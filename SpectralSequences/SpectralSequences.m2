@@ -220,12 +220,14 @@ SpectralSequenceSheet.synonym = "spectral sequence sheet"
 SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
   F := filteredComplex E;
   L := for p from E.minF to E.maxF list (
-    for q from E.minH - E.maxF to E.maxH - E.minF list (
+    M := for q from E.minH - E.maxF to E.maxH - E.minF list (
       S := pageE(r,F,p,q);
       if S != 0 then 
       {{p,q},inducedMap(pageE(r,F,p+r,q-r+1),S,matrix (F^(p+1)).dd_(-p-q))}
       else continue
-      ));
+      );
+    if M != {} then M else continue
+  );
   << L << endl;
   new SpectralSequenceSheet from flatten L 
   )
@@ -250,6 +252,7 @@ chainComplex E
 keys E
 
 E_0
+keys E_0
 
 -- Nathan's first example
 id_(QQ^1) || 0*id_(QQ
