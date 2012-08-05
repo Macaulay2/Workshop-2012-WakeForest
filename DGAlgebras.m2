@@ -16,7 +16,8 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
         torMap, homologyAlgebra, torAlgebra, maxDegree, StartDegree, EndDegree, ringMap,
 	isHomologyAlgebraTrivial, findTrivialMasseyOperation, findNaryTrivialMasseyOperation, AssertWellDefined,
 	isGolod, isGolodHomomorphism, GenDegreeLimit, RelDegreeLimit, TMOLimit,
-	InitializeDegreeZeroHomology, InitializeComplex, isAcyclic, getDegNModule
+	InitializeDegreeZeroHomology, InitializeComplex, isAcyclic, getDegNModule,
+	semifreeDGModule,DGRing, homologyModule
 }
 
 -- Questions:
@@ -1104,19 +1105,27 @@ torMap RingMap := opts -> f -> (
 net DGModule := M -> net M.natural
 
 semifreeDGModule = method(TypicalValue => DGModule)
-semifreeDGModule (DGAlgebra,List) := (A,genDegrees) -> (
+semifreeDGModule (DGAlgebra,List) := (A,degList) -> (
    M := new MutableHashTable;
    
-   M#(symbol DGring) = A;
+   M#(symbol DGRing) = A;
    M#(symbol ring) = A.ring;
    M#(symbol diff) = {};
-   if isHomogeneous R then (
-   
+   -- define M.natural differently depending on whether or not A is homogeneous.
+   --   if #(first degList) != #(first degrees A.ring) + 1 then degList = apply(degList, i -> i | {0});
+   --   A#(symbol natural) = (A.ring)[varsList, Degrees => degList, Join => false, SkewCommutative => select(toList(0..(#degList-1)), i -> odd first degList#i)];
+   --)
+   --else (
+   --   A#(symbol natural) = (A.ring)[varsList, Degrees => degList, SkewCommutative => select(toList(0..(#degList-1)), i -> odd first degList#i)];
+   if isHomogeneous A then (
+      if #(first degList) != #(first A.Degrees) then degList = apply(degList, i -> i | {0});
+      M#(symbol natural) = (A.natural)^(-degList);
    )
    else (
+      M#(symbol natural) = (A.natural)^(-degList);
    );
    M#(symbol isHomogeneous) = false;
-   M.natural.cache = new CacheTable;
+   --M.natural.cache = new CacheTable;
    -- basisModule is here to keep track of degrees over a nested polynomial ring.
    --M.natural.cache#(symbol basisModule) = ...;
    M#(symbol Degrees) = degList;
@@ -1126,6 +1135,30 @@ semifreeDGModule (DGAlgebra,List) := (A,genDegrees) -> (
    M.cache#(symbol diffs) = new MutableHashTable;
    new DGModule from M
 )
+
+TEST ///
+restart
+loadPackage "DGAlgebras"
+Q = QQ[x]
+I = ideal(x^3)
+K = koszulComplexDGA(I)
+M = coker matrix {{x^2}}
+U = semifreeDGModule(K,{{0,0},{1,2},{2,2}})
+degrees U.natural
+use K.natural
+setDiff(U,sub(matrix{{0,x^2,0},{0,0,1},{0,0,0}}, K.natural))
+///
+
+setDiff (DGModule,Matrix) := opts -> (M,diffMatrix) -> (
+   if diffMatrix.ring =!= M.DGRing.natural then error "Ensure that the differential is defined over the DGAlgebra.";
+   M.diff = map(M.natural,M.natural, diffMatrix);
+   M.isHomogeneous = isHomogeneous (M.DGRing).ring and checkIsHomogeneous(M);
+   --if opts.InitializeComplex then M.dd = (toComplex(A,totalOddDegree(A)+1)).dd;
+   M
+)
+
+-- check to make sure that the differential on M is homogeneous.
+checkIsHomogeneous DGModule := M -> isHomogeneous M.diff;
 
 --------------------
 -- Documentation  --
