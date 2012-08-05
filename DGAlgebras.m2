@@ -1106,11 +1106,11 @@ net DGModule := M -> net M.natural
 
 semifreeDGModule = method(TypicalValue => DGModule)
 semifreeDGModule (DGAlgebra,List) := (A,degList) -> (
-   M := new MutableHashTable;
+   U := new MutableHashTable;
    
-   M#(symbol DGRing) = A;
-   M#(symbol ring) = A.ring;
-   M#(symbol diff) = {};
+   U#(symbol DGRing) = A;
+   U#(symbol ring) = A.ring;
+   U#(symbol diff) = {};
    -- define M.natural differently depending on whether or not A is homogeneous.
    --   if #(first degList) != #(first degrees A.ring) + 1 then degList = apply(degList, i -> i | {0});
    --   A#(symbol natural) = (A.ring)[varsList, Degrees => degList, Join => false, SkewCommutative => select(toList(0..(#degList-1)), i -> odd first degList#i)];
@@ -1119,35 +1119,24 @@ semifreeDGModule (DGAlgebra,List) := (A,degList) -> (
    --   A#(symbol natural) = (A.ring)[varsList, Degrees => degList, SkewCommutative => select(toList(0..(#degList-1)), i -> odd first degList#i)];
    if isHomogeneous A then (
       if #(first degList) != #(first A.Degrees) then degList = apply(degList, i -> i | {0});
-      M#(symbol natural) = (A.natural)^(-degList);
+      U#(symbol natural) = (A.natural)^(-degList);
    )
    else (
-      M#(symbol natural) = (A.natural)^(-degList);
+      U#(symbol natural) = (A.natural)^(-degList);
    );
-   M#(symbol isHomogeneous) = false;
+   U#(symbol isHomogeneous) = false;
    --M.natural.cache = new CacheTable;
    -- basisModule is here to keep track of degrees over a nested polynomial ring.
    --M.natural.cache#(symbol basisModule) = ...;
-   M#(symbol Degrees) = degList;
-   M#(symbol cache) = new CacheTable;
-   M.cache#(symbol homology) = new MutableHashTable;
-   M.cache#(symbol homologyModule) = new MutableHashTable;
-   M.cache#(symbol diffs) = new MutableHashTable;
-   new DGModule from M
+   U#(symbol Degrees) = degList;
+   U#(symbol cache) = new CacheTable;
+   U.cache#(symbol homology) = new MutableHashTable;
+   U.cache#(symbol homologyModule) = new MutableHashTable;
+   U.cache#(symbol diffs) = new MutableHashTable;
+   new DGModule from U
 )
 
-TEST ///
-restart
-loadPackage "DGAlgebras"
-Q = QQ[x]
-I = ideal(x^3)
-K = koszulComplexDGA(I)
-M = coker matrix {{x^2}}
-U = semifreeDGModule(K,{{0,0},{1,2},{2,2}})
-degrees U.natural
-use K.natural
-setDiff(U,sub(matrix{{0,x^2,0},{0,0,1},{0,0,0}}, K.natural))
-///
+maxDegree DGModule := U -> maxDegree (U.DGRing) + max ((degrees U.natural) / first)
 
 setDiff (DGModule,Matrix) := opts -> (M,diffMatrix) -> (
    if diffMatrix.ring =!= M.DGRing.natural then error "Ensure that the differential is defined over the DGAlgebra.";
@@ -1156,6 +1145,56 @@ setDiff (DGModule,Matrix) := opts -> (M,diffMatrix) -> (
    --if opts.InitializeComplex then M.dd = (toComplex(A,totalOddDegree(A)+1)).dd;
    M
 )
+
+toComplex DGModule := U -> (
+   maxDeg := maxDegree U;
+   if maxDeg == infinity then error "Must specify an upper degree bound if an even generator exists.";
+   toComplex(U,maxDeg)
+)
+
+toComplex (DGModule,ZZ) := (U,n) -> chainComplex(apply(n, i -> polyDifferential(i+1,U)))
+
+polyDifferential(ZZ,DGModule) := (n,U) -> (
+   K := U.DGRing;
+   R := U.ring;
+   sourceList := transpose basis(2,U.natural);
+   sourceDegreeList := apply(degrees source sourceList, l -> -drop(l,1));
+   sourceList = entries sourceList;
+   targetList := basis(1,U.natural);
+   targetDegreeList := apply(degrees source targetList, l -> -drop(l,1));
+   tempDiff := matrix {apply(sourceList, l -> (
+      (coeff,basisVec) := coefficients matrix {l};
+      coeff = first flatten entries coeff;
+      (polyDifferential(K,coeff)*(transpose basisVec) + (-1)^(first degree coeff)*coeff*U.diff*(transpose basisVec))
+   ))};
+   tempDiff = sub(last coefficients(tempDiff, Monomials=>targetList),K.ring);
+   map(R^targetDegreeList,R^sourceDegreeList,tempDiff)
+)
+
+TEST ///
+restart
+debug loadPackage "DGAlgebras"
+Q = QQ[x]
+I = ideal(x^3)
+K = koszulComplexDGA(I)
+M = coker matrix {{x^2}}
+U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
+degrees U.natural
+use K.natural
+setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
+U.diff
+-- working here on polyDifferential, turning the below hard-coded example
+-- into a function
+polyDifferential(2,U)
+U.natural
+sourceList = entries transpose basis(2,U.natural)
+tempDiff = matrix {apply(sourceList, l -> (
+   (coeff,basisVec) := coefficients matrix {l};
+   coeff = first flatten entries coeff;
+   (polyDifferential(K,coeff)*(transpose basisVec) + (-1)^(first degree coeff)*coeff*U.diff*(transpose basisVec))
+   ))}
+sub(last coefficients(tempDiff, Monomials=>basis(1,U.natural)),K.ring)
+///
 
 -- check to make sure that the differential on M is homogeneous.
 checkIsHomogeneous DGModule := M -> isHomogeneous M.diff;
