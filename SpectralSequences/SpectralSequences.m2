@@ -19,10 +19,14 @@ needsPackage "SimplicialComplexes"
 newPackage(
   "SpectralSequences",
   Version => "0.1'",
-  Date => "1 August 2012",
+  Date => "4 August 2012",
   Authors => {{
       Name => "Nathan Grieve", 
       Email => "nathangrieve@mast.queensu.ca"},
+{
+      Name => "Thanh Vu", 
+      Email => "vqthanh@math.berkeley.edu"},
+
     {
       Name => "Gregory G. Smith", 
       Email => "ggsmith@mast.queensu.ca", 
@@ -60,19 +64,22 @@ max FilteredComplex := K -> max spots K
 min FilteredComplex := K -> min spots K
 
 FilteredComplex ^ ZZ := ChainComplex => (K,p) -> (
+     -- We assume that spots form a consecutive sequence of integers
   maxK := max K;                   -- all filtrations are separated
   minK := min K;      	      	   -- all filtrations are exhaustive
-  if K#?p then K#p else if p < minK then K#minK else K#maxK)
+  if K#?p then K#p else if p < minK then K#minK else if p > maxK then K#maxK
+  else error "expected no gaps in filtration")
 
 net FilteredComplex := K -> (
+     -- Don't want to display all filtered pieces
+     -- Should we display the quotients rather than the submodules?
+     -- Eliminate the duplication of the homological indexes     
   v := between("", apply(sort spots K, p -> p | " : " | net K^p));
   if #v === 0 then "0" else stack v)
 
 filteredComplex = method(
-  Dispatch => Thing, 
   TypicalValue => FilteredComplex)
 
-filteredComplex Sequence :=
 filteredComplex List := L -> (
   local maps;
   local C;
@@ -85,7 +92,12 @@ filteredComplex List := L -> (
 	i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
   else (
     maps = L;
-    C = target maps#0);	       	       	    -- all filtrations are exhaustive
+    if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
+	 error "expected sequence of chain complexes");
+    C = target maps#0;	       	       	    -- all filtrations are exhaustive
+    if any(#maps, p-> target maps#p != C) then (
+	 error "expected all map to have the same target"));
+     
   Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
   P := {{0,C}} | apply(#maps, p -> {p+1, image maps#p});
   if (last P)#1 != Z then P = P | {{#maps+1, Z}};
@@ -109,7 +121,7 @@ net SpectralSequence := E -> (
   then toString getAttribute(E, ReverseDictionary) 
   else net expression E)
 expression SpectralSequence := E -> new FunctionApplication from {
-  spectralSequence, chainComplex E}
+  spectralSequence, filteredComplex E}
 
 filteredComplex SpectralSequence := FilteredComplex => E -> (
   E.filteredComplex)
@@ -127,22 +139,73 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
     symbol filteredComplex => K,
     symbol cache => CacheTable})
 
+{* Old version of construction 
 cycles := (K,r,p,q) -> (
   ker inducedMap(K^0^(p+q+1) / K^(p+r)^(p+q+1), K^p^(p+q), (K^0).dd_(-p-q)))
+
+ 
 boundaries := (K,r,p,q) -> (
   image ((K^(p-r+1)).dd_(-p-q+1)) + image id_(K^(p+1)^(p+q)))
+
+*}
+
+invSubmodule := (d,C) -> (
+     g := inducedMap ((target d)/C,target d);
+     f := g * d;
+     ker f
+     )
+
+
+pageA := (r, F,p,q) -> (
+d:= (F^p).dd_(-p-q);
+M:= source d;
+N:= source (F^(p+r)).dd_(-p-q-1);
+P:= invSubmodule (d, N);
+A:= intersect (M,P);
+dA:= map (N, A, matrix d);
+{A, dA}
+)
+
+pageA2 := (r,F,p,q) -> (
+A:= pageA(r-1,F,p-r+1,q+r-2);
+image A_1
+)
+
+pageZ := (r, F,p,q) -> (
+     A:= pageA(r,F,p,q);
+     d:= (F^(p+1)).dd_(-p-q);
+     M:= source d;
+     (A_0 + M)/M
+     )
+
+pageB := (r,F,p,q) -> (
+     A:= pageA2(r,F,p,q);
+     d:= (F^(p+1)).dd_(-p-q);
+     M:= source d;
+     (A+M)/M
+     )
+
+pageE = method ();
+pageE :=  (r,F,p,q) -> (
+    Z:= pageZ(r,F,p,q);
+    B:= pageZ(r,F,p,q);
+    Z/B
+    ) 
 
 
 SpectralSequenceSheet = new Type of MutableHashTable
 SpectralSequenceSheet.synonym = "spectral sequence sheet"
 
 SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
-  K := filteredComplex E;
-  L := {};
-  for p from E.minF to E.maxF do (
-    for q from E.minH to E.maxH do (
-      L = {{p,q},(cycles(K,r,p,q) + boundaries(K,r,p,q)) / boundaries(K,r,p,q)};
-      ))
+  F := filteredComplex E;
+  L := for p from E.minF to E.maxF list (
+    for q from E.minH - E.maxF to E.maxH - E.minF list (
+	 S := pageE(r,F,p,q);
+	 if S != 0 then 
+	 {{p,q},inducedMap(pageE(r,F,p+r,q-r+1),S,matrix (F^(p+1)).dd_(-p-q))}
+	 else continue
+      ));
+  new SpectralSequenceSheet from flatten L 
   )
 
 end
@@ -164,21 +227,7 @@ filteredComplex E
 chainComplex E
 keys E
 
-r = 0
-L = {};
-for p from E.minF to E.maxF do (
-  for q from E.minH to E.maxH do (
-    << (p,q) << "  " << cycles(K,r,p,q) << "  " << boundaries(K,r,p,q) << endl;
-    L = {{p,q},(cycles(K,r,p,q) + boundaries(K,r,p,q)) / boundaries(K,r,p,q)};
-    ))
-Er = new SpectralSequenceSheet from {L}
-keys Er
-cycles(K,r,p,q)
-boundaries(K,0,0,1)
-(image (K^1).dd_0) 
-(K^1) == 0
-image id_(K^0^(-1))
-K^0^(-1)  
+E_0
 
 -- Nathan's first example
 id_(QQ^1) || 0*id_(QQ
