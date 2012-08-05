@@ -213,11 +213,13 @@ keynumber = (I) -> (
   and other optional arguments provided in Dmodules
 *}
 
-multIdealViaDmodules := (I,t) -> (
+multIdealViaDmodules = method()
+multIdealViaDmodules(Ideal,Number) := (I,t) -> (
   Dmodules$multiplierIdeal(I,t)
   );
 
-lctViaDmodules := (I) -> (
+lctViaDmodules = method()
+lctViaDmodules(Ideal) := (I) -> (
   Dmodules$lct(I)
   );
 
@@ -794,6 +796,17 @@ lctHyperplaneArrangement(CentralArrangement) := (A) -> (
 -- VIA DMODULES ----------------------------------------------------------------
 --------------------------------------------------------------------------------
 
+TEST ///
+  needsPackage "MultiplierIdeals";
+  R := QQ[x,y];
+  use R;
+  I := ideal(y^2-x^3);
+  assert(lctViaDmodules(I) == 5/6);
+  assert(multIdealViaDmodules(I,1/2) == ideal(1_R));
+  assert(multIdealViaDmodules(I,5/6) == ideal(x,y));
+  assert(multIdealViaDmodules(I,1) == I);
+///  
+
 --------------------------------------------------------------------------------
 -- MONOMIAL IDEALS -------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -1006,6 +1019,203 @@ assert( (lctMonomialCurve(R,{3,4,11})) === 19/12 )
 ///
 
 
+
+--------------------------------------------------------------------------------
+-- HYPERPLANE ARRANGEMENTS -----------------------------------------------------
+--------------------------------------------------------------------------------
+
+TEST ///
+  needsPackage "MultiplierIdeals";
+  R := QQ[x,y,z];
+  use R;
+  f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
+  A := arrangement f;
+  assert(A == arrangement {z, y - z, y + z, x - z, x + z, x - y, x + y});
+  assert(lctHyperplaneArrangement(A) == 3/7);
+///
+
+TEST ///
+  R := QQ[x,y,z];
+  f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
+  A := arrangement f;
+  assert(A == arrangement {z, y - z, y + z, x - z, x + z, x - y, x + y});
+  assert(multIdealHyperplaneArrangement(3/7,A) == ideal(z,y,x));
+///
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- DOCUMENTATION ---------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+beginDocumentation()
+document { 
+  Key => MultiplierIdeals,
+  Headline => "A package for computing multiplier ideals",
+  EM "MultiplierIdeals", " is a package for computing multiplier ideals.",
+  "The implementation for monomial curves is based on the algorithm given in ",
+    "H.M. Thompson's paper", ITALIC "Multiplier Ideals of Monomial Space Curves",
+    HREF { "http://arxiv.org/abs/1006.1915" , "arXiv:1006.1915v4" }, "[math.AG]."
+}
+
+--------------------------------------------------------------------------------
+-- MONOMIAL IDEAL --------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+document {
+  Key => {multIdealMonomial,
+         (multIdealMonomial, MonomialIdeal, QQ),
+         (multIdealMonomial, MonomialIdeal, ZZ)
+         },
+  Headline => "multiplier ideal of a monomial ideal",
+  Usage => "multIdealMonomial(I,t)",
+  Inputs => {
+    "I" => MonomialIdeal => {"a monomial ideal in a polynomial ring"},
+    "t" => QQ => {"a coefficient"}
+  },
+  Outputs => {
+    MonomialIdeal => {}
+  },
+  "Computes the multiplier ideal of I with coefficient t ",
+  "using Howald's Theorem and the package ", TO Normaliz, ".",
+  
+  EXAMPLE lines ///
+R = QQ[x,y];
+I = monomialIdeal(y^2,x^3);
+multIdealMonomial(I,5/6)
+  ///,
+  
+  SeeAlso => { "lctMonomial" }
+}
+
+
+document {
+  Key => {lctMonomial, (lctMonomial, MonomialIdeal)},
+  Headline => "log canonical threshold of a monomial ideal",
+  Usage => "lctMonomial I",
+  Inputs => {
+    "I" => MonomialIdeal => {},
+  },
+  Outputs => {
+    QQ => {}
+  },
+  "Computes the log canonical threshold of a monomial ideal I ",
+  "(the least positive value of t such that the multiplier ideal ",
+  "of I with coefficient t is a proper ideal).",
+  
+  EXAMPLE lines ///
+R = QQ[x,y];
+I = monomialIdeal(y^2,x^3);
+lctMonomial(I)
+  ///,
+  
+  SeeAlso => { "multIdealMonomial" }
+}
+
+
+document {
+  Key => { thresholdMonomial },
+  Headline => "thresholds of multiplier ideals of monomial ideals",
+  Usage => "thresholdMonomial(I,m)",
+  Inputs => {
+    "I" => MonomialIdeal => {},
+    "m" => RingElement => {"a monomial"}
+  },
+  Outputs => {
+    QQ => {"the least t such that m is not in the t-th multiplier ideal of I"},
+    Matrix => {"the equations of the facets of the Newton polyhedron of I which impose the threshold on m"}
+  },
+  "Computes the threshold of inclusion of the monomial m=x^v in the multiplier ideal J(I^t), ",
+  "that is, the value t = sup{ c | m lies in J(I^c) } = min{ c | m does not lie in J(I^c)}. ",
+  "In other words, (1/t)*(v+(1,..,1)) lies on the boundary of the Newton polyhedron Newt(I). ",
+  "In addition, returns the linear inequalities for those facets of Newt(I) which contain (1/t)*(v+(1,..,1)). ",
+  "These are in the format of ", TO "Normaliz", ", i.e., a matrix (A | b) where the number of columns of A is ",
+  "the number of variables in the ring, b is a column vector, and the inequality on the column ",
+  "vector v is given by Av+b >= 0, entrywise. ",
+  "As a special case, the log canonical threshold is the threshold of the monomial 1_R = x^0.",
+  
+  EXAMPLE lines ///
+R = QQ[x,y];
+I = monomialIdeal(x^13,x^6*y^4,y^9);
+thresholdMonomial(I,x^2*y)
+  ///,
+  
+  SeeAlso => { "lctMonomial" }
+}
+
+document { Key => { (thresholdMonomial, MonomialIdeal, RingElement) } }
+document { Key => { (thresholdMonomial, MonomialIdeal, List) } }
+
+
+--------------------------------------------------------------------------------
+-- MONOMIAL CURVE --------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+doc ///
+Key
+  multIdealMonomialCurve
+  (multIdealMonomialCurve,Ring,List,QQ)
+  (multIdealMonomialCurve,Ring,List,ZZ)
+Headline
+  multiplier ideal of monomial space curve
+Usage
+  I = multIdealMonomialCurve(R,n,t)
+Inputs
+  R:Ring
+  n:List
+     three integers
+  t:QQ
+Outputs
+  I:Ideal
+Description
+  Text
+  
+    Given a monomial space curve {\tt C} and a parameter {\tt t}, the function 
+    {\tt multIdealMonomialCurve} computes the multiplier ideal associated to the embedding of {\tt C}
+    in {\tt 3}-space and the parameter {\tt t}.
+    
+    More precisely, we assume that {\tt R} is a polynomial ring in three variables, {\tt n = \{a,b,c\}}
+    is a sequence of positive integers of length three, and that {\tt t} is a rational number. The corresponding
+    curve {\tt C} is then given by the embedding {\tt u\to(u^a,u^b,u^c)}.
+  
+  Example
+    R = QQ[x,y,z];
+    n = {2,3,4};
+    t = 5/2;
+    I = multIdealMonomialCurve(R,n,t)
+
+///
+
+
+
+doc ///
+Key
+  lctMonomialCurve
+  (lctMonomialCurve, Ring, List)
+    
+Headline
+  log canonical threshold of monomial space curves
+Usage
+  lct = lctMonomialCurve(R,n)
+Inputs
+  R:Ring
+  n:List 
+   three integers
+Outputs
+  lct:QQ 
+
+Description
+  Text
+  
+    The function {\tt lctMonomialCurve} computes the log
+    canonical threshold of a space curve. This curve is defined via
+    {\tt n = (a,b,c)} through the embedding {\tt u\to(u^a,u^b,u^c)}.
+    
+  Example
+    R = QQ[x,y,z];
+    n = {2,3,4};
+    lct = lctMonomialCurve(R,n)
+///
 
 
 
