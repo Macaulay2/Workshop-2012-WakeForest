@@ -2,8 +2,8 @@ needsPackage "Polyhedra"
 
 newPackage(
 	"Polymake",
-    	Version => "0.2", 
-    	Date => "March 1, 2011",
+    	Version => "0.3", 
+    	Date => "Aug 5, 2012",
     	Authors => {{Name => "Josephine Yu", 
 		  Email => "josephine.yu@math.gatech.edu", 
 		  HomePage => "http://people.math.gatech.edu/~jyu67"}},
@@ -79,8 +79,8 @@ toPolymakeFormat(Polyhedron) := (P) -> (
 	      S = S|toPolymakeFormat("VERTICES", transpose(P#"homogenizedVertices"#0))|"\n\n";
 	      S = S|toPolymakeFormat("N_VERTICES", P#"number of rays" + P#"number of vertices")|"\n\n";
 	      );
-	  S = S|toPolymakeFormat("INEQUALITIES", transpose(P#"homogenizedHalfspaces"#0))|"\n\n";
-	  S = S|toPolymakeFormat("EQUATIONS", transpose(P#"homogenizedHalfspaces"#1))|"\n\n";
+	  S = S|toPolymakeFormat("INEQUALITIES", transpose(-P#"homogenizedHalfspaces"#0))|"\n\n";
+	  S = S|toPolymakeFormat("EQUATIONS", transpose(-P#"homogenizedHalfspaces"#1))|"\n\n";
      	  S
 	  )
      )
@@ -193,6 +193,7 @@ getPropertyNames(String) := (filename) -> (
   -- )
 
 ------------------------------------------------------------------------------
+
 
 getProperty = method(TypicalValue => List)
 getProperty(List, String) := (F, section) -> (
@@ -655,7 +656,11 @@ end
 ---------------------------------------------------------------------------
 
 restart
+
+-- Josephine's space
+loadPackage("Polymake")
 installPackage("Polymake")
+uninstallPackage("Polymake")
 installPackage("Polymake", FileName => "~/Documents/math/M2codes/packageRepository/development/aim2009/Polymake.m2", MakeDocumentation => true)
 needsPackage("Polymake")
 viewHelp(Polymake)
@@ -674,6 +679,7 @@ toPolymakeFormat(P3)
 toPolymakeFormat(P4)
 
 runPolymake(P, "FACETS")
+runPolymake(P, "F_VECTOR")
 filename = writePolymakeFile(P)
 runPolymake(filename, "PROPERTY_NAMES")
 
@@ -683,6 +689,7 @@ getMatrixProperty(filename, "VERTICES")
 getVectorProperty(filename, "F_VECTOR")
 getProperty(filename, "F_VECTOR")
 
+-- QingChun's space
 
 
 ------------------ TO DO ---------------------
