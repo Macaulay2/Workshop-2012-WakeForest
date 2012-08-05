@@ -25,7 +25,7 @@ centralFiber(Ideal, List) := (I, W) ->(
      n:=#W;
      R:=ring(I);
      degs := apply (n, j-> {1,W_j});
-     S := QQ[gens R, Weights => W, Degrees => degs,Global =>false];
+     S := QQ[gens R, Weights => W, Degrees => degs];
      f := map (R/I, S, gens R);
      J := ker f;
      leadJ := ideal leadTerm(1,J);
@@ -40,8 +40,8 @@ futaki(Ideal, List) := (I, W) ->(
      m:=#W;
      R:=ring(I);
      degs := apply (m, j-> {1,W_j});
-     S := QQ[gens R, Weights => W, Degrees => degs,Global =>false];
-     f := map (R, S, gens R);
+     S := QQ[gens R, Weights => W, Degrees => degs];
+     f := map (R/I, S, gens R);
      J := ker f;
      n := dim J;
      newIdeal := ideal leadTerm(1,J);
@@ -75,8 +75,8 @@ chow(Ideal, List) := (I, W) ->(
      m:=#W;
      R:=ring(I);
      degs := apply (m, j-> {1,W_j});
-     S := QQ[gens R, Weights => W, Degrees => degs,Global =>false];
-     f := map (R, S, gens R);
+     S := QQ[gens R, Weights => W, Degrees => degs];
+     f := map (R/I, S, gens R);
      J := ker f;
      n := dim J;
      newIdeal := ideal leadTerm(1,J);
@@ -99,20 +99,6 @@ chow(Ideal, List) := (I, W) ->(
     )
 
 -- example of defining a type
--- Poset = new Type of HashTable
-
---poset = method()
---poset(List,List) := (I,C) ->( 
---    if (rank(transitiveClosure(I,C)) == #I) then
---         (new Poset from {
---	      symbol GroundSet => I,
---	      symbol Relations => C,
---     	      symbol RelationMatrix => transitiveClosure(I,C),
---	      symbol cache => new CacheTable
---	      })
---    else error "antisymmetry fails"
---    )
-
 
 
 ----------------------------------
@@ -192,7 +178,7 @@ doc ///
 	       ring.
 	  Example
 	       R = QQ[a,b,c]
-	       I=(a*c-b^2)
+	       I= ideal(a*c-b^2)
 	       W = {2,1,1}
 	       centralFiber(I,W)
      SeeAlso
