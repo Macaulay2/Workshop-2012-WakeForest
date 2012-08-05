@@ -57,6 +57,23 @@ needsPackage "SimplicialComplexes"
 debug Core
 
 --------------------------------------------------------------------------------
+Module + Module := Module => (M,N) -> (
+  if ring M =!= ring N
+  then error "expected modules over the same ring";
+  R := ring M;
+  if ambient M != ambient N
+  or M.?relations and N.?relations and M.relations != N.relations
+  or M.?relations and not N.?relations
+  or not M.?relations and N.?relations
+  then error "expected submodules of the same module";
+  subquotient(
+    ambient M,
+    if not M.?generators or not N.?generators then null else M.generators | N.generators,
+    if M.?relations then M.relations else null
+    )
+  )
+
+--------------------------------------------------------------------------------
 -- CODE
 --------------------------------------------------------------------------------
 -- constructing filtered complexes
@@ -204,11 +221,12 @@ SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
   F := filteredComplex E;
   L := for p from E.minF to E.maxF list (
     for q from E.minH - E.maxF to E.maxH - E.minF list (
-	 S := pageE(r,F,p,q);
-	 if S != 0 then 
-	 {{p,q},inducedMap(pageE(r,F,p+r,q-r+1),S,matrix (F^(p+1)).dd_(-p-q))}
-	 else continue
+      S := pageE(r,F,p,q);
+      if S != 0 then 
+      {{p,q},inducedMap(pageE(r,F,p+r,q-r+1),S,matrix (F^(p+1)).dd_(-p-q))}
+      else continue
       ));
+  << L << endl;
   new SpectralSequenceSheet from flatten L 
   )
 
@@ -231,6 +249,7 @@ filteredComplex E
 chainComplex E
 keys E
 
+keys 
 E_0
 
 -- Nathan's first example
@@ -276,6 +295,17 @@ K = filteredComplex {D,D1,D0,Z}
 E = spectralSequence K
 E_0
 
+SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
+  F = filteredComplex E
+  L = for p from E.minF to E.maxF list (
+    for q from E.minH - E.maxF to E.maxH - E.minF list (
+      S := pageE(r,F,p,q);
+      if S != 0 then 
+      {{p,q},inducedMap(pageE(r,F,p+r,q-r+1),S,matrix (F^(p+1)).dd_(-p-q))}
+      else continue
+      ));
+  new SpectralSequenceSheet from flatten L 
+  )
 
 
 code(chainComplex, SimplicialComplex)
