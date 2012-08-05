@@ -23,7 +23,6 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
 -- is there a way to present graded pieces of graded A-modules as modules over A_0?
 -- is there a way to make f act like a function for f a DGAlgebraMap?
 
--- Things to do before version 2
 -- [user v1.5] Change toComplex to chainComplex as per conversation with Dan on the M2 Google group (9/14/2010)
 -- [functionality v1.5] Single degree homology(DGAlgebraMap,ZZ)
 -- [functionality v1.5] Lift a map from a semifree DGA to another DGA along a quism
@@ -64,9 +63,12 @@ protect basisAlgebra
 -- Defining the new type DGAlgebra
 DGAlgebra = new Type of MutableHashTable
 globalAssignment DGAlgebra
---DGAlgebraMap still in development
+-- DGAlgebraMap, the new type of map between DGAlgebras
 DGAlgebraMap = new Type of MutableHashTable
 globalAssignment DGAlgebraMap
+-- DGModule, a DG module over a DG algebra
+DGModule = new Type of MutableHashTable
+globalAssignment DGModule
 
 -- Modify the standard output for a DGAlgebra
 net DGAlgebra := A -> (
@@ -959,7 +961,7 @@ toComplexMap (DGAlgebraMap,ZZ) := opts -> (f,n) -> (
    )
 )
 
--- make pushForward functorial for maps of free modules
+-- make pushForward functorial for maps of free modules.  To use in toComplexMap above.
 pushForward(RingMap,Matrix) := opts -> (f,M) -> (
    -- converts a map of free S-modules (a finite R-algebra) to a map over R
    R := source f;
@@ -1093,6 +1095,36 @@ torMap RingMap := opts -> f -> (
    sSub := map(sTorAlg, B.natural,matrix{gens sTorAlg});
    phi := liftToDGMap(B,A,f);
    map(sTorAlg,rTorAlg,matrix{take(flatten entries matrix phi.natural,numgens A.natural) / sSub})
+)
+
+--------------------
+-- DGModule Type  --
+--------------------
+
+net DGModule := M -> net M.natural
+
+semifreeDGModule = method(TypicalValue => DGModule)
+semifreeDGModule (DGAlgebra,List) := (A,genDegrees) -> (
+   M := new MutableHashTable;
+   
+   M#(symbol DGring) = A;
+   M#(symbol ring) = A.ring;
+   M#(symbol diff) = {};
+   if isHomogeneous R then (
+   
+   )
+   else (
+   );
+   M#(symbol isHomogeneous) = false;
+   M.natural.cache = new CacheTable;
+   -- basisModule is here to keep track of degrees over a nested polynomial ring.
+   --M.natural.cache#(symbol basisModule) = ...;
+   M#(symbol Degrees) = degList;
+   M#(symbol cache) = new CacheTable;
+   M.cache#(symbol homology) = new MutableHashTable;
+   M.cache#(symbol homologyModule) = new MutableHashTable;
+   M.cache#(symbol diffs) = new MutableHashTable;
+   new DGModule from M
 )
 
 --------------------
@@ -3646,4 +3678,6 @@ H5 = prune HH_5(A); numgens H5
 H6 = prune HH_6(A); numgens H6
 H7 = prune HH_7(A); numgens H7
 
-
+R = QQ[x, SkewCommutative=>{0}]
+M = coker vars R
+res(M, LengthLimit=>10)
