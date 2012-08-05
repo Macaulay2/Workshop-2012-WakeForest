@@ -1,22 +1,27 @@
-needsPackage "SimplicialComplexes"
-needsPackage "Posets"
-needsPackage "Graphs"
+if version#"VERSION" <= "1.4" then (
+    needsPackage "SimplicialComplexes";
+    needsPackage "Graphs";
+    needsPackage "Posets";
+    )
 
-newPackage("Permutations", 
-           Version => "0.0.1",
-           Date => "April 26, 2010",
- 	   Authors =>{
-		       {Name => "Gwyn Whieldon", 
-                        Email => "Gwyn.Whieldon@gmail.com",
-                        HomePage => "http://www.math.cornell.edu/People/Grads/whieldon.html"
-                       }
-                      },
-           Headline => "A package for combinatorics on graphs, simplicial complexes, permutations, and posets.",
-           DebuggingMode => true
-          )
-needsPackage "SimplicialComplexes"
-needsPackage "Graphs"
-needsPackage "Posets"
+newPackage select((
+    "Permutations",
+        Version => "1.0.1", 
+        Date => "August 5 2011",
+        Authors => {
+            {Name => "Gwyn Whieldon", Email => "whieldon@hood.edu", HomePage => "http://www.hood.edu/Academics/Departments/Mathematics/Faculty/Gwyneth-Whieldon.html"}
+        },
+        Headline => "A package for combinatorics on graphs, simplicial complexes, permutations, and posets",
+        Configuration => {"DefaultPDFViewer" => "open", "DefaultPrecompute" => true, "DefaultSuppressLabels" => true},
+        DebuggingMode => true,
+        if version#"VERSION" > "1.4" then PackageExports => {"SimplicialComplexes", "Graphs", "Posets"}
+        ), x -> x =!= null)
+
+if version#"VERSION" <= "1.4" then (
+    needsPackage "SimplicialComplexes";
+    needsPackage "Graphs";
+    needsPackage "Posets";
+    )
 
 export {
      Permutation,
@@ -25,6 +30,7 @@ export {
      permute,
      Cycle,
      cycle,
+     cycleDecomposition,
      --checkCycle,
      checkTranspositions,
      isBasicPermutation,
@@ -85,6 +91,12 @@ export {
 Permutation = new Type of HashTable
 Cycle = new Type of List
 
+
+------------------------------------------------------------------
+------------------------------------------------------------------
+--Net for Displaying Permutations
+------------------------------------------------------------------
+------------------------------------------------------------------
 net Permutation := P -> toString P -- displayPermutation P -- toString P
 
 displayPermutation = method()
@@ -94,15 +106,35 @@ displayPermutation(Permutation) := Net => (P) -> (
 	horizontalJoin L
 )
 
+------------------------------------------------------------------
+------------------------------------------------------------------
+--Various Constructors
+------------------------------------------------------------------
+------------------------------------------------------------------
+
 permutation = method()
 
 toString Permutation := P -> toString(apply(sort keys P.map,i->(P.map)#i))
+
+
+------------------------------------------------------------------
+--This method constructs a permutation as a pair of lists, which
+--contain the same (nonrepeating) elements.
+------------------------------------------------------------------
 
 permutation(List,List) := Permutation => (M,L) -> (
 	if(set L === set M) and (unique L === L) and (unique M === M) then
 		permutation hashTable apply(#M, i -> M#i=>L#i)
 	else error "Not a permutation."
 )
+
+------------------------------------------------------------------
+--This method takes a list L as input, and outputs the permutation
+--taking the (sorted) L as input and outputting L.
+--Example:  L = {5,1,4,2,3} would give the permutation s = (1,2,4,3,5),
+--written here in cycle notation.  It would be stored as the hash 
+--table {1 => 2, 2=> 4, 3=>5, 4=>3, 5=>1}.
+------------------------------------------------------------------
 
 permutation(List):= Permutation => L -> (     
 	if unique L === L then
@@ -112,6 +144,11 @@ permutation(List):= Permutation => L -> (
 	) else error "Not a permutation."
 )
 
+------------------------------------------------------------------
+--This method picks the ith permutation (lex ordered) out of
+--permutations of list L.
+------------------------------------------------------------------
+
 permutation(List,ZZ) := Permutation => (L,i) -> (
 	if 0 <= i and i <= (#L)!-1 then
 		permutation permutationByIndex(L, i)
@@ -119,25 +156,44 @@ permutation(List,ZZ) := Permutation => (L,i) -> (
 		error("Permutation index (" | i | ") too large for list size (" | #L | ").")
 )
 
+------------------------------------------------------------------
+-- This constructs a permutation (array form) from a cycle.
+------------------------------------------------------------------
+
 permutation(Cycle) := Permutation => (L) -> (
 	S := apply(L, l -> orbitToPermutation l);
 	fold(S, (i,j) -> composePermutations(i,j))     
 )
 
+------------------------------------------------------------------
+-- This extends a permutation on {1,2,..,#P} to {1,2,...,#N}.
+------------------------------------------------------------------
+
 permutation(Permutation, ZZ) := Permutation => (P, N) ->
 	composePermutations(P, identityPermutation N)
+
+------------------------------------------------------------------
+-- This constructs the nth permutation (lex) on {1,2,..,m}.
+------------------------------------------------------------------
 
 permutation(ZZ,ZZ) := Permutation => (m,n) -> 
 	permutation(toList (1..m), n)
 
+------------------------------------------------------------------
+-- This converts a hash table to a permutation.
+------------------------------------------------------------------
+
 permutation(HashTable) := Permutation => (H) -> 
 	new Permutation from hashTable {symbol map => H, symbol cache => new CacheTable}
+
+
 
 ----------------------------------------
 --Helper Function for permutation(Cycle)
 --Converts a list representing one orbit 
 --of a cycle decomposition into a permutation.
 ---------------------------------------------
+
 orbitToPermutation = (L) -> (
 	permutation hashTable flatten apply(#L, i-> L#i => L#((i+1) %#L))
 )
@@ -420,8 +476,6 @@ lengthOfPermutation(Permutation) := ZZ => (P) -> (
 	P.cache.lengthOfPermutation = sum inversionVector P
 )
 
-lengthOfPermutation(Cycle):= ZZ => (C) ->
-	sum inversionVector permutation P
 
 countOrbits = method()
 
@@ -652,7 +706,7 @@ weakBruhatOrder(ZZ):= Poset => (N) ->(
 coveringPair = method()
 
 coveringPair(Permutation,Permutation):= Boolean => (P,S) -> (     
-     (# toTranspositions composePermutations(P,(S^-1)))===1
+     (# first cycle composePermutations(P,(S^-1)))===1
      )
 
 BruhatRelations = method()
