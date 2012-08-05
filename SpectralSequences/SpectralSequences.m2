@@ -183,7 +183,7 @@ M:= source d;
 N:= source (F^(p+r)).dd_(-p-q-1);
 P:= invSubmodule (d, N);
 A:= intersect (M,P);
-dA:= map (N, A, matrix d);
+dA:= inducedMap (N, A, matrix d);
 {A, dA}
 )
 
@@ -249,7 +249,6 @@ filteredComplex E
 chainComplex E
 keys E
 
-keys 
 E_0
 
 -- Nathan's first example
