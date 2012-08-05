@@ -775,6 +775,7 @@ multIdealHyperplaneArrangement(Number,CentralArrangement,List) := (s,A,m) -> (
   HyperplaneArrangements$multIdeal(s,A,m)
   );
 
+lctHyperplaneArrangement = method()
 lctHyperplaneArrangement(CentralArrangement) := (A) -> (
   HyperplaneArrangements$lct(A)
   );
@@ -815,7 +816,6 @@ TEST ///
   J := intmat2monomIdeal(M2,R,1); -- integer matrix -> ideal
   assert ( I === J );
 ///
-
 
 
 
