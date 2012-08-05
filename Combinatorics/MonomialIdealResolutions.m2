@@ -21,7 +21,9 @@ needsPackage ("ChainComplexExtras");
 export {      
   isStable,
   isElement,
+  isStrongGenericMonIdeal,
   isGenericMonIdeal,
+  strictlyDivides,
   EK,
   EKResolution,
   scarf,  
@@ -41,8 +43,8 @@ export {
 -- Exported Code
 -------------------
    
-isGenericMonIdeal=method();
-isGenericMonIdeal(MonomialIdeal) := I->(
+isStrongGenericMonIdeal=method();
+isStrongGenericMonIdeal(MonomialIdeal) := I->(
      local l; 
      flag:=true;
      ex:=apply(I_*,g->(flatten exponents g));
@@ -54,6 +56,29 @@ isGenericMonIdeal(MonomialIdeal) := I->(
 	  );
      flag     
 ) 
+
+isGenericMonIdeal=method();
+isGenericMonIdeal(MonomialIdeal) := I->(
+     local l; 
+     --flag:=true;
+     ex:=apply(I_*,g->(flatten exponents g));
+   --  print VerticalList ex;
+     variableExps := apply(support I,v->(l=(apply(ex,e->e_(index v)))));
+     ties := flatten apply(variableExps, 
+             exps -> unique select((apply(exps, 
+			 entry -> select(#exps, i-> exps_i == entry))), test-> #test > 1)); -- finds the indicies of mon gens that have ties
+     tiesAndComplements := apply(ties, tie-> {tie,select(numgens I, i-> unique(tie|{i}) != tie)}); 
+     testTies := apply(tiesAndComplements, 
+	  tnc -> select(tnc_1, j-> strictlyDivides(support I,(lcm (apply(tnc_0, i-> I_i))),I_j)==true) );
+     if #select(testTies, test-> #test == 0)== 0 then true else false		
+     ) 
+
+strictlyDivides=method();
+strictlyDivides(List, RingElement, RingElement) := (variables, mon1, mon2)->(
+     usableVars := select(variables, v-> mon1%v == 0);
+     if #select(usableVars, v-> (mon1//v)%mon2==0) == #usableVars then true else false
+     )
+
 
 --scarf=method();
 --scarf(MonomialIdeal):= I -> (
