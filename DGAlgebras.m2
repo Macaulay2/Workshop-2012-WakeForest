@@ -1187,6 +1187,8 @@ doc ///
 ///
 
 doc ///
+
+
   Key
     "The Koszul complex as a DG Algebra"
   Headline
@@ -1300,7 +1302,17 @@ doc ///
     The class of all DGAlgebras
   Description
     Text
+      A @ TO DGAlgebra @ A is represented as a  MutableHashTable  with three entries: A.ring is the coefficient ring, A.natural is the underlying algebra and A.diff is the differential. 
+    
+    Text
       Some common ways to create DGAlgebras include @ TO koszulComplexDGA @, @ TO freeDGAlgebra @, @ TO setDiff @, and @ TO acyclicClosure @.
+    
+    Example
+      R = ZZ/101[a,b,c]
+      A = koszulComplexDGA(R)
+      A.ring
+      A.natural
+      A.diff   
   SeeAlso
     "Basic operations on DG Algebras"
 ///
@@ -2991,6 +3003,7 @@ uninstallPackage "DGAlgebras"
 restart
 installPackage "DGAlgebras"
 check "DGAlgebras"
+loadPackage "DGAlgebras"
 viewHelp DGAlgebras
 
 -- Demo
