@@ -4,18 +4,18 @@ newPackage(
     	Date => "August 22, 2011",
     	Authors => {
 	     {Name => "Sonja Mapes", Email => "smapes@math.duke.edu", HomePage => "http://www.math.duke.edu/~smapes/"},
-	     {Name => "Gabor Szekelyhidi", Email => "gszekely@nd.edu", HomePage => "http://www.nd.edu/~gszekely"}
+	     {Name => "Gabor Szekelyhidi", Email => "gszekely@nd.edu", HomePage => "http://www.nd.edu/~gszekely"},
 	     },
     	Headline => "Package for K-stability calculations",
     	DebuggingMode => true
     	)
  
+needsPackage"SimpleDoc" 
+ 
 export {
      centralFiber,
      futaki,
      chow
-     -- testConfiguration
-     -- chow ?	
        }
 
 
@@ -37,14 +37,16 @@ centralFiber(Ideal, List) := (I, W) ->(
 futaki = method(TypicalValue=>QQ)
 futaki(Ideal, List) := (I, W) ->(
      -- compute flat limit
+     Wmin := min W;
      m:=#W;
+     W = apply(m, j -> W_j - Wmin); -- make weights non-negative
      R:=ring(I);
      degs := apply (m, j-> {1,W_j});
-     S := QQ[gens R, Weights => W, Degrees => degs,Global=>false];
+     S := QQ[gens R, Weights => W, Degrees => degs];
      f := map (R/I, S, gens R);
      J := ker f;
-     n := dim J;
-     newIdeal := ideal leadTerm(1,J);
+     n := dim J;  -- original ideal in ring with new multigrading including weights of action
+     newIdeal := ideal leadTerm(1,J); -- initial ideal w.r.t degree
      -- 
      F := hilbertSeries newIdeal;
      numF := value numerator F;
@@ -72,10 +74,12 @@ futaki(Ideal, List) := (I, W) ->(
 chow = method(TypicalValue=>QQ)
 chow(Ideal, List) := (I, W) ->(
      -- compute flat limit
+     Wmin := min W;
      m:=#W;
+     W = apply(m, j -> W_j - Wmin); -- make weights non-negative
      R:=ring(I);
      degs := apply (m, j-> {1,W_j});
-     S := QQ[gens R, Weights => W, Degrees => degs,Global=>false];
+     S := QQ[gens R, Weights => W, Degrees => degs];
      f := map (R/I, S, gens R);
      J := ker f;
      n := dim J;
@@ -108,15 +112,16 @@ chow(Ideal, List) := (I, W) ->(
 beginDocumentation()
 
 
----------
--- front page
----------
-document { 
-  Key => Kstability,
-  Headline => "a package for K-stability computations",
-  PARA{},
-  "Blah blah doing stuff"
-}
+doc ///
+  Key 
+      Kstability
+  Headline 
+      a package for K-stability computations
+  Description
+      Text
+          This package contains functions to compute the Futaki and Chow invariants 
+	  of test-configurations. 
+///
 
 
 
@@ -147,8 +152,8 @@ doc ///
 	  Example
 	       R = QQ[a,b,c]
 	       I=ideal (a*c-b^2)
-	       W = {2,1,1}
-	       futaki(I,W)
+	       w = {2,1,1}
+	       futaki(I,w)
      SeeAlso
      	  centralFiber
 	  chow
@@ -223,5 +228,7 @@ doc ///
 -- Tests
 ---------------------------
 
--- this is an example of a test
---assert(2+2 === 4)
+TEST ///
+    R = QQ[x,y,z]
+    assert ( centralFiber(ideal(y^2 - x*z), {1,0,0}) == ideal(x*z) )
+/// 
