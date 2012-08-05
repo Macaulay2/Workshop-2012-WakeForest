@@ -120,9 +120,9 @@ filteredComplex List := L -> (
 	 error "expected all map to have the same target"));
      
   Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
-  P := {{0,C}} | apply(#maps, p -> {p+1, image maps#p});
-  if (last P)#1 != Z then P = P | {{#maps+1, Z}};
-  return new FilteredComplex from P | {{symbol cache, new CacheTable}})
+  P := {0 => C} | apply(#maps, p -> p+1 => image maps#p);
+  if (last P)#1 != Z then P = P | {#maps+1 => Z};
+  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
     
 filteredComplex ChainComplex := C -> (
   complete C;
@@ -158,7 +158,9 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
     symbol minH => min K^0,
     symbol maxH => max K^0,
     symbol filteredComplex => K,
-    symbol cache => CacheTable})
+    symbol zero => K.zero,
+    symbol cache => CacheTable}
+)
 
 {* Old version of construction 
 cycles := (K,r,p,q) -> (
@@ -228,10 +230,13 @@ SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
       );
     if M != {} then M else continue
   );
-  << L << endl;
-  new SpectralSequenceSheet from flatten L 
+  new SpectralSequenceSheet from flatten L | {symbol zero => E.zero} 
   )
 
+
+SpectralSequenceSheet ^ List := Module => (Er,L) -> (
+       if Er#?L then source Er#L else Er.zero
+       ) 
 end
 
 --------------------------------------------------------------------------------
@@ -253,6 +258,12 @@ keys E
 
 E_0
 keys E_0
+E_0^{1,1}
+E_0^{0,0}
+keys E_0
+C
+E_1
+keys E_1
 
 -- Nathan's first example
 id_(QQ^1) || 0*id_(QQ
