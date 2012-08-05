@@ -23,10 +23,14 @@ newPackage(
   Authors => {{
       Name => "Nathan Grieve", 
       Email => "nathangrieve@mast.queensu.ca"},
+
+    {
+      Name => "Adam Boocher", 
+      Email => "aboocher@math.berkeley.edu", 
+      HomePage => "http://www.math.berkeley.edu/~aboocher"}},
 {
       Name => "Thanh Vu", 
       Email => "vqthanh@math.berkeley.edu"},
-
     {
       Name => "Gregory G. Smith", 
       Email => "ggsmith@mast.queensu.ca", 
