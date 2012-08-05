@@ -106,7 +106,62 @@ sumOut (List,List) := (tensors,indicesByTensor) -> (
      return value(sumCommand|summand))
 sumOut List := L -> sumOut(L/first,L/(i->toSequence remove(i,0)))
 
+----------------
+--Tensor Spaces
+----------------
 
+TensorModule = new Type of Module
+TensorModule.synonym="tensor module"
+tm=tensorModule = method()
+tm Module := M -> (
+     Q:=new TensorModule from M;
+     Q.cache.dimensions = {numgens M};
+     Q.cache.factors = {M};
+     Q
+     )
+net TensorModule := M -> (net new Module from M)|", "|"dimensions: "|toString(M.cache.dimensions)
+TensorModule#{Standard,AfterPrint} = M -> (
+     << endl;				  -- double space
+     n := rank ambient M;
+     << concatenate(interpreterDepth:"o") << lineNumber << " : "
+     << ring M
+     << "-TensorModule";
+{*
+     if M.?generators then
+     if M.?relations then << ", subquotient of " << ambient M
+     else << ", submodule of " << ambient M
+     else if M.?relations then << ", quotient of " << ambient M
+     else if n > 0 then (
+	  << ", free";
+	  if not all(degrees M, d -> all(d, zero)) 
+	  then << ", degrees " << if degreeLength M === 1 then flatten degrees M else degrees M;
+	  );
+*}
+     << endl;
+     )
+dimensions TensorModule := M -> M.cache.dimensions
+module TensorModule := M -> new Module from M
+--
+TensorModule**TensorModule := (M,N) -> (
+     P:=(module M) ** (module N);
+     P=tensorModule P;
+     P.cache.dimensions=M.cache.dimensions|N.cache.dimensions;
+     P.cache.factors=M.cache.factors|N.cache.factors;
+     P
+     )
+P=M**M**M
+t=sum for i in 0..7 list i*P_i
+dimensions class t
+
+----PICK UP HERE
+tel TensorModule := M -> ()
+
+((set{1,2,3})**(set{4,5,6}))
+     
+     
+     )
+
+--
 beginDocumentation()
 
 TEST ///
@@ -168,3 +223,23 @@ es({{A,i,j},{B,j,k},{C,j,l}})
 sumOut({m0,m1,m2},{(2,i),(i,1),(i,0)})
 sumOut{{m0,2,i},{m1,i,1},{m2,i,0}}
 sumOut({m0,m0,m0},{(0,i),(i,1),(j,0)})
+
+-----
+module M
+M=tm R^2
+M.cache.dimensions
+keys M.cache
+N=M
+M
+M=tm R^2
+P=M**M
+((M**M**M)**(M**M**M)).cache.factors
+tensorModule P
+class P
+
+class class( (M_1)**(M_0))
+
+
+
+
+
