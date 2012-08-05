@@ -19,11 +19,13 @@ export {
        }
 
 
-centralFiber = method()
-centralFiber(Ring, Ideal, List) := (R, I, W) ->(
+centralFiber = method(TypicalValue=>Ideal)
+centralFiber(Ideal, List) := (I, W) ->(
      -- compute flat limit
-     degs := apply (#W, j-> entries (matrix{apply(#W, i-> 1), W})_j);
-     S := QQ[apply(#W, i-> concatenate("x",toString(i))), Weights => W, Degrees => degs];
+     n:=#W;
+     R:=ring(I);
+     degs := apply (n, j-> {1,W_j});
+     S := QQ[gens R, Weights => W, Degrees => degs,Global =>false];
      f := map (R/I, S, gens R);
      J := ker f;
      leadJ := ideal leadTerm(1,J);
@@ -32,15 +34,17 @@ centralFiber(Ring, Ideal, List) := (R, I, W) ->(
 )    
 
 
-futaki = method()
-futaki(Ring, List) := (R, W) ->(
+futaki = method(TypicalValue=>QQ)
+futaki(Ideal, List) := (I, W) ->(
      -- compute flat limit
-     degs := apply (#W, j-> entries (matrix{apply(#W, i-> 1), W})_j);
-     S := QQ[apply(#W, i-> concatenate("x",toString(i))), Weights => W, Degrees => degs];
+     m:=#W;
+     R:=ring(I);
+     degs := apply (m, j-> {1,W_j});
+     S := QQ[gens R, Weights => W, Degrees => degs,Global =>false];
      f := map (R, S, gens R);
-     I := ker f;
-     n := dim I;
-     newIdeal := ideal leadTerm(1,I);
+     J := ker f;
+     n := dim J;
+     newIdeal := ideal leadTerm(1,J);
      -- 
      F := hilbertSeries newIdeal;
      numF := value numerator F;
@@ -63,15 +67,19 @@ futaki(Ring, List) := (R, W) ->(
      b1 - a1*b0/a0
     )
 
-chow = method()
-chow(Ring, List) := (R, W) ->(
+
+--
+chow = method(TypicalValue=>QQ)
+chow(Ideal, List) := (I, W) ->(
      -- compute flat limit
-     degs := apply (#W, j-> entries (matrix{apply(#W, i-> 1), W})_j);
-     S := QQ[apply(#W, i-> concatenate("x",toString(i))), Weights => W, Degrees => degs];
+     m:=#W;
+     R:=ring(I);
+     degs := apply (m, j-> {1,W_j});
+     S := QQ[gens R, Weights => W, Degrees => degs,Global =>false];
      f := map (R, S, gens R);
-     I := ker f;
-     n := dim I;
-     newIdeal := ideal leadTerm(1,I);
+     J := ker f;
+     n := dim J;
+     newIdeal := ideal leadTerm(1,J);
      -- 
      F := hilbertSeries newIdeal;
      numF := value numerator F;
@@ -132,14 +140,14 @@ document {
 doc ///
      Key     
      	  futaki
-	  (futaki, Ring, List)
+	  (futaki, Ideal, List)
      Headline
      	  computes the Futaki invariant
      Usage
-     	  n = futaki(R,w)
+     	  n = futaki(I,w)
      Inputs
-     	  R : Ring
-	       a quotient of a polynomial ring
+     	  I : Ring
+	       an ideal in a polynomial ring
 	  w : List
 	       a list of weights 
      Outputs
@@ -151,29 +159,31 @@ doc ///
 	       acting by the C* action with the given weights, inside the projective space given by the polynomial
 	       ring.
 	  Example
-	       R = QQ[a,b,c]/(a*c-b^2)
+	       R = QQ[a,b,c]
+	       I=ideal (a*c-b^2)
 	       W = {2,1,1}
---	       futaki(R,W)
+	       futaki(I,W)
      SeeAlso
      	  centralFiber
+	  chow
      	  
 ///
 
 doc ///
      Key     
      	  centralFiber
-	  (centralFiber, Ring, Ideal, List)
+	  (centralFiber, Ideal, List)
      Headline
      	  computes the central fiber of a test-configuration
      Usage
-     	  I = centralFiber(R,w)
+     	  J = centralFiber(I,w)
      Inputs
-     	  R : Ring
-	       a quotient of a polynomial ring
+          I : Ideal
+	       an ideal in a polynomial ring
 	  w : List
 	       a list of weights 
      Outputs
-     	  I : Ideal
+     	  J : Ideal
 	       an ideal in R
      Description
     	  Text
@@ -181,25 +191,27 @@ doc ///
 	       acting by the C* action with the given weights, inside the projective space given by the polynomial
 	       ring.
 	  Example
-	       R = QQ[a,b,c]/(a*c-b^2)
+	       R = QQ[a,b,c]
+	       I=(a*c-b^2)
 	       W = {2,1,1}
---	       centralFiber(R,W)
+	       centralFiber(I,W)
      SeeAlso
      	  futaki
+	  chow
      	  
 ///
 
 doc ///
      Key     
-     	  futaki
-	  (futaki, Ring, List)
+     	  chow
+	  (chow, Ideal, List)
      Headline
-     	  computes the Futaki invariant
+     	  computes the Chow invariant
      Usage
-     	  n = futaki(R,w)
+     	  n = chow(I,w)
      Inputs
-     	  R : Ring
-	       a quotient of a polynomial ring
+     	  I : Ideal
+	       an ideal in a polynomial ring
 	  w : List
 	       a list of weights 
      Outputs
@@ -207,15 +219,17 @@ doc ///
 	       a rational number
      Description
     	  Text
-	       This function computes the Futaki invariant of the test-configuration obtained by 
+	       This function computes the Chow invariant of the test-configuration obtained by 
 	       acting by the C* action with the given weights, inside the projective space given by the polynomial
 	       ring.
-	  Example
-	       R = QQ[a,b,c]/(a*c-b^2)
+	  Example  
+	       R = QQ[a,b,c]
+	       I=ideal (a*c-b^2)
 	       W = {2,1,1}
-	       futaki(R,W)
+	       chow(I,W)
      SeeAlso
      	  centralFiber
+	  futaki
      	  
 ///
 
@@ -224,4 +238,4 @@ doc ///
 ---------------------------
 
 -- this is an example of a test
-assert(2+2 === 4)
+--assert(2+2 === 4)
