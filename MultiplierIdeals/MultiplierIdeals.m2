@@ -91,10 +91,8 @@ newPackage(
        {Name => "Claudiu Raicu"}
        },
       Headline => "multiplier ideals, log canonical thresholds, and jumping numbers",
-      PackageImports=>{"ReesAlgebra","Dmodules","Normaliz"}
+      PackageImports=>{"ReesAlgebra","Dmodules","Normaliz","HyperplaneArrangements"}
       )
-
---needsPackage "HyperplaneArrangements"
 
 
 -- Main functionality:
@@ -161,6 +159,49 @@ setNmzOption("bigint",true);
 -- METHODS ---------------------------------------------------------------------
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- SHARED ROUTINES -------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+intmat2monomIdeal = method();
+intmat2monomIdeal ( Matrix, Ring ) := (M,R) -> (
+  if ( numColumns M > numgens R ) then (
+    error("intmat2monomIdeal: Not enough generators in ring.");
+  );
+  
+  genList := apply( 0..< numRows M ,
+                    i -> R_(flatten entries M^{i}) );
+  
+  return monomialIdeal genList;
+);
+-- only include rows whose last entry is d; and ignore last column
+intmat2monomIdeal ( Matrix, Ring, ZZ ) := (M,R,d) -> intmat2monomIdeal(M,R,d,numColumns(M)-1);
+-- only include rows with entry 'd' in column 'c'; and ignore column 'c'
+intmat2monomIdeal ( Matrix, Ring, ZZ, ZZ ) := (M,R,d,c) -> (
+  if ( numColumns M > 1 + numgens R ) then (
+    error("intmat2monomIdeal: Not enough generators in ring.");
+  );
+  
+  rowList := select( 0 ..< numRows M , i -> (M_(i,c) == d) ) ;
+  columnList := delete( c , toList(0 ..< numColumns M) );
+  
+  M1 := submatrix(M,rowList,columnList);
+  
+  return intmat2monomIdeal(M1,R);
+);
+
+
+-- keynumber: 'key number' of an ideal,
+-- a la Hochster-Huneke:
+-- should be keynumber=min(ambient dimension, numgens I, analyticSpread I) = analyticSpread I
+-- v0.2b: keynumber = ambient dimension = numColumns vars ring I
+-- v0.2c: keynumber = analyticSpread
+keynumber = (I) -> (
+--  return numColumns vars ring I;
+--  return numgens trim I;
+  return analyticSpread(I); -- defined in package 'ReesAlgebra'
+);
 
 
 --------------------------------------------------------------------------------
@@ -326,35 +367,6 @@ multIdealMonomial (MonomialIdeal, QQ) := (I,t) -> (
 );
 
 
-intmat2monomIdeal = method();
-intmat2monomIdeal ( Matrix, Ring ) := (M,R) -> (
-  if ( numColumns M > numgens R ) then (
-    error("intmat2monomIdeal: Not enough generators in ring.");
-  );
-  
-  genList := apply( 0..< numRows M ,
-                    i -> R_(flatten entries M^{i}) );
-  
-  return monomialIdeal genList;
-);
--- only include rows whose last entry is d; and ignore last column
-intmat2monomIdeal ( Matrix, Ring, ZZ ) := (M,R,d) -> intmat2monomIdeal(M,R,d,numColumns(M)-1);
--- only include rows with entry 'd' in column 'c'; and ignore column 'c'
-intmat2monomIdeal ( Matrix, Ring, ZZ, ZZ ) := (M,R,d,c) -> (
-  if ( numColumns M > 1 + numgens R ) then (
-    error("intmat2monomIdeal: Not enough generators in ring.");
-  );
-  
-  rowList := select( 0 ..< numRows M , i -> (M_(i,c) == d) ) ;
-  columnList := delete( c , toList(0 ..< numColumns M) );
-  
-  M1 := submatrix(M,rowList,columnList);
-  
-  return intmat2monomIdeal(M1,R);
-);
-
-
-
 
 -- lctMonomial: lct of monomial ideal
 lctMonomial = method();
@@ -431,17 +443,6 @@ thresholdMonomial (MonomialIdeal , List) := (I , v) -> (
   facetMatrix := M^facetList;
   
   return ( threshVal , facetMatrix );
-);
-
--- keynumber: 'key number' of an ideal,
--- a la Hochster-Huneke:
--- should be keynumber=min(ambient dimension, numgens I, analyticSpread I) = analyticSpread I
--- v0.2b: keynumber = ambient dimension = numColumns vars ring I
--- v0.2c: keynumber = analyticSpread
-keynumber = (I) -> (
---  return numColumns vars ring I;
---  return numgens trim I;
-  return analyticSpread(I); -- defined in package 'ReesAlgebra'
 );
 
 --------------------------------------------------------------------------------
@@ -777,6 +778,234 @@ multIdealHyperplaneArrangement(Number,CentralArrangement,List) := (s,A,m) -> (
 lctHyperplaneArrangement(CentralArrangement) := (A) -> (
   HyperplaneArrangements$lct(A)
   );
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- TESTS -----------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- VIA DMODULES ----------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- MONOMIAL IDEALS -------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+-- Test 0
+-- Compute a NewtonPolyhedron and intmat2monomialIdeal:
+-- go from Ideal -> Polyhedron -> Ideal, see if it is the same again
+TEST ///
+  needsPackage "Normaliz";
+  needsPackage "MultiplierIdeals";
+  debug MultiplierIdeals;
+  R := QQ[x,y,z];
+  use R;
+  I := monomialIdeal(x*z^2,y^3,y*z^3,y^2*z^2,x*y^2*z,x^2*y*z,x^3*z,x^2*y^2,x^4*y,x^5,z^6);
+  -- this I is integrally closed!
+  M1 := NewtonPolyhedron(I); -- integer matrix (A|b) s.t. Newt(I) = {Ax \geq b}
+  nmzOut := normaliz(M1,4);
+  M2 := nmzOut#"gen"; -- integer matrix whose rows (minimally) generate semigroup 
+   -- of lattice points in {Ax \geq b}, where M1 = (A|b)
+  J := intmat2monomIdeal(M2,R,1); -- integer matrix -> ideal
+  assert ( I === J );
+///
+
+
+
+
+-- Test 2
+-- Compute some LCTs of diagonal monomial ideals
+TEST ///
+  needsPackage "MultiplierIdeals";
+  R := QQ[x_1..x_5];
+  use R;
+  for a from 1 to 6 do (
+    for b from a to 6 do (
+      for c from b to 6 do (
+        for d from c to 6 do (
+          for e from d to 6 do (
+            I := monomialIdeal(x_1^a,x_2^b,x_3^c,x_4^d,x_5^e);
+            l := 1/a+1/b+1/c+1/d+1/e;
+            assert ( lctMonomial(I) === l );
+          );
+        );
+      );
+    );
+  );
+///
+
+
+
+
+
+-- Test 5
+-- Threshold computations
+TEST ///
+  needsPackage "MultiplierIdeals";
+  R := QQ[x,y];
+  use R;
+  I := monomialIdeal( y^2 , x^3 );
+  assert ( thresholdMonomial( I , 1_R ) === (5/6,map(ZZ^1,ZZ^3,{{2, 3, -6}})) );
+  assert ( thresholdMonomial( I , x ) === (7/6,map(ZZ^1,ZZ^3,{{2, 3, -6}})) );
+  I = monomialIdeal( x^3 , x*y , y^4 );
+  assert ( thresholdMonomial( I , 1_R ) === (1/1,map(ZZ^2,ZZ^3,{{1, 2, -3}, {3, 1, -4}})) );
+  assert ( thresholdMonomial( I , x ) === (4/3,map(ZZ^1,ZZ^3,{{1, 2, -3}})) );
+///
+
+--------------------------------------------------------------------------------
+-- MONOMIAL CURVES -------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+---Test 0 - affineMonomialCurveIdeal
+TEST ///
+needsPackage"MultiplierIdeals";
+debug MultiplierIdeals;
+R = QQ[x,y,z];
+assert( (affineMonomialCurveIdeal(R,{2,3,4})) == ideal(y^2-x*z,x^2-z) )
+assert( (affineMonomialCurveIdeal(R,{5,8})) == ideal(x^8-y^5) )
+assert( (affineMonomialCurveIdeal(R,{1,1,1})) == ideal(y-z,x-z) )
+///
+
+---Test 1 - ord
+TEST ///
+needsPackage"MultiplierIdeals";
+debug MultiplierIdeals;
+R = QQ[x,y,z];
+assert( (ord({2,3,4},z-x^2)) === 4 )
+assert( (ord({1,1,1},z*y+x-x^2)) === 1 )
+assert( (ord({0,0,0},(z*y+x-x^2)^2)) === 0 )
+assert( (ord({2,3,4},1+x)) === 0 )
+///
+
+---Test 2 - sortedGens
+TEST ///
+needsPackage"MultiplierIdeals";
+debug MultiplierIdeals;
+R = QQ[x,y,z];
+assert( {x^2-z,y^2-x*z} === (sortedGens(R,{2,3,4})) )
+assert( (sortedGens(R,{1,1,1})) === {y-z,x-z} )
+assert( (try sortedGens(R,{0,0,0}) else oops) === oops )
+///
+
+---Test 3 - exceptionalDivisorValuation
+TEST ///
+needsPackage"MultiplierIdeals";
+debug MultiplierIdeals;
+R = QQ[x,y,z];
+assert( (exceptionalDivisorValuation({2,3,4},{1,1,2},x)) === 1 )
+assert( (exceptionalDivisorValuation({2,3,4},{1,1,2},y)) === 1 )
+assert( (exceptionalDivisorValuation({2,3,4},{1,1,2},z)) === 2 )
+assert( (exceptionalDivisorValuation({2,3,4},{1,1,2},z-x^2)) === 2 )
+assert( (exceptionalDivisorValuation({2,3,4},{1,1,2},(z-x^2)^3*(x+y+z))) === 7 )
+assert( (exceptionalDivisorValuation({3,5,11},{7,1,2},x)) === 7 )
+assert( (exceptionalDivisorValuation({3,5,11},{7,1,2},y)) === 1 )
+assert( (exceptionalDivisorValuation({3,5,11},{7,1,2},z)) === 2 )
+assert( (exceptionalDivisorValuation({3,5,11},{7,1,2},x^2*y-z)) === 3 )
+assert( (exceptionalDivisorValuation({3,5,11},{7,1,2},(x^2*y-z)^2 * x * (y + z))) === 14 )
+///
+
+---Test 4 - monomialValuationIdeal
+TEST ///
+needsPackage"MultiplierIdeals";
+needsPackage "Normaliz";
+debug MultiplierIdeals;
+R = QQ[x,y];
+assert( (monomialValuationIdeal(R,{2,3},6)) == monomialIdeal (x^3,x^2*y,y^2) )
+assert( (monomialValuationIdeal(R,{2,3},1)) == monomialIdeal (x,y) )
+assert( (monomialValuationIdeal(R,{2,3},0)) == monomialIdeal 1_R )
+assert( (monomialValuationIdeal(R,{2,3},-1)) == monomialIdeal 1_R )
+
+S = QQ[x,y,z];
+assert( (monomialValuationIdeal(S,{2,3,4},6)) == monomialIdeal (x^3,x^2*y,y^2,x*z,y*z,z^2) )
+assert( (monomialValuationIdeal(S,{3,4,5},9)) == monomialIdeal (x^3,x^2*y,x*y^2,y^3,x^2*z,y*z,z^2) )
+assert( (monomialValuationIdeal(S,{3,5,11},0)) == monomialIdeal 1_S )
+assert( (monomialValuationIdeal(S,{3,5,11},2)) == monomialIdeal (x,y,z) )
+///
+
+---Test 5 - exceptionalDivisorValuationIdeal
+TEST ///
+needsPackage"MultiplierIdeals";
+needsPackage "Normaliz";
+debug MultiplierIdeals;
+R = QQ[x,y,z];
+ff = sortedGens(R,{3,4,5});
+assert( (exceptionalDivisorValuationIdeal(R,ff,{1,1,2},6)) == ideal(z^3,y^2*z^2,x*y*z^2,x^2*z^2,y^3*z,x*y^2*z,y^4,x^3*y*z,x^4*z,x^2*y^3,x^3*y^2,x^5*y,x^6) )
+assert( (exceptionalDivisorValuationIdeal(R,ff,{2,3,4},3)) == ideal(z,y,x^2) )
+S = QQ[x,y,z];
+ff = sortedGens(S,{2,3,4});
+assert( ( exceptionalDivisorValuationIdeal(S,ff,{1,2,2},4)) == ideal(z^2,y*z,y^2,x^2*z,x^2*y,x^3-x*z) )
+assert( ( exceptionalDivisorValuationIdeal(S,ff,{2,3,4},6)) == ideal(z^2,y*z,x*z,y^2,x^2-z) )
+assert( ( exceptionalDivisorValuationIdeal(S,ff,{2,3,4},1)) == ideal(z,y,x) )
+assert( ( exceptionalDivisorValuationIdeal(S,ff,{1,2,2},6)) == ideal(z^3,y*z^2,y^2*z,y^3,x^2*z^2,x^2*y*z,x^3*z-x*z^2,x^2*y^2,x^3*y-x*y*z,x^4-2*x^2*z+z^2) )
+assert( ( exceptionalDivisorValuationIdeal(S,ff,{1,2,2},-1)) == ideal 1_S )
+assert( ( exceptionalDivisorValuationIdeal(S,ff,{1,2,2},0)) == ideal 1_S )
+///
+
+---Test 6 - termIdeal
+TEST ///
+needsPackage"MultiplierIdeals";
+debug MultiplierIdeals;
+R = QQ[x,y,z];
+assert( (termIdeal(ideal{y^2-x^3})) == monomialIdeal (x^3,y^2) )
+assert( (termIdeal(ideal{y^2-x^3,(x-y)^3})) == monomialIdeal (x^3,x^2*y,y^2) )
+assert( (termIdeal(ideal{y^2-x^3,x*y*z+1})) == monomialIdeal 1_R )
+assert( (termIdeal(ideal{0_R})) == monomialIdeal 0_R )
+assert( (termIdeal(ideal{1_R})) == monomialIdeal 1_R )
+///
+
+
+---Test 7 - symbolicPowerCurveIdeal
+TEST ///
+needsPackage"MultiplierIdeals";
+debug MultiplierIdeals;
+R = QQ[x,y,z];
+I = affineMonomialCurveIdeal(R,{2,3,4})
+J = affineMonomialCurveIdeal(R,{3,4,5})
+assert(symbolicPowerCurveIdeal(I,3) == I^3)
+assert(symbolicPowerCurveIdeal(J,3) != J^3)
+assert(symbolicPowerCurveIdeal(J,1) == J)
+assert( (symbolicPowerCurveIdeal(J,2)) == ideal(y^4-2*x*y^2*z+x^2*z^2,x^2*y^3-x^3*y*z-y^2*z^2+x*z^3,x^3*y^2-x^4*z-y^3*z+x*y*z^2,x^5+x*y^3-3*x^2*y*z+z^3) )
+assert( (symbolicPowerCurveIdeal(J,4)) == ideal(y^8-4*x*y^6*z+6*x^2*y^4*z^2-4*x^3*y^2*z^3+x^4*z^4,x^2*y^7-3*x^3*y^5*z+3*x^4*y^3*z^2-x^5*y*z^3-y^6*z^2+3*x*y^4*z^3-3*x^2*y^2*z^4+x^3*z^5,x^3*y^6-3*x^4*y^4*z+3*x^5*y^2*z^2-x^6*z^3-y^7*z+3*x*y^5*z^2-3*x^2*y^3*z^3+x^3*y*z^4,x^5*y^4-2*x^6*y^2*z+x^7*z^2+x*y^7-5*x^2*y^5*z+7*x^3*y^3*z^2-3*x^4*y*z^3+y^4*z^3-2*x*y^2*z^4+x^2*z^5,x^7*y^3-x^8*y*z-x^4*y^4*z-x^5*y^2*z^2+2*x^6*z^3+y^7*z-4*x*y^5*z^2+8*x^2*y^3*z^3-5*x^3*y*z^4-y^2*z^5+x*z^6,x^8*y^2-x^9*z+x^4*y^5-5*x^5*y^3*z+4*x^6*y*z^2-x*y^6*z+4*x^2*y^4*z^2-2*x^3*y^2*z^3-x^4*z^4-y^3*z^4+x*y*z^5,x^10+2*x^6*y^3-6*x^7*y*z+x^2*y^6-6*x^3*y^4*z+9*x^4*y^2*z^2+2*x^5*z^3+2*x*y^3*z^3-6*x^2*y*z^4+z^6) )
+assert( (symbolicPowerCurveIdeal(I,0)) == ideal 1_R )
+assert( (symbolicPowerCurveIdeal(J,-1)) == ideal 1_R )
+///
+
+
+----Test 8 - monomialSpaceCurveMultiplierIdeal 
+TEST ///
+needsPackage"MultiplierIdeals";
+needsPackage"Dmodules";
+debug MultiplierIdeals;
+
+R = QQ[x,y,z];
+assert( (multIdealMonomialCurve(R,{2,3,4},1)) == ideal 1_R )
+assert( (multIdealMonomialCurve(R,{2,3,4},7/6)) == ideal 1_R )
+assert( (multIdealMonomialCurve(R,{2,3,4},20/7)) == ideal(y^2*z-x*z^2,x^2*z-z^2,y^3-x*y*z,x*y^2-z^2,x^2*y-y*z,x^3-x*z) )
+assert( (multIdealMonomialCurve(R,{3,4,5},11/5)) == ideal(y^2-x*z,x^2*y-z^2,x^3-y*z) )
+I = affineMonomialCurveIdeal(R,{2,3,4})
+assert(multIdealMonomialCurve(R,{2,3,4},3/2) == Dmodules$multiplierIdeal(I,3/2))
+///
+
+
+
+
+
+----Test 10 - monomialSpaceCurveLCT
+TEST ///
+needsPackage "MultiplierIdeals";
+R = QQ[x,y,z];
+assert( (lctMonomialCurve(R,{2,3,4})) === 11/6 )
+assert( (lctMonomialCurve(R,{3,4,5})) === 13/9 )
+assert( (lctMonomialCurve(R,{3,4,11})) === 19/12 )
+///
+
+
 
 
 
