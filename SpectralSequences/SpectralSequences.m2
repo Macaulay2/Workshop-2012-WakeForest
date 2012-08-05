@@ -27,7 +27,7 @@ newPackage(
     {
       Name => "Adam Boocher", 
       Email => "aboocher@math.berkeley.edu", 
-      HomePage => "http://www.math.berkeley.edu/~aboocher"}},
+      HomePage => "http://www.math.berkeley.edu/~aboocher"},
 {
       Name => "Thanh Vu", 
       Email => "vqthanh@math.berkeley.edu"},
@@ -192,7 +192,7 @@ pageB := (r,F,p,q) -> (
 pageE = method ();
 pageE :=  (r,F,p,q) -> (
     Z:= pageZ(r,F,p,q);
-    B:= pageZ(r,F,p,q);
+    B:= pageB(r,F,p,q);
     Z/B
     ) 
 
