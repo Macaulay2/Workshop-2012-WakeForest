@@ -55,14 +55,24 @@ isGenericMonIdeal(MonomialIdeal) := I->(
      flag     
 ) 
 
+--scarf=method();
+--scarf(MonomialIdeal):= I -> (
+--   S:=drop(subsets(numgens I),1);
+--   faces:={};
+--   P:=partition(s->lcmMon(apply (s,i->flatten exponents I_i)),S);
+--   apply(keys P,k->if #(P#k)==1 then faces=faces|P#k); 
+--   v:=getSymbol "v";
+--   R:=QQ[v_1..v_(length faces-1)];
+--   simplicialComplex apply(faces,f->product(apply(f,i->R_i)))           
+--)
 scarf=method();
 scarf(MonomialIdeal):= I -> (
    S:=drop(subsets(numgens I),1);
-   faces:={};
    P:=partition(s->lcmMon(apply (s,i->flatten exponents I_i)),S);
-   apply(keys P,k->if #(P#k)==1 then faces=faces|P#k); 
+   faceMarkers := select(keys P,k->#(P#k)==1); 
+   faces := flatten apply(faceMarkers, k-> P#k);
    v:=getSymbol "v";
-   R:=QQ[v_1..v_(length faces-1)];
+   R:=QQ[v_1..v_(length faces)];
    simplicialComplex apply(faces,f->product(apply(f,i->R_i)))           
 )
 
