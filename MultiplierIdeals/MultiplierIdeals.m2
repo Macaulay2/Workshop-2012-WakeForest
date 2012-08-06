@@ -128,7 +128,9 @@ export {
      multIdealMonomialCurve,
      lctMonomialCurve,
      multIdealHyperplaneArrangement,
-     lctHyperplaneArrangement
+     lctHyperplaneArrangement,
+     multIdealGenericDeterminantal,
+     lctIdealGenericDeterminantal
      }
 
 --     multIdeal,
@@ -783,6 +785,51 @@ lctHyperplaneArrangement(CentralArrangement) := (A) -> (
   );
 
 
+--------------------------------------------------------------------------------
+-- HYPERPLANE ARRANGEMENTS -----------------------------------------------------
+--------------------------------------------------------------------------------
+
+genericDeterminantalSymbolicPower := (R,m,n,r,a) -> (
+  X := genericMatrix(R,m,n);
+  I := ideal(1_R);
+  for p in partitions(a) do (
+    J := ideal(1_R);
+    for i from 0 to (#p - 1) do (
+      J = J * minors(X, r - 1 + p#i);
+    );
+    
+    I = I + J;
+  );
+  
+  return I;
+);
+
+{*
+multIdealGenericDeterminantal = method()
+multIdealGenericDeterminantal(Ring,ZZ,ZZ,ZZ,ZZ) := (R,m,n,r,c) -> multIdealGenericDeterminantal(R,m,n,r,promote(c,QQ));
+multIdealGenericDeterminantal(Ring,ZZ,ZZ,ZZ,QQ) := (R,m,n,r,c) -> (
+*}
+multIdealGenericDeterminantal = (R,m,n,r,c) -> (
+  if ( m*n > numcols vars R ) then (
+    error "not enough variables in ring";
+  );
+  X := genericMatrix(R,m,n);
+  I := minors(X,r);
+  J := ideal(1_R);
+  
+  for i from 1 to r do (
+    ai := floor( c * (r+1-i) ) - (n-i+1)*(m-i+1);
+    Ji := genericDeterminantalSymbolicPower(R,m,n,i,ai);
+    J = intersect(J,Ji);
+  );
+  
+  return J;
+);
+
+lctIdealGenericDeterminantal = method()
+lctIdealGenericDeterminantal(ZZ,ZZ,ZZ) := (m,n,r) -> (
+  min( apply(1..r , i -> (n-i)*(m-i)/(r+1-i)) )
+);
 
 
 
@@ -791,6 +838,22 @@ lctHyperplaneArrangement(CentralArrangement) := (A) -> (
 -- TESTS -----------------------------------------------------------------------
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- SIMPLE TESTS ----------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+TEST ///
+///
+
+TEST ///
+  needsPackage "MultiplierIdeals";
+///
+
+--------------------------------------------------------------------------------
+-- SHARED ROUTINES -------------------------------------------------------------
+--------------------------------------------------------------------------------
+
 
 --------------------------------------------------------------------------------
 -- VIA DMODULES ----------------------------------------------------------------
@@ -1026,6 +1089,7 @@ assert( (lctMonomialCurve(R,{3,4,11})) === 19/12 )
 
 TEST ///
   needsPackage "MultiplierIdeals";
+  needsPackage "HyperplaneArrangements";
   R := QQ[x,y,z];
   use R;
   f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
@@ -1035,12 +1099,20 @@ TEST ///
 ///
 
 TEST ///
+  needsPackage "MultiplierIdeals";
+  needsPackage "HyperplaneArrangements";
   R := QQ[x,y,z];
   f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
   A := arrangement f;
   assert(A == arrangement {z, y - z, y + z, x - z, x + z, x - y, x + y});
   assert(multIdealHyperplaneArrangement(3/7,A) == ideal(z,y,x));
 ///
+
+
+--------------------------------------------------------------------------------
+-- GENERIC DETERMINANTAL -------------------------------------------------------
+--------------------------------------------------------------------------------
+
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -1052,10 +1124,12 @@ beginDocumentation()
 document { 
   Key => MultiplierIdeals,
   Headline => "A package for computing multiplier ideals",
-  EM "MultiplierIdeals", " is a package for computing multiplier ideals.",
-  "The implementation for monomial curves is based on the algorithm given in ",
-    "H.M. Thompson's paper", ITALIC "Multiplier Ideals of Monomial Space Curves",
-    HREF { "http://arxiv.org/abs/1006.1915" , "arXiv:1006.1915v4" }, "[math.AG]."
+  PARA {EM "MultiplierIdeals", " is a package for computing multiplier ideals. "},
+  PARA {"The implementation for monomial ideals uses Howald's Theorem."},
+  PARA {"The implementation for monomial curves is based on the algorithm given in ",
+  "H.M. Thompson's paper ", ITALIC "Multiplier Ideals of Monomial Space Curves",
+  " ", HREF { "http://arxiv.org/abs/1006.1915" , "arXiv:1006.1915v4" },
+  " [math.AG]."}
 }
 
 --------------------------------------------------------------------------------
