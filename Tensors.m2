@@ -15,21 +15,21 @@ newPackage(
  --for this package to work  
    
 --ToDo:
---1)new type and methods for tensors
---on creation of new tensor space
---e.g. t_(1,0,0) should work.
---2)tensor' to make tensors
---3)equality testing of tensor spaces
+--1) t_(1,0,0) should work directly
+--2) tensor' to make tensors
+--3) equality testing of tensor spaces
+--4) command for dropping 1's in dimension list
 
 exportMutable {TemporaryTensorList, TemporaryIndexList}
-export{TensorArray, tensorArray}
-export{toTensor,isTensor}
+
 export{associativeCartesianProduct,
      nestedListAccess,isRectangular,
      rectangularNestedList}
+export{TensorArray, tensorArray}
 export{einsteinSummation}
-export{sumOut}
 export{Tensor,TensorModule}
+export{tensor',isTensor}
+export{sumOut}
 
 
 --
@@ -203,9 +203,9 @@ TensorModule#{Standard,AfterPrint} = M -> (
      << endl;
      )
 
--------------------------
+-------------------------------------
 --Method for building tensor modules:
--------------------------
+-------------------------------------
 
 --Copy an ImmutableHashTable with a CacheTable:
 cacheCopy = method()
@@ -278,13 +278,13 @@ TensorModule++TensorModule := (M,N) -> (
 tensorArray Tensor := t -> new TensorArray from rnl (dimensions t,entries t);
 ------
 tt=
-toTensor = method()
-toTensor (List,TensorModule) := (L,M) -> (
+tensor' = method()
+tensor' (List,TensorModule) := (L,M) -> (
      t:=tensorArray L;
-     if not dimensions t == dimensions M then error "toTensor (List,TensorModule): dimension mismatch";
+     if not dimensions t == dimensions M then error "tensor' (List,TensorModule): dimension mismatch";
      new M from vector ultimate(flatten,L)
      )
-toTensor TensorArray := t -> (
+tensor' TensorArray := t -> (
      dims:=dimensions t;
      f:=ultimate(flatten,t);
      R:=commonRing f;
@@ -292,7 +292,7 @@ toTensor TensorArray := t -> (
      new M from vector f
      )
 
-toTensor List := L -> toTensor tensorArray L;
+tensor' List := L -> tensor' tensorArray L;
 ------
 isTensor=method()
 isTensor Thing := x -> instance(class x,TensorModule)
@@ -325,19 +325,6 @@ N_0
 O_0
 --
 
---This does not work:
-M=tm(R,{1})
-M**M
-M
-M**M**M**M
---
-
---This does not work:
-M=tm(R,{1})
-N=tm(R,{1,1})
-M
---
-
 --this works:
 M=tm(R,{1})
 N=tm(R,{1,1})
@@ -354,17 +341,10 @@ N
 
 
 M=tm R^2
-f=map(M,M,{{0,1},{1,0}})
-t=(M_0)**(M_1)**(M_0)
-g=f**f**f
-g*t
-
-M=tm R^2
 f=map(tm R^1,M,{{1,1}})
 f=map(tm R^3,M,{{1,1},{2,3},{4,5}})
-source f == M
 t=(M_0)**(M_1)**(M_0)
-g=f**f**f
+g=f**f**(id_(M))
 g*t
 
 N = tm R^1
@@ -373,9 +353,9 @@ N**N**N**N
 --check rectangular in tel
 
 L={{1,2},{3,4}}
-toTensor(ta toTensor({L,L,L},M++M++M),M)
-t=toTensor({L,L+L,L+L+L+L},((tm R^3)**M))
-toTensor(ta t,((tm R^3)**M))==t
+tensor'(ta tensor'({L,L,L},M++M++M),M)
+t=tensor'({L,L+L,L+L+L+L},((tm R^3)**M))
+tensor'(ta t,((tm R^3)**M))==t
 
 
 while not all(L,i->not class i == List)
