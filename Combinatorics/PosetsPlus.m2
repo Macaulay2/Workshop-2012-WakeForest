@@ -59,6 +59,7 @@ posetMap(Poset, Poset, HashTable) := PosetMap => (P1, P2, H) -> (
 	new PosetMap from hashTable {symbol source => P1, symbol target => P2, symbol map => H, symbol cache => new CacheTable})
 
 
+map(Poset,Poset,List) := PosetMap => opts -> (P1,P2,M) -> (posetMap(P1,P2,M))
 
 
 
@@ -68,7 +69,7 @@ P1 = poset({a,b,c},{(a,b), (b,c)})
 P2 = poset({x,y},{(x,y)})
 M = {{a,x},{b,y},{c,y}}
 posetMap(P1,P2,M)
-
+map(P1,P2,M)
 
 
 
