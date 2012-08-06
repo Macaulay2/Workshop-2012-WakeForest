@@ -828,7 +828,7 @@ multIdealGenericDeterminantal = (R,m,n,r,c) -> (
 
 lctIdealGenericDeterminantal = method()
 lctIdealGenericDeterminantal(ZZ,ZZ,ZZ) := (m,n,r) -> (
-  min( apply(1..r , i -> (n-i)*(m-i)/(r+1-i)) )
+  min( apply(1..<r , i -> (n-i)*(m-i)/(r-i)) )
 );
 
 
@@ -1129,7 +1129,9 @@ document {
   PARA {"The implementation for monomial curves is based on the algorithm given in ",
   "H.M. Thompson's paper ", ITALIC "Multiplier Ideals of Monomial Space Curves",
   " ", HREF { "http://arxiv.org/abs/1006.1915" , "arXiv:1006.1915v4" },
-  " [math.AG]."}
+  " [math.AG]."},
+  PARA {"The implementation for generic determinantal ideals uses ",
+  "the unpublished dissertation of Amanda Johnson, U. Michigan, 2003."}
 }
 
 --------------------------------------------------------------------------------
