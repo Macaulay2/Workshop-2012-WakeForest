@@ -142,6 +142,26 @@ joinExists (Poset, List) := Boolean => (P,L) -> (
         )
     )
 
+isCrosscut = method()
+isCrosscut (Poset, List) := Boolean => (P,L) -> (
+     M := maximalChains P;
+     isTrue := true;
+     for c in M do (if #(set(c) * set(L)) != 1 then isTrue = false);
+     if isTrue then (
+	  S := subsets L;
+	  for s in S do (
+	       if #s > 1 and isTrue then (
+		    Fk := apply(s, a -> set(principalOrderIdeal'(P, indexElement(P, a))));
+    		    if #intersectSets(Fk) > 0 then isTrue = meetExists(P,s);
+		    if isTrue then (
+			 Fk := apply(s, a -> set(principalFilter'(P, indexElement(P, a))));
+    		    	 if #intersectSets(Fk) > 0 then isTrue = joinExists(P,s);
+			 );
+	       	    );
+	       );
+	  );
+     isTrue
+     )
 
 
 
