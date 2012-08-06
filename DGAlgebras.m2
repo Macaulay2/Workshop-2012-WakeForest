@@ -905,12 +905,13 @@ net DGModuleMap := f -> net f.natural
 
 dgModuleMap = method(TypicalValue => DGModuleMap)
 dgModuleMap (DGModule,DGModule,Matrix) := (V,U,fnMatrix) -> (
+   -- the source and target must be modules over the same DGAlgebra
    assert(U.DGRing === V.DGRing);  
    f := new MutableHashTable;
    f#(symbol source) = U;
    f#(symbol target) = V;
-   f#(symbol natural) = map(V.natural,U.natural,fnMatrix);
-   f#(symbol ringMap) = map(V.DGRing,U.DGRing,drop(flatten entries matrix f.natural,numgens U.natural) / (f -> substitute(f,V.DGRing)));
+   f#(symbol natural) = map(V.natural,U.natural,sub(fnMatrix,U.DGRing.natural));
+   -- morphisms of DGModules are graded linear over the base DGAlgebra 
    new DGAlgebraMap from f
 )
 
@@ -1247,6 +1248,7 @@ doc ///
     "Basic operations on DG Algebras"
     "The Koszul complex as a DG Algebra"
     "Basic operations on DG Algebra Maps"
+    "Basic operations on DG Modules Maps"
 ///
 
 doc ///
@@ -1425,6 +1427,46 @@ doc ///
     Example
       HHg = HH g
       matrix HHg
+///
+
+
+doc ///
+  Key
+    "Basic operations on DG Modules Maps"
+  Headline
+    Outlines some basic operations on DGModuleMaps
+  Description
+    Text
+      A module map between the underlying graded modules that satisfies the Leibniz rule and is graded linear over the base @ TO DGAlgebra @  
+      is a morphism of DG modules.  Such objects are created using the DGModuleMap class.  As with DGModules, one can define a DGModuleMap 'from scratch' using @ TO dgAlgebraMap @.
+    Example
+      Q = QQ[x]
+      I = ideal(x^3)
+      K = koszulComplexDGA(I)
+      U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
+      setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
+      V = semifreeDGModule(K,{{0,0},{1,1},{2,3}})
+      setDiff(U,sub(matrix{{0,x,-T_1},{0,0,x^2},{0,0,0}}, K.natural))
+      f = dgModuleMap(V,U,sub(matrix{{1,0,0},{0,x,0},{0,0,1}},K.natural))
+    Text
+      Once we define the DGModuleMap, it is a good idea to check to see if it indeed satisfies the Leibniz rule.  This can be checked by using
+      isWellDefined.
+    Example
+    --  isWellDefined f
+    Text
+      Once one has a DGAlgebraMap, one can also obtain the underlying map of complexes via toComplexMap.
+    Example
+     -- cmf = toComplexMap(phi,EndDegree=>3)
+    Text
+      There are also some auxiliary commands associated with DGModuleMaps
+    Example
+     -- source phi
+     -- target phi
+    Text
+      One can also obtain the map on homology induced by a DGModule map.
+    Example
+     -- HHg = HH g
+     -- matrix HHg
 ///
 
 doc ///
@@ -2986,7 +3028,8 @@ time TorR1R2 = torAlgebra(R1,R2,GenDegreeLimit=>5,RelDegreeLimit=>10)
 -- the multiplication is trivial, since the map R3 --> R4 is Golod
 numgens TorR1R2
 numgens ideal TorR1R2
-apply(21, i -> #(flatten entries getBasis(i,TorR1R2)))
+apply(21, i -> #(flatten entries getBasis
+s(i,TorR1R2)))
 assert(sum oo - 1 == numgens TorR1R2)
 ///
 
