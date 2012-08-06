@@ -20,27 +20,67 @@ newPackage(
 export {TensorArray, tensorArray, nestedListAccess}
 exportMutable {TemporaryTensorList, TemporaryIndexList}
 --
-nA = nestedListAccess = method()
-nA(Thing,Sequence) := (x,l) -> (
+
+---------------------------
+--Methods for nested lists
+---------------------------
+{*The following cartesian product lists have sequences
+as their entries, rather than lists.  this is intentional, 
+both for consistency with Set**Set, and for planned later 
+use of nested lists of sequences of indices.
+*}
+List**List := (L,M) -> flatten for l in L list for m in M list (l,m)
+Sequence**Sequence := (L,M) -> toSequence flatten for l in L list for m in M list (l,m)
+acp=associativeCartesianProduct=method()
+associativeCartesianProduct VisibleList := L -> fold((i,j)->(i**j)/splice,L)
+---
+--Compute the initial dimensions of a list;
+--if the list is nested and rectangular
+--this equals its array dimension:
+initialDimensions=method()
+initialDimensions List := L -> (d:={};
+     while instance(L,List) do (d=d|{#L},L=L_0);
+     return d)
+--
+--A recursive function for access to 
+--elements of nested lists:
+nla = nestedListAccess = method()
+nla(Thing,Sequence) := (x,l) -> (
      if l === () then return x else error: "too many indices?")
-nA(VisibleList,Sequence) := (N,l) -> (
+nla(VisibleList,Sequence) := (N,l) -> (
      if l === () then return N;
-     if l_0 === null then return apply(N,i->nA(i,take(l,{1,-1+#l})));
-     return nA(N#(l#0),take(l,{1,-1+#l})))
+     if l_0 === null then return apply(N,i->nla(i,take(l,{1,-1+#l})));
+     return nla(N#(l#0),take(l,{1,-1+#l})))
+---
+--Recursive function to test if a nested list is rectangular
+---
+isrect=isRectangular = method()
+isrect(Thing) := (x) -> true
+isrect(List) := (L) -> (
+     if not instance(L_0,List) then return all(L,i->not instance(i,List));
+     return all(L,i->
+     
+     
+
+	  --all rect of same length
+     
+     if l === () then return N;
+     if l_0 === null then return apply(N,i->nla(i,take(l,{1,-1+#l})));
+     return nla(N#(l#0),take(l,{1,-1+#l})))
+
+isRectangular=method()
+isRectangular List := L -> (d:=initialDimensions L;
+     inds:=associativeCartesianProduct(d/(i->0..<i));
+     for i in inds do try L_i else return false;
+     return true)
+--
 ---
 
 export{associativeCartesianProduct,isRectangular}
 
-List**List := (L,M) -> flatten for l in L list for m in M list (l,m)
-Sequence**Sequence := (L,M) -> toSequence flatten for l in L list for m in M list (l,m)
-acp=associativeCartesianProduct=method()
-acp VisibleList := L -> fold((i,j)->(i**j)/splice,L)
+
 ---
-isRectangular=method()
-isRectangular VisibleList := L -> (d:=dimensions ta L;
-     inds:=associativeCartesianProduct(d/(i->0..<i));
-     for i in inds do try L_i else return false;
-     return true)
+
 
 --assert isRectangular ta {{1,2},{3,4,5}} == false
 
@@ -53,25 +93,14 @@ TensorArray_ZZ := (N,n) -> N_(1:n)
 TensorArray_Sequence:=(N,s) -> (
      if not all(s,i->instance(i,ZZ) or instance(i,Symbol)) then error "expected a list of integers or symbols";
      if not all(s,i->instance(i,ZZ)) then return (hold N)_(hold s);
-     return ta nA(N,s);
+     return ta nla(N,s);
      )
 -----dimensions=method()
+dimensions=method()
 dimensions TensorArray := L -> (d:={};
      while class L === TensorArray do (d=d|{#L},L=L_0);
      return d)
 ---
-
-
-ta=tensorArray=method()
-tensorArray List := L -> new TensorArray from L
-
---need to test rectangularity
---tensorArray Thing := x -> x
---TensorArray_Sequence:=(N,s) -> ta nA(N,s)
-
-----
-----
-
 export{nestedList}
 nestedList=method()
 nestedList(List,List):=(dims,L) -> (
@@ -81,8 +110,17 @@ nestedList(List,List):=(dims,L) -> (
 	  L = for i in 0..<round(#L/d) list take(L,{i*d,(i+1)*d-1});
 	  dims = take(dims,{0,-2+#dims}));
      return L)
+---
+ta=tensorArray=method()
+tensorArray List := L -> new TensorArray from L
 
---
+--need to test rectangularity
+--tensorArray Thing := x -> x
+--TensorArray_Sequence:=(N,s) -> ta nla(N,s)
+
+----
+----
+
 tensorArray Vector := v -> ta nestedList (dimensions v,entries v);
 --
 
@@ -281,15 +319,15 @@ L=nestedList({2,2,2},{1,2,3,4,5,6,7,8})
 
 L={{{1,2,3},{4,5,6}},{{5,6,7},{8,9,10}}}
 --entry:
-nA(L,(1,1,2))
+nla(L,(1,1,2))
 
 --slices:
-nA(L,(1,))
-nA(L,(1,,))
-nA(L,(,1,))
-nA(L,(,,1))
-nA(L,(,1,1))
-nA(L,(1,,1))
+nla(L,(1,))
+nla(L,(1,,))
+nla(L,(,1,))
+nla(L,(,,1))
+nla(L,(,1,1))
+nla(L,(1,,1))
 
 ta {{1,2},{3,4}}
 ta {L,L}
