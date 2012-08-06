@@ -17,7 +17,7 @@ newPackage(
 --2)tensor' to make tensors
 --3)equality testing of tensor spaces
 
-export {TensorEntryList, tensorEntryList, nA, tel}
+export {TensorArray, tensorArray, nA, tel}
 exportMutable {TemporaryTensorList, TemporaryIndexList}
 
 
@@ -31,28 +31,6 @@ nA(VisibleList,Sequence) := (N,l) -> (
      return nA(N#(l#0),take(l,{1,-1+#l})))
 ---
 
-
------
-TensorEntryList  = new Type of List
-net TensorEntryList  := T -> netList new List from T
-tel=tensorEntryList=method()
-tel List := L -> new TensorEntryList from L
-tel Thing := x -> x
-TensorEntryList_Sequence:=(N,s) -> tel nA(N,s)
-TensorEntryList_ZZ := (N,n) -> N_(1:n)
------
-TensorEntryList_Sequence:=(N,s) -> (
-     if not all(s,i->class i === ZZ or class i === Symbol) then error "expected a list of integers or symbols";
-     if not all(s,i->class i === ZZ) then return (hold N)_(hold s);
-     return tel nA(N,s);
-     )
-
-----
-dimensions=method()
-dimensions TensorEntryList := L -> (d:={};
-     while class L === TensorEntryList do (d=d|{#L},L=L_0);
-     return d)
-----
 export{associativeCartesianProduct,isRectangular}
 
 List**List := (L,M) -> flatten for l in L list for m in M list (l,m)
@@ -61,10 +39,34 @@ acp=associativeCartesianProduct=method()
 acp VisibleList := L -> fold((i,j)->(i**j)/splice,L)
 ---
 isRectangular=method()
-isRectangular VisibleList := L -> (d:=dimensions tel L;
+isRectangular VisibleList := L -> (d:=dimensions ta L;
      inds:=associativeCartesianProduct(d/(i->0..<i));
      for i in inds do try L_i else return false;
      return true)
+
+--assert isRectangular ta {{1,2},{3,4,5}} == false
+
+
+-----
+TensorArray  = new Type of List
+net TensorArray  := T -> netList new List from T
+ta=tensorArray=method()
+ta List := L -> new TensorArray from L
+ta Thing := x -> x
+TensorArray_Sequence:=(N,s) -> ta nA(N,s)
+TensorArray_ZZ := (N,n) -> N_(1:n)
+-----
+TensorArray_Sequence:=(N,s) -> (
+     if not all(s,i->instance(i,ZZ) or instance(i,Symbol)) then error "expected a list of integers or symbols";
+     if not all(s,i->instance(i,ZZ)) then return (hold N)_(hold s);
+     return ta nA(N,s);
+     )
+----
+dimensions=method()
+dimensions TensorArray := L -> (d:={};
+     while class L === TensorArray do (d=d|{#L},L=L_0);
+     return d)
+----
 
 
 export{einsteinSummation}
@@ -91,7 +93,7 @@ einsteinSummation (List,List) := (tensors,indicesByTensor) -> (
 	  return "(TemporaryTensorList_0)_"|toString(TemporaryIndexList_0)|(
      	       concatenate for tensorNumber in 1..<numberOfTensors list "*(TemporaryTensorList_"|toString(tensorNumber)|")_"|toString(TemporaryIndexList_tensorNumber)));
      listCommand:=concatenate for s in singleIndices list "for i"|toString(s)|" in 0..<"|toString(indexRange s)|" list ";
-     return tel value(listCommand|sumCommand|summand ((singleIndices)/(j->getSymbol("i"|toString(j))))))
+     return ta value(listCommand|sumCommand|summand ((singleIndices)/(j->getSymbol("i"|toString(j))))))
 einsteinSummation List := L -> einsteinSummation(L/first,L/(i->toSequence remove(i,0)))
 es=einsteinSummation
 
@@ -127,7 +129,19 @@ tm Module := M -> (
 --     Q.cache.factors = {M};
      Q
      )
-net TensorModule := M -> (net new Module from M)|", "|"tensor order "|toString(#M.cache.dimensions)|", dimensions "|toString(M.cache.dimensions)
+tm (Ring,List) := (R,L) -> (
+     d:=product L;
+     Q:=new TensorModule from R^d;
+     Q.cache.dimensions = L;
+--     Q.cache.factors = {M};
+     Q
+     )
+tm (Module,List) := (M,L) -> (
+     d:=product L;
+     if not numgens M == d then error "dimension mismatch";
+     tm(ring M,L)
+     )
+net TensorModule := M -> (net new Module from M)|", "|"tensor of order "|toString(#M.cache.dimensions)|", dimensions "|toString(M.cache.dimensions)
 TensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
      n := rank ambient M;
@@ -149,8 +163,27 @@ TensorModule#{Standard,AfterPrint} = M -> (
      )
 module TensorModule := M -> new Module from M
 dimensions TensorModule := M -> M.cache.dimensions
-dimensions Module := M -> {numgens M}
-dimensions Vector := v -> dimensions module v
+dimensions Vector := v -> (
+     if not instance(class v,TensorModule) then error "'dimensions' expected an element of a TensorModule";
+     dimensions class v
+     )
+export{toTensor,isTensor}
+tt=toTensor=method()
+toTensor (List,TensorModule) := (L,M) -> (
+     t:=tensorArray L;
+     if not dimensions t == dimensions M then error "dimension mismatch";
+     new M from vector ultimate(flatten,L)
+     )
+toTensor (List) := L -> (
+     t:=tensorArray L;
+     dims:=dimensions t;
+     f:=ultimate(flatten,L);
+     R:=commonRing f;
+     M:=tensorModule(R,dims);
+     new M from vector f
+     )
+isTensor=method()
+isTensor Thing := x -> instance(class x,TensorModule)
 
 --
 TensorModule**TensorModule := (M,N) -> (
@@ -187,8 +220,7 @@ nestedList(List,List):=(dims,L) -> (
 	  L = for i in 0..<round(#L/d) list take(L,{i*d,(i+1)*d-1});
 	  dims = take(dims,{0,-2+#dims}));
      return L)
-tel Vector := v -> tel nestedList (dimensions v,entries v);
-
+tensorArray Vector := v -> ta nestedList (dimensions v,entries v);
 
 
 --
@@ -204,7 +236,35 @@ end
 
 
 restart
-debug loadPackage"Tensors"
+loadPackage"Tensors"
+tt
+
+R=QQ[x]
+f=map(R^2,R^2,{{0,1},{1,0}})
+M=tm R^2
+errorDepth=0
+f=map(M,M,{{0,1},{1,0}})
+ta ((f**f)*((M_0)**(M_1)))
+f**f
+(M_0)**(M_1)
+instance(M,Module)
+g=f**f**f
+g*t
+
+
+--check rectangular in tel
+
+L={{1,2},{3,4}}
+toTensor(ta toTensor({L,L,L},M++M++M),M)
+t=toTensor({L,L+L,L+L+L+L},((tm R^3)**M))
+toTensor(ta t,((tm R^3)**M))==t
+
+
+while not all(L,i->not class i == List)
+
+new Function from flatten
+
+
 
 L=nestedList({2,2,2},{1,2,3,4,5,6,7,8})
 
@@ -220,10 +280,10 @@ nA(L,(,,1))
 nA(L,(,1,1))
 nA(L,(1,,1))
 
-tel {{1,2},{3,4}}
-tel {L,L}
+ta {{1,2},{3,4}}
+ta {L,L}
 
-T = tel L
+T = ta L
 dimensions T
 
 R=QQ[x]
@@ -232,7 +292,7 @@ P=M**M**M
 t=sum for i in 0..7 list i*P_i
 dimensions t
 t=(M_0)**(M_1)**(M_0)
-tel t
+ta t
 dimensions t
 
 (1,2,3)**(4,5,6)
@@ -246,9 +306,9 @@ isRectangular T
 ----
 x=symbol x
 R=QQ[x_1..x_27]
-m0=tel entries genericMatrix(R,3,3)
-m1=tel entries genericMatrix(R,x_10,3,3)
-m2=tel entries genericMatrix(R,x_19,3,3)
+m0=ta entries genericMatrix(R,3,3)
+m1=ta entries genericMatrix(R,x_10,3,3)
+m2=ta entries genericMatrix(R,x_19,3,3)
 
 isRectangular m1
 
@@ -283,7 +343,7 @@ N=(M**M)++(M**M)
 ESUM=EinsteinSummationMethodFunction=new Type of MethodFunction
 esum=new ESUM from method(Dispatch=>Thing)
 ESUM_List := (esum,inds) -> (
-     if not all(inds,i->class i === Symbol) then error "expected a list of Symbols";
+     if not all(inds,i->instance(i,Symbol)) then error "expected a list of Symbols";
      f = i->1;
      r
      )
@@ -316,8 +376,13 @@ new Sum from {hold 1+2,hold 1+2}
 new Sum from {hold (M_0)_j,M_0}
 
 
-
+f=method()
 f Thing:= x -> new Holder from {hold x+hold x}
+f(hold 1+2)
+
+es(A_(2,3) * B_(j,k))
+A
+
 f hold i
 i=hold i
 (hold symbol M)_(hold symbol i)
