@@ -46,6 +46,7 @@ export {
   "SpectralSequence",
   "spectralSequence",
   "SpectralSequenceSheet",
+  "totalHom",
   "filteredHom"
   }
 
@@ -247,21 +248,12 @@ SpectralSequenceSheet ^ List := Module => (Er,L) -> (
        ) 
   
 
-totmap :=(L,M,f) -> (
-     m := f(L_0,M_0);
-     for j from 1 to length L -1 do m = m|f(L_j,M_0);
-     for j from 1 to length M -1 do (
-	  n:= f(L_0,M_j);
-	  for i from 1 to length L-1 do n = n|f(L_i,M_j);
-	  m = m||n
-	  );
-     m
-     )
-
+tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))
 
      
 -- totHom gives the total complex of double complex of hom of chain complexes.
-totHom := (C,D)-> (
+totalHom = method ();
+totalHom(ChainComplex,ChainComplex) := ChainComplex => (C,D)-> (
      minC := min C;
      maxC := max C;
      minD := min D;
@@ -269,45 +261,46 @@ totHom := (C,D)-> (
      L:= for k from minC - maxD to maxC - minD - 1 list (
 	  LC:= toList(max(minC,k+minD)..min(maxC,k+maxD));
 	  LD:= toList(max(minC,k+1+minD)..min(maxC,k+maxD+1));
-	  f:= (i,j) -> (if i == j then (-1)^(i+j)*Hom(C_i,D.dd_(i-k))
+ 	  f:= (i,j) -> (
+	       if i == j then (-1)^(i+j)*Hom(C_i,D.dd_(i-k))
 	       else if i + 1 == j then Hom(C.dd_(i+1),D_(i-k))
 	       else map(Hom(C_j,D_(j-k-1)),Hom(C_i,D_(i-k)),0)
-	       );
-	  S := directSum apply (LC, i-> Hom(C_i,D_(i-k)));
-	  T := directSum apply (LD, i-> Hom(C_i,D_(i-k-1)));
-	  map(T,S, totmap(LC,LD,f))
+          );
+
+	  S := directSum apply (LC, i-> i => Hom(C_i,D_(i-k)));
+	  T := directSum apply (LD, i-> i => Hom(C_i,D_(i-k-1)));
+	  map(T,S, tmap(LC,LD,f))
 	  );
      chainComplex reverse L
      )
 
 -- hHom1 makes a filter complex from double complex of hom of chain complexes with horizontal filtration
 
-filteredHom = method(Options => {Degree => 0})
+filteredHom = method(Options => {Degree => {1,0}})
 filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
      minC:= min C;
      maxC:= max C;
      minD:= min D;
      maxD:= max D;
-     T:= totHom(C,D);
-     R:= ring C_minC;
-     maps := for i from minC+1 to maxC list (
-	  L:= for k from minC -maxD to maxC - minD - 1 list (
-	  LC:= toList(max(i,k+minD)..min(maxC,k+maxD));
-	  LD:= toList(max(i,k+1+minD)..min(maxC,k+maxD+1));
-	  S := if LC == {} then R^0 else directSum apply (LC, i-> Hom(C_i,D_(i-k)));
-	  T := if LD == {} then R^0 else directSum apply (LD, i-> Hom(C_i,D_(i-k-1)));
-	  a := map(T,S,0);
-	  b := if LC == {} then map(T_(maxC - minD -k),S,0) else (T_(maxC -minD-k))_(matrix {LC})
-	  );
-     	  si:= chainComplex reverse L;
+     R:= ring C;
+     T:= totalHom(C,D);
+     maps := for p from minC+1 to maxC list (
+	  differential := new MutableHashTable;
+	  inclusion := new MutableHashTable;
+	  for k from minC -maxD to maxC - minD - 1 do (
+	       LCp:= toList(max(p,k+minD)..min(maxC,k+maxD));
+	       LDp:= toList(max(p,k+1+minD)..min(maxC,k+maxD+1));
+	       S := if LCp == {} then R^0 
+	       else directSum apply (LCp, i -> i => Hom(C_i,D_(i-k)));
+	       Ta := if LDp == {} then R^0 
+	       else directSum apply (LDp, i -> i => Hom(C_i,D_(i-k-1)));
+	       differential#k = map(Ta,S,0);
+	       inclusion#k = if LCp == {} then map(T_(maxC - minD -k),S,0) 
+	       else (T_(maxC -minD-k))_(new Array from LCp)
+	       );
+     	  si:= chainComplex apply (rsort keys differential,k-> differential#k);
 	  f:= k -> (
-	       if k != maxC - minD then (
-		    CT:= components T_k;
-		    CS:= components si_k;
-		    Diff:= toList (set CT - set CS);
-		    Aux:=directSum Diff;
-		    map(T_k,si_k,id_(si_k)|map(Aux,si_k,0))
-		    )
+	       if k != maxC - minD then inclusion#k
 	       else map (T_k,si_k,0)
 	       );
 	  map(T,si,f)
@@ -315,7 +308,7 @@ filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
      filteredComplex maps
      )
      
-     
+  
 
 
 
@@ -333,10 +326,11 @@ totTensor := (C,D)-> (
 	       );
 	  S := directSum apply (LC, i-> C_i ** D_(-i-k));
 	  T := directSum apply (LD, i-> C_i ** D_(-i-k-1));
-	  map(T,S,totmap(LC,LD,f))
+	  map(T,S,tmap(LC,LD,f))
 	  );
      chainComplex reverse L
      )
+
 
 
   
@@ -346,11 +340,10 @@ end
 
 restart
 needsPackage "SpectralSequences";
-debug SpectralSequences
+debug SpectralSequences;
 S = QQ[x,y,z];
-C = res ideal gens S;   -- Koszul complex
-K = filteredComplex C
 F = res ideal (x,y,z)
+totalHom (F,F)
 filteredHom(F,F)
 spectralSequence K
 E = spectralSequence K
@@ -386,6 +379,7 @@ epq(FilteredCoChainComplex,ZZ,ZZ,ZZ):=
 S = QQ[a..f];
 D = simplicialComplex monomialIdeal(a*b*c, a*b*f, a*c*e, a*d*e, a*d*f, b*c*d,
   b*d*e,b*e*f,c*d*f,c*e*f)
+
 C = chainComplex D
 D1 =simplicialComplex first entries faces(1,D)
 D0 =simplicialComplex first entries faces(0,D)
