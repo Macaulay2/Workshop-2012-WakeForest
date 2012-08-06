@@ -31,49 +31,41 @@
    - For monomial ideals, use Howald's theorem, implemented in this package.
    - For ideal of monomial curve, use Howard Thompson's theorem, implemented
      in this package.
-   - (Future work: generic determinantal ideals, using Amanda Johnson's dissertation)
+   - For generic determinantal ideals, use Amanda Johnson's dissertation,
+     implemented in this package
    - (Future work: plane curve singularities)
    
-   Initial version: simply have separate commands for each of the above computations.
    For now, only try to compute multiplier ideals and lcts.
    Eventually, add code for jumping numbers.
    
    
-   Future work: a more unified single command with "strategy" optional argument
-  
-   Optional argument: Strategy
-   Possible values: DmodulesMultIdealStrat, MonomialMultIdealStrat,
-    MonomialCurveMultIdealStrat, HyperplaneArrangementMultIdealStrat,
-    AutomaticMultIdealStrat
-   Default value: 'AutomaticMultIdealStrat'
-   'Automatic' strategy tries strategies from "cheapest" to most general:
-   1. if input ideal is a MonomialIdeal, use Monomial strategy
-   2. else if input ideal defines a monomial curve, use MonomialCurve strategy
-   3. else if input ideal defines a hyperplane arrangement, use that strategy
-      (not yet sure how to test for this)
-   4. else use Dmodules strategy.
   
    Input:
-   With Dmodules strategy:
+   For Dmodules:
     * ideal I
     * rational t
-   With Monomial strategy:
+   For Monomial:
     * MonomialIdeal I
     * rational t
-   With MonomialCurve strategy:
+   For MonomialCurve:
     * ring S
     * list of integers {a1,...,an} (exponents in parametrization of curve)
     * rational t
-    OR
+    OR (not implemented yet)
     * ideal I which happens to be the defining ideal of a monomial curve
     * rational t
-   With HyperplaneArrangement strategy:
+   For HyperplaneArrangement:
     * CentralArrangement A
     * rational t
     * (optional) list of multiplicities M
     OR (can we do this?)
     * ideal I which happens to be the defining ideal of a central arrangement
       (with multiplicities)
+    * rational t
+   For GenericDeterminantal:
+    * ring R
+    * integers m, n (size of matrix)
+    * integer r (size of minors)
     * rational t
   
    Output:
@@ -84,14 +76,15 @@
 newPackage(
   "MultiplierIdeals",
       Version => "0.1", 
-      Date => "July 31, 2011",
+      Date => "August 6, 2012",
       Authors => {
        {Name => "Zach Teitler"},
        {Name => "Bart Snapp"},
        {Name => "Claudiu Raicu"}
        },
       Headline => "multiplier ideals, log canonical thresholds, and jumping numbers",
-      PackageImports=>{"ReesAlgebra","Dmodules","Normaliz","HyperplaneArrangements"}
+      PackageImports=>{"ReesAlgebra","Normaliz","Dmodules"},
+      PackageExports=>{"HyperplaneArrangements"}
       )
 
 
@@ -99,18 +92,25 @@ newPackage(
 -- Multiplier ideals.
 -- Input: an ideal, a real number
 -- Output: the multiplier ideal
--- For arbitrary ideals, use the Dmodules package
 -- When possible, use specialized routines for
 --  monomial ideals (implemented in this package)
 --  ideal of monomial curve (implemented in this package)
+--  generic determinantal ideals (implemented in this package)
 --  hyperplane arrangements (implemented in HyperplaneArrangements)
+-- For arbitrary ideals, use the Dmodules package
 
+
+-- Implementation for monomial ideals is based on Howald's Theorem,
+-- 	arXiv:math/0003232v1 [math.AG]
+--  J.A. Howald, Multiplier ideals of monomial ideals.,
+--  Trans. Amer. Math. Soc. 353 (2001), no. 7, 2665–2671
 
 -- Implementation for monomial curves is based on the algorithm given in
 -- H.M. Thompson's paper: "Multiplier Ideals of Monomial Space
 -- Curves." arXiv:1006.1915v4 [math.AG] 
 -- 
--- http://arxiv.org/abs/1006.1915
+-- Implementation for generic determinantal ideals is based on the
+-- dissertation of Amanda Johnson, U. Michigan, 2003
 
 
 --------------------------------------------------------------------------------
@@ -119,33 +119,18 @@ newPackage(
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-export {
-     multIdealViaDmodules,
-     lctViaDmodules,
-     multIdealMonomial,
-     lctMonomial,
-     thresholdMonomial,
-     multIdealMonomialCurve,
-     lctMonomialCurve,
-     multIdealHyperplaneArrangement,
-     lctHyperplaneArrangement,
-     multIdealGenericDeterminantal,
-     lctIdealGenericDeterminantal
-     }
+-- export {
+--      multIdeal,
+--      mct
+--      }
 
---     multIdeal,
---     AutomaticMultIdealStrat,
---     DmodulesMultIdealStrat,
---     MonomialMultIdealStrat
-
-exportMutable {}
+-- exportMutable {}
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- PACKAGES --------------------------------------------------------------------
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-
 
 -- Set Normaliz version to "normbig", arbitrary-precision arithmetic (vs. "norm64", 64-bit)
 -- Format of command in previous versions (Macaulay2 1.3 and pre; Normaliz 2.1 and pre)
@@ -161,6 +146,42 @@ setNmzOption("bigint",true);
 -- METHODS ---------------------------------------------------------------------
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- PUBLIC METHODS --------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+-- multIdeal:
+--   a public-facing method to dispatch computation to the appropriate private
+--   method implemented below
+-- multIdeal = method()
+-- arbitrary ideal
+multIdeal(Ideal,Number) := (I,t) -> multIdealViaDmodules(I,t)
+-- hyperplane arrangement
+-- multIdeal(Number,CentralArrangement) := (s,A) -> multIdealHyperplaneArrangement(s,A)
+-- multIdeal(Number,CentralArrangement,List) := (s,A,m) -> multIdealHyperplaneArrangement(s,A,m)
+-- monomial
+multIdeal(MonomialIdeal,Number) := (I,t) -> multIdealMonomial(I,t)
+-- monomial curve
+multIdeal(Ring,List,Number) := (R,nn,t) -> multIdealMonomialCurve(R,nn,t)
+-- generic determinantal
+multIdeal(Ring,List,ZZ,Number) := (R,mm,r,t) -> multIdealGenericDeterminantal(R,mm,r,t)
+
+
+--   a public-facing method to dispatch computation to the appropriate private
+--   method implemented below
+-- lct = method()
+-- arbitrary ideal
+lct(Ideal,Number) := (I,t) -> lctViaDmodules(I,t)
+-- hyperplane arrangement
+-- lct(Number,CentralArrangement) := (s,A) -> lctHyperplaneArrangement(s,A)
+-- lct(Number,CentralArrangement,List) := (s,A,m) -> lctHyperplaneArrangement(s,A,m)
+-- monomial
+lct(MonomialIdeal,Number) := (I,t) -> lctMonomial(I,t)
+-- monomial curve
+lct(Ring,List,Number) := (R,nn,t) -> lctMonomialCurve(R,nn,t)
+-- generic determinantal
+lct(Ring,List,ZZ,Number) := (R,mm,r,t) -> lctGenericDeterminantal(R,mm,r,t)
 
 --------------------------------------------------------------------------------
 -- SHARED ROUTINES -------------------------------------------------------------
@@ -804,12 +825,13 @@ genericDeterminantalSymbolicPower := (R,m,n,r,a) -> (
   return I;
 );
 
-{*
+
 multIdealGenericDeterminantal = method()
-multIdealGenericDeterminantal(Ring,ZZ,ZZ,ZZ,ZZ) := (R,m,n,r,c) -> multIdealGenericDeterminantal(R,m,n,r,promote(c,QQ));
-multIdealGenericDeterminantal(Ring,ZZ,ZZ,ZZ,QQ) := (R,m,n,r,c) -> (
-*}
-multIdealGenericDeterminantal = (R,m,n,r,c) -> (
+multIdealGenericDeterminantal(Ring,List,ZZ,ZZ) := (R,mm,r,c) -> multIdealGenericDeterminantal(R,mm,r,promote(c,QQ));
+multIdealGenericDeterminantal(Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
+  m := mm_0;
+  n := mm_1;
+  
   if ( m*n > numcols vars R ) then (
     error "not enough variables in ring";
   );
@@ -826,9 +848,9 @@ multIdealGenericDeterminantal = (R,m,n,r,c) -> (
   return J;
 );
 
-lctIdealGenericDeterminantal = method()
-lctIdealGenericDeterminantal(ZZ,ZZ,ZZ) := (m,n,r) -> (
-  min( apply(1..<r , i -> (n-i)*(m-i)/(r-i)) )
+lctGenericDeterminantal = method()
+lctGenericDeterminantal(List,ZZ) := (mm,r) -> (
+  min( apply(1..<r , i -> (mm_0-i)*(mm_1-i)/(r-i)) )
 );
 
 
@@ -1089,7 +1111,6 @@ assert( (lctMonomialCurve(R,{3,4,11})) === 19/12 )
 
 TEST ///
   needsPackage "MultiplierIdeals";
-  needsPackage "HyperplaneArrangements";
   R := QQ[x,y,z];
   use R;
   f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
@@ -1100,7 +1121,6 @@ TEST ///
 
 TEST ///
   needsPackage "MultiplierIdeals";
-  needsPackage "HyperplaneArrangements";
   R := QQ[x,y,z];
   f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
   A := arrangement f;
@@ -1304,25 +1324,6 @@ Description
 end
 
 
-
-{*
-multIdeal = method(TypicalValue=>Ideal,
-                         Options=>{Strategy=>AutomaticMultIdealStrat});
-
--- with integer input:
--- promote to rational number, keep options the same
-multIdeal(Ideal,ZZ) := opt -> (I,t) ->
-  multIdeal(I,promote(t,QQ),opt);
-
-
-multIdeal(Ideal,QQ) := opt -> (I,t) -> (
-  if (opt.Strategy == DmodulesMultIdealStrat) then (
-    return multIdealViaDmodules(I,t);
-  ) else if (opt.Strategy == AutomaticMultIdealStrat) then (
-    return multIdeal(I,t,Strategy=>DmodulesMultIdealStrat);
-  );
-  );
-*}
 
 
 
