@@ -138,6 +138,41 @@ filteredComplex ChainComplex := C -> (
   complete C;
   g := map(C, C, i -> 0*id_(C#i));
   return filteredComplex{g})
+
+filteredHom0 = method(Options => {Degree => {1,0}})
+filteredHom0 (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
+     R := C.ring;
+     if R =!= D.ring then error "expected chain complexes over the same ring";
+     c := spots C;
+     d := spots D;
+     pairs := new MutableHashTable;
+     scan(c, i -> scan(d, j -> (
+		    k := i-j;
+		    p := if not pairs#?k then pairs#k = new MutableHashTable else pairs#k;
+		    p#(i,j) = 1;
+		    )));
+     scan(keys pairs, k -> pairs#k = sort keys pairs#k);
+     E := new ChainComplex;
+     E.ring = R;
+     scan(keys pairs, k-> (
+	   	p := pairs#k;
+		E#k = directSum(apply(p, v -> v => Hom(C_(v#0), D_(v#1) )));
+		)
+	  );
+     e := spots E;
+     scan(e, i -> if E#?i and E#?(i-1) then E.dd#i = 
+	  map(E#(i-1), E#i, 
+	       matrix table(
+		    E#(i-1).cache.indices, E#i.cache.indices, 
+		    (j,k) -> if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(j#0),D.dd_(k#0))
+		    else if j#0 === k#0 - 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_k#0)
+		    else 0
+		    )
+	       )
+	  )
+     l := if Degree == {1,0} then length c else length d;
+     E --provisionally for testing, makes this like totalHom
+     )
     
 
 --------------------------------------------------------------------------------
@@ -188,14 +223,13 @@ invSubmodule := (d,C) -> (
      ker f
      )
 
-
 pageA := (r, F,p,q) -> (
 d:= (F^p).dd_(-p-q);
 M:= source d;
 N:= source (F^(p+r)).dd_(-p-q-1);
 P:= invSubmodule (d, N);
 A:= intersect (M,P);
-dA:= inducedMap (N, A, matrix d);
+dA:= inducedMap(N, A, matrix d);
 {A, dA}
 )
 
@@ -232,14 +266,14 @@ SpectralSequenceSheet.synonym = "spectral sequence sheet"
 SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
   F := filteredComplex E;
   L := for p from E.minF to E.maxF list (
-    M := for q from E.minH - E.maxF to E.maxH - E.minF list (
+    M:= for q from E.minH - E.maxF to E.maxH - E.minF list (
       S := pageE(r,F,p,q);
       if S != 0 then 
       {{p,q},inducedMap(pageE(r,F,p+r,q-r+1),S,matrix (F^(p+1)).dd_(-p-q))}
       else continue
       );
     if M != {} then M else continue
-  );
+ );
   new SpectralSequenceSheet from flatten L | {symbol zero => E.zero} 
   )
 
@@ -275,7 +309,7 @@ totalHom(ChainComplex,ChainComplex) := ChainComplex => (C,D)-> (
      chainComplex reverse L
      )
 
--- hHom1 makes a filter complex from double complex of hom of chain complexes with horizontal filtration
+-- hHom1 makes a filtered complex from double complex of hom of chain complexes with horizontal filtration
 
 filteredHom = method(Options => {Degree => {1,0}})
 filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
@@ -310,8 +344,6 @@ filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
      )
      
   
-
-
 
 -- totTensor gives the total complex of the tensor product of chain complexes
 
@@ -430,4 +462,5 @@ chainComplex SimplicialComplex := (D) -> (
   else chainComplex apply(0..d, r -> boundary(r,D));
   if D.cache.?labels then C[0] else C[1]
   )
+
 
