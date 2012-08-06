@@ -17,7 +17,7 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
 	isHomologyAlgebraTrivial, findTrivialMasseyOperation, findNaryTrivialMasseyOperation, AssertWellDefined,
 	isGolod, isGolodHomomorphism, GenDegreeLimit, RelDegreeLimit, TMOLimit,
 	InitializeDegreeZeroHomology, InitializeComplex, isAcyclic, getDegNModule,
-	semifreeDGModule,DGRing, homologyModule
+	semifreeDGModule, DGRing, homologyModule, DGModule, DGModuleMap, dgModuleMap
 }
 
 -- Questions:
@@ -69,6 +69,9 @@ globalAssignment DGAlgebraMap
 -- DGModule, a DG module over a DG algebra
 DGModule = new Type of MutableHashTable
 globalAssignment DGModule
+-- DGModuleMap, the new type of map between DGModules
+DGModuleMap = new Type of MutableHashTable
+globalAssignment DGModuleMap
 
 -- Modify the standard output for a DGAlgebra
 net DGAlgebra := A -> (
@@ -893,6 +896,32 @@ isWellDefined DGAlgebraMap := f -> (
    all(apply(gens A.natural, x -> f.natural(A.diff(x)) == B.diff(f.natural(x))), identity)
 )
 
+
+----- DGModuleMap functions --------
+
+net DGModuleMap := f -> net f.natural
+
+dgModuleMap = method(TypicalValue => DGModuleMap)
+dgModuleMap (DGModule,DGModule,Matrix) := (V,U,fnMatrix) -> (
+   assert(U.ring.natural === V.ring.natural);  
+   f := new MutableHashTable;
+   f#(symbol source) = U;
+   f#(symbol target) = V;
+   f#(symbol natural) = map(V.natural,U.natural,fnMatrix);
+   f#(symbol ringMap) = map(V.ring,U.ring,drop(flatten entries matrix f.natural,numgens U.natural) / (f -> substitute(f,V.ring)));
+   new DGAlgebraMap from f
+)
+
+target DGAlgebraMap := f -> f.target
+source DGAlgebraMap := f -> f.source
+
+-- overload isWellDefined for DGAlgebraMap
+isWellDefined DGAlgebraMap := f -> (
+   A := source f;
+   B := target f;
+   all(apply(gens A.natural, x -> f.natural(A.diff(x)) == B.diff(f.natural(x))), identity)
+)
+
 toComplexMap = method(TypicalValue=>ChainComplexMap,Options=>{EndDegree=>-1,AssertWellDefined=>true})
 toComplexMap DGAlgebraMap := opts -> f -> (
    A := source f;
@@ -1420,6 +1449,41 @@ doc ///
   SeeAlso
     "Basic operations on DG Algebras"
 ///
+
+doc ///
+  Key
+    DGModule
+  Headline
+    The class of all DGModules
+  Description
+    Text
+      A @ TO DGModule @ U is represented as a  MutableHashTable  with three entries: U.ring is the @ TO DGAlgebra @ that U is a module over, U.natural is the underlying @TO Module @  and U.diff is the differential. 
+    
+    Text
+      Some common ways to create DGAlgebras include @ TO semifreeDGModule @, @ TO setDiff @, and @ TO acyclicClosure @.
+    
+    Example
+      Q = QQ[x]
+      I = ideal(x^3)
+      K = koszulComplexDGA(I)
+      M = coker matrix {{x^2}}
+      U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
+      degrees U.natural
+      use K.natural
+      setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
+      U.diff
+      d0 = polyDifferential(0,U)
+      d1 = polyDifferential(1,U)
+      d2 = polyDifferential(2,U)
+      d3 = polyDifferential(3,U)
+      d4 = polyDifferential(4,U)
+      chainComplex U
+  Caveat
+      So far only semifree DGModules can be constructed.
+///   
+      
+      
+      
 
 doc ///
   Key
