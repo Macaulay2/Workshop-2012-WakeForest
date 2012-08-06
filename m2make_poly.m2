@@ -1,22 +1,18 @@
-
-
-makeDets  = (str,mu) -> (
--- mu is a list of a filled tableau
-Ind :=  apply(mu, m -> apply(#m, i-> apply(#m,j -> (m_i, j))) );
-a := getSymbol str;
-R := QQ[(flatten flatten Ind)/(v -> a_v)];
-Ma := apply(Ind, k ->  applyTable(k, j -> value a_j));
-product apply(Ma, ma ->( det matrix ma ))
-)
+makeDets  = (a,mu) -> (
+    -- mu is a list of a filled tableau
+    Ind :=  apply(mu, m -> apply(#m, i-> apply(#m,j -> (m_i, j))) );
+    R := QQ[(flatten flatten Ind)/(v -> a_v)];
+    Ma := apply(Ind, k ->  applyTable(k, j -> value a_j));
+    product apply(Ma, ma -> det matrix ma)
+    )
 
 makeUnsymmetric = L ->(
-alpha:= {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"};
-Dets := apply(#L, i -> makeDets(alpha_i, L_i));
-rings := apply(Dets, i -> ring i);
-uberring := QQ[flatten apply(rings, r->gens r)];
-maps :=apply(rings, r -> map(uberring,r));
-product apply(#Dets, i -> maps_i(Dets_i))
-)
+    Dets := apply(#L, i -> makeDets(vars i, L_i));
+    rings := apply(Dets, i -> ring i);
+    uberring := QQ[flatten apply(rings, r->gens r)];
+    maps :=apply(rings, r -> map(uberring,r));
+    product apply(#Dets, i -> maps_i(Dets_i))
+    )
 
 unfactor = F->(
      
@@ -28,17 +24,16 @@ load"m2make_poly.m2"
 mu1 = {{1,2,3},{4}}
 mu2 = {{1,2,3},{4}}
 
-
-F=makeUnsymmetric( {mu1,mu2});
-Ra=ring(makeDets("a",mu1))
-Rb=ring(makeDets("b",mu2))
-
+F=makeUnsymmetric( {mu1,mu2})
+Ra=ring(makeDets(symbol a,mu1))
+Rb=ring(makeDets(symbol b,mu2))
 
 X= apply(#mu1_0, j-> apply(#mu2_0,i->x_(i,j) ) )
 Rx = QQ[flatten X ]
 R = Ra**Rb**Rx
 use R
-F=sub(F,R);
+F
+F=sub(F,R)
 
 Ra1=sub(basis(1,Ra),R)
 Rb1=sub(basis(1,Rb),R)
