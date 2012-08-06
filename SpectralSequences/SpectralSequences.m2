@@ -156,8 +156,8 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
   new SpectralSequence from {
     symbol minF => min K,
     symbol maxF => max K,
-    symbol minH => min K^0,
-    symbol maxH => max K^0,
+    symbol maxH => - min K^0,
+    symbol minH => - max K^0,
     symbol filteredComplex => K,
     symbol zero => K.zero,
     symbol cache => CacheTable}
@@ -310,11 +310,35 @@ keys E
 E_0
 keys E_0
 E_0^{1,1}
-E_0^{0,0}
-keys E_0
+prune E_0^{0,0}
+prune E_0^{0,-1}
+prune E_0^{0,-2}
+prune E_0^{0,-3}
+
+F = filteredComplex E
+p = 0
+q = 0
+d= (F^p).dd_(-p-q);
+M= source d
+r = 0
+N= source (F^(p+r)).dd_(-p-q-1)
+P= invSubmodule (d, N)
+prune P
+A= intersect (M,P)
+
+dA= inducedMap (N, A, matrix d)
+
+prune (pageA(0,F,0,-2))_0
+
+prune pageA2(0,F,0,-2)
+
+prune pageE(0,F,0,-3)
+prune oo
 C
 E_1
 keys E_1
+E_1^{0,0}
+prune o21
 
 -- Nathan's first example
 id_(QQ^1) || 0*id_(QQ
