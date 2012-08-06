@@ -17,8 +17,9 @@ newPackage(
 --2)tensor' to make tensors
 --3)equality testing of tensor spaces
 
-export {TensorArray, tensorArray, nestedListAccess}
 exportMutable {TemporaryTensorList, TemporaryIndexList}
+export{TensorArray, tensorArray}
+
 --
 
 ---------------------------
@@ -29,11 +30,14 @@ as their entries, rather than lists.  this is intentional,
 both for consistency with Set**Set, and for planned later 
 use of nested lists of sequences of indices.
 *}
+export{associativeCartesianProduct,initialDimensions,
+     nestedListAccess,isRectangular,
+     rectangularNestedList}
 List**List := (L,M) -> flatten for l in L list for m in M list (l,m)
 Sequence**Sequence := (L,M) -> toSequence flatten for l in L list for m in M list (l,m)
 acp=associativeCartesianProduct=method()
 associativeCartesianProduct VisibleList := L -> fold((i,j)->(i**j)/splice,L)
----
+
 --Compute the initial dimensions of a list;
 --if the list is nested and rectangular
 --this equals its array dimension:
@@ -41,7 +45,7 @@ initialDimensions=method()
 initialDimensions List := L -> (d:={};
      while instance(L,List) do (d=d|{#L},L=L_0);
      return d)
---
+
 --A recursive function for access to 
 --elements of nested lists:
 nla = nestedListAccess = method()
@@ -51,41 +55,30 @@ nla(VisibleList,Sequence) := (N,l) -> (
      if l === () then return N;
      if l_0 === null then return apply(N,i->nla(i,take(l,{1,-1+#l})));
      return nla(N#(l#0),take(l,{1,-1+#l})))
----
---Recursive function to test if a nested list is rectangular
+
+---Recursive function to test if a nested list is rectangular
 ---
 isrect=isRectangular = method()
 isrect(Thing) := (x) -> true
 isrect(List) := (L) -> (
      if not instance(L_0,List) then return all(L,i->not instance(i,List));
-     return all(L,i->
-     
-     
+     all(L,i->instance(i,List) and isrect(i) and #i==#L_0)
+     )
 
-	  --all rect of same length
-     
-     if l === () then return N;
-     if l_0 === null then return apply(N,i->nla(i,take(l,{1,-1+#l})));
-     return nla(N#(l#0),take(l,{1,-1+#l})))
+--Function to make a rectangular nested list
+--from a list
+rnl=rectangularNestedList=method()
+rnl(List,List):=(dims,L) -> (
+     if not product dims == #L then error "dimension mismatch";
+     while #dims>1 do (
+	  d:=last dims;
+	  L = for i in 0..<round(#L/d) list take(L,{i*d,(i+1)*d-1});
+	  dims = take(dims,{0,-2+#dims}));
+     return L)
 
-isRectangular=method()
-isRectangular List := L -> (d:=initialDimensions L;
-     inds:=associativeCartesianProduct(d/(i->0..<i));
-     for i in inds do try L_i else return false;
-     return true)
---
----
-
-export{associativeCartesianProduct,isRectangular}
-
-
----
-
-
---assert isRectangular ta {{1,2},{3,4,5}} == false
-
-
------
+----------------------------
+--Tensor Arrays
+----------------------------
 TensorArray  = new Type of List
 net TensorArray  := T -> netList new List from T
 TensorArray_ZZ := (N,n) -> N_(1:n)
@@ -95,33 +88,19 @@ TensorArray_Sequence:=(N,s) -> (
      if not all(s,i->instance(i,ZZ)) then return (hold N)_(hold s);
      return ta nla(N,s);
      )
------dimensions=method()
+-----
 dimensions=method()
+--This method assumes the tensor array is rectangular,
+--which will be tested when the array is built
+--with tensorArray()
 dimensions TensorArray := L -> (d:={};
-     while class L === TensorArray do (d=d|{#L},L=L_0);
+     while instance(L,TensorArray) do (d=d|{#L},L=L_0);
      return d)
----
-export{nestedList}
-nestedList=method()
-nestedList(List,List):=(dims,L) -> (
-     if not product dims == #L then error "dimension mismatch in nestedList";
-     while #dims>1 do (
-	  d:=last dims;
-	  L = for i in 0..<round(#L/d) list take(L,{i*d,(i+1)*d-1});
-	  dims = take(dims,{0,-2+#dims}));
-     return L)
 ---
 ta=tensorArray=method()
 tensorArray List := L -> new TensorArray from L
+tensorArray(Vector,List) := (v,L) -> ta rnl (L,entries v);
 
---need to test rectangularity
---tensorArray Thing := x -> x
---TensorArray_Sequence:=(N,s) -> ta nla(N,s)
-
-----
-----
-
-tensorArray Vector := v -> ta nestedList (dimensions v,entries v);
 --
 
 export{einsteinSummation}
@@ -160,7 +139,7 @@ sumOut (List,List) := (tensors,indicesByTensor) -> (
      indexLocations:= i -> indicesByTensor/(j->positions(j,k->k===i));
      tensorsWithIndex:= i -> positions(indexLocations i,j->not j==={});
      indexRange:= i -> (
-     	  t:= first tensorsWithIndex i;
+     	  t:= first tensorsWithIndex i;	    
      	  l:= first (indexLocations i)_t;
      	  return (dimensions(tensors_t))_l);
      TemporaryTensorList=tensors;
@@ -177,32 +156,10 @@ sumOut List := L -> sumOut(L/first,L/(i->toSequence remove(i,0)))
 export{Tensor,TensorModule}
 Tensor=new Type of Vector
 TensorModule = new Type of Module
+module TensorModule := M -> new Module from M
+
+--Printing TensorModules:
 TensorModule.synonym="tensor module"
-tm=tensorModule = method()
-tm Module := M -> (
-     Q:=newClass(TensorModule,Tensor,M);
-     Q.cache.dimensions = {numgens M};
---     Q.cache.factors = {M};
-     Q
-     )
-tm Module := M -> (
-     Q:=newClass(TensorModule,Tensor,M);
-     Q.cache.dimensions = {numgens M};
---     Q.cache.factors = {M};
-     Q
-     )
-tm (Ring,List) := (R,L) -> (
-     d:=product L;
-     Q:=newClass(TensorModule,Tensor,R^d);
-     Q.cache.dimensions = L;
---     Q.cache.factors = {M};
-     Q
-     )
-tm (Module,List) := (M,L) -> (
-     d:=product L;
-     if not numgens M == d then error "dimension mismatch";
-     tm(ring M,L)
-     )
 net TensorModule := M -> (net new Module from M)|", "|"tensor of order "|toString(#M.cache.dimensions)|", dimensions "|toString(M.cache.dimensions)
 TensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
@@ -223,12 +180,38 @@ TensorModule#{Standard,AfterPrint} = M -> (
 *}
      << endl;
      )
-module TensorModule := M -> new Module from M
+
+---Method for building tensor modules:
+tm=tensorModule = method()
+tm Module := M -> (
+     Q:=newClass(TensorModule,Tensor,M);
+     Q.cache.dimensions = {numgens M};
+     Q
+     )
+tm (Ring,List) := (R,L) -> (
+     d:=product L;
+     Q:=newClass(TensorModule,Tensor,R^d);
+     Q.cache.dimensions = L;
+     Q
+     )
+tm (Module,List) := (M,L) -> (
+     d:=product L;
+     if not numgens M == d then error "dimension mismatch";
+     Q:=newClass(TensorModule,Tensor,M);
+     Q.cache.dimensions = L;
+     )
+------
+
+--CLEANED UP TO HERE
+
 dimensions TensorModule := M -> M.cache.dimensions
 dimensions Tensor := v -> (
---     if not instance(class v,TensorModule) then error "'dimensions' expected an element of a TensorModule";
      dimensions class v
      )
+
+----
+tensorArray Tensor := t -> ta rnl (dimensions t,entries t);
+----
 export{toTensor,isTensor}
 tt=toTensor=method()
 toTensor (List,TensorModule) := (L,M) -> (
@@ -315,7 +298,7 @@ new Function from flatten
 
 
 
-L=nestedList({2,2,2},{1,2,3,4,5,6,7,8})
+L=rectangularNestedList({2,2,2},{1,2,3,4,5,6,7,8})
 
 L={{{1,2,3},{4,5,6}},{{5,6,7},{8,9,10}}}
 --entry:
