@@ -46,7 +46,11 @@ export {
      lengthOfPermutation,
      countOrbits,
      countFixedPoints,
-     sign
+     sign,
+     bruhatCompare,
+     bruhatOrder,
+     bruhatRelations,
+     bruhatInterval
 };
 
 ----------------------------------------------------------------------------------------
@@ -477,6 +481,8 @@ lengthOfPermutation(Permutation) := ZZ => (P) -> (
 	P.cache.lengthOfPermutation = sum inversionVector P
 )
 
+length(Permutation):= P -> lengthOfPermutation(P)
+
 
 countOrbits = method()
 countOrbits(Permutation) := ZZ => (P) -> #cycle P
@@ -494,7 +500,98 @@ sign(Permutation) := ZZ => (P) ->
 sign(Cycle) := ZZ => (C) -> 
 	if even sum apply(C, L -> #L - 1) then 1 else -1
 	
+
 	
+-------------------------------------------------------------
+-- Restrict Sum Matrix helper function for computing Bruhat order
+-------------------------------------------------------------	
+
+restrictionSumMatrix = method()
+restrictionSumMatrix(Matrix, List, List) := Matrix => (M, I, J) -> (
+     sum flatten apply((entries M)_I, r -> r_J)
+)
+
+-------------------------------------------------------------	
+--This method is not used, left it in because it looked potentially
+--useful later.
+-------------------------------------------------------------	
+restrictMatrix = method()
+restrictMatrix(Matrix, List, List) := Matrix => (M, I, J) -> (
+     matrix apply((entries M)_I, r -> r_J)
+)
+
+-------------------------------------------------------------	
+--Use Bruhat order comparison from Fulton's Young Tableaux:
+--Given permutation matrixes M(P) and M(Q) for permutations
+--P and Q, we have P < Q if and only if for all i,j such that
+--1<= i,j <= n-1, # 1s in M(P)_(I,J) > # 1s in M(Q)_(I,J). 
+-------------------------------------------------------------	
+
+-------------------------------------------------------------	
+--This helper function computes the sum of entries in 
+--restricted M(P),M(Q) for pair (i,j):
+-------------------------------------------------------------	
+compareRestrictionIndices = method()
+compareRestrictionIndices(Matrix,Matrix,ZZ,ZZ):= ZZ => (M,N,i,j) ->(
+     I:=toList(0..i-1);
+     J:=toList(0..j-1);
+     restrictionSumMatrix(M,I,J) >= restrictionSumMatrix(N,I,J)
+)
+
+bruhatCompare = method()
+bruhatCompare(Permutation,Permutation):= (P,Q) ->(
+     m := max keys P.map;
+     M := permutationMatrix P;
+     N := permutationMatrix Q;
+     if P == Q then return symbol ==;
+     if (not P==Q) and (length P === length Q) then return symbol incomparable;
+     if length P > length Q then (
+	  k := 0;
+	  val := true;
+	  while (k < m^2) and val do (
+	       val = compareRestrictionIndices(N,M,floor(k/m),k%m);
+	       k=k+1;
+	  );
+     	  if not val then (
+	       return symbol incomparable;
+	  )
+	  else return symbol >;
+     );
+     if length Q > length P then (
+	  k = 0;
+	  val = true;
+	  while (k < m^2) and val do (
+	       val = compareRestrictionIndices(M,N,floor(k/m),k%m);
+	       k=k+1;
+	  );
+     	  if not val then (
+	       return symbol incomparable;
+	  )
+	  else return symbol <;
+     );
+)
+
+Permutation ? Permutation := (P,S)-> (
+	bruhatCompare(P,S)
+)
+
+bruhatRelation = method()
+bruhatRelation(Permutation,Permutation):= (P,Q) -> (
+     if ((P ? Q) === symbol <) or ((P ? Q) === symbol ==) then {P,Q}
+)
+
+bruhatRelations = method()
+bruhatRelations(ZZ):= List => N -> (
+     G:=apply(permutations(N), p-> permutation p);
+     select(flatten apply(G, p-> apply(G, q -> bruhatRelation(p,q))), r -> r=!=null)
+)
+
+bruhatOrder = method()
+bruhatOrder(ZZ):= Poset => N -> (
+     poset bruhatRelations(N)
+)
+
+
 beginDocumentation()
 
 
