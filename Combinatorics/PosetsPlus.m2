@@ -1,3 +1,5 @@
+intersectSets = x -> set keys select(tally flatten (keys \ x), n -> n === #x)
+
 if version#"VERSION" <= "1.4" then (
     needsPackage "SimplicialComplexes";
     needsPackage "Graphs";
