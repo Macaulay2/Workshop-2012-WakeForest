@@ -1,45 +1,59 @@
-needsPackage "Polyhedra"
-
 newPackage(
 	"Polymake",
     	Version => "0.3", 
-    	Date => "Aug 5, 2012",
+    	Date => "Aug 6, 2012",
     	Authors => {{Name => "Josephine Yu", 
 		  Email => "josephine.yu@math.gatech.edu", 
-		  HomePage => "http://people.math.gatech.edu/~jyu67"}},
+		  HomePage => "http://people.math.gatech.edu/~jyu67"},
+	            {Name => "Qingchun Ren", 
+		  Email => "qingchun.ren@gmail.com", 
+		  HomePage => "http://math.berkeley.edu/~qingchun/"}},
     	Headline => "a package for interfacing with polymake",
     	DebuggingMode => true
     	)
 
-export { --PolymakeObject,
-      polymakeObject, toPolymakeFormat, writePolymakeFile, runPolymake,getPropertyNames, getProperty, getMatrixProperty, getListProperty, getVectorProperty, makevec, makemat }
+export {PolymakePolytope,getProperty,getPropertyNames}
 
 
 ---------------------------------------------------------------------------
 -- Code
 ---------------------------------------------------------------------------
 
-needsPackage "gfanInterface2"
 needsPackage "Polyhedra"
 needsPackage "SimpleDoc"
 
+PolymakePolytope = new Type of MutableHashTable
 
---PolymakeObject = new Type of MutableHashTable
-
-polymakeObject = method()
-polymakeObject(String, List) := (filename, properties) -> (
- --    F := removeComments lines get filename;
-     new PolymakeObject from apply(properties, p -> p => getMatrixProperty(filename,p))
+new PolymakePolytope from HashTable := (this,properties) -> (
+     new MutableHashTable from {
+	  "parsedProperties" => new MutableHashTable from properties,
+	  "availableProperties" => new MutableHashTable from apply(keys(properties),x->{x,1}),
+	  "polymakeFile" => null
+	  }
      )
-polymakeObject(String) := (filename) -> (    
- --    F := removeComments lines get filename;
- --    properties = getPropertyNames(F);
-     properties := getPropertyNames(filename);
-     new PolymakeObject from apply(properties, p -> p => getMatrixProperty(filename,p))
+
+new PolymakePolytope from Polyhedron := (this,P) -> (
+     properties := new MutableHashTable from {};
+     if P===null then null
+     else(
+	  properties#"DIM" = P#"dimension of polyhedron";
+	  if(P#"dimension of lineality space" == 0) then (
+	      properties#"VERTICES" = transpose(P#"homogenizedVertices"#0);
+	      properties#"N_VERTICES" = P#"number of rays" + P#"number of vertices";
+	      );
+	  properties#"INEQUALITIES" = transpose(-P#"homogenizedHalfspaces"#0);
+	  properties#"EQUATIONS" = transpose(-P#"homogenizedHalfspaces"#1);
+	  new PolymakePolytope from properties
+	  )
+     )
+
+getPropertyNames = method(TypicalValue => List)
+getPropertyNames(PolymakePolytope) := (P) -> (
+     keys P#"availableProperties"
      )
 
 ---------------------------------------------------------------------------
--- toPolymakeFormat
+-- Create a polymake input file
 
 toPolymakeFormat = method(TypicalValue => String)
 toPolymakeFormat(String, Matrix) := (propertyname, M) -> (
@@ -67,36 +81,20 @@ toPolymakeFormat(String,ZZ) := (propertyname,x) -> (
      	  S
      	  )
      )
-toPolymakeFormat(PolymakeObject) := (P) -> (
-     concatenate apply(pairs P, a -> toPolymakeFormat(a)|"\n\n")
+toPolymakeFormat(PolymakePolytope) := (P) -> (
+     concatenate apply(pairs(P#"parsedProperties"), a -> toPolymakeFormat(a)|"\n\n")
      )
-toPolymakeFormat(Polyhedron) := (P) -> (
-     if P === null then ""
-     else(
-	  S := "";
-	  S = S|toPolymakeFormat("DIM", P#"dimension of polyhedron")|"\n\n";
-	  if(P#"dimension of lineality space" == 0) then (
-	      S = S|toPolymakeFormat("VERTICES", transpose(P#"homogenizedVertices"#0))|"\n\n";
-	      S = S|toPolymakeFormat("N_VERTICES", P#"number of rays" + P#"number of vertices")|"\n\n";
-	      );
-	  S = S|toPolymakeFormat("INEQUALITIES", transpose(-P#"homogenizedHalfspaces"#0))|"\n\n";
-	  S = S|toPolymakeFormat("EQUATIONS", transpose(-P#"homogenizedHalfspaces"#1))|"\n\n";
-     	  S
-	  )
-     )
-
----------------------------------------------------------------------------
--------- Create polymake input files from a Polyhedron
 
 writePolymakeFile = method(TypicalValue => String)
-writePolymakeFile(Polyhedron,String) := (P, filename) ->(
+writePolymakeFile(PolymakePolytope,String) := (P, filename) ->(
      filename << toPolymakeFormat(P) << endl << close;
+     P#"polymakeFile" = filename;
      filename	  
      )
-writePolymakeFile(Polyhedron) := (P) ->(
+writePolymakeFile(PolymakePolytope) := (P) ->(
      filename := temporaryFileName()|currentTime()|".poly";
      << "using temporary file " << filename << endl;
-     filename << toPolymakeFormat(P) << endl << close;
+     writePolymakeFile(P,filename);
      filename	  
      )
 
@@ -104,177 +102,198 @@ writePolymakeFile(Polyhedron) := (P) ->(
 ----- Run Polymake
 
 runPolymake = method(TypicalValue => String)
-runPolymake(String,String) := (filename, propertyname)->(
-     get("!"|"polymake "|filename|" "|propertyname)
-     )
-runPolymake(PolymakeObject, String) := (P, propertyname) -> (
-     filename := temporaryFileName()|currentTime()|".poly";
-     << "using temporary file " << filename << endl;
-     filename << toPolymakeFormat(P) << endl << close;
-     runPolymake(filename, propertyname)
-     )
-runPolymake(Polyhedron, String) := (P, propertyname) -> (
-     filename := temporaryFileName()|currentTime()|".poly";
-     << "using temporary file " << filename << endl;
-     filename << toPolymakeFormat(P) << endl << close;
-     runPolymake(filename, propertyname)
+
+runPolymakePrefix = "export ResourcesDir=/Applications/polymake.app/Contents/Resources;export POLYMAKE_USER_DIR=\"${HOME}/.polymake-macbundle\";export POLYMAKE_BASE_PATH=$ResourcesDir/polymake;export LD_LIBRARY_PATH=$ResourcesDir/lib:$ResourcesDir/include/boost_1_47_0/:$LD_LIBRARY_PATH;export CPLUS_INCLUDE_PATH=$ResourcesDir/include/;export CFLAGS=-I$ResourcesDir/include/;export CPPFLAGS=-I$ResourcesDir/include/;export PERL5LIB=$ResourcesDir/lib/perl5/site_perl/$perlversion/darwin-thread-multi-2level/:$ResourcesDir/polymake/lib/polymake/lib/:$ResourcesDir/lib/perl5/:$ResourcesDir/polymake/lib/polymake/perlx/:$ResourcesDir/polymake/share/polymake/perllib/:$PERL5LIB;/Applications/polymake.app/Contents/Resources/polymake/bin/polymake"
+
+runPolymake(PolymakePolytope,String) := (P,propertyName) -> (
+     if(P#"polymakeFile"===null) then (
+	  writePolymakeFile(P);
+	  );
+     script := "use application \\\"polytope\\\";my \\$object = load(\\\""|(P#"polymakeFile")|"\\\");\\$object->"|propertyName|";save(\\$object,\\\""|(P#"polymakeFile")|"\\\");my @properties = \\$object->list_properties;my \\$numberOfProperties = scalar @properties;for(my \\$i=0;\\$i<\\$numberOfProperties;\\$i++){print \\\"\\$properties[\\$i]\\\\n\\\";}";
+     script = "!"|runPolymakePrefix|" \""|script|"\"";
+     propertiesString := get(script);
+     propertiesList := lines propertiesString;
+     for property in propertiesList do (
+	  P#"availableProperties"#property = 1;
+	  );
      )
 
 ---------------------------------------------------------------------------
 ----- Utilities
 
-isBlankLine = (s) -> (
-     #s == 0 or
-     match("^[[:space:]]*$",s) or
-     match("^[[:space:]]*#",s)
-     )
-
-makevec = (str) -> (
-     t := separateRegexp(" +", removeComment str);
+makeList = (str) -> (
+     t := separateRegexp(" +",str);
      t = apply(t,value);
      select(t, x-> x =!= null)
      )
 
-makemat = (L) -> (
+makeMatrix = (str) -> (
+     L := lines str;
+     L = select (L, x -> x!="");
      if #L == 0 then map(QQ^0,QQ^0,0)
-     else matrix(L/makevec)
-     )
-
-makelist = (L) -> (
-     if #L == 0 then {}
-     else apply(removeComments(L), t-> value replace(" ", ",", t)) 
-     )
-
-removeComments = (F) -> ( 
-     -- F is a list of lines
-     -- removes comments beginning with #
-     -- also removes trailing blank spaces
-		 if F === null then return null
-		 else
-     apply(F, s-> replace("[[:space:]]*#.*|[[:space:]]+$","" ,s))
-     )
-
-removeComment = (str) -> ( 
-     -- F is a list of lines
-     -- removes comments beginning with #
-     -- also removes trailing blank spaces
-     replace("[[:space:]]*#.*|[[:space:]]+$","" ,str)
+     else matrix(L/makeList)
      )
 
 ------------------------------------------------------------------------------
--------  Getting Properties of Polyhedra using Polymake
-
--- This is for Polymake version 2
-      -- returns a list of strings, names of known properties
-getPropertyNames = method(TypicalValue => String)
-getPropertyNames(List) := (F) -> (
-      -- F is a list of lines, as from a polymake file (old version)
-      nameLines := select(F, s-> match("property name", s) );
-      apply(nameLines, s->  
-	   replace( "\".*$"  , "" ,replace("^.*property name=\"", "", s))
-	   )
-     )
-getPropertyNames(String) := (filename) -> (
-      -- filename is the name of a polymake file (may be in XML format)
-      F := lines get filename;
-      nameLines := select(F, s-> match("property name", s) );
-      apply(nameLines, s->  
-	   replace( "\".*$"  , "" ,replace("^.*property name=\"", "", s))
-	   )
-     )
-
------ Old Version -----
---getPropertyNames(List) := (F) -> (
-      -- F is a list of lines, as from a polymake file
-      -- returns a list of strings, names of known properties
-  --    FF = removeComments(F);
-  --    PP = select(FF, s-> match("^[[:space:]]*[[:alpha:]]", s));
-  --    apply(PP, s -> toString s)    
-  -- )
-
+--Types of properties in polymake (hard coded)
 ------------------------------------------------------------------------------
 
+propertyTypes = new HashTable from {
+     "CENTROID" => "LIST",
+     "SPLITS" => "MATRIX",
+     "SPLIT_COMPATIBILITY_GRAPH" => "GRAPH",
+     "STEINER_POINT" => "LIST",
+     "AFFINE_HULL" => "MATRIX",
+     "BOUNDED" => "BOOLEAN",
+     "CENTERED" => "BOOLEAN",
+     "FEASIBLE" => "BOOLEAN",
+     "GALE_TRANSFORM" => "MATRIX",
+     "MINIMAL_VERTEX_ANGLE" => "SCALAR",
+     "N_POINTS" => "SCALAR",
+     "ONE_VERTEX" => "LIST",
+     "POINTS" => "MATRIX",
+     "STEINER_POINTS" => "MATRIX",
+     "VALID_POINT" => "LIST",
+     "VERTEX_BARYCENTER" => "LIST",
+     "VERTEX_LABELS" => "LIST_OF_STRING",
+     "VERTEX_NORMALS" => "MATRIX",
+     "VERTICES" => "MATRIX",
+     "ZONOTOPE_INPUT_VECTORS" => "MATRIX",
+     "ALTSHULER_DET" => "SCALAR",
+     "BALANCE" => "SCALAR",
+     "BALANCED" => "BOOLEAN",
+     "CD_INDEX_COEFFICIENTS" => "LIST",
+     "COCUBICAL" => "BOOLEAN",
+     "COCUBICALITY" => "SCALAR",
+     "COMPLEXITY" => "SCALAR",
+     "CUBICAL" => "BOOLEAN",
+     "CUBICALITY" => "SCALAR",
+     "CUBICAL_H_VECTOR" => "LIST",
+     "DUAL_BOUNDED_H_VECTOR" => "LIST",
+     "DUAL_H_VECTOR" => "LIST",
+     "F2_VECTOR" => "MATRIX",
+     "FACETS_THRU_POINTS" => "INCIDENCE_MATRIX",
+     "FACETS_THRU_VERTICES" => "INCIDENCE_MATRIX",
+     "FACE_SIMPLICITY" => "SCALAR",
+     "FATNESS" => "SCALAR",
+     "F_VECTOR" => "LIST",
+     "GRAPH" => "GRAPH",
+     "G_VECTOR" => "LIST",
+     "H_VECTOR" => "LIST",
+     "NEIGHBORLINESS" => "SCALAR",
+     "NEIGHBORLY" => "BOOLEAN",
+     "N_VERTEX_FACET_INC" => "SCALAR",
+     "N_VERTICES" => "SCALAR",
+     "SIMPLICIALITY" => "SCALAR",
+     "SIMPLICITY" => "SCALAR",
+     "SUBRIDGE_SIZES" => "MAP",
+     "TWO_FACE_SIZES" => "MAP",
+     "VERTEX_SIZES" => "LIST",
+     "VERTICES_IN_FACETS" => "INCIDENCE_MATRIX",
+     "INEQUALITIES_THRU_VERTICES" => "INCIDENCE_MATRIX",
+     "POINTS_IN_FACETS" => "INCIDENCE_MATRIX",
+     "VERTICES_IN_INEQUALITIES" => "INCIDENCE_MATRIX",
+     "LP" => "LINEAR_PROGRAM",
+     "CHIROTOPE" => "TEXT",
+     "FAR_HYPERPLANE" => "LIST",
+     "SPECIAL_FACETS" => "SET",
+     "POLYTOPAL_SUBDIVISION" => "POLYHEDRAL_COMPLEX",
+     "VOLUME" => "SCALAR",
+     "BOUNDED_COMPLEX" => "POLYHEDRAL_COMPLEX",
+     "FAR_FACE" => "SET",
+     "N_BOUNDED_VERTICES" => "SCALAR",
+     "SIMPLE_POLYHEDRON" => "BOOLEAN",
+     "TOWARDS_FAR_FACE" => "LIST",
+     "UNBOUNDED_FACETS" => "SET",
+     "FTV_CYCLIC_NORMAL" => "ARRAY_OF_LIST",
+     "GALE_VERTICES" => "MATRIX",
+     "NEIGHBOR_VERTICES_CYCLIC_NORMAL" => "ARRAY_OF_LIST",
+     "SCHLEGEL_DIAGRAM" => "SCHLEGEL_DIAGRAM",
+     "VIF_CYCLIC_NORMAL" => "ARRAY_OF_ARRAY",
+     }
 
-getProperty = method(TypicalValue => List)
-getProperty(List, String) := (F, section) -> (
-     -- F is a list of lines, as from a polymake file
-     n := position(F, s -> match("^"|section|///[:space:]*$///,s) or
-	   match("^"|section|///[:space:]*#///,s));
-     if(n =!= null) then
-     ( 
-        p := n+1;
-				if isBlankLine F_p then {} 
-				else
-       	  while p < #F and not isBlankLine F_p  list (p=p+1; F_(p-1))
+------------------------------------------------------------------------------
+--Parse properties into M2 format
+------------------------------------------------------------------------------
+
+parseUnknownProperty = method(TypicalValue => String)
+parseUnknownProperty(PolymakePolytope,String) := (P, propertyName) -> (
+     script := "use application \\\"polytope\\\";my \\$object = load(\\\""|(P#"polymakeFile")|"\\\");print \\$object->"|propertyName|";";
+     script = "!"|runPolymakePrefix|" \""|script|"\"";
+     propertyValue := get(script);
+     print propertyValue;
+     P#"parsedProperties"#propertyName = propertyValue;
+     propertyValue
      )
-     else null
-     ) 
-getProperty(String,String) := (filename, propertyname) -> (
-     F := lines runPolymake(filename, propertyname);
-     getProperty(F, propertyname)
-     )
-getProperty(Polyhedron,String) := (P, propertyname) -> (
-     F := lines runPolymake(P, propertyname);
-     getProperty(F, propertyname)
-     )
 
----------------------------------------------------------------------------
-
-getMatrixProperty = method(TypicalValue => Matrix)
-getMatrixProperty(List, String) := (F, section) -> (
-     L := getProperty(F,section);
-     if L === null then null
-     else makemat L
-     )
-getMatrixProperty(String,String) := (filename, propertyname) -> (
-     F := lines runPolymake(filename, propertyname);
-     getMatrixProperty(F, propertyname)
-     )
-getMatrixProperty(Polyhedron,String) := (P, propertyname) -> (
-     F := lines runPolymake(P, propertyname);
-     getMatrixProperty(F, propertyname)
+parseBooleanProperty = method(TypicalValue => Boolean)
+parseBooleanProperty(PolymakePolytope,String) := (P, propertyName) -> (
+     script := "use application \\\"polytope\\\";my \\$object = load(\\\""|(P#"polymakeFile")|"\\\");my \\$v = \\$object->"|propertyName|";if(\\$v){print(\\\"true\\\")}else{print(\\\"false\\\");}";
+     script = "!"|runPolymakePrefix|" \""|script|"\"";
+     propertyValue := (get(script)=="true");
+     P#"parsedProperties"#propertyName = propertyValue;
+     propertyValue
      )
 
----------------------------------------------------------------------------
-
-
-getListProperty = method(TypicalValue => List)
-getListProperty(List, String) := (F, section) -> (
-		 L := getProperty(F,section);
-		 if L === null then null
-	   else makelist L
-		 )
-getListProperty(String,String) := (filename, propertyname) -> (
-     F := lines runPolymake(filename, propertyname);
-     getListProperty(F, propertyname)
-     )
-getListProperty(Polyhedron,String) := (P, propertyname) -> (
-     F := lines runPolymake(P, propertyname);
-     getListProperty(F, propertyname)
+parseScalarProperty = method()
+parseScalarProperty(PolymakePolytope,String) := (P, propertyName) -> (
+     script := "use application \\\"polytope\\\";my \\$object = load(\\\""|(P#"polymakeFile")|"\\\");print \\$object->"|propertyName|";";
+     script = "!"|runPolymakePrefix|" \""|script|"\"";
+     propertyValue := value(get(script));
+     P#"parsedProperties"#propertyName = propertyValue;
+     propertyValue
      )
 
----------------------------------------------------------------------------
-
-
-getVectorProperty = method(TypicalValue => List)
-getVectorProperty(List, String) := (F, section) -> (
-     L := getProperty(F,section);
-     if L === null then null
-     else if #L > 1 then error "property is not a vector"
-     else if #L == 0 then {} 
-     else makevec L_0
-     )
-getVectorProperty(String,String) := (filename, propertyname) -> (
-     F := lines runPolymake(filename, propertyname);
-     getVectorProperty(F, propertyname)
-     )
-getVectorProperty(Polyhedron,String) := (P, propertyname) -> (
-     F := lines runPolymake(P, propertyname);
-     getVectorProperty(F, propertyname)
+parseListProperty = method(TypicalValue => List)
+parseListProperty(PolymakePolytope,String) := (P, propertyName) -> (
+     script := "use application \\\"polytope\\\";my \\$object = load(\\\""|(P#"polymakeFile")|"\\\");print \\$object->"|propertyName|";";
+     script = "!"|runPolymakePrefix|" \""|script|"\"";
+     propertyValue := makeList(get(script));
+     P#"parsedProperties"#propertyName = propertyValue;
+     propertyValue
      )
 
+parseMatrixProperty = method(TypicalValue => Matrix)
+parseMatrixProperty(PolymakePolytope,String) := (P, propertyName) -> (
+     script := "use application \\\"polytope\\\";my \\$object = load(\\\""|(P#"polymakeFile")|"\\\");print \\$object->"|propertyName|";";
+     script = "!"|runPolymakePrefix|" \""|script|"\"";
+     propertyValue := makeMatrix(get(script));
+     P#"parsedProperties"#propertyName = propertyValue;
+     propertyValue
+     )
 
+parseProperty = method()
+parseProperty(PolymakePolytope,String) := (P, propertyName) -> (
+     if(not(propertyTypes#?propertyName)) then (
+	  parseUnknownProperty(P,propertyName)
+	  )
+     else if(propertyTypes#propertyName=="BOOLEAN") then (
+	  parseBooleanProperty(P,propertyName)
+	  )
+     else if(propertyTypes#propertyName=="SCALAR") then (
+	  parseScalarProperty(P,propertyName)
+	  )
+     else if(propertyTypes#propertyName=="LIST") then (
+	  parseListProperty(P,propertyName)
+	  )
+     else if(propertyTypes#propertyName=="MATRIX") then (
+	  parseMatrixProperty(P,propertyName)
+	  )
+     else (
+	  parseUnknownProperty(P,propertyName)
+	  );
+     )
 
+getProperty = method()
+getProperty(PolymakePolytope,String) := (P, propertyName) -> (
+     if(not(P#"availableProperties"#?propertyName)) then (
+	  runPolymake(P,propertyName);
+	  );
+     if(not(P#"parsedProperties"#?propertyName)) then (
+	  parseProperty(P,propertyName);
+	  );
+     P#"parsedProperties"#propertyName
+     )
 
 ---------------------------------------------------------------------------
 -----------------------DOCUMENTATION----------------------
@@ -654,45 +673,12 @@ end
 ---------------------------------------------------------------------------
 ------------------------- END ---------------------------
 ---------------------------------------------------------------------------
-
 restart
-
--- Josephine's space
-loadPackage("Polymake")
-installPackage("Polymake")
-uninstallPackage("Polymake")
-installPackage("Polymake", FileName => "~/Documents/math/M2codes/packageRepository/development/aim2009/Polymake.m2", MakeDocumentation => true)
-needsPackage("Polymake")
-viewHelp(Polymake)
-
-P = cyclicPolytope(3,5)
-Vertices = transpose (matrix {{1, 0, 0, 0}, {1, 1, 1, 1}, {1, 2, 4, 8}, {1, 3, 9, 27}, {1, 4,16, 64}})
-Rays = transpose(matrix{{1,2,3,4},{-1,-2,-3,-4}})
-P2 = convexHull(Vertices,Rays)
-Rays = transpose(matrix{{1,2,3,4},{1,-2,-3,-4}})
-P3 = convexHull(Vertices,Rays)
-P4 = convexHull(transpose (matrix {{1, 0, 0, -1}, {1, -1,-1,1}, {1, 2, 4, -7}, {1, -10, 9, 0}, {8, 4,-16, 4}}))
-
-toPolymakeFormat(P)
-toPolymakeFormat(P2)
-toPolymakeFormat(P3)
-toPolymakeFormat(P4)
-
-runPolymake(P, "FACETS")
-
-filename = writePolymakeFile(P4)
-runPolymake(filename, "FACETS")
-runPolymake(filename, "F_VECTOR")
-
-getProperty(filename, "AMBIENT_DIM")
-getProperty(filename, "VERTICES")
-getMatrixProperty(filename, "VERTICES")
-getVectorProperty(filename, "F_VECTOR")
-getProperty(filename, "F_VECTOR")
-
--- QingChun's space
-
-
------------------- TO DO ---------------------
-get other properties such as lists, graphs, simplicial complexes
-if can't process, just read as list of strings
+needsPackage "Polyhedra"
+needsPackage "Polymake"
+P = new PolymakePolytope from cyclicPolytope(2,3)
+getProperty(P,"DIM")
+getProperty(P,"CONE_DIM")
+getProperty(P,"F_VECTOR")
+getProperty(P,"FACETS")
+getPropertyNames(P)
