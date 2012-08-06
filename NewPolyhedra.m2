@@ -39,7 +39,8 @@ newPackage("NewPolyhedra",
 ---------------------------------------------------------------------------
 
 
-export {"intersection",
+export {
+	"intersection",
 	"linSpace",
 	"vertices",
 	"rays",
@@ -83,6 +84,21 @@ globalAssignment PolyhedralObject
 
 -- PURPOSE : Computing the Convex Hull of a given set of points and rays
 convexHull = method(TypicalValue => Polyhedron)
+--   INPUT : 'Mvert'  a Matrix containing the generating points as column vectors
+--		 'Mrays'  a Matrix containing the generating rays as column vectors
+--		'LS' lineality space
+--  OUTPUT : 'P'  a Polyhedron
+-- COMMENT : The description by vertices and rays is stored in P as well as the 
+--           description by defining half-spaces and hyperplanes.
+convexHull(Matrix,Matrix,Matrix) := (Mvert,Mrays,LS) -> (
+	Mvert = chkZZQQ(Mvert,"points");
+        Mrays = chkZZQQ(Mrays,"rays");
+        LS = chkZZQQ(LS,"lineality space");
+	new Polyhedron from {
+		"genlinealitySpace" => LS,
+		"genpoints" => Mvert,
+		"genrays" => Mrays}
+	)
 
 --   INPUT : 'Mvert'  a Matrix containing the generating points as column vectors
 --		 'Mrays'  a Matrix containing the generating rays as column vectors
@@ -134,6 +150,54 @@ convexHull List := L -> (
 		"genrays" => rlist}
 	)
 
+-- PURPOSE : Computing the positive hull of a given set of rays lineality 
+--		 space generators
+posHull = method(TypicalValue => Cone)
+
+--   INPUT : 'Mrays'  a Matrix containing the generating rays as column vectors
+--		 'LS'  a Matrix containing the generating rays of the 
+--				lineality space as column vectors
+--  OUTPUT : 'C'  a Cone
+-- COMMENT : The description by rays and lineality space is stored in C as well 
+--		 as the description by defining half-spaces and hyperplanes.
+posHull(Matrix,Matrix) := (Mrays,LS) -> (new Cone from convexHull(map(QQ^(numgens target Mrays),QQ^1,0),Mrays,LS))
+
+--   INPUT : 'R'  a Matrix containing the generating rays as column vectors
+posHull Matrix := R -> (new Cone from convexHull(map(QQ^(numgens target R),QQ^1,0),R))
+
+--   INPUT : '(C1,C2)'  two cones
+posHull(Cone,Cone) := (C1,C2) -> (new Cone from convexHull(C1,C2))
+
+--   INPUT : 'P'  a Polyhedron
+posHull Polyhedron := P -> (posHull {P})
+
+
+--   INPUT : 'L',   a list of Cones, Polyhedra, rays given by R, 
+--     	    	    and (rays,linSpace) given by '(R,LS)'
+posHull List := L -> (
+	vrlist:=apply(L,P->(
+	if instance(P,Polyhedron) then (
+		if P#?"vertices" then return (P#"vertices"|P#"rays",P#"linealitySpace");
+		if P#?"genpoints" then return (P#"genpoints"|P#"genrays",P#"genlinealitySpace");
+		computeVertices P;
+		return (P#"vertices"|P#"rays",P#"linealitySpace"));
+	if instance(P,Matrix) then return (chkZZQQ(P,"rays"),map(QQ^(numgens target P),QQ^1,0));
+	(chkZZQQ(P#0,"rays"),chkZZQQ(P#1,"lineality space"))));
+	rlist:=matrix {apply(vrlist,v->v#0)};
+	llist:=matrix {apply(vrlist,v->v#1)};
+	print (rlist,llist);
+	)
+
+
+
+
+
+
+
+
+
+
+
 
 
 -- PURPOSE : Computing a polyhedron as the intersection of affine half-spaces and hyperplanes
@@ -171,6 +235,57 @@ intersection(Matrix,Matrix) := (M,N) -> (
 	-- or the Polyhedron P={p | M*p >= N != 0}
 	else return intersection(M,N,map(QQ^1,source M,0),map(QQ^1,QQ^1,0)))
    
+
+--   INPUT : '(P1,P2)',  two polyhedra 
+--  OUTPUT : 'P', the polyhedron that is the intersection of both
+intersection(Polyhedron,Polyhedron) := (P1,P2) -> (intersection {P1,P2})
+
+--   INPUT : 'M',  a matrix, such that the Cone is given by C={x | Mx>=0} 
+--  OUTPUT : 'C', the Cone
+intersection Matrix := M -> (new Cone from intersection{(M,map(QQ^(numgens source M),QQ^1,0))})
+
+--   INPUT : '(C1,C2)',  two Cones
+--  OUTPUT : 'C', the Cone that is the intersection of both
+intersection(Cone,Cone) := (C1,C2) -> (new Cone from intersection{C1,C2})
+
+--   INPUT : '(C,P)',  a Cone and a Polyhedron
+--  OUTPUT : 'Q', the Polyhedron that is the intersection of both
+intersection(Cone,Polyhedron) := (C,P) -> intersection {C,P}
+
+
+
+--   INPUT : '(P,C)',  a Polyhedron and a Cone
+--  OUTPUT : 'Q', the Polyhedron that is the intersection of both
+intersection(Polyhedron,Cone) := (P,C) -> intersection {P,C}
+
+
+--   INPUT : 'L',   a list of Cones, Polyhedra, inequalities given by (M,v), 
+--     	    	    and hyperplanes given by '{N,w}'
+intersection List := L -> (
+     -- This function checks if the inserted pair is a pair of matrices that gives valid in/equalities
+     isValidPair := S -> #S == 2 and if S#1 == 0 then instance(S#0,Matrix) else instance(S#1,Matrix) and numRows S#0 == numRows S#1 and numColumns S#1 == 1;
+     -- Checking for input errors  
+     if L == {} then error("List must not be empty");   
+     hhlist:=apply(L,C->(
+     		if (not instance(C,Cone)) and (not instance(C,Polyhedron)) and (not instance(C,Sequence)) and (not instance(C,List)) then 
+	  		error ("The input must be cones, polyhedra, inequalities, equalities.");
+		if instance(C,Polyhedron) then (
+			if C#?"hyperplanes" then return (C#"halfspaces",C#"hyperplanes");
+			if C#?"genhyperplanes" then return (C#"genhalfspaces",C#"genhyperplanes");
+    			computeHalfspaces C;
+			(C#"halfspaces",C#"hyperplanes")) 
+		else if instance(C,Sequence) then (
+	  		if not isValidPair C then error("Inequalities must be given as a sequence of a matrix and a column vector");
+			return (C,(map(QQ^1,QQ^(numgens source C#0),0),map(QQ^1,QQ^1,0))))
+        	else (
+	  		if not isValidPair C then error("Equalities must be given as a list of a matrix and a column vector");
+			return (C,(map(QQ^1,QQ^(numgens source C#0),0),map(QQ^1,QQ^1,0))));
+	));
+	vlist:=matrix apply(hhlist,i->{i#0#1});
+	wlist:=matrix apply(hhlist,i->{i#1#1});
+	halist:=matrix apply(hhlist,i->{i#0#0});
+	hplist:=matrix apply(hhlist,i->{i#1#0});
+	intersection(halist,vlist,hplist,wlist))
 
 
 
@@ -231,6 +346,11 @@ computeHalfspaces = P -> (
 	local Mvert; local Mrays; local Mlin;
 	if P#?"vertices" then (Mvert=P#"vertices";Mrays=P#"rays";Mlin=P#"linealitySpace")
 	else (Mvert=P#"genpoints";Mrays=P#"genrays";Mlin=P#"genlinealitySpace");
+	local fm;
+	if Mvert==0 then return (
+		fm=fourierMotzkin(Mrays,Mlin);
+		P#"halfspaces"=(transpose fm_0,map(QQ^(numColumns fm_0),QQ^1,0));
+		P#"hyperplanes"=(transpose fm_1,map(QQ^(numColumns fm_1),QQ^1,0)));
 	if numRows Mvert == 0 then Mvert = matrix{{0}};
 	if numColumns Mvert == 0 then Mvert = map(target Mvert,QQ^1,0);
 	if numRows Mrays == 0 then Mrays = matrix{{0}};
@@ -239,9 +359,9 @@ computeHalfspaces = P -> (
 	if numColumns Mlin == 0 then Mlin = map(target Mlin,QQ^1,0);
 	Mvert = map(QQ^1,source Mvert,(i,j)->1) || Mvert;
 	Mrays = map(QQ^1,source Mrays,0) || Mrays;
-	Mlin = map(QQ^1,source Mrays,0) || Mlin;
+	Mlin = map(QQ^1,source Mlin,0) || Mlin;
 	M := Mvert | Mrays;
-	fm:= fourierMotzkin(M,Mlin);
+	fm= fourierMotzkin(M,Mlin);
 	HP := transpose(fm_1);
 	P#"hyperplanes"= (HP_{1..(numgens source HP)-1},-HP_{0});
 	HS := transpose(fm_0);
@@ -253,7 +373,12 @@ computeVertices = P-> (
 		computeHalfspaces P);
 	local M; local N; 
 	if P#?"hyperplanes" then (M=P#"halfspaces";N=P#"hyperplanes")
-	else (M=P#"genhalfspaces";N=P#"genhalfspaces");
+	else (M=P#"genhalfspaces";N=P#"genhyperplanes");
+	if M#1==0 and N#1==0 then return (fm:=fourierMotzkin(transpose M#0,transpose N#0);
+	P#"vertices"=map(QQ^(numRows fm_0),QQ^1,0);
+	P#"rays"=fm_0;
+	P#"linealitySpace"=fm_1;
+	);
 	M=(-M#1)|(M#0);
 	N=(-N#1)|(N#0);
 	M = transpose M | map(source M,QQ^1,(i,j) -> if i == 0 then -1 else 0);
