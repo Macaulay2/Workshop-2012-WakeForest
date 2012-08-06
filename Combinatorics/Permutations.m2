@@ -26,53 +26,27 @@ if version#"VERSION" <= "1.4" then (
 export {
      Permutation,
      permutation,
---     Permutations,
-     permute,
      Cycle,
      cycle,
      cycleDecomposition,
-     --checkCycle,
-     checkTranspositions,
-     isTransposition,
-     isSimpleTransposition,
-     composePermutations,
-     permutationVector,
-     identityPermutation,
-     isIdentity,
-     inverseOfPermutation,
-     toPermutation,
-     --minChangePermutations,
-     lengthOfTranspositions,
-     lengthOfPermutation,
-     countOrbits,
-     countFixedPoints,
-     randomPermutation,
-     inversionVector,
-     permutationFromInversionVector,
+     displayPermutation,
+     permute,
      permuteRows,
      permuteColumns,
      permutationMatrix,
-     cartesianProduct,
-     --numberOfInversions,
-     --subsets [already implemented in basic M2]
-     --compositions [already implemented in basic M2]
-     --partitions [already implemented in basic M2] (ZZ) or (ZZ,ZZ)
-     --partition [implemented and USEFUL!]
-     --conjugate partition
-     --isPermutation
-     bruhatComparison,
-     BruhatOrder,
-     BruhatRelations,
-     weakBruhatOrder,
-     weakBruhatRelations,
-     weakBruhatComparison,
-     coveringPair,
+     inverseOfPermutation,
      minimalCycles,
+     identityPermutation,
+     isIdentity,
      rotateRight,
      rotateLeft,
-     displayPermutation,
-     sign,
-     simpleTranspositions
+     permutationVector,
+     inversionVector,
+     permutationFromInversionVector,
+     lengthOfPermutation,
+     countOrbits,
+     countFixedPoints,
+     sign
 };
 
 ----------------------------------------------------------------------------------------
@@ -81,7 +55,7 @@ export {
 --
 ----------------------------------------------------------------------------------------
 -----
----Various ways of defining Permutations (Vectors, Cycles, Tranpositions)
+---Ways of defining permutations (Array form and Cycle form)
 -----
 ----------------------------------------------------------------------------------------
 
@@ -94,44 +68,62 @@ Cycle = new Type of List
 --Net for Displaying Permutations
 ------------------------------------------------------------------
 ------------------------------------------------------------------
-net Permutation := P -> toString P -- displayPermutation P -- toString P
+net Permutation := P -> toString P
+
+------------------------------------------------------------------
+--Function to display permutation in array form.
+------------------------------------------------------------------
 
 displayPermutation = method()
 displayPermutation(Permutation) := Net => (P) -> (
-	L := apply(sort keys P.map, k -> (toString(k) || toString(k \ P)) | (" "||" "));
-	L = {"( " || "( "}  | L | {")"||")"};
+	L := apply(sort keys P.map, k -> (toString(k) || toString(P(k))) | (" "||" "));
+	L = {"| " || "| "}  | L | {"|"||"|"};
 	horizontalJoin L
 )
 
 ------------------------------------------------------------------
 ------------------------------------------------------------------
---Various Constructors
+--Various Constructors for "Permutations"
 ------------------------------------------------------------------
 ------------------------------------------------------------------
 
 permutation = method()
+------------------------------------------------------------------
+--Function to convert permutations to strings
+------------------------------------------------------------------
 
 toString Permutation := P -> toString(apply(sort keys P.map,i->(P.map)#i))
 
+------------------------------------------------------------------
+-- This converts a hash table to a permutation.
+-- Used to construct permutations from lists.
+------------------------------------------------------------------
+
+permutation(HashTable) := Permutation => (H) -> 
+	new Permutation from hashTable {symbol map => H, symbol cache => new CacheTable}
 
 ------------------------------------------------------------------
--- M and L are different orderings of {0..#L-1}, giving the top
--- and bottom rows of the permutation array.
---Constructs permutation(M,L) and stores as a hash table.
+--This constructs an array from a pair of lists, checking if
+--that gives a permutation of {0..n-1}.
 ------------------------------------------------------------------
+
 
 permutation(List,List) := Permutation => (M,L) -> (
-	if (set L === set M) and (unique L === L) and (unique M === M) and (sort L == toList(0..#L-1)) then
-		permutation hashTable apply(#M, i -> M#i=>L#i)
-	else error "Not a permutation."
+	if (set L === set M) then( --checks if sets are the same
+	     if (unique L === L) and (unique M === M) then ( -- checks if M and L are sets.
+		  if (sort L == toList(0..#L-1)) then ( -- checks if M/L are {0..n-1}
+		       permutation hashTable apply(#M, i -> M#i=>L#i)
+		  )
+	     	  else error "Not a permutation of {0..n-1}."
+	     )
+	     else error "Lists contain nonunique elements."
+	)
+   	else error "Not a permutation of same set."
 )
 
 ------------------------------------------------------------------
---This method takes a list L as input, and outputs the permutation
---taking the (sorted) L as input and outputting L.
---Example:  L = {5,1,4,2,3} would give the permutation s = (1,2,4,3,5),
---written here in cycle notation.  It would be stored as the hash 
---table {1 => 2, 2=> 4, 3=>5, 4=>3, 5=>1}.
+--Constructs a permutation in array form from a list.
+--Input:  L = lower row of (sorted) array form of permutation
 ------------------------------------------------------------------
 
 permutation(List):= Permutation => L -> (     
@@ -143,7 +135,7 @@ permutation(List):= Permutation => L -> (
 )
 
 ------------------------------------------------------------------
--- This constructs a permutation (array form) from a cycle.
+-- This constructs a permutation (in array form) from a cycle.
 ------------------------------------------------------------------
 
 permutation(Cycle) := Permutation => (L) -> (
@@ -151,124 +143,16 @@ permutation(Cycle) := Permutation => (L) -> (
 	fold(S, (i,j) -> composePermutations(i,j))     
 )
 
-permutation(List,ZZ) := Permutation => (L,i) -> (
-     if 0 <= i and i <= (#L)!-1 then
-           permutation permutationByIndex(L, i)
-     else
-           error("Permutation index (" | i | ") too large for list size (" | #L | ").") 
-) 
-
-------------------------------------------------------------------
--- This extends a permutation on {0,1,2,..,#P-1} to {0,1,2,...,#N-1}.
-------------------------------------------------------------------
-
-permutation(Permutation, ZZ) := Permutation => (P, N) ->
-	composePermutations(P, identityPermutation N)
-
-------------------------------------------------------------------
--- This constructs the nth permutation (lex) on {1,2,..,m}.
-------------------------------------------------------------------
-
-permutation(ZZ,ZZ) := Permutation => (m,n) -> 
-	permutation(toList (0.. m-1), n)
-
-------------------------------------------------------------------
--- This converts a hash table to a permutation.
-------------------------------------------------------------------
-
-permutation(HashTable) := Permutation => (H) -> 
-	new Permutation from hashTable {symbol map => H, symbol cache => new CacheTable}
-
-
-
-----------------------------------------
---Helper Function for permutation(Cycle)
---Converts a list representing one orbit 
---of a cycle decomposition into a permutation.
----------------------------------------------
-
-orbitToPermutation = (L) -> (
-	permutation hashTable flatten apply(#L, i-> L#i => L#((i+1) %#L))
-)
-
---------------------------------------------
--- Helper function for permutation(List, ZZ)
---------------------------------------------
-
-permutationByIndex = (L,i) -> (
-	if #L <= 1 then return L;
-	k := (#L - 1)!;
-	j := i % k;
-	l := round((i - j)/k); -- i = l * #L! + j
-	prepend(L#l, permutationByIndex(drop(L, {l,l}), j))
-)
-
-----------------------------------------------------------------------------------------
------
----Various ways of defining Permutations (Vectors, Cycles, Tranpositions)
------
-----------------------------------------------------------------------------------------
-
-
-----------------------------------------------------------------------------------------
------
------
------
-----------------------------------------------------------------------------------------
-
-----------------------------------------------------------------------------------------
--- Methods to allow permutations to act on lists or on integers.
-----------------------------------------------------------------------------------------
-
-permute = method()
-
-permute(List, Permutation) := List => (L,P) -> toList apply(0..#L-1, m -> L_(P.map#m))
-
-permute(ZZ, Permutation) := ZZ => (z,P) -> if member(z,keys P.map) then P.map#z else z
-
---ZZ / Permutation := ZZ => (z,P) -> if member(z,keys P.map) then P.map#z else z
---List / Permutation := List => (L,P)-> toList apply(0..#L-1, m -> L_(P.map#m))
---Permutation ZZ := (P,z) -> if member(z,keys P.map) then P.map#z else z
---Permutation List := List => (P,L)-> toList apply(0..#L-1, m -> L_(P.map#m))
-
-ZZ / Permutation := ZZ => (z,P) -> permute(z,P)
-
-List / Permutation := List => (L,P)-> permute(L,P)
-
-Permutation ZZ := (P,z) -> permute(z,P)
-
-Permutation List := List => (P,L)-> permute(L,P)
-
-permuteRows = method()
-
-permuteRows(Matrix,Permutation):= Matrix => (M,P) -> (
-	matrix permute(entries M,P)
-)
-
-permuteColumns = method()
-
-permuteColumns(Matrix, Permutation):= Matrix => (M,P) -> (
-	matrix transpose permute(entries transpose M,P)
-)
-
-
-Permutation * Matrix := Matrix => (P,M) -> permuteRows(M,P)
-
-Matrix * Permutation := Matrix => (M,P) -> permuteColumns(M,P)
-
-permutationMatrix = method()
-
-permutationMatrix(Permutation) := Matrix => (P) -> (
-		n := max keys P.map;
-		matrix apply(toList(0..n-1), i -> 
-			apply(toList(0..n-1), j -> if P(j) === i then 1 else 0))
-)
 
 ----------------------------------------------------------------------------------------
 -----
 ---Cycles
 -----
 ----------------------------------------------------------------------------------------
+
+------------------------------------------------------------------
+--Function to display cycles in cycle form.
+------------------------------------------------------------------
 
 toCycleString:= (L) -> (
 	"(" |
@@ -281,19 +165,39 @@ toCycleString:= (L) -> (
 	| ")"
 )
 
+------------------------------------------------------------------
+--Function to convert permutations to strings
+------------------------------------------------------------------
 toString Cycle := (C) -> concatenate apply(C, toCycleString)
 
+------------------------------------------------------------------
+------------------------------------------------------------------
+--Net for Displaying Cycles
+------------------------------------------------------------------
+------------------------------------------------------------------
 net Cycle := (C) -> toString C
 
+
+------------------------------------------------------------------
+--Functions for Creating Cycles
+------------------------------------------------------------------
 cycle = method()
 
+
+------------------------------------------------------------------
+--Creates a cycle from a list of lists.
+------------------------------------------------------------------
 cycle(List):= Cycle => (L)-> (     
 	L = apply(L, toList);
-	if all(L, l -> l === unique l) then
+	if all(L, l -> l === unique l) and all(flatten L, l -> instance(l,ZZ)) then
 		new Cycle from L
 	else
-		error "Not a set of cycles."
+		error "Not a set of cycles of integers."
 )
+
+------------------------------------------------------------------
+--Creates minimal cycle decomposition.
+------------------------------------------------------------------
 
 cycle(List,ZZ) := Cycle => (L,N) ->
 	cycle(cycle L, N)
@@ -325,89 +229,143 @@ cycle(Permutation) := Cycle => (P) -> (
 	P.cache.cycleDecomposition = new Cycle from Z
 )
 
+
+------------------------------------------------------------------
+-- Converting Cycles to Permutations
+------------------------------------------------------------------
+
 ----------------------------------------
---
--- Types of permutations
---
-----------------------------------------
+--Helper Function for permutation(Cycle)
+--Converts a list representing one orbit 
+--of a cycle decomposition into a permutation.
+--This pads a cycle C into a permutation of
+-- {0..max element in C}.
+---------------------------------------------
 
-identityPermutation = method()
-
-identityPermutation(ZZ) := Permutation => (N) -> permutation toList(1..N)
-
-identityPermutation(List) := Permutation => (L) -> permutation(L,L)
-
-isIdentity = method()
-
-isIdentity(Permutation) := Boolean => (P) ->
-	all(keys P.map, k -> k == P(k))
-
-rotateRight = method();
-rotateRight(ZZ) := Permutation => (N) -> permutation cycle {toList(1..N)}
-
-rotateLeft = method();
-rotateLeft(ZZ) := Permutation => (N) -> permutation cycle reverse {toList(1..N)}
+orbitToPermutation = (L) -> (
+     origH := hashTable flatten apply(#L, i-> L#i => L#((i+1) %#L));
+     m := max keys origH;
+     identH := hashTable flatten apply(toList(0..m), i-> i => (i+1) % (m+1));
+     permutation hashTable apply(keys identH, i -> if member(i,keys origH) then ( i => origH#i ) else (i => i))
+)
 
 
+
+--------------------------------------------
+-- Helper function for permutation(List, ZZ)
+--------------------------------------------
+
+permutationByIndex = (L,i) -> (
+	if #L <= 1 then return L;
+	k := (#L - 1)!;
+	j := i % k;
+	l := round((i - j)/k); -- i = l * #L! + j
+	prepend(L#l, permutationByIndex(drop(L, {l,l}), j))
+)
 
 
 ----------------------------------------------------------------------------------------
------
----Transpositions
------
+-- Methods to allow permutations to act on lists, integers, or matrices.
 ----------------------------------------------------------------------------------------
 
---This function checks that a transposition is made up up a list of pairs of elements.
-  
-isTransposition = method()
+permute = method()
 
-isTransposition(Cycle) := Boolean => (C) -> (
-	D := minimalCycles C;
-	#D === 1 and #(first D) === 2 
+----------------------------------------------------------------------------------------
+--These methods allow permutations to act on lists.
+--Require both permutation and list to be of the same length.
+----------------------------------------------------------------------------------------
+
+permute(List, Permutation) := List => (L,P) -> toList apply(0..#L-1, m -> L_(P.map#m))
+List / Permutation := List => (L,P)-> permute(L,P)
+Permutation List := List => (P,L)-> permute(L,P)
+
+---------------------------------------------------------------------
+-- This returns a list, permuted by the ith lexicographic permutation.
+---------------------------------------------------------------------
+permute(List,ZZ) := List => (L,i) -> (
+     if 0 <= i and i <= (#L)!-1 then
+           permutationByIndex(L, i)
+     else
+           error("Permutation index (" | i | ") too large for list size (" | #L | ").") 
+) 
+
+----------------------------------------------------------------------------------------
+--These methods allow permutations to act on indices.
+--If a set index is outside of the range of P, then
+--the index will return itself, i.e. for P= {3,1,0,2},
+--we have P(4)=4.
+----------------------------------------------------------------------------------------
+
+permute(ZZ, Permutation) := ZZ => (z,P) -> if member(z,keys P.map) then P.map#z else z
+ZZ / Permutation := ZZ => (z,P) -> permute(z,P)
+Permutation ZZ := (P,z) -> permute(z,P)
+
+----------------------------------------------------------------------------------------
+--Method to permute rows and columns of a matrix.
+----------------------------------------------------------------------------------------
+
+permuteRows = method()
+permuteRows(Matrix,Permutation):= Matrix => (M,P) -> (
+	matrix permute(entries M,P)
 )
 
-isTransposition(Permutation) := Boolean => (P) -> isTransposition cycle P
-
-isSimpleTransposition = method()
-
-isSimpleTransposition(Cycle) := Boolean => (C) -> (
-	D := minimalCycles C;
-	#D === 1 and #(first D) === 2 and 1 + min first D === max first D
+permuteColumns = method()
+permuteColumns(Matrix, Permutation):= Matrix => (M,P) -> (
+	matrix transpose permute(entries transpose M,P)
 )
 
-isSimpleTransposition(Permutation) := Boolean => (P) -> lengthOfPermutation P === 1
 
+Permutation * Matrix := Matrix => (P,M) -> permuteRows(M,P)
+Matrix * Permutation := Matrix => (M,P) -> permuteColumns(M,P)
 
-simpleTranspositions = method()
+----------------------------------------------------------------------------------------
+--Construct permutation matrix of a given P
+----------------------------------------------------------------------------------------
 
--- Implemented using bubble sort
-simpleTranspositions(Permutation) := Cycle => (P) -> (
-	L := permutationVector P;
-	cycle reverse flatten apply(#L, i -> apply(number(take(L, i), p -> p > L#i), j -> {i-j-1,i-j}))
+permutationMatrix = method()
+permutationMatrix(Permutation) := Matrix => (P) -> (
+		n := max keys P.map;
+		matrix apply(toList(0..n-1), i -> 
+			apply(toList(0..n-1), j -> if P(j) === i then 1 else 0))
 )
 
-simpleTranspositions(Cycle) := Cycle => (C) -> 
-	simpleTranspositions permutation C
+----------------------------------------------------------------------------------------
+--Methods to compose permutations or cycles.
+----------------------------------------------------------------------------------------
+
+composePermutations = method()
+composePermutations(Permutation,Permutation):= Permutation => (P,M) -> (
+     permutation hashTable apply(keys M.map | keys P.map, i-> i=> P(M(i)))
+     )
+
+
+Permutation * Permutation := composePermutations
+
+--Product = Concatenation
+Cycle ** Cycle := Cycle => (C,D) -> C|D
+
+--Pairwise minimal product
+Cycle * Cycle := Cycle => (C,D) -> minimalCycles(C|D)
 
 
 ----------------------------------------------------------------------------------------
------
----Permutation Operations
------
+--Methods to compute minimal cycles of a permutation P.
 ----------------------------------------------------------------------------------------
 
-randomPermutation = method()
+minimalCycles = method()
+minimalCycles(Permutation) := Cycle => (P) -> 
+	cycle P
 
-randomPermutation(ZZ) := Permutation => (N) -> (
-	L := toList (1..N);
-	M := toList random L;
-	permutation(L,M)
-)
+----------------------------------------------------------------------------------------
+--Converts a cycle or list of cycles into a minimal cycle decomposition.
+----------------------------------------------------------------------------------------
 
-permutationVector = method()
+minimalCycles(List) := Cycle => (M) -> 
+	cycle permutation cycle M
 
-permutationVector(Permutation):= List => (P) -> 
-	apply(sort keys P.map, k -> P(k))
+--------------------------------------------------
+-- Permutation Inverse
+--------------------------------------------------
 
 inverseOfPermutation = method()
 
@@ -417,48 +375,9 @@ inverseOfPermutation(Permutation):= Permutation => (P) -> (
 	permutation A
 )
 
-inversionVector = method()
-
-inversionVector(Permutation):= List => (P) ->(
-	if P.cache.?inversionVector then return P.cache.inversionVector;
-	L := permutationVector P;
-	P.cache.inversionVector = apply(#L, i -> number(take(L, i), p -> p > L#i))
-)
-
-permutationFromInversionVector = method();
-
-permutationFromInversionVector(List) := (L) -> (
-	N := reverse toList(1..#L);
-	L = reverse L;
-	permutation reverse apply(L, i -> ( A := N#i; N = drop(N,{i,i}); A))
-)
-
-lengthOfPermutation = method()
-
-lengthOfPermutation(Permutation) := ZZ => (P) -> (
-	if P.cache.?lengthOfPermutation then return P.cache.lengthOfPermutation;
-	P.cache.lengthOfPermutation = sum inversionVector P
-)
-
-
-countOrbits = method()
-
-countOrbits(Permutation) := ZZ => (P) -> #cycle P
-
-countOrbits(Cycle) := ZZ => (C) -> #cycle permutation C
-
-countFixedPoints = method()
-
-countFixedPoints(Permutation) := ZZ => (P) -> 
-	number(keys P.map, k -> k == P(k))
-
-sign = method()
-
-sign(Permutation) := ZZ => (P) -> 
-	if even lengthOfPermutation P then 1 else -1
-
-sign(Cycle) := ZZ => (C) -> 
-	if even sum apply(C, L -> #L - 1) then 1 else -1
+--------------------------------------------------
+-- Powers of a permutation (positive or negative).
+--------------------------------------------------
 
 Permutation ^ ZZ := (P,N)->(
 	if N === 0 then return identityPermutation keys P.map;
@@ -470,242 +389,114 @@ Permutation ^ ZZ := (P,N)->(
 		P * ((P*P)^(floor(N/2)))
 )
 
-composePermutations = method()
+----------------------------------------
+-- Identity and rotation permutations.
+----------------------------------------
 
-composePermutations(Permutation,Permutation):= Permutation => (P,M) -> (
-     permutation hashTable apply(keys M.map | keys P.map, i-> i=> P(M(i)))
-     )
+identityPermutation = method()
+identityPermutation(ZZ) := Permutation => (N) -> permutation toList(0..N-1)
+identityPermutation(List) := Permutation => (L) -> permutation(L,L)
 
-Permutation * Permutation := composePermutations
+isIdentity = method()
+isIdentity(Permutation) := Boolean => (P) ->
+	all(keys P.map, k -> k == P(k))
 
---Product = Concatenation
-Cycle ** Cycle := Cycle => (C,D) -> C|D
+rotateRight = method();
+rotateRight(ZZ) := Permutation => (N) -> permutation cycle {toList(0..N-1)}
 
---Pairwise minimal product
-Cycle * Cycle := Cycle => (C,D) -> minimalCycles(C|D)
+rotateLeft = method();
+rotateLeft(ZZ) := Permutation => (N) -> permutation cycle reverse {toList(0..N-1)}
 
-minimalCycles = method()
 
-minimalCycles(Permutation) := Cycle => (P) -> 
-	cycle P
-
---Takes a list of cycles or a Cycle
-minimalCycles(List) := Cycle => (M) -> 
-	cycle permutation cycle M
-
-----------------------------------------------------------------------------------------
------
----Bruhat Order
------
-----------------------------------------------------------------------------------------
+----------------------------------------
+-- Permutation Identity
+----------------------------------------
 
 Permutation == Permutation := Boolean => (P,S) -> 
 	isIdentity((P^-1)*S)
 
-Permutation ? Permutation := (P,S)-> (
-	weakBruhatComparison(P,S)
-)
+
+----------------------------------------
+-- cartesianProduct helper function
+----------------------------------------
 
 cartesianProduct = method()
-
 cartesianProduct(List,List):= List => (H,J) -> (
      flatten apply(H, h-> apply(J, i-> {h,i}))
      )
 
-weakBruhatComparison = method()
+----------------------------------------------------------------------------------------
+--Basic Permutation Operations
+----------------------------------------------------------------------------------------
 
-weakBruhatComparison(Permutation,Permutation) := (P,S)->(
-     if P==S then symbol==
-     else if lengthOfPermutation(P) === lengthOfPermutation(S)+lengthOfPermutation((S^-1)*P) then symbol >
-     else if lengthOfPermutation(S) === lengthOfPermutation(P)+lengthOfPermutation((P^-1)*S) then symbol <
-     else incomparable
-     )
-
--- returns true if Q covers P
-weakBruhatCover = method()
-weakBruhatCover(Permutation, Permutation) := (P,Q) -> 
-	lengthOfPermutation(P) < lengthOfPermutation(Q) and isSimpleTransposition(P^-1 * Q)
-
-bruhatCover = method()
-bruhatCover(Permutation, Permutation) := (P,Q) -> 
-	lengthOfPermutation(P) < lengthOfPermutation(Q) and isTransposition(P^-1 * Q)
-
-
-lowerOnes = (n) -> matrix apply(n, i-> 
-     apply(n, j->(if i>=j then 1 else 0) ) )
-
-rankMatrix = (p) -> lowerOnes(# keys p.map) * permutationMatrix(p) * transpose (lowerOnes(# keys p.map))
-
-
-------------------------------------------
--- bruhatComparison
-------------------------------------------
--- Compares two permutation with respect to
--- the Bruhat order and returns
--- one of ==, <, >, or incomparable.
-------------------------------------------
--- The algorithm works by recursively producing
--- all permutations greater than the lower
--- lengthed input. These greater permutations
--- are made by multiplying by an arbitrary
--- transposition. Recursion is stopped if 
--- the length decreases or becomes larger than 
--- the length of the larger permutation.
--- Visited permutations are cached.
--- Also lengths are not computed using
--- the normal algorithm, but updated
--- using lengthOfPermutationTransposition.
-
-bruhatComparison = method()
-bruhatComparison(Permutation, Permutation) := (P,Q) -> (
-	if P == Q then return symbol==;
-	if lengthOfPermutation(P) == lengthOfPermutation(Q) then return incomparable;
-	comparisonSign := symbol<;
-	if lengthOfPermutation(P) > lengthOfPermutation(Q) then (
-		(P,Q) = (Q,P);
-		comparisonSign = symbol>;
-	);
-	N := length permutationVector P;
-	transpos := flatten apply(toList(1..(N-1)), i -> apply(toList((i+1)..N), j -> {i,j}));
-	VisitedPermutations := set {};
-	recursiveBruhatComparison := (P) -> (
-		if P == Q then return true;
-		if lengthOfPermutation P >= lengthOfPermutation Q then return false;
-		any(transpos, T -> ( 
-				R := P * permutation cycle {T};
-				R.cache.lengthOfPermutation = lengthOfPermutationTransposition(P,T);
-				if lengthOfPermutation R < lengthOfPermutation P then return false;
-				if member(R, VisitedPermutations) then return false;
-				VisitedPermutations = VisitedPermutations + set {R};
-				if #VisitedPermutations % 100 === 0 then << #VisitedPermutations << endl;
-				if recursiveBruhatComparison(R) then (
-					<< T << endl;
-					true
-				) else false
-			)
-		)
-	);
-	if recursiveBruhatComparison(P,Q) then comparisonSign else incomparable
-)
-
-bruhatInterval = method()
-bruhatInterval(Permutation, Permutation) := (P,Q) -> (
-	if P == Q then return set { {P, set{}}};
-	if lengthOfPermutation(P) >= lengthOfPermutation(Q) then return set{};
-	N := length permutationVector P;
-	transpos := flatten apply(toList(1..(N-1)), i -> apply(toList((i+1)..N), j -> {i,j}));
-	VisitedPermutations := set {};
-	IntervalPermutations := set {};
-	isInInterval := (P) -> (
-		if P == Q then (
-			IntervalPermutations = IntervalPermutations + set {P};
-			return true;
-		);
-		if lengthOfPermutation P >= lengthOfPermutation Q then return false;
-		L := apply(transpos, T -> (
-				R := P * permutation cycle {T};
-				R.cache.lengthOfPermutation = lengthOfPermutationTransposition(P,T);
-				R
-			)
-		);
-		L = select(L, R -> 
-			member(R, IntervalPermutations) or 
-			(	(not member(R, VisitedPermutations))
-				and lengthOfPermutation R < lengthOfPermutation P
-				and isInInterval R
-			)
-		);
-		if #L === 0 then (
-			VisitedPermutations = VisitedPermutations + set {P};
-		) else (
-			IntervalPermutations = IntervalPermutations + set {P};
-		);
-		#L == 0
-	);
-	isInInterval(P);
-	IntervalPermutations
-)
-
---Computes the length of P*T
---P a permutation
---T a list of length two describing a transposition
-lengthOfPermutationTransposition = (P,T) -> (
-	I := min T;
-	J := max T;
-	A := P I;
-	B := P J;
-	L := lengthOfPermutation P;
-	V := drop(drop(permutationVector P, I), J - 1 - length permutationVector P);
-	if B > A then 
-		L + 1 + 2 * number(V, i -> A < i and i < B) 
-	else 
-		L - 1 - 2 * number(V, i -> B < i and i < A)
+----------------------------------------
+-- Generates a random permutation
+----------------------------------------
+randomPermutation = method()
+randomPermutation(ZZ) := Permutation => (N) -> (
+	L := toList (0..N-1);
+	M := toList random L;
+	permutation(L,M)
 )
 
 
-weakBruhatRelations = method()
+---------------------------------------------------------
+-- Returns the bottom row of a permutation in array form.
+---------------------------------------------------------
 
-weakBruhatRelations(ZZ):= List => (N) -> (
-	P := (permutations toList(1..N)) / permutation;
-	PR := partition(p-> lengthOfPermutation p, P);
-	H := flatten join values PR;
-	m:= max keys PR;
-	CH:= flatten apply( P, h-> apply( P, i-> {h,i}));
-	CP:= flatten apply( #P, h-> apply( #P, i-> {h,i}));
-	R:= flatten apply(toList(0..m-1), i-> cartesianProduct(PR#i,PR#(i+1)));
-	GL:=select(R, r-> isSimpleTransposition((first r)^-1 *(last r)));
-	apply(positions(CH, r-> member(r,GL)), i-> CP_i)
+permutationVector = method()
+permutationVector(Permutation):= List => (P) -> 
+	apply(sort keys P.map, k -> P(k))
+
+
+---------------------------------------------------------
+-- Returns inversion vector of a permutation.
+-- The number of elements greater than i to the left of i 
+-- in a permutation gives the ith element of the 
+-- inversion vector 
+---------------------------------------------------------
+
+inversionVector = method()
+inversionVector(Permutation):= List => (P) ->(
+	if P.cache.?inversionVector then return P.cache.inversionVector;
+	L := permutationVector P;
+	P.cache.inversionVector = apply(#L, i -> number(take(L, i), p -> p > L#i))
 )
 
 
-weakBruhatOrder = method()
+permutationFromInversionVector = method();
+permutationFromInversionVector(List) := (L) -> (
+	N := reverse toList(0..#L-1);
+	L = reverse L;
+	permutation reverse apply(L, i -> ( A := N#i; N = drop(N,{i,i}); A))
+)
 
-weakBruhatOrder(ZZ):= Poset => (N) ->(
-     B:= weakBruhatRelations N;
-     H:= unique flatten B;
-     S:= toList(0..(#H-1));
-     poset(S, B)
-     )
-
-coveringPair = method()
-
-coveringPair(Permutation,Permutation):= Boolean => (P,S) -> (     
-     (# first cycle composePermutations(P,(S^-1)))===1
-     )
-
-BruhatRelations = method()
-
-BruhatRelations(ZZ):= List => (N)->(
-     P:=apply(permutations toList(1..N), i-> permutation i);
-     PR:= partition(p-> lengthOfPermutation p, P);
-     H:=flatten join values PR;
-     m:= max keys PR;
-     CH:= flatten apply( P, h-> apply( P, i-> {h,i}));
-     CP:= flatten apply( #P, h-> apply( #P, i-> {h,i}));
-     R:= flatten apply(toList(0..m-1), i-> cartesianProduct(PR#i,PR#(i+1)));
-     GL:=select(R, r-> coveringPair(first r, last r));
-     apply(positions(CH, r-> member(r,GL)), i-> CP_i)
-     )
+lengthOfPermutation = method()
+lengthOfPermutation(Permutation) := ZZ => (P) -> (
+	if P.cache.?lengthOfPermutation then return P.cache.lengthOfPermutation;
+	P.cache.lengthOfPermutation = sum inversionVector P
+)
 
 
-BruhatOrder = method()
-
-BruhatOrder(ZZ):= Poset => (N) ->(
-     B:= BruhatRelations N;
-     H:= unique flatten B;
-     S:= toList(0..(#H-1));
-     poset(S, B)
-     )
+countOrbits = method()
+countOrbits(Permutation) := ZZ => (P) -> #cycle P
+countOrbits(Cycle) := ZZ => (C) -> #cycle permutation C
 
 
+countFixedPoints = method()
+countFixedPoints(Permutation) := ZZ => (P) -> 
+	number(keys P.map, k -> k == P(k))
+
+
+sign = method()
+sign(Permutation) := ZZ => (P) -> 
+	if even lengthOfPermutation P then 1 else -1
+sign(Cycle) := ZZ => (C) -> 
+	if even sum apply(C, L -> #L - 1) then 1 else -1
+	
+	
 beginDocumentation()
 
-
----------------------------------------------------------
----------------------------------------------------------
--- Simple Doc information
----------------------------------------------------------
----------------------------------------------------------
 
 --*******************************************************
 -- DOCUMENTATION FOR PACKAGE
@@ -718,8 +509,23 @@ doc ///
 		A package for working with permutations, partitions, and combinatorics of various objects.
 	Description
 		Text
-			{@EM "Permutations"@ is a package that implements many algorithms for the permutations or partitions of sets,
-			along with various other combinatorial functions.}
+			@EM "Permutations"@ is a package for handling permutations in $\sigma\in S_n$, group actions by $S_n$ on various
+			objects, and a variety of related combinatorics of posets and the Bruhat order.
+		Text
+		
+		
+		Text
+		     	The primary way to enter a permutation by hand is via the lower row of the array
+			representation of $\sigma$.
+		
+		Text
+		
+		
+		
+		Example
+		     	P = permutation {2,4,5,0,1,3,7,6}
+			sigma = displayPermutation P
+			
 ///
 
 
@@ -730,38 +536,40 @@ doc///
         a class for permutations
      Description
         Text
-	   	     This class represents permutations of a finite set.  One way to describe a permutation is
-		     just as a finite list.  In this case, permutation L will be the map from the entries in L,
-		     sorted from least to greatest, to the ordered list L.
-     	Example
-	     	  M={2,0,4,5,1,3,7,6}
-		  permutation M
-		  peek M
+	   	     This class represents permutations of sets {0,1,...,n-1}.  One way to input a permutation
+		     by entering the bottom row of the array form of the permutation.
 	Text
-	     	  Permutations are stored as a hash table of maps from items in the list to other items in the list.
-		  A second way to enter a permutation then is to take two different orderings of a list, and let the
+	
+	
+     	Example
+	     	  P = permutation {2,0,4,5,1,3,7,6}
+		  displayPermutation P
+		  peek P
+	Text
+	
+	Text
+	     	  Permutations are stored as a hash table of maps from integers in the list to other integers in the list.
+		  A second way to enter a permutation then is to take two different orderings of a list of integers, and let the
 		  permutation take the first element of the first list to the first element of the second list, and so
 		  on.  The displayed permutation vector will have put the keys of the first list
 		  into increasing order.
+		  
+	Text
+	
 	Example
 	     	  M={2,4,0,5,1,3,7,6}
 		  L={5,3,2,0,6,4,7,1}
 		  permutation(M,L)
-
+		  
 	Text
-	     	  A final way of entering a partition is via a pair of numbers n and m.  This will
-		  output (m+1)st permutation, under the lexicographic order, of the set {1,2,..,n}.
-	
-	Example
-	     	  permutation(5,0)
-     	       	  permutation(5,10)
-	     	  permutation(5,119)
 	
 	Text
 	     	  The permutation is being stored as a map containing a set of keys (the base set L) 
 		  and where they go under the permutation.  We can have these permutations act on a list 
-		  in one of two key ways.  First, we could take elements in the list to their images under
-		  the permutation vector.
+		  in one of two key ways.  We take an element in position i of our list to the position
+		  P(i) in the image.
+		  
+	Text
 	
 	Example
 	     	  P=permutation{5,4,3,2,1,0}
@@ -770,27 +578,13 @@ doc///
 		  permute(S,P)
 		  T={cat, dog, horse, 1,2,3}
 		  permute(T,P)
-     	
 	Text
-	     	  Alternately, we could have the permutation act on the ordering of elements in the list.
-	
-	Example
-	     	  P=permutation{5,4,3,2,1,0}
-		  S={3,4,0,5,1,2}
-		  permute(S,P)
      	
-	Text
-	     	  The list can contain just about anything, including symbols, rings, functions, or repeated elements.
-	
-	Example
-	    	  P=permutation{5,4,3,2,1,0};
-		  permute({cat, dog, horse, 1,2,3},P)
-		  permute({A,B,C,A,D,E},P)
-		  permute({ZZ, ZZ/10007[a,b,c],QQ, CC[x,y], ZZ/2, QQ[x,y]/ideal"x2,xy"},P)
-	
 	Text
 	      	  One specific additional function included with Permutations is applying a permutation 
 		  to the rows or columns of a matrix M.
+	Text
+	
 	Example
 	      	  M=matrix{{1,2,3,4,5,6},{7,8,9,10,11,12},{13,14,15,16,17,18}}
 		  P1=permutation{3,2,1,5,0,4}
@@ -799,17 +593,18 @@ doc///
 		  M*P1
 		  permuteRows(M,P2)
 		  P2*M
+	Text
 		  
      SeeAlso
           permutation
 
 ///
-doc///
+
+doc ///
 	Key
      		permutation
 		(permutation, List)
 		(permutation, List, List)
-		(permutation, ZZ, ZZ)
 		(permutation, HashTable)
 	Headline
      		returns a permutation of a list
@@ -827,7 +622,7 @@ doc///
 		m: ZZ
 			the set of elements from 1 to m
      	Outputs
-      		P:Permutation
+      		P: Permutation
 			a hashtable with keys corresponding to elements of a list, and values describing 
 			where the keys go under the permutation
 	Description
@@ -838,45 +633,8 @@ doc///
 	       		L={5,3,2,6,0,4,7,1}
 			permutation L
 			permutation(M,L)
-			cycle permutation(M,L)
 ///
 
-doc///
-     Key
-          Cycle
-     Headline
-          a class for cycles
-     Description
-          Text
-	       This class represents all cycles.  Given any permutation P, we can 
-	       compute the cycle structure directly.
-          Example
-	       P=permutation{7, 10, 14, 4, 3, 1, 8, 6, 11, 0, 12, 2, 5, 15, 9, 13}
-	       C= cycle P
-	  Text
-	       A cycle can be created from any list of lists, so long each individual list
-	       contains no repeated elements.  It can then be converted to the minimal cycle
-	       representation.
-	  Example
-	       L={{1,2,3,4},{3,4,5},{5,1,2,0},{6,5}};
-	       C=cycle L
-     	       M=minimalCycles C
-	  Text
-	       Two cycles can be concatenated or composed, where they are viewed as acting on the
-	       left.  Concatenation will not necessarily return a minimal structure,
-	       whereas composing cycles will return a minimal cycle.
-	  Example
-	       C=cycle {{1,2,3,4},{3,0,4,5}}
-	       D=cycle{{5,1,2,0},{6,5,3}}
-     	       C*D
-	       C**D
-     SeeAlso
-          permutation
-	  cycle
-	  minimalCycles
-
-
-///
 
 doc///
      Key
@@ -895,7 +653,7 @@ doc///
 	       not necessarily disjoint
      Description
      	  Text
-	       Given any list of lists of disjoint elements, we can create a cycle permuting
+	       Given any list of lists of unique integers, we can create a cycle permuting
 	       the elements.  We can also create a cycle from a permutation via cycle.
 	  Example
      	       C=cycle{{5,3,1,0},{6,2},{10,9,8,7,4}}
@@ -907,7 +665,6 @@ doc///
 	  Cycle
 
 ///
-
 
 doc///
      Key
@@ -927,14 +684,17 @@ doc///
      	  Text
 	       Permute will act on an (ordered) list L by permuting the elements.
 	  Example
-	       L={A,B,1,2,C,4}
-	       P=permutation {4,5,1,2,3,0} ;
+	       P=permutation {4,5,1,2,3,0}
 	       P.map
+	       L={A,B,1,2,C,4}
 	       permute(L,P)
 	       P(L)
+	  Text
+	       Note that a permutation P will ONLY act on a list of the same size as P.
      SeeAlso
 
 ///
+
 
 doc///
      Key
@@ -950,13 +710,13 @@ doc///
      	  L: List
      Description
      	  Text
-	       A permutation can be thought about as acting on a base set of elements.
+	       The lower row in the (sorted) permutation array is the permutation vector.
 	  Example
 	       P=permutation({3,2,1,4,5,0},{4,3,0,1,2,5})
 	       K={3,2,1,4,5,0}
 	       B=sort K
 	  Text
-	       The list of values of these keys, in order, is the permutation vector.  It is already
+	       The list of values of these keys, in order, returns the permutation vector.  It is already
 	       displayed as the net of a permutation.
 	  Example
 	       P=permutation({3,2,1,4,5,0},{4,3,0,1,2,5})
@@ -964,7 +724,7 @@ doc///
 	       P(B)
      SeeAlso
      	  permutation
-///	  
+///
 
 doc///
      Key
@@ -981,138 +741,10 @@ doc///
 	       the minimal cycle decomposition of C
      Description
      	  Text
-	       Given any set of cycles, this
+	       Given any set of cycles C, this function returns the minimal cycle
+	       decomposition of C as a permutation.
+	  Example
+	       C = cycle({{0,4,2,1},{1,2,3},{4,5,10}})
+	       C' = minimalCycles C
      SeeAlso
 ///
-
---doc///
---     Key
---     Headline
---     Usage
---     Inputs
---     Outputs
---     Description
---     SeeAlso
---///
---doc///
---     Key
---     Headline
---     Usage
---     Inputs
---     Outputs
---     Description
---     SeeAlso
---///
---doc///
---     Key
---     Headline
---     Usage
---     Inputs
---     Outputs
---     Description
---     SeeAlso
---///
--------------------------------------
--- Test Permutation Maker
--------------------------------------
-
-
--------------------------------------
--- Test Single List
--------------------------------------
-
-TEST///
-L={7,6,5,4,3,2,1}
-P=permutation L
-L=toString L
-assert(toString L=== net P)
-assert(net P === toString reverse toList(1..7))
-///
-
-TEST///
-L={1,2,3,4,5,6,7}
-P=permutation L
-assert(toString L===net P)
-assert(net P === toString toList (1..7))
-///
-
-TEST///
-L={5,6,70,1,3,4,2,10}
-P=permutation L
-assert(toString L=== net P)
-///
-
-
--------------------------------------
--- Test Conversion of Permutation to Cycles
--------------------------------------
-
-TEST///
-L={9, 5, 2, 3, 7, 4, 6, 8, 1, 10}
-C=cycle permutation L
-assert(net C=== "(9 1)(7 6 4 3 2 5)")
-D=cycle (permutation L)^-1
-assert(net D==="(9 1)(7 5 2 3 4 6)")
-P=permutation {11,3,10,6,13,5,8,1,7,12,2,4,14,15,9}
-assert(P===toPermutation cycle P)
-///
--------------------------------------
--- Test Permutation Inverses
--------------------------------------
-
-TEST///
-L={9, 5, 2, 3, 7, 4, 6, 8, 1, 10}
-P=permutation L
-P^-1
-assert(toString net P^-1=== toString {9,3,4,6,2,7,5,8,1,10})
-///
-
--------------------------------------
--- Test Cycle & Transposition Checks
--------------------------------------
-TEST///
-L=cycle{{5,1,2},{6,5}}
-M=minimalCycles L
-assert(net M=== "(6 1 2 5)")
-J=cycle{{3,4,5},{5,1,2},{6,5}}
-K=cycle{{3,4,5},{6,1,2,5}}
-assert(net minimalCycles J=== net minimalCycles K)
-///
-
-end
-
-installPackage "Permutations"
-loadPackage "Permutations"
-
-shiftIndex = method()
-
-shiftIndex(List):= List => (L)->(
-apply(L, i->apply(i, r->r+1))
-     )
-
-shiftIndex permutations 5
-
-
-isPermutation = method()
-
-isPermutation(List):= Boolean => (L) -> (
-     if 
-     )
-
-loadPackage "Permutations"
-(P,Q) = (randomPermutation 6, randomPermutation 6)
-bruhatComparison(P,Q)
-
-
-P = permutation {3, 1, 4, 5, 7, 2, 6}
-Q = permutation {5, 7, 1, 3, 4, 6, 2}
-L = reverse apply({{6, 7},{2, 5},{2, 4},{2, 3},{1, 4},{1, 3}}, i -> permutation cycle {i})
-lengthOfPermutation(P)
-lengthOfPermutation(P*L_0)
-lengthOfPermutation(P*L_0*L_1)
-lengthOfPermutation(P*L_0*L_1*L_2)
-lengthOfPermutation(P*L_0*L_1*L_2*L_3)
-lengthOfPermutation(P*L_0*L_1*L_2*L_3*L_4)
-lengthOfPermutation(P*L_0*L_1*L_2*L_3*L_4*L_5)
-P*L_0*L_1*L_2*L_3*L_4*L_5
-bruhatComparison(P,Q)
