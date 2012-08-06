@@ -10,9 +10,14 @@ newPackage(
 	     },
     	Headline => "tensors"
     	)
-   
-export {TensorEntryList, tensorEntryList, nA, tel}
+--ToDo:
+--1)new type and methods for tensors
+--on creation of new tensor space
+--e.g. t_(1,0,0) should work.
+--2)tensor' to make tensors
+--3)equality testing of tensor spaces
 
+export {TensorEntryList, tensorEntryList, nA, tel}
 exportMutable {TemporaryTensorList, TemporaryIndexList}
 
 
@@ -36,6 +41,11 @@ tel Thing := x -> x
 TensorEntryList_Sequence:=(N,s) -> tel nA(N,s)
 TensorEntryList_ZZ := (N,n) -> N_(1:n)
 -----
+TensorEntryList_Sequence:=(N,s) -> (
+     if not all(s,i->class i === ZZ or class i === Symbol) then error "expected a list of integers or symbols";
+     if not all(s,i->class i === ZZ) then return (hold N)_(hold s);
+     return tel nA(N,s);
+     )
 
 ----
 dimensions=method()
@@ -139,8 +149,12 @@ TensorModule#{Standard,AfterPrint} = M -> (
 *}
      << endl;
      )
-dimensions TensorModule := M -> M.cache.dimensions
 module TensorModule := M -> new Module from M
+
+dimensions TensorModule := M -> M.cache.dimensions
+dimensions Module := M -> {numgens M}
+dimensions Vector := v -> dimensions module v
+
 --
 TensorModule**TensorModule := (M,N) -> (
      P:=(module M) ** (module N);
@@ -149,18 +163,17 @@ TensorModule**TensorModule := (M,N) -> (
      P.cache.factors=M.cache.factors|N.cache.factors;
      P
      )
-P=M**M**M
-t=sum for i in 0..7 list i*P_i
-dimensions class t
 
 ----PICK UP HERE
-tel TensorModule := M -> ()
-
-((set{1,2,3})**(set{4,5,6}))
-     
-     
-     )
-
+nestedList=method()
+nestedList(List,List):=(dims,L) -> (
+     if not product dims == #L then error "dimension mismatch in nestedList";
+     while #dims>1 do (
+	  d:=last dims;
+	  L = for i in 0..<round(#L/d) list take(L,{i*d,(i+1)*d-1});
+	  dims = take(dims,{0,-2+#dims}));
+     return L)
+tel Vector := v -> tel nestedList (dimensions v,entries v);
 --
 beginDocumentation()
 
@@ -176,9 +189,12 @@ end
 restart
 debug loadPackage"Tensors"
 
+L=nestedList({2,2,2},{1,2,3,4,5,6,7,8})
+
 L={{{1,2,3},{4,5,6}},{{5,6,7},{8,9,10}}}
 --entry:
 nA(L,(1,1,2))
+A_(i,j)
 
 --slices:
 nA(L,(1,))
@@ -190,6 +206,15 @@ nA(L,(1,,1))
 
 tel {{1,2},{3,4}}
 tel {L,L}
+
+P=M**M**M
+t=sum for i in 0..7 list i*P_i
+dimensions class t
+t=(M_0)**(M_1)**(M_0)
+tel t
+dimensions class t
+ancestors R^2
+
 
 T = tel L
 dimensions T
@@ -226,7 +251,9 @@ sumOut({m0,m0,m0},{(0,i),(i,1),(j,0)})
 
 -----
 module M
+R^2
 M=tm R^2
+
 M.cache.dimensions
 keys M.cache
 N=M
@@ -237,7 +264,83 @@ P=M**M
 tensorModule P
 class P
 
+(M_1) ** (M_0)
+
 class class( (M_1)**(M_0))
+
+
+--TRYING TO IMPROVE EINSTEIN SUMMATION
+
+ESUM=EinsteinSummationMethodFunction=new Type of MethodFunction
+esum=new ESUM from method(Dispatch=>Thing)
+ESUM_List := (esum,inds) -> (
+     if not all(inds,i->class i === Symbol) then error "expected a list of Symbols";
+     f = i->1;
+     r
+     )
+esum_{i,j}
+getParsing (hold 1+2)
+(expression 1+2)+(expression 1+2)
+hold 1+2
+
+hold' = method(Dispatch => Thing, TypicalValue => Expression)
+hold' Expression := identity
+hold' Thing := x -> ((new Holder from {x})+(new Holder from {x}))
+hold' 1+2+3
+
+test=new Keyword from abc
+test
+f = method(Dispatch=>Thing)
+f Thing:= x -> (Holder{x}+Holder{x})
+f 1
+f 1+2
+f(hold 1+2)
+f hold 1+2
+(hold 1) ..< (hold 5)
+value ((hold M)_0)
+Holder{1}
+
+new Sum from {hold 1+2,hold 1+2}
+
+
+(new Expression from {3})+(new Expression from {3})
+new Sum from {hold (M_0)_j,M_0}
+
+
+
+f Thing:= x -> new Holder from {hold x+hold x}
+f hold i
+i=hold i
+(hold symbol M)_(hold symbol i)
+hold a_k
+hold m_k
+
+(f 1+2)
+(f 1)+2
+f(1+2)
+--     return (hold x)+(hold x);
+     return s+s;
+     )
+f(hold 1+2)
+f 1+2
+
+g=f@@hold
+g 1+2
+f hold 1+2
+code hold
+f(hold i*j)
+(hold 1+2)+(hold 3+4)
+
+KeyWord 
+class(for)
+
+f (hold i*j)
+g=hold
+g i*j
+
+(hold i*j) + (hold i*j)
+s= hold i*j
+s+s
 
 
 
