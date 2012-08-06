@@ -679,9 +679,10 @@ toPolymakeFormat(P3)
 toPolymakeFormat(P4)
 
 runPolymake(P, "FACETS")
-runPolymake(P, "F_VECTOR")
-filename = writePolymakeFile(P)
-runPolymake(filename, "PROPERTY_NAMES")
+
+filename = writePolymakeFile(P4)
+runPolymake(filename, "FACETS")
+runPolymake(filename, "F_VECTOR")
 
 getProperty(filename, "AMBIENT_DIM")
 getProperty(filename, "VERTICES")
