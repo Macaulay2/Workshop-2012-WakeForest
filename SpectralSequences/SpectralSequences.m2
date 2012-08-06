@@ -121,7 +121,11 @@ filteredComplex List := L -> (
 	 error "expected all map to have the same target"));
      
   Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
-  P := {0 => C} | apply(#maps, p -> p+1 => image maps#p);
+  P := {0 => C} | for p to #maps-1 list (
+       F:= image maps#p;
+       p => chainComplex for i from min F to max F - 1 list (
+	    inducedMap(F_i,F_(i+1), matrix C.dd_(i+1))
+	    ));
   if (last P)#1 != Z then P = P | {#maps+1 => Z};
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
     
@@ -255,12 +259,14 @@ totmap :=(L,M,f) -> (
      
 -- totHom gives the total complex of double complex of hom of chain complexes.
 totHom := (C,D)-> (
-     n:= length C;
-     m:= length D;
-     L:= for k from -m to n-1 list (
-	  LC:= toList(max(0,k)..min(n,k+m));
-	  LD:= toList(max(0,k+1)..min(n,k+m+1));
-	  f:= (i,j) -> (if i == j then (-1)^i*Hom(C_i,D.dd_(i-k))
+     minC := min C;
+     maxC := max C;
+     minD := min D;
+     maxD := max D;
+     L:= for k from minC -maxD to maxC - minD - 1 list (
+	  LC:= toList(max(minC,k+minD)..min(maxC,k+maxD));
+	  LD:= toList(max(minC,k+1+minD)..min(maxC,k+maxD+1));
+	  f:= (i,j) -> (if i == j then (-1)^(i+j)*Hom(C_i,D.dd_(i-k))
 	       else if i + 1 == j then Hom(C.dd_(i+1),D_(i-k))
 	       else map(Hom(C_j,D_(j-k-1)),Hom(C_i,D_(i-k)),0)
 	       );
@@ -271,25 +277,49 @@ totHom := (C,D)-> (
 
 -- hHom1 makes a filter complex from double complex of hom of chain complexes with horizontal filtration
 
-hHom1:= (C,D) -> (
-     u := (i,j) -> Hom(C.dd_(i+1),D_j);
-     l := (i,j) -> Hom(C_i,D.dd_j);
-     out := {};
-     for i from 0 to length C - 1 do (
-	  for j from 1 to length D do (
-	       out = append(out, {{{i+1,j},{i,j}},u(i,j)});
-	       out = append(out,{{{i,j-1},{i,j}},l(i,j)});
-	       )
-	  );
-     for j from 1 to length D do 
-	  out = append(out, {{{length C,j-1},{length C,j}},l(length C,j)});
-	  hashTable (out)
+filteredHom = method(Options => {Filtration => 0})
+filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
+     minC:= min C;
+     maxC:= max C;
+     minD:= min D;
+     maxD:= max D;
+     
+     T:= totHom(C,D);
+     
+     for i from minC+1 to maxC do (
+	  for k from minC -maxD to maxC - minD - 1 list (
+	  LC:= toList(max(i,k+minD)..min(maxC,k+maxD));
+	  LD:= toList(max(i,k+1+minD)..min(maxC,k+maxD+1));
+	 
+	  S := directSum apply (LC, i-> Hom(C_i,D_(i-k)));
+	  T := directSum apply (LD, i-> Hom(C_i,D_(i-k-1)));
 	  )
+
+
+
+-- totTensor gives the total complex of the tensor product of chain complexes
+
+totTensor := (C,D)-> (
+     n:= length C;
+     m:= length D;
+     L:= for k from -m-n to -1 list (
+	  LC:= toList(max(0,-k-m)..min(n,-k));
+	  LD:= toList(max(0,-k-1-m)..min(n,-k-1));
+	  f:= (i,j) -> (if i == j then (-1)^i* C_i ** D.dd_(-i-k)
+	       else if i - 1 == j then C.dd_i ** D_(-i-k)
+	       else map(C_j ** D_(-j-k-1), C_i ** D_(-i-k),0)
+	       );
+	  S := directSum apply (LC, i-> C_i ** D_(-i-k));
+	  T := directSum apply (LD, i-> C_i ** D_(-i-k-1));
+	  map(T,S,totmap(LC,LD,f))
+	  );
+     chainComplex reverse L
+     )
 
 
   
 end
-error 
+
 --------------------------------------------------------------------------------
 
 restart
@@ -316,29 +346,7 @@ prune E_0^{0,-2}
 prune E_0^{0,-3}
 
 F = filteredComplex E
-p = 0
-q = 0
-d= (F^p).dd_(-p-q);
-M= source d
-r = 0
-N= source (F^(p+r)).dd_(-p-q-1)
-P= invSubmodule (d, N)
-prune P
-A= intersect (M,P)
 
-dA= inducedMap (N, A, matrix d)
-
-prune (pageA(0,F,0,-2))_0
-
-prune pageA2(0,F,0,-2)
-
-prune pageE(0,F,0,-3)
-prune oo
-C
-E_1
-keys E_1
-E_1^{0,0}
-prune o21
 
 -- Nathan's first example
 id_(QQ^1) || 0*id_(QQ
@@ -350,20 +358,12 @@ D0 = simplicialComplex {product gens S}
 D1 = simplicialComplex {x*y, x*z}
 D2 = simplicialComplex {x*y}
 
-K = filteredComplex(D0,D1,D2)
+K = filteredComplex{D0,D1,D2}
 
 
 code(net,Variety)
 
-cycles = (K,p,q,r) -> (
-  ker inducedMap(K^0^(p+q+1) / K^(p+r)^(p+q+1), K^p^(p+q), (K^0).dd_(-p-q)))
 
-boundaries = (K,p,q,r) -> (
-  image ((K^(p-r+1)).dd_(-p-q+1)) + (K^(p+1)^(p+q)))
-
-
-
-boundaries(
 
 epq(FilteredCoChainComplex,ZZ,ZZ,ZZ):=
 (FK,p,q,r)->(  ((zpq(FK,p,q,r)+bpq(FK,p,q,r)) / bpq(FK,p,q,r)) )
