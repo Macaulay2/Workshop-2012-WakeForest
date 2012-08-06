@@ -83,11 +83,10 @@ newPackage(
        {Name => "Claudiu Raicu"}
        },
       Headline => "multiplier ideals, log canonical thresholds, and jumping numbers",
-      PackageImports=>{"ReesAlgebra","Normaliz","Dmodules"},
-      PackageExports=>{"HyperplaneArrangements"},
-      DebuggingMode=>true
+      PackageImports=>{"ReesAlgebra","Normaliz"},
+      PackageExports=>{"Dmodules","HyperplaneArrangements"},
+      DebuggingMode=>false
       )
-
 
 -- Main functionality:
 -- Multiplier ideals.
