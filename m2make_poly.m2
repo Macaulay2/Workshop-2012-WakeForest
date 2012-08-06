@@ -88,10 +88,12 @@ F=sub(F,R);
 
 
 tmp=F;
-scan(1 .. #(flatten mu1), p-> tmp=sum flatten flatten apply(plist#p#2,k->  apply(plist#p#1,j-> apply(plist#p#0,i-> x_(i,j,k)*contract( a_(p,i)*b_(p,j)*c_(p,k),tmp )  ))) )
+scan(1 .. #(flatten mu1), p-> tmp=sum flatten flatten apply(plist#p#2,k->  apply(plist#p#1,j-> apply(plist#p#0,i-> 
+		    x_(i,j,k)*contract( a_(p,i)*b_(p,j)*c_(p,k),tmp )
+		      ))) )
 tmp 
 factor tmp
-
+viewHelp drop
 
 makeUnsymmetric:=proc(J::list,K::list)
 	description "this procedure takes in a list of partitions J and a list of permutations K and produces the unsymmetrized (and factored!) tensor";
