@@ -6,7 +6,7 @@
 --------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
--- Copyright 2011 Claudiu Raicu, Bart Snapp, Zach Teitler
+-- Copyright 2011, 2012 Claudiu Raicu, Bart Snapp, Zach Teitler
 --
 -- This program is free software: you can redistribute it and/or modify it under
 -- the terms of the GNU General Public License as published by the Free Software
@@ -84,7 +84,8 @@ newPackage(
        },
       Headline => "multiplier ideals, log canonical thresholds, and jumping numbers",
       PackageImports=>{"ReesAlgebra","Normaliz","Dmodules"},
-      PackageExports=>{"HyperplaneArrangements"}
+      PackageExports=>{"HyperplaneArrangements"},
+      DebuggingMode=>true
       )
 
 
@@ -159,22 +160,23 @@ setNmzOption("bigint",true);
 -- arbitrary ideal
 multIdeal(Ideal,QQ) :=
   multIdeal(Ideal,ZZ) :=
-  (I,t) -> multIdealViaDmodules(I,t)
+--  (I,t) -> multIdealViaDmodules(I,t)
+  (I,t) -> Dmodules$multiplierIdeal(I,t)
 -- hyperplane arrangement
 -- multIdeal(Number,CentralArrangement) := (s,A) -> multIdealHyperplaneArrangement(s,A)
 -- multIdeal(Number,CentralArrangement,List) := (s,A,m) -> multIdealHyperplaneArrangement(s,A,m)
 -- monomial
-multIdeal(MonomialIdeal,QQ) :=
-  multIdeal(MonomialIdeal,ZZ) :=
-  (I,t) -> multIdealMonomial(I,t)
+-- multIdeal(MonomialIdeal,QQ) :=
+--   multIdeal(MonomialIdeal,ZZ) :=
+--   (I,t) -> multIdealMonomial(I,t)
 -- monomial curve
-multIdeal(Ring,List,QQ) :=
-  multIdeal(Ring,List,ZZ) :=
-  (R,nn,t) -> multIdealMonomialCurve(R,nn,t)
+-- multIdeal(Ring,List,QQ) :=
+--   multIdeal(Ring,List,ZZ) :=
+--   (R,nn,t) -> multIdealMonomialCurve(R,nn,t)
 -- generic determinantal
-multIdeal(Ring,List,ZZ,QQ) :=
-  multIdeal(Ring,List,ZZ,ZZ) :=
-  (R,mm,r,t) -> multIdealGenericDeterminantal(R,mm,r,t)
+-- multIdeal(Ring,List,ZZ,QQ) :=
+--   multIdeal(Ring,List,ZZ,ZZ) :=
+--   (R,mm,r,t) -> multIdealGenericDeterminantal(R,mm,r,t)
 
 
 --------------------------------------------------------------------------------
@@ -230,10 +232,10 @@ keynumber = (I) -> (
   and other optional arguments provided in Dmodules
 *}
 
-multIdealViaDmodules = method()
-multIdealViaDmodules(Ideal,Number) := (I,t) -> (
-  Dmodules$multiplierIdeal(I,t)
-  );
+-- multIdealViaDmodules = method()
+-- multIdealViaDmodules(Ideal,Number) := (I,t) -> (
+--   Dmodules$multiplierIdeal(I,t)
+--   );
 
 -- lctViaDmodules = method()
 -- lctViaDmodules(Ideal) := (I) -> (
@@ -276,7 +278,7 @@ NewtonPolyhedron (MonomialIdeal) := (I) -> (
   
 );
 
--- multIdealMonomial
+-- multIdeal of monomialIdeal
 -- input: monomialIdeal I, rational number t
 -- output: multiplier ideal J(I^t)
 ----
@@ -319,9 +321,8 @@ NewtonPolyhedron (MonomialIdeal) := (I) -> (
 ---- for v in Int(t*Newt(I)); then use Macaulay2 to quotient by the product
 ---- of the variables, corresponding to Howald's (1,...,1).
 
-multIdealMonomial = method();
-multIdealMonomial (MonomialIdeal, ZZ) := (I,t) -> multIdealMonomial(I,promote(t,QQ));
-multIdealMonomial (MonomialIdeal, QQ) := (I,t) -> (
+multIdeal (MonomialIdeal, ZZ) :=
+multIdeal (MonomialIdeal, QQ) := (I,t) -> (
   
   R := ring I;
   -- use R;
@@ -335,7 +336,7 @@ multIdealMonomial (MonomialIdeal, QQ) := (I,t) -> (
   ) else if ( t >= keynumber I ) then (
     
     s := 1 + floor(t-keynumber(I));
-    multIdeal = I^s*multIdealMonomial(I,t-s) ;
+    multIdeal = I^s*multIdeal(I,t-s) ;
   
   ) else (
     
@@ -722,9 +723,8 @@ intersectionIndexSet = (ff) -> (
 -- Output:
 --  * an ideal
 
-multIdealMonomialCurve = method()
-multIdealMonomialCurve(Ring, List, QQ) :=
-multIdealMonomialCurve(Ring, List, ZZ) := (R, nn, t) -> (
+multIdeal (Ring, List, QQ) :=
+multIdeal (Ring, List, ZZ) := (R, nn, t) -> (
      ff := sortedGens(R,nn);
      curveIdeal := affineMonomialCurveIdeal(R,nn);
      
@@ -732,7 +732,7 @@ multIdealMonomialCurve(Ring, List, ZZ) := (R, nn, t) -> (
      
      
      symbpow := symbolicPowerCurveIdeal(curveIdeal , floor(t-1));
-     term    := multIdealMonomial(termIdeal(curveIdeal) , t);
+     term    := multIdeal(termIdeal(curveIdeal) , t);
      
      validl  := intersect apply(indexList ,
                      mm -> exceptionalDivisorValuationIdeal(R,ff,mm,
@@ -780,6 +780,7 @@ lctMonomialCurveFromSortedGens(List) :=  ff -> (
 -- HYPERPLANE ARRANGEMENTS -----------------------------------------------------
 --------------------------------------------------------------------------------
 
+{*
 multIdealHyperplaneArrangement = method()
 multIdealHyperplaneArrangement(Number,CentralArrangement) := (s,A) -> (
   HyperplaneArrangements$multIdeal(s,A)
@@ -792,7 +793,7 @@ lctHyperplaneArrangement = method()
 lctHyperplaneArrangement(CentralArrangement) := (A) -> (
   HyperplaneArrangements$lct(A)
   );
-
+*}
 
 --------------------------------------------------------------------------------
 -- HYPERPLANE ARRANGEMENTS -----------------------------------------------------
@@ -814,9 +815,8 @@ genericDeterminantalSymbolicPower := (R,m,n,r,a) -> (
 );
 
 
-multIdealGenericDeterminantal = method()
-multIdealGenericDeterminantal(Ring,List,ZZ,ZZ) := (R,mm,r,c) -> multIdealGenericDeterminantal(R,mm,r,promote(c,QQ));
-multIdealGenericDeterminantal(Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
+multIdeal (Ring,List,ZZ,ZZ) :=
+multIdeal (Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
   m := mm_0;
   n := mm_1;
   
@@ -860,9 +860,9 @@ TEST ///
 --------------------------------------------------------------------------------
 
 
--- --------------------------------------------------------------------------------
--- -- VIA DMODULES ----------------------------------------------------------------
--- --------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- VIA DMODULES ----------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- TEST ///
 --   needsPackage "MultiplierIdeals";
@@ -1266,7 +1266,6 @@ Description
 ///
 
 
-
 doc ///
 Key
   (lct, Ring, List)
@@ -1294,7 +1293,6 @@ Description
     n = {2,3,4};
     lct(R,n)
 ///
-
 
 
 --------------------------------------------------------------------------------
