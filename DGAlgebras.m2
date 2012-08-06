@@ -16,7 +16,7 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
         torMap, homologyAlgebra, torAlgebra, maxDegree, StartDegree, EndDegree, ringMap,
 	isHomologyAlgebraTrivial, findTrivialMasseyOperation, findNaryTrivialMasseyOperation, AssertWellDefined,
 	isGolod, isGolodHomomorphism, GenDegreeLimit, RelDegreeLimit, TMOLimit,
-	InitializeDegreeZeroHomology, InitializeComplex, isAcyclic, getDegNModule,
+	InitializeDegreeZeroHomology, InitializeComplex, isAcyclic, getDegNModule, polydifferential, 
 	semifreeDGModule, DGRing, homologyModule, DGModule, DGModuleMap, dgModuleMap
 }
 
@@ -905,12 +905,12 @@ net DGModuleMap := f -> net f.natural
 
 dgModuleMap = method(TypicalValue => DGModuleMap)
 dgModuleMap (DGModule,DGModule,Matrix) := (V,U,fnMatrix) -> (
-   assert(U.ring.natural === V.ring.natural);  
+   assert(U.DGRing === V.DGRing);  
    f := new MutableHashTable;
    f#(symbol source) = U;
    f#(symbol target) = V;
    f#(symbol natural) = map(V.natural,U.natural,fnMatrix);
-   f#(symbol ringMap) = map(V.ring,U.ring,drop(flatten entries matrix f.natural,numgens U.natural) / (f -> substitute(f,V.ring)));
+   f#(symbol ringMap) = map(V.DGRing,U.DGRing,drop(flatten entries matrix f.natural,numgens U.natural) / (f -> substitute(f,V.DGRing)));
    new DGAlgebraMap from f
 )
 
@@ -1134,7 +1134,6 @@ net DGModule := M -> net M.natural
 semifreeDGModule = method(TypicalValue => DGModule)
 semifreeDGModule (DGAlgebra,List) := (A,degList) -> (
    U := new MutableHashTable;
-   
    U#(symbol DGRing) = A;
    U#(symbol ring) = A.ring;
    U#(symbol diff) = {};
@@ -1322,8 +1321,6 @@ doc ///
 ///
 
 doc ///
-
-
   Key
     "The Koszul complex as a DG Algebra"
   Headline
@@ -1474,11 +1471,6 @@ doc ///
       use K.natural
       setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
       U.diff
-      d0 = polyDifferential(0,U)
-      d1 = polyDifferential(1,U)
-      d2 = polyDifferential(2,U)
-      d3 = polyDifferential(3,U)
-      d4 = polyDifferential(4,U)
       chainComplex U
   Caveat
       So far only semifree DGModules can be constructed.
