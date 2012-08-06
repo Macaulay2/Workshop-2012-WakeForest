@@ -175,11 +175,14 @@ sumOut List := L -> sumOut(L/first,L/(i->toSequence remove(i,0)))
 ----------------
 Tensor=new Type of Vector
 TensorModule = new Type of Module
-module TensorModule := M -> new Module from copy M
+module TensorModule := M -> new Module from M
 
 --Printing TensorModules:
 TensorModule.synonym="tensor module"
-net TensorModule := M -> (net new Module from copy M)|", "|"tensor of order "|toString(#M.cache.dimensions)|", dimensions "|toString(M.cache.dimensions)
+net TensorModule := M -> (net new Module from M)|
+     ", "|
+     "tensor order "|toString(#M.cache.dimensions)|
+     ", dimensions "|toString(M.cache.dimensions)
 TensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
      n := rank ambient M;
@@ -200,24 +203,37 @@ TensorModule#{Standard,AfterPrint} = M -> (
      << endl;
      )
 
-------
+-------------------------
 --Method for building tensor modules:
+-------------------------
+
+--Copy an ImmutableHashTable with a CacheTable:
+cacheCopy = method()
+cacheCopy Thing := M -> hashTable ((pairs M)|{symbol cache => new CacheTable from M.cache})
+
+--Copy a module into a TensorModule
+--without the new cache table entries:
+tm'=method()
+tm' Module := M -> new TensorModule of Tensor from cacheCopy M;
+
+--Build tensor modules:
 tm=tensorModule = method()
 tm Module := M -> (
-     Q:=newClass(TensorModule,Tensor,copy M);
+     Q:=tm' M;
      Q.cache.dimensions = {numgens M};
      Q
      )
 tm (Ring,List) := (R,L) -> (
      d:=product L;
-     Q:=newClass(TensorModule,Tensor,copy (R^d));
+--     Q:=newClass(TensorModule,Tensor, (R^d));
+     Q:=tm'(R^d);
      Q.cache.dimensions = L;
      Q
      )
 tm (Module,List) := (M,L) -> (
      d:=product L;
      if not numgens M == d then error "dimension mismatch";
-     Q:=newClass(TensorModule,Tensor,copy M);
+     Q:=tm' M;
      Q.cache.dimensions = L;
      )
 
@@ -299,9 +315,6 @@ restart
 debug loadPackage"Tensors"
 
 R=QQ[x]
-M = tm R^1
-M**M
-M
 
 --the following works okay:
 N=tm(R,{1,1})
@@ -316,9 +329,10 @@ O_0
 M=tm(R,{1})
 M**M
 M
+M**M**M**M
 --
 
---This works:
+--This does not work:
 M=tm(R,{1})
 N=tm(R,{1,1})
 M
