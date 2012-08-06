@@ -52,6 +52,10 @@ export {
      isBoundedAbove,
      isCrosscut,
      crosscuts
+     
+     -- fibers
+     posetMapFiber,
+     isFiberContractible
     }
 
 ------------------------------------------
@@ -193,7 +197,23 @@ crosscuts (Poset) := List => (P) -> (
 -- methods dealing with fibers
 -- compute fibers over a point in the target
 -- check contractability of fibers
+posetMapFiber = method()
+posetMapFiber(PosetMap, Thing) := Poset => (f,elt) -> (
+     elts := select((f.source).GroundSet, preim -> (f.GroundMap)#preim == elt);
+     subposet (f.source, elts)
+     )
 
+nonnull :=(L) -> (
+     select(L, i-> i =!= null))
+
+
+
+isFiberContractible = method()
+isFiberContractible (PosetMap, Thing) := Boolean => (f, elt) -> (
+           fiberCmpx := orderComplex(posetMapFiber(f,elt)); 
+	   homDims := nonnull (unique apply(keys HH fiberCmpx, key-> if key =!= symbol ring then (prune HH fiberCmpx)#key));
+      	   if #homDims == 1 and homDims_0 == 0 then true else false
+	   )
 
 
 
