@@ -98,9 +98,11 @@ net TensorArray  := T -> netList new List from T
 TensorArray_ZZ := (N,n) -> N_(1:n)
 -----
 TensorArray_Sequence:=(N,s) -> (
-     if not all(s,i->instance(i,ZZ) or instance(i,Symbol)) then error "TensorArray_Sequence: expected a list of integers or symbols";
-     if not all(s,i->instance(i,ZZ)) then return (hold N)_(hold s);
-     return ta nla(N,s);
+     if not all(s,i->instance(i,ZZ) or instance(i,Symbol) or instance(i,Nothing)) then error "TensorArray_Sequence: expected a list of integers or symbols";
+     if not all(s,i->instance(i,ZZ) or instance(i,Nothing)) then return (hold N)_(hold s);
+     l:= nla(N,s);
+     if instance(l,List) then return ta l;
+     l
      )
 -----
 dimensions=method()
@@ -113,6 +115,7 @@ dimensions TensorArray := L -> (d:={};
 ---
 ta=
 tensorArray=method()
+tensorArray Thing := x -> x
 tensorArray List := L -> (
      if not isrect(L) then return "error: nested list is not rectangular";
      new TensorArray from L
@@ -177,6 +180,18 @@ Tensor=new Type of Vector
 TensorModule = new Type of Module
 module TensorModule := M -> new Module from M
 
+--
+Tensor _ List := (v,L) -> (
+     M := tensorModule v;
+     dims := M.cache.dimensions;
+     if not #L == #dims then error"dimension mismatch";
+     ind := L#0;
+     for i from 0 to #L-2 do ind = ind*dims#i + L#(i+1);
+     v_ind
+     )
+
+Tensor _ Sequence := (v,L) -> v_(toList L)
+
 --Printing TensorModules:
 TensorModule.synonym="tensor module"
 net TensorModule := M -> (net new Module from M)|
@@ -235,7 +250,9 @@ tm (Module,List) := (M,L) -> (
      if not numgens M == d then error "dimension mismatch";
      Q:=tm' M;
      Q.cache.dimensions = L;
+     Q
      )
+tm Vector := v -> class v;
 
 ------
 --Using dimensions method previously defined for
@@ -315,6 +332,17 @@ restart
 debug loadPackage"Tensors"
 
 R=QQ[x]
+
+M = tensorModule(R^8,{2,2,2})
+vec = vector{1,2,3,4,5,6,7,8}
+v = new M from vec
+
+v_{0,0,1}
+v_(1,1,0)
+
+tav = tensorArray v
+tav_(0,0,1)
+
 
 --the following works okay:
 N=tm(R,{1,1})
