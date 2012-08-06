@@ -938,7 +938,6 @@ toComplexMap DGAlgebraMap := opts -> f -> (
    if A.ring === B.ring then
       map(Bcc,Acc,i -> toComplexMap(f,i,opts))
    else
-      -- the below doesn't work yet since I haven't made pushForward functorial.
       map(pushForward(f.ringMap,Bcc),Acc, t -> toComplexMap(f,t,opts))
 )
 
@@ -990,7 +989,7 @@ toComplexMap (DGAlgebraMap,ZZ) := opts -> (f,n) -> (
    )
 )
 
--- make pushForward functorial for maps of free modules.  To use in toComplexMap above.
+-- the below command makes pushForward functorial for maps of free modules.  To use in toComplexMap above.
 pushForward(RingMap,Matrix) := opts -> (f,M) -> (
    -- converts a map of free S-modules (a finite R-algebra) to a map over R
    R := source f;
@@ -1138,12 +1137,6 @@ semifreeDGModule (DGAlgebra,List) := (A,degList) -> (
    U#(symbol DGRing) = A;
    U#(symbol ring) = A.ring;
    U#(symbol diff) = {};
-   -- define M.natural differently depending on whether or not A is homogeneous.
-   --   if #(first degList) != #(first degrees A.ring) + 1 then degList = apply(degList, i -> i | {0});
-   --   A#(symbol natural) = (A.ring)[varsList, Degrees => degList, Join => false, SkewCommutative => select(toList(0..(#degList-1)), i -> odd first degList#i)];
-   --)
-   --else (
-   --   A#(symbol natural) = (A.ring)[varsList, Degrees => degList, SkewCommutative => select(toList(0..(#degList-1)), i -> odd first degList#i)];
    if isHomogeneous A then (
       if #(first degList) != #(first A.Degrees) then degList = apply(degList, i -> i | {0});
       U#(symbol natural) = (A.natural)^(-degList);
@@ -1152,9 +1145,6 @@ semifreeDGModule (DGAlgebra,List) := (A,degList) -> (
       U#(symbol natural) = (A.natural)^(-degList);
    );
    U#(symbol isHomogeneous) = false;
-   --M.natural.cache = new CacheTable;
-   -- basisModule is here to keep track of degrees over a nested polynomial ring.
-   --M.natural.cache#(symbol basisModule) = ...;
    U#(symbol Degrees) = degList;
    U#(symbol cache) = new CacheTable;
    U.cache#(symbol homology) = new MutableHashTable;
@@ -1162,6 +1152,34 @@ semifreeDGModule (DGAlgebra,List) := (A,degList) -> (
    U.cache#(symbol diffs) = new MutableHashTable;
    new DGModule from U
 )
+
+{*semifreeResoution = method(TypicalValue => DGModule, Options=>{LengthLimit=>3})
+semifreeResolution (Module,DGAlgebra) := opts -> (M,A) -> (
+   -- The below code follows the construction in proposition 2.2.7 in the IFR notes.
+   -- It computes a presentation of M over Q, tensor up to A, kill the kernel of this new
+   -- projection by adjoining variables, then adjoin variables to kill H1, etc, etc.
+   -- it assumes that M is an R-module, and A is a DG Algebra resolution of R over Q = A.ring.
+   Q := A.ring;
+   R := ring M;
+   phi := map(R,Q);
+   -- present M over Q, not R
+   MoverQ := pushForward(phi,M);
+   presMoverQ := presentation MoverQ;
+)
+*}
+
+TEST ///
+restart
+loadPackage "DGAlgebras"
+Q = QQ[x,y]
+R = Q/ideal{x^3,y^3}
+KR = koszulComplexDGA(ideal R)
+use R
+phi = map(R,Q)
+MR = coker matrix {{x^2}}
+presMoverQ = presentation pushForward(phi,MR)
+presMoverQ**
+///
 
 maxDegree DGModule := U -> maxDegree (U.DGRing) + max ((degrees U.natural) / first)
 
