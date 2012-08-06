@@ -151,6 +151,13 @@ permutation(Cycle) := Permutation => (L) -> (
 	fold(S, (i,j) -> composePermutations(i,j))     
 )
 
+permutation(List,ZZ) := Permutation => (L,i) -> (
+     if 0 <= i and i <= (#L)!-1 then
+           permutation permutationByIndex(L, i)
+     else
+           error("Permutation index (" | i | ") too large for list size (" | #L | ").") 
+) 
+
 ------------------------------------------------------------------
 -- This extends a permutation on {0,1,2,..,#P-1} to {0,1,2,...,#N-1}.
 ------------------------------------------------------------------
@@ -216,15 +223,15 @@ permutationByIndex = (L,i) -> (
 
 ZZ / Permutation := ZZ => (z,P) -> if member(z,keys P.map) then P.map#z else z
 
-List / Permutation := List => (L,P)-> apply(0..#L, m -> P.map#m)
+List / Permutation := List => (L,P)-> toList apply(0..#L-1, m -> L_(P.map#m))
 
-Permutation ZZ := (p,t) -> z / P
+Permutation ZZ := (P,z) -> if member(z,keys P.map) then P.map#z else z
 
-Permutation List := List / Permutation
+Permutation List := List => (P,L)-> toList apply(0..#L-1, m -> L_(P.map#m))
 
 permute = method()
 
-permute(List, Permutation) := List => (L,P) -> apply(0..#L, m -> P.map#m)
+permute(List, Permutation) := List => (L,P) -> toList apply(0..#L-1, m -> L_(P.map#m))
 
 permuteRows = method()
 
@@ -779,12 +786,13 @@ doc///
 	      	  One specific additional function included with Permutations is applying a permutation 
 		  to the rows or columns of a matrix M.
 	Example
-	      	  M=matrix{{1,2,3,4,5},{6,7,8,9,10},{11,12,13,14,15}}
-		  P=permutation{3,2,1,5,0,4}
-		  permuteRows(M,P)
-		  P*M
-		  permuteColumns(M,P)
-		  M*P
+	      	  M=matrix{{1,2,3,4,5,6},{7,8,9,10,11,12},{13,14,15,16,17,18}}
+		  P1=permutation{3,2,1,5,0,4}
+		  P2=permutation{2,1,0}
+		  permuteColumns(M,P1)
+		  M*P1
+		  permuteRows(M,P2)
+		  P2*M
 		  
      SeeAlso
           permutation
