@@ -30,7 +30,8 @@ newPackage(
       HomePage => "http://www.math.berkeley.edu/~aboocher"},
 {
       Name => "Thanh Vu", 
-      Email => "vqthanh@math.berkeley.edu"},
+      Email => "vqthanh@math.berkeley.edu",
+      HomePage => "http://math.berkeley.edu/~thanh"},
     {
       Name => "Gregory G. Smith", 
       Email => "ggsmith@mast.queensu.ca", 
@@ -237,6 +238,56 @@ SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
 SpectralSequenceSheet ^ List := Module => (Er,L) -> (
        if Er#?L then source Er#L else Er.zero
        ) 
+  
+
+totmap :=(L,M,f) -> (
+     m := f(L_0,M_0);
+     for j from 1 to length L -1 do m = m|f(L_j,M_0);
+     for j from 1 to length M -1 do (
+	  n:= f(L_0,M_j);
+	  for i from 1 to length L-1 do n = n|f(L_i,M_j);
+	  m = m||n
+	  );
+     m
+     )
+
+
+     
+-- totHom gives the total complex of double complex of hom of chain complexes.
+totHom := (C,D)-> (
+     n:= length C;
+     m:= length D;
+     L:= for k from -m to n-1 list (
+	  LC:= toList(max(0,k)..min(n,k+m));
+	  LD:= toList(max(0,k+1)..min(n,k+m+1));
+	  f:= (i,j) -> (if i == j then (-1)^i*Hom(C_i,D.dd_(i-k))
+	       else if i + 1 == j then Hom(C.dd_(i+1),D_(i-k))
+	       else map(Hom(C_j,D_(j-k-1)),Hom(C_i,D_(i-k)),0)
+	       );
+	  totmap(LC,LD,f)
+	  );
+     chainComplex reverse L
+     )
+
+-- hHom1 makes a filter complex from double complex of hom of chain complexes with horizontal filtration
+
+hHom1:= (C,D) -> (
+     u := (i,j) -> Hom(C.dd_(i+1),D_j);
+     l := (i,j) -> Hom(C_i,D.dd_j);
+     out := {};
+     for i from 0 to length C - 1 do (
+	  for j from 1 to length D do (
+	       out = append(out, {{{i+1,j},{i,j}},u(i,j)});
+	       out = append(out,{{{i,j-1},{i,j}},l(i,j)});
+	       )
+	  );
+     for j from 1 to length D do 
+	  out = append(out, {{{length C,j-1},{length C,j}},l(length C,j)});
+	  hashTable (out)
+	  )
+
+
+  
 end
 
 --------------------------------------------------------------------------------
