@@ -33,9 +33,16 @@ posets'SuppressLabels = if instance((options Posets).Configuration#"DefaultSuppr
 
 export {
      -- types and constructors
-     PosetMap   
-        GroundMap
-     posetMap	  
+     PosetMap,   
+        GroundMap,
+     posetMap,	 
+     
+     -- checking properties
+     isOrderPreserving,
+     isOrderReversing,
+     isSimplicial,
+     isJoinPreserving,
+     isMeetPreserving 
      
 
     }
@@ -75,11 +82,22 @@ Thing / PosetMap := Thing => (elt,f) -> (eval(elt,f))
 
 
 -- methods that check properties of posetMaps
--- isOrderPreserving
+-- isOrderPreserving, reversing, and simplicial
 isOrderPreserving = method()
 isOrderPreserving(PosetMap) := Boolean => (f) -> (
      checkLessThans := unique flatten apply((f.source).GroundSet, elt1 -> apply((f.source).GroundSet, elt2 -> if compare(f.source, elt1, elt2) == true then compare(f.target, (elt1/f),(elt2/f))));
      not (unique(checkLessThans|{false}) == checkLessThans))
+
+isOrderReversing=method()
+isOrderReversing(PosetMap) := Boolean => (f) -> (
+     checkLessThans := unique flatten apply((f.source).GroundSet, elt1 -> apply((f.source).GroundSet, elt2 -> if compare(f.source, elt1, elt2) == true then compare(f.target, (elt2/f),(elt1/f))));
+     not (unique(checkLessThans|{false}) == checkLessThans))
+
+isSimplicial = method()
+isSimplicial(PosetMap) := Boolean => (f) -> (
+     if isOrderPreserving(f)== true or  isOrderReversing(f)== true then true else false
+     )
+
 
 -- isJoinPreserving
 -- isMeetPreserving
@@ -99,7 +117,9 @@ isMeetPreserving(PosetMap) := Boolean => (f) -> (
      )
 
 
--- isSimplicial
+
+
+
 
 
 
