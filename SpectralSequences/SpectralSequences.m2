@@ -45,7 +45,8 @@ export {
   "filteredComplex",
   "SpectralSequence",
   "spectralSequence",
-  "SpectralSequenceSheet"
+  "SpectralSequenceSheet",
+  "filteredHom"
   }
 
 -- symbols used as keys
@@ -263,37 +264,56 @@ totHom := (C,D)-> (
      maxC := max C;
      minD := min D;
      maxD := max D;
-     L:= for k from minC -maxD to maxC - minD - 1 list (
+     L:= for k from minC - maxD to maxC - minD - 1 list (
 	  LC:= toList(max(minC,k+minD)..min(maxC,k+maxD));
 	  LD:= toList(max(minC,k+1+minD)..min(maxC,k+maxD+1));
 	  f:= (i,j) -> (if i == j then (-1)^(i+j)*Hom(C_i,D.dd_(i-k))
 	       else if i + 1 == j then Hom(C.dd_(i+1),D_(i-k))
 	       else map(Hom(C_j,D_(j-k-1)),Hom(C_i,D_(i-k)),0)
 	       );
-	  totmap(LC,LD,f)
+	  S := directSum apply (LC, i-> Hom(C_i,D_(i-k)));
+	  T := directSum apply (LD, i-> Hom(C_i,D_(i-k-1)));
+	  map(T,S, totmap(LC,LD,f))
 	  );
      chainComplex reverse L
      )
 
 -- hHom1 makes a filter complex from double complex of hom of chain complexes with horizontal filtration
 
-filteredHom = method(Options => {Filtration => 0})
+filteredHom = method(Options => {Degree => 0})
 filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
      minC:= min C;
      maxC:= max C;
      minD:= min D;
      maxD:= max D;
-     
      T:= totHom(C,D);
-     
-     for i from minC+1 to maxC do (
-	  for k from minC -maxD to maxC - minD - 1 list (
+     R:= ring C_minC;
+     maps := for i from minC+1 to maxC list (
+	  L:= for k from minC -maxD to maxC - minD - 1 list (
 	  LC:= toList(max(i,k+minD)..min(maxC,k+maxD));
 	  LD:= toList(max(i,k+1+minD)..min(maxC,k+maxD+1));
-	 
-	  S := directSum apply (LC, i-> Hom(C_i,D_(i-k)));
-	  T := directSum apply (LD, i-> Hom(C_i,D_(i-k-1)));
-	  )
+	  S := if LC == {} then R^0 else directSum apply (LC, i-> Hom(C_i,D_(i-k)));
+	  T := if LD == {} then R^0 else directSum apply (LD, i-> Hom(C_i,D_(i-k-1)));
+	  a := map(T,S,0);
+	  b := if LC == {} then map(T_(maxC - minD -k),S,0) else (T_(maxC -minD-k))_(matrix {LC})
+	  );
+     	  si:= chainComplex reverse L;
+	  f:= k -> (
+	       if k != maxC - minD then (
+		    CT:= components T_k;
+		    CS:= components si_k;
+		    Diff:= toList (set CT - set CS);
+		    Aux:=directSum Diff;
+		    map(T_k,si_k,id_(si_k)|map(Aux,si_k,0))
+		    )
+	       else map (T_k,si_k,0)
+	       );
+	  map(T,si,f)
+	  );
+     filteredComplex maps
+     )
+     
+     
 
 
 
@@ -328,22 +348,14 @@ debug SpectralSequences
 S = QQ[x,y,z];
 C = res ideal gens S;   -- Koszul complex
 K = filteredComplex C
-K^(-2)
-K^4
-
+F = res ideal (x,y,z)
+filteredHom(F,F)
 spectralSequence K
 E = spectralSequence K
 filteredComplex E
 chainComplex E
 keys E
 
-E_0
-keys E_0
-E_0^{1,1}
-prune E_0^{0,0}
-prune E_0^{0,-1}
-prune E_0^{0,-2}
-prune E_0^{0,-3}
 
 F = filteredComplex E
 
