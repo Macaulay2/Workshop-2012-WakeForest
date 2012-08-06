@@ -20,7 +20,7 @@ newPackage("NewPolyhedra",
 -- COPYRIGHT NOTICE:
 --
 -- Copyright 2012 Nathan Ilten
--- Parts Copyright 2010 Rene Birkner
+-- Some parts copyright 2010 Rene Birkner
 --
 --
 -- This program is free software: you can redistribute it and/or modify
@@ -39,7 +39,9 @@ newPackage("NewPolyhedra",
 ---------------------------------------------------------------------------
 
 
-export {"vertices",
+export {"intersection",
+	"linSpace",
+	"vertices",
 	"rays",
 	"ambDim",
 	"hyperplanes",
@@ -54,8 +56,6 @@ export {"vertices",
 	
 needsPackage "FourierMotzkin"
 
--- WISHLIST
---  -Symmetry group for polytopes
 
 
 -- Defining the new type PolyhedralObject
@@ -93,6 +93,7 @@ convexHull(Matrix,Matrix) := (Mvert,Mrays) -> (
 	Mvert = chkZZQQ(Mvert,"points");
         Mrays = chkZZQQ(Mrays,"rays");
 	new Polyhedron from {
+		"genlinealitySpace" => map(QQ^(numgens target Mrays),QQ^1,0),
 		"genpoints" => Mvert,
 		"genrays" => Mrays}
 	)
@@ -107,47 +108,105 @@ convexHull Matrix := M -> (
 	R := map(target M,QQ^1,0);
 	convexHull(M,R))
 
+
 --   INPUT : '(P1,P2)'  two polyhedra
-convexHull(Polyhedron,Polyhedron) := (P1,P2) -> (
-	-- Checking for input errors
-	if ambDim P1 =!= ambDim P2 then error("Polyhedra must lie in the same ambient space");
-	if member("genhyperplanes",keys P1) and member("genhyperplanes",keys P1) then return (
-		new Polyhedron from {
-			"genhyperplanes" => (P1#"genhyperplanes"|P2#"genhyperplanes"),
-			"genhalfspaces" => (P1#"genhalfspaces"|P2#"genhalfspaces")
-			});
-	if member("genpoints",keys P1) and member("genpoints",keys P1) then return (
-		new Polyhedron from {
-			"genpoints" => (P1#"genpoints"|P2#"genpoints"),
-			"genrays" => (P1#"genrays"|P2#"genrays")
-			});
-	--descriptions don't agree, so we will compute point/ray description
+convexHull(Polyhedron,Polyhedron) := (P1,P2) -> convexHull{P1,P2}
+
+
+--   INPUT : 'L',   a list of Cones, Polyhedra, vertices given by M, 
+--     	    	    and (vertices,rays) given by '(V,R)'
+
+convexHull List := L -> (
+     vrlist:=apply(L,P->(
+	if instance(P,Polyhedron) then (
+		if P#?"vertices" then return (P#"vertices",P#"rays",P#"linealitySpace");
+		if P#?"genpoints" then return (P#"genpoints",P#"genrays",P#"genlinealitySpace");
+		computeVertices P;
+		return (P#"vertices",P#"rays",P#"linealitySpace"));
+	if instance(P,Matrix) then return (chkZZQQ(P,"points"),map(QQ^(numgens target P),QQ^1,0),map(QQ^(numgens target P),QQ^1,0));
+	(chkZZQQ(P#0,"points"),chkZZQQ(P#1,"rays",map(QQ^(numgens target P#0),QQ^1,0)))));
+	vlist:=matrix {apply(vrlist,v->v#0)};
+	rlist:=matrix {apply(vrlist,v->v#1)};
+	llist:=matrix {apply(vrlist,v->v#2)};
+	new Polyhedron from {
+		"genlinealitySpace" => llist,
+		"genpoints" => vlist,
+		"genrays" => rlist}
 	)
+
+
+
+-- PURPOSE : Computing a polyhedron as the intersection of affine half-spaces and hyperplanes
+intersection = method()
+
+--   INPUT : '(M,v,N,w)',  where all four are matrices (although v and w are only vectors), such
+--     	    	      	  that the polyhedron is given by P={x | Mx<=v and Nx=w} 
+--  OUTPUT : 'P', the polyhedron
+intersection(Matrix,Matrix,Matrix,Matrix) := (M,v,N,w) -> (
+	-- checking for input errors
+	if numColumns M =!= numColumns N then error("equations of half-spaces and hyperplanes must have the same dimension");
+	if numRows M =!= numRows v or numColumns v =!= 1 then error("invalid condition vector for half-spaces");
+	if numRows N =!= numRows w or numColumns w =!= 1 then error("invalid condition vector for hyperplanes");
+	new Polyhedron from {
+		"genhalfspaces"=>(chkZZQQ(M,"half-spaces"),chkZZQQ(v,"condition vector for half-spaces")),
+		"genhyperplanes"=>(chkZZQQ(N,"hyperplanes"),chkZZQQ(w,"condition vector for hyperplanes"))
+		}
+	)
+
+--   INPUT : '(M,N)',  two matrices where either 'P' is the Cone {x | Mx<=0, Nx=0} if 'M' and 'N' have the same source space 
+--     	    	       or, if 'N' is only a Column vector the Polyhedron {x | Mx<=v} 
+--  OUTPUT : 'P', the Cone or Polyhedron
+intersection(Matrix,Matrix) := (M,N) -> (
+	-- Checking for input errors
+	if ((numColumns M =!= numColumns N and numColumns N =!= 1) or (numColumns N == 1 and numRows M =!= numRows N)) and N != 0*N then 
+		error("invalid condition vector for half-spaces");
+	M = chkZZQQ(M,"half-spaces");
+	N = chkZZQQ(N,"condition vector for half-spaces");
+	-- Decide whether 'M,N' gives the Cone C={p | M*p >= 0, N*p = 0}
+	if numColumns M == numColumns N and numColumns N != 1 then return (
+		intersection(M,map(source M,QQ^1,0),N,map(source M,QQ^1,0)))
+	-- or the Cone C={p | M*p >= N=0}
+	else if numRows N == 0 then return (
+		intersection(M,map(source M,QQ^1,0),map(QQ^1,source M,0),map(source M,QQ^1,0)))
+	-- or the Polyhedron P={p | M*p >= N != 0}
+	else return intersection(M,N,map(QQ^1,source M,0),map(QQ^1,QQ^1,0)))
+   
+
+
+
+
+
+
 
 halfspaces = method()
 halfspaces Polyhedron := P -> (
-	if member("halfspaces",keys P) then return P#"halfspaces";
+	if P#?"halfspaces" then return P#"halfspaces";
 	computeHalfspaces P;
 	P#"halfspaces")
 
 hyperplanes = method()
 hyperplanes Polyhedron := P -> (
-	if member("hyperplanes",keys P) then return P#"hyperplanes";
+	if P#?"hyperplanes" then return P#"hyperplanes";
 	computeHalfspaces P;
 	P#"hyperplanes")
 
 vertices = method()
 vertices Polyhedron := P -> (
-	if member("vertices",keys P) then return P#"vertices";
+	if P#?"vertices" then return P#"vertices";
 	computeVertices P;
 	P#"vertices")
 
 rays = method()
 rays Polyhedron := P -> (
-	if member("rays",keys P) then return P#"rays";
+	if P#?"rays" then return P#"rays";
 	computeVertices P;
 	P#"rays")
 
+linSpace = method()
+linSpace Polyhedron := P -> (
+	if P#?"rays" then return P#"linealitySpace";
+	computeVertices P;
+	P#"linealitySpace")
 
 
 
@@ -159,28 +218,30 @@ ambDim = method(TypicalValue => ZZ)
 --   INPUT : 'P'  a Polyhedron 
 --  OUTPUT : an integer, the dimension of the ambient space
 ambDim Polyhedron := X -> (
-	if member("ambient dimension",keys X) then return X#"ambient dimension";
-	if member("genrays",keys X) then X#"ambient dimension"=numgens target X#"genrays"
-	else if member("genhyperplanes",keys X) then X#"ambient dimension"=numgens target (X#"genhyperplanes")_0;
-	return X#"ambient dimension")
+	if X#?"genrays" then return numgens target X#"genrays";
+	numgens target (X#"genhyperplanes")_0
+	)
 
 
 --aux functions
 
 computeHalfspaces = P -> (
-	if not member ("vertices",keys P) and not member("genpoints",keys P) then (
+	if not P#?"vertices" and not P#?"genpoints" then (
 		computeVertices P);
-	local Mvert; local Mrays; 
-	if member("vertices",keys P) then (Mvert=P#"vertices";Mrays=P#"rays")
-	else (Mvert=P#"genpoints";Mrays=P#"genrays");
+	local Mvert; local Mrays; local Mlin;
+	if P#?"vertices" then (Mvert=P#"vertices";Mrays=P#"rays";Mlin=P#"linealitySpace")
+	else (Mvert=P#"genpoints";Mrays=P#"genrays";Mlin=P#"genlinealitySpace");
 	if numRows Mvert == 0 then Mvert = matrix{{0}};
 	if numColumns Mvert == 0 then Mvert = map(target Mvert,QQ^1,0);
 	if numRows Mrays == 0 then Mrays = matrix{{0}};
 	if numColumns Mrays == 0 then Mrays = map(target Mrays,QQ^1,0);
+	if numRows Mlin == 0 then Mlin = matrix{{0}};
+	if numColumns Mlin == 0 then Mlin = map(target Mlin,QQ^1,0);
 	Mvert = map(QQ^1,source Mvert,(i,j)->1) || Mvert;
 	Mrays = map(QQ^1,source Mrays,0) || Mrays;
+	Mlin = map(QQ^1,source Mrays,0) || Mlin;
 	M := Mvert | Mrays;
-	fm:= fourierMotzkin M;
+	fm:= fourierMotzkin(M,Mlin);
 	HP := transpose(fm_1);
 	P#"hyperplanes"= (HP_{1..(numgens source HP)-1},-HP_{0});
 	HS := transpose(fm_0);
@@ -188,10 +249,10 @@ computeHalfspaces = P -> (
 	)
 
 computeVertices = P-> (
-	if not member ("hyperplanes",keys P) and not member("genhyperplanes",keys P) then (
+	if not P#?"hyperplanes" and not P#?"genhyperplanes" then (
 		computeHalfspaces P);
 	local M; local N; 
-	if member("hyperplanes",keys P) then (M=P#"halfspaces";N=P#"hyperplanes")
+	if P#?"hyperplanes" then (M=P#"halfspaces";N=P#"hyperplanes")
 	else (M=P#"genhalfspaces";N=P#"genhalfspaces");
 	M=(-M#1)|(M#0);
 	N=(-N#1)|(N#0);
@@ -206,8 +267,11 @@ computeVertices = P-> (
 	     B = promote(VR_(VRpart#true),QQ);
 	     B = matrix transpose apply(numColumns B, j -> flatten entries((1/B_j_0)*B_{j})));
 	if VRpart#?false then C = VR_(VRpart#false);
-	P#"vertices"=B^{1..(numgens target B)-1},
-	P#"rays"=C^{1..(numgens target C)-1}
+	LS := verticesA#1;
+	LS = LS^{1..(numgens target LS)-1};
+	P#"vertices"=B^{1..(numgens target B)-1};
+	P#"rays"=C^{1..(numgens target C)-1};
+	P#"linealitySpace"=LS;
 	)
 
 
