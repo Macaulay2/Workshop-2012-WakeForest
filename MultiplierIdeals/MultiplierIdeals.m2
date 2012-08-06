@@ -121,8 +121,6 @@ newPackage(
 --------------------------------------------------------------------------------
 
 export {
---      multIdeal,
---      lct,
       thresholdMonomial
       }
 
@@ -148,35 +146,6 @@ setNmzOption("bigint",true);
 -- METHODS ---------------------------------------------------------------------
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-
---------------------------------------------------------------------------------
--- PUBLIC METHODS --------------------------------------------------------------
---------------------------------------------------------------------------------
-
--- multIdeal:
---   a public-facing method to dispatch computation to the appropriate private
---   method implemented below
--- multIdeal = method()
--- arbitrary ideal
-multIdeal(Ideal,QQ) :=
-  multIdeal(Ideal,ZZ) :=
---  (I,t) -> multIdealViaDmodules(I,t)
-  (I,t) -> Dmodules$multiplierIdeal(I,t)
--- hyperplane arrangement
--- multIdeal(Number,CentralArrangement) := (s,A) -> multIdealHyperplaneArrangement(s,A)
--- multIdeal(Number,CentralArrangement,List) := (s,A,m) -> multIdealHyperplaneArrangement(s,A,m)
--- monomial
--- multIdeal(MonomialIdeal,QQ) :=
---   multIdeal(MonomialIdeal,ZZ) :=
---   (I,t) -> multIdealMonomial(I,t)
--- monomial curve
--- multIdeal(Ring,List,QQ) :=
---   multIdeal(Ring,List,ZZ) :=
---   (R,nn,t) -> multIdealMonomialCurve(R,nn,t)
--- generic determinantal
--- multIdeal(Ring,List,ZZ,QQ) :=
---   multIdeal(Ring,List,ZZ,ZZ) :=
---   (R,mm,r,t) -> multIdealGenericDeterminantal(R,mm,r,t)
 
 
 --------------------------------------------------------------------------------
@@ -232,15 +201,12 @@ keynumber = (I) -> (
   and other optional arguments provided in Dmodules
 *}
 
--- multIdealViaDmodules = method()
--- multIdealViaDmodules(Ideal,Number) := (I,t) -> (
---   Dmodules$multiplierIdeal(I,t)
---   );
+multIdeal(Ideal,QQ) :=
+  multIdeal(Ideal,ZZ) :=
+  (I,t) -> Dmodules$multiplierIdeal(I,t)
 
--- lctViaDmodules = method()
--- lctViaDmodules(Ideal) := (I) -> (
---   Dmodules$lct(I)
---   );
+lct(Ideal) := (I) -> Dmodules$lct(I)
+
 
 --------------------------------------------------------------------------------
 -- MONOMIAL IDEALS -------------------------------------------------------------
@@ -321,7 +287,7 @@ NewtonPolyhedron (MonomialIdeal) := (I) -> (
 ---- for v in Int(t*Newt(I)); then use Macaulay2 to quotient by the product
 ---- of the variables, corresponding to Howald's (1,...,1).
 
-multIdeal (MonomialIdeal, ZZ) :=
+multIdeal (MonomialIdeal, ZZ) := (I,t) -> multIdeal(I,promote(t,QQ))
 multIdeal (MonomialIdeal, QQ) := (I,t) -> (
   
   R := ring I;
@@ -386,27 +352,6 @@ multIdeal (MonomialIdeal, QQ) := (I,t) -> (
 
 );
 
-lct MonomialIdeal := (I) -> (
-  
---  M := NewtonPolyhedron(I);
---  m := numRows M;
---  n := numColumns M;
---  
---  lctList := {};
---  
---  local i;
---  for i from 0 to m-1 do (
---    s := sum( toList(0..(n-2)) , j -> M_(i,j) );
---    if ( M_(i,n-1) != 0 and s != 0 ) then (
---      lctList = append(lctList , -1*s / M_(i,n-1));
---    );
---  );
---  
---  return min(lctList);
---);
-
-  return first thresholdMonomial ( I , 1_(ring(I)) ) ;
-);
 
 
 -- thresholdMonomial
@@ -424,16 +369,12 @@ lct MonomialIdeal := (I) -> (
 --  at (1/t)*(v+(1,..,1)), and the vector (1/t)*(v+(1,..,1)) lies on the facets defined by the rows of (A' | -b')
 --  (via: (A'|-b')(w|1)^transpose >= 0 )
 thresholdMonomial = method();
-thresholdMonomial (MonomialIdeal , RingElement) := (I , m) -> (
-  if ( leadMonomial(m) != m ) then (
-    error("Second input must be a monomial (input was ",m,")");
-  ) else (
-    return thresholdMonomial(I,first exponents m);
+thresholdMonomial (MonomialIdeal , RingElement) := (I , mon) -> (
+  if ( leadMonomial(mon) != mon ) then (
+    error("Second input must be a monomial (input was ",mon,")");
   );
-  return 0;
-);
-thresholdMonomial (MonomialIdeal , List) := (I , v) -> (
   
+  v := first exponents mon;
   M := NewtonPolyhedron(I);
   m := numRows M;
   n := numColumns M;
@@ -459,6 +400,8 @@ thresholdMonomial (MonomialIdeal , List) := (I , v) -> (
   
   return ( threshVal , facetMatrix );
 );
+
+lct (MonomialIdeal) := (I) -> first thresholdMonomial ( I , 1_(ring(I)) )
 
 --------------------------------------------------------------------------------
 -- MONOMIAL CURVES -------------------------------------------------------------
@@ -723,8 +666,8 @@ intersectionIndexSet = (ff) -> (
 -- Output:
 --  * an ideal
 
-multIdeal (Ring, List, QQ) :=
-multIdeal (Ring, List, ZZ) := (R, nn, t) -> (
+multIdeal (Ring, List, ZZ) := (R, nn, t) -> multIdeal(R,nn,promote(t,QQ))
+multIdeal (Ring, List, QQ) := (R, nn, t) -> (
      ff := sortedGens(R,nn);
      curveIdeal := affineMonomialCurveIdeal(R,nn);
      
@@ -756,21 +699,15 @@ multIdeal (Ring, List, ZZ) := (R, nn, t) -> (
 -- Output:
 --  * a rational number
 
-lct(Ring,List) := (R,nn) -> lctMonomialCurveFromSortedGens(sortedGens(R,nn))
-
-lctMonomialCurveFromSortedGens = method()
-lctMonomialCurveFromSortedGens(List) :=  ff -> (
-     indexList  := intersectionIndexSet(ff);
-     curveIdeal := ideal ff;
-     lctTerm    := lct(termIdeal(curveIdeal));
-     min (2, lctTerm, 
+lct(Ring,List) := (R,nn) -> (
+  ff := sortedGens(R,nn);
+  indexList  := intersectionIndexSet(ff);
+  curveIdeal := ideal ff;
+  lctTerm    := lct(termIdeal(curveIdeal));
+  min (2, lctTerm, 
     min(
-         apply(indexList, mm -> 
-         (
-           exceptionalDivisorDiscrepancy(mm,ff)+1)/ord(mm,ff_1)
-         )
-         )
-    )
+         apply(indexList, mm -> (exceptionalDivisorDiscrepancy(mm,ff)+1)/ord(mm,ff_1) )
+    ) )
 );
  
 
@@ -796,7 +733,7 @@ lctHyperplaneArrangement(CentralArrangement) := (A) -> (
 *}
 
 --------------------------------------------------------------------------------
--- HYPERPLANE ARRANGEMENTS -----------------------------------------------------
+-- GENERIC DETERMINANTS --------------------------------------------------------
 --------------------------------------------------------------------------------
 
 genericDeterminantalSymbolicPower := (R,m,n,r,a) -> (
@@ -815,7 +752,7 @@ genericDeterminantalSymbolicPower := (R,m,n,r,a) -> (
 );
 
 
-multIdeal (Ring,List,ZZ,ZZ) :=
+multIdeal (Ring,List,ZZ,ZZ) := (R,mm,r,c) -> multIdeal(R,mm,r,promote(c,QQ))
 multIdeal (Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
   m := mm_0;
   n := mm_1;
@@ -1065,12 +1002,12 @@ needsPackage"Dmodules";
 debug MultiplierIdeals;
 
 R = QQ[x,y,z];
-assert( (multIdealMonomialCurve(R,{2,3,4},1)) == ideal 1_R )
-assert( (multIdealMonomialCurve(R,{2,3,4},7/6)) == ideal 1_R )
-assert( (multIdealMonomialCurve(R,{2,3,4},20/7)) == ideal(y^2*z-x*z^2,x^2*z-z^2,y^3-x*y*z,x*y^2-z^2,x^2*y-y*z,x^3-x*z) )
-assert( (multIdealMonomialCurve(R,{3,4,5},11/5)) == ideal(y^2-x*z,x^2*y-z^2,x^3-y*z) )
+assert( (multIdeal(R,{2,3,4},1)) == ideal 1_R )
+assert( (multIdeal(R,{2,3,4},7/6)) == ideal 1_R )
+assert( (multIdeal(R,{2,3,4},20/7)) == ideal(y^2*z-x*z^2,x^2*z-z^2,y^3-x*y*z,x*y^2-z^2,x^2*y-y*z,x^3-x*z) )
+assert( (multIdeal(R,{3,4,5},11/5)) == ideal(y^2-x*z,x^2*y-z^2,x^3-y*z) )
 I = affineMonomialCurveIdeal(R,{2,3,4})
-assert(multIdealMonomialCurve(R,{2,3,4},3/2) == Dmodules$multiplierIdeal(I,3/2))
+assert(multIdeal(R,{2,3,4},3/2) == Dmodules$multiplierIdeal(I,3/2))
 ///
 
 
@@ -1194,7 +1131,10 @@ lct(I)
 
 
 document {
-  Key => { thresholdMonomial },
+  Key => {
+    thresholdMonomial,
+    (thresholdMonomial, MonomialIdeal, RingElement)
+  },
   Headline => "thresholds of multiplier ideals of monomial ideals",
   Usage => "thresholdMonomial(I,m)",
   Inputs => {
@@ -1223,8 +1163,6 @@ thresholdMonomial(I,x^2*y)
   SeeAlso => { (lct,MonomialIdeal) }
 }
 
-document { Key => { (thresholdMonomial, MonomialIdeal, RingElement) } }
-document { Key => { (thresholdMonomial, MonomialIdeal, List) } }
 
 
 --------------------------------------------------------------------------------
