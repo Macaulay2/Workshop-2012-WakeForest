@@ -83,6 +83,22 @@ isOrderPreserving(PosetMap) := Boolean => (f) -> (
 
 -- isJoinPreserving
 -- isMeetPreserving
+
+isJoinPreserving = method()
+isJoinPreserving(PosetMap) := Boolean => (f) -> (
+     setOfJoins := select(subsets((f.source).GroundSet,2), pair -> joinExists((f.source),pair_0, pair_1)); -- note this excludes elements with itself
+     checkJoins := unique apply(setOfJoins, pair-> ((posetJoin(f.source,pair_0,pair_1) / f)  ==posetJoin(f.target, (pair_0 /f), (pair_1 /f))));
+     not (unique(checkJoins|{false}) == checkJoins)
+     )
+
+isMeetPreserving = method()
+isMeetPreserving(PosetMap) := Boolean => (f) -> (
+     setOfMeets := select(subsets((f.source).GroundSet,2), pair -> meetExists((f.source),pair_0, pair_1)); -- note this excludes elements with itself
+     checkMeets := unique apply(setOfMeets, pair-> ((posetMeet(f.source,pair_0,pair_1) / f)  ==posetMeet(f.target, (pair_0 /f), (pair_1 /f))));
+     not (unique(checkMeets|{false}) == checkMeets)
+     )
+
+
 -- isSimplicial
 
 
