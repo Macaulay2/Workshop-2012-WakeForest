@@ -32,7 +32,12 @@ posets'Precompute = if instance((options Posets).Configuration#"DefaultPrecomput
 posets'SuppressLabels = if instance((options Posets).Configuration#"DefaultSuppressLabels", Boolean) then (options Posets).Configuration#"DefaultSuppressLabels" else true;
 
 export {
-   
+     -- types and constructors
+     PosetMap   
+        GroundMap
+     posetMap	  
+     
+
     }
 
 ------------------------------------------
@@ -56,10 +61,32 @@ posetMap(Poset, Poset, List):= PosetMap => (P1,P2,M) -> (
 
 
 posetMap(Poset, Poset, HashTable) := PosetMap => (P1, P2, H) -> (
-	new PosetMap from hashTable {symbol source => P1, symbol target => P2, symbol map => H, symbol cache => new CacheTable})
+	new PosetMap from hashTable {symbol source => P1, symbol target => P2, symbol GroundMap => H, symbol cache => new CacheTable})
 
 
 map(Poset,Poset,List) := PosetMap => opts -> (P1,P2,M) -> (posetMap(P1,P2,M))
+
+
+
+-- methods that check properties of posetMaps
+-- isOrderPreserving
+-- isJoinPreserving
+-- isMeetPreserving
+-- isSimplicial
+
+
+
+
+
+
+-- methods dealing with fibers
+-- compute fibers over a point in the target
+-- check contractability of fibers
+
+
+
+
+-- discrete morse theory types of things
 
 
 
