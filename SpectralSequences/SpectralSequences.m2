@@ -56,7 +56,6 @@ protect minH
 protect maxH
 
 needsPackage "SimplicialComplexes"
-debug Core
 
 --------------------------------------------------------------------------------
 Module + Module := Module => (M,N) -> (
@@ -74,6 +73,9 @@ Module + Module := Module => (M,N) -> (
     if M.?relations then M.relations else null
     )
   )
+
+hasAttribute = value Core#"private dictionary"#"hasAttribute"
+getAttribute = value Core#"private dictionary"#"getAttribute"
 
 --------------------------------------------------------------------------------
 -- CODE
