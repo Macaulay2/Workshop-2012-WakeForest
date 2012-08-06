@@ -1,8 +1,10 @@
 makeDets  = (a,mu) -> (
     -- mu is a list of a filled tableau
-    Ind :=  apply(mu, m -> apply(#m, i-> apply(#m,j -> (m_i, j))) );
-    R := QQ[(flatten flatten Ind)/(v -> a_v)];
-    Ma := apply(Ind, k ->  applyTable(k, j -> value a_j));
+    Ind:=new MutableHashTable;
+    scan (mu, m-> scan (#m,i-> Ind#(m_i) =#m   ));
+    Ind = new HashTable from Ind;
+    R := QQ[flatten apply( #(flatten mu)  ,p->apply(Ind#(p+1) , i->  a_(p+1,i) )) ];
+    Ma :=apply( mu, m->apply(m,  p->apply(Ind#(p) , i-> value  a_(p,i) )));
     product apply(Ma, ma -> det matrix ma)
     )
 
@@ -20,94 +22,75 @@ unfactor = F->(
 
 end
 restart
+
+mu = {{1,2,4},{3,5}}
+Ind=new MutableHashTable;
+scan (mu, m-> scan (#m,i-> Ind#(m_i) =#m   ));
+Ind = new HashTable from Ind
+R = QQ[flatten apply( #(flatten mu)  ,p->apply(Ind#(p+1) , i->  a_(p+1,i) )) ]
+R_*
+
+apply( mu, m->apply(m,  p->apply(Ind#(p) , i->  a_(p,i) )))
+    Ma =apply( mu, m->apply(m,  p->apply(Ind#(p) , i->  a_(p,i) )))
+    product apply(Ma, ma -> det matrix ma)
+
+restart
 load"m2make_poly.m2"
-mu1 = {{1,2,3},{4}}
-mu2 = {{1,2,3},{4}}
+mu1 = {{1,2,3},{4,5}}
+mu2 = {{1,2,4},{3,5}}
 
-F=makeUnsymmetric( {mu1,mu2})
-Ra=ring(makeDets(symbol a,mu1))
-Rb=ring(makeDets(symbol b,mu2))
 
+F=makeUnsymmetric( {mu1,mu2});
+Ra=ring(makeDets(a,mu1))
+Rb=ring(makeDets(b,mu2))
 X= apply(#mu1_0, j-> apply(#mu2_0,i->x_(i,j) ) )
 Rx = QQ[flatten X ]
 R = Ra**Rb**Rx
 use R
-F
-F=sub(F,R)
+F=sub(F,R);
 
-Ra1=sub(basis(1,Ra),R)
-Rb1=sub(basis(1,Rb),R)
+--make a hash table that tells the number of elements in each letter
+-- note hashtable #key = what it gets
+plist=new MutableHashTable
+scan (mu1, m-> scan (#m,i-> plist#(m_i) ={#m,0}   ))
+scan (mu2, m-> scan (#m,i-> plist#(m_i) ={(plist#(m_i))_0,#m}))
+plist = new HashTable from plist
 
 
 tmp=F;
-for p from 1 to # mu1_0 do(
-tmp=sum flatten apply(#mu1_0,   j-> apply(#mu2_0,i->x_(i,j)*contract(a_(p,i)*b_(p,j), tmp) ) )
-)
-tmp
-for p from #mu1_0+1 to #mu1_0+#mu1_1 do(
-tmp=sum flatten apply(#mu1_1,   j-> apply(#mu2_1,i->x_(i,j)*contract(a_(p,i)*b_(p,j), tmp) ) )
-)
+scan(1 .. #(flatten mu1), p-> tmp=sum flatten apply(plist#p#1,j-> apply(plist#p#0,i-> x_(i,j)*contract( a_(p,i)*b_(p,j),tmp )  )))
 tmp
 factor tmp
 
-ABp= apply(#(mu1_0),
-     p->apply(#mu1_0, 
-	  j-> apply(#mu2_0,
-	       i->a_(p+1,i)*b_(p+1,j) ) ))
-apply(#(mu1_1),
-     p->apply(#mu1_1, 
-	  j-> apply(#mu2_1,
-	       i->a_(p+1+#mu1_0,i)*b_(p+1+#mu1_0,j) ) ))
-FA_0=contract(matrix(ABp_0), F);
-X_0_0*((FA_0)_(0,0))
-FAx = product(apply(#mu1_0, j-> apply(#mu2_0, i -> x_(i,j)*((FA_0)_(i,j))_0)))
-
-#(flatten mu1)
-options R
-a_(1,0)
-)
-Ra1=sub(basis(1,Ra), R)
-
-toString oo
-matrix {{a_(1,0), a_(1,1), a_(1,2), 
-	  a_(2,0), a_(2,1), a_(2,2), 
-	  a_(3,0), a_(3,1), a_(3,2), 
-	  a_(4,0), a_(4,1), 
-	  a_(5,0), a_(5,1)}}
-
-Rb1=sub(basis(1,Rb), R);
-
-Ra1**Rb1
-
-
-{makeDets("a", {{x,y,s},{z,w}}),makeDets("b", {{x,z,s},{y,w}})}
-
-makeDets (String, List) := method()
-ring(Ma_0_0_0)
-
-
-mu = {{x,y,s},{z,w}}
-mu = {{1,2,3},{4,5}}
+--- here's a 3-factor example
 
 restart
-partition(3)
+load"m2make_poly.m2"
+mu1 = {{1,2,3},{4,5}}
+mu2 = {{1,2,4},{3,5}}
+mu3 = {{1,3,5},{2,4}}
 
-makeDets:=proc(a,LL::list,mu::list)
-        local L:
-        description "this procedure makes a product of
-	 determinants of sizes determined by a partition LL.
-	  The first index of each column is twisted by a permutation mu.";
-        
-		L:=myconjpart(LL):
-return `*`(seq(Determinant(
-Matrix([seq([seq(
+plist=new MutableHashTable
+scan (mu1, m-> scan (#m,i-> plist#(m_i) ={#m,0,0}   ))
+scan (mu2, m-> scan (#m,i-> plist#(m_i) ={plist#(m_i)#0,#m,0}))
+scan (mu3, m-> scan (#m,i-> plist#(m_i) ={plist#(m_i)#0,plist#(m_i)#1, #m}))
+plist = new HashTable from plist
 
-a[op(j+( `+`(seq( op(p,L) ,p=1..k-1))),mu),i]
+F=makeUnsymmetric( {mu1,mu2, mu3});
+Ra=ring(makeDets(a,mu1))
+Rb=ring(makeDets(b,mu2))
+Rc=ring(makeDets(c,mu3))
+X= apply(#mu3_0,k->apply(#mu2_0, j-> apply(#mu1_0,i-> x_(i,j,k) ) ))
+Rx = QQ[flatten flatten X ]
+R = Ra**Rb**Rc**Rx
+use R
+F=sub(F,R);
 
-,j=1 .. op(k,L))], 
-i = 1 .. op(k,L))])) ,
-k=1..nops(L)))
-end proc:
+
+tmp=F;
+scan(1 .. #(flatten mu1), p-> tmp=sum flatten flatten apply(plist#p#2,k->  apply(plist#p#1,j-> apply(plist#p#0,i-> x_(i,j,k)*contract( a_(p,i)*b_(p,j)*c_(p,k),tmp )  ))) )
+tmp 
+factor tmp
 
 
 makeUnsymmetric:=proc(J::list,K::list)
