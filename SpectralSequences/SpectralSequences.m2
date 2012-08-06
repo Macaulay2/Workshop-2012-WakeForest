@@ -77,6 +77,7 @@ Module + Module := Module => (M,N) -> (
 
 hasAttribute = value Core#"private dictionary"#"hasAttribute"
 getAttribute = value Core#"private dictionary"#"getAttribute"
+ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 
 --------------------------------------------------------------------------------
 -- CODE
