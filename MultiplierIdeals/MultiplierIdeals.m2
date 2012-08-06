@@ -119,10 +119,11 @@ newPackage(
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
--- export {
+export {
 --      multIdeal,
---      mct
---      }
+--      lct,
+      thresholdMonomial
+      }
 
 -- exportMutable {}
 
@@ -425,7 +426,6 @@ lctMonomial (MonomialIdeal) := (I) -> (
   return first thresholdMonomial ( I , 1_(ring(I)) ) ;
 );
 
-export "thresholdMonomial"
 
 -- thresholdMonomial
 -- threshold of inclusion in a multiplier ideal
