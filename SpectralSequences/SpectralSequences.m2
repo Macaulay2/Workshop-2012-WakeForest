@@ -288,7 +288,7 @@ filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
      maps := for p from minC+1 to maxC list (
 	  differential := new MutableHashTable;
 	  inclusion := new MutableHashTable;
-	  for k from minC -maxD to maxC - minD - 1 do (
+	  for k from minC - maxD to maxC - minD - 1 do (
 	       LCp:= toList(max(p,k+minD)..min(maxC,k+maxD));
 	       LDp:= toList(max(p,k+1+minD)..min(maxC,k+maxD+1));
 	       S := if LCp == {} then R^0 
@@ -301,7 +301,7 @@ filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
 	       );
      	  si:= chainComplex apply (rsort keys differential,k-> differential#k);
 	  f:= k -> (
-	       if k != maxC - minD then inclusion#k
+	       if k != 0 then inclusion#(maxC -minD - k)
 	       else map (T_k,si_k,0)
 	       );
 	  map(T,si,f)
@@ -344,9 +344,12 @@ needsPackage "SpectralSequences";
 debug SpectralSequences;
 S = QQ[x,y,z];
 F = res ideal (x,y,z)
-totalHom (F,F)
+T = totalHom (F,F)
 filteredHom(F,F)
-spectralSequence K
+(spots si)/f
+T_8
+f(0)
+keys inclusion
 E = spectralSequence K
 filteredComplex E
 chainComplex E
