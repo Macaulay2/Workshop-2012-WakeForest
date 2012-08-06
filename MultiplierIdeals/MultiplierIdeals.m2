@@ -1184,7 +1184,7 @@ document {
     "t" => QQ => {"a coefficient"}
   },
   Outputs => {
-    MonomialIdeal => {}
+    Ideal => {}
   },
   "Computes the multiplier ideal of I with coefficient t ",
   "using Howald's Theorem and the package ", TO Normaliz, ".",
