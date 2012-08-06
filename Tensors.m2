@@ -10,6 +10,10 @@ newPackage(
 	     },
     	Headline => "tensors"
     	)
+ --Macaulay2-1.4/share/Macaulay2/Core/matrix1.m2 
+ --needs to replaced
+ --for this package to work  
+   
 --ToDo:
 --1)new type and methods for tensors
 --on creation of new tensor space
@@ -19,6 +23,14 @@ newPackage(
 
 exportMutable {TemporaryTensorList, TemporaryIndexList}
 export{TensorArray, tensorArray}
+export{toTensor,isTensor}
+export{associativeCartesianProduct,
+     nestedListAccess,isRectangular,
+     rectangularNestedList}
+export{einsteinSummation}
+export{sumOut}
+export{Tensor,TensorModule}
+
 
 --
 
@@ -30,12 +42,11 @@ as their entries, rather than lists.  this is intentional,
 both for consistency with Set**Set, and for planned later 
 use of nested lists of sequences of indices.
 *}
-export{associativeCartesianProduct,initialDimensions,
-     nestedListAccess,isRectangular,
-     rectangularNestedList}
+
 List**List := (L,M) -> flatten for l in L list for m in M list (l,m)
 Sequence**Sequence := (L,M) -> toSequence flatten for l in L list for m in M list (l,m)
-acp=associativeCartesianProduct=method()
+acp=
+associativeCartesianProduct = method()
 associativeCartesianProduct VisibleList := L -> fold((i,j)->(i**j)/splice,L)
 
 --Compute the initial dimensions of a list;
@@ -48,9 +59,10 @@ initialDimensions List := L -> (d:={};
 
 --A recursive function for access to 
 --elements of nested lists:
-nla = nestedListAccess = method()
+nla=
+nestedListAccess = method()
 nla(Thing,Sequence) := (x,l) -> (
-     if l === () then return x else error: "too many indices?")
+     if l === () then return x else error: "nestedListAccess: too many indices?")
 nla(VisibleList,Sequence) := (N,l) -> (
      if l === () then return N;
      if l_0 === null then return apply(N,i->nla(i,take(l,{1,-1+#l})));
@@ -58,7 +70,8 @@ nla(VisibleList,Sequence) := (N,l) -> (
 
 ---Recursive function to test if a nested list is rectangular
 ---
-isrect=isRectangular = method()
+isrect=
+isRectangular = method()
 isrect(Thing) := (x) -> true
 isrect(List) := (L) -> (
      if not instance(L_0,List) then return all(L,i->not instance(i,List));
@@ -67,9 +80,10 @@ isrect(List) := (L) -> (
 
 --Function to make a rectangular nested list
 --from a list
-rnl=rectangularNestedList=method()
+rnl=
+rectangularNestedList = method()
 rnl(List,List):=(dims,L) -> (
-     if not product dims == #L then error "dimension mismatch";
+     if not product dims == #L then error "rectangularNestedList: dimension mismatch";
      while #dims>1 do (
 	  d:=last dims;
 	  L = for i in 0..<round(#L/d) list take(L,{i*d,(i+1)*d-1});
@@ -84,7 +98,7 @@ net TensorArray  := T -> netList new List from T
 TensorArray_ZZ := (N,n) -> N_(1:n)
 -----
 TensorArray_Sequence:=(N,s) -> (
-     if not all(s,i->instance(i,ZZ) or instance(i,Symbol)) then error "expected a list of integers or symbols";
+     if not all(s,i->instance(i,ZZ) or instance(i,Symbol)) then error "TensorArray_Sequence: expected a list of integers or symbols";
      if not all(s,i->instance(i,ZZ)) then return (hold N)_(hold s);
      return ta nla(N,s);
      )
@@ -97,13 +111,19 @@ dimensions TensorArray := L -> (d:={};
      while instance(L,TensorArray) do (d=d|{#L},L=L_0);
      return d)
 ---
-ta=tensorArray=method()
-tensorArray List := L -> new TensorArray from L
-tensorArray(Vector,List) := (v,L) -> ta rnl (L,entries v);
+ta=
+tensorArray=method()
+tensorArray List := L -> (
+     if not isrect(L) then return "error: nested list is not rectangular";
+     new TensorArray from L
+     )
+tensorArray (List,List) := (dims,L) -> new TensorArray from rnl(dims,L)
+
+tensorArray (Vector,List) := (v,dims) -> new TensorArray from rnl(dims,entries v);
 
 --
 
-export{einsteinSummation}
+
 einsteinSummation = method()
 einsteinSummation (List,List) := (tensors,indicesByTensor) -> (
      numberOfTensors:=#tensors;
@@ -131,7 +151,7 @@ einsteinSummation (List,List) := (tensors,indicesByTensor) -> (
 einsteinSummation List := L -> einsteinSummation(L/first,L/(i->toSequence remove(i,0)))
 es=einsteinSummation
 
-export{sumOut}
+
 sumOut=method()
 sumOut (List,List) := (tensors,indicesByTensor) -> (
      numberOfTensors:=#tensors;
@@ -153,7 +173,6 @@ sumOut List := L -> sumOut(L/first,L/(i->toSequence remove(i,0)))
 ----------------
 --Tensor Modules
 ----------------
-export{Tensor,TensorModule}
 Tensor=new Type of Vector
 TensorModule = new Type of Module
 module TensorModule := M -> new Module from M
@@ -181,7 +200,8 @@ TensorModule#{Standard,AfterPrint} = M -> (
      << endl;
      )
 
----Method for building tensor modules:
+------
+--Method for building tensor modules:
 tm=tensorModule = method()
 tm Module := M -> (
      Q:=newClass(TensorModule,Tensor,M);
@@ -200,37 +220,18 @@ tm (Module,List) := (M,L) -> (
      Q:=newClass(TensorModule,Tensor,M);
      Q.cache.dimensions = L;
      )
+
 ------
-
---CLEANED UP TO HERE
-
+--Using dimensions method previously defined for
+--TensorArrays now for...
 dimensions TensorModule := M -> M.cache.dimensions
 dimensions Tensor := v -> (
      dimensions class v
      )
 
-----
-tensorArray Tensor := t -> ta rnl (dimensions t,entries t);
-----
-export{toTensor,isTensor}
-tt=toTensor=method()
-toTensor (List,TensorModule) := (L,M) -> (
-     t:=tensorArray L;
-     if not dimensions t == dimensions M then error "dimension mismatch";
-     new M from vector ultimate(flatten,L)
-     )
-toTensor (List) := L -> (
-     t:=tensorArray L;
-     dims:=dimensions t;
-     f:=ultimate(flatten,L);
-     R:=commonRing f;
-     M:=tensorModule(R,dims);
-     new M from vector f
-     )
-isTensor=method()
-isTensor Thing := x -> instance(class x,TensorModule)
-
---
+----------------------------
+--TensorModule combinations
+----------------------------
 TensorModule**TensorModule := (M,N) -> (
      P:=(module M) ** (module N);
      P=tensorModule P;
@@ -255,7 +256,31 @@ TensorModule++TensorModule := (M,N) -> (
      )
 
 
-----PICK UP HERE
+----------------------------------------------
+--Conversions between Tensors and TensorArrays
+----------------------------------------------
+tensorArray Tensor := t -> new TensorArray from rnl (dimensions t,entries t);
+------
+tt=
+toTensor = method()
+toTensor (List,TensorModule) := (L,M) -> (
+     t:=tensorArray L;
+     if not dimensions t == dimensions M then error "toTensor (List,TensorModule): dimension mismatch";
+     new M from vector ultimate(flatten,L)
+     )
+toTensor TensorArray := t -> (
+     dims:=dimensions t;
+     f:=ultimate(flatten,t);
+     R:=commonRing f;
+     M:=tensorModule(R,dims);
+     new M from vector f
+     )
+
+toTensor List := L -> toTensor tensorArray L;
+------
+isTensor=method()
+isTensor Thing := x -> instance(class x,TensorModule)
+------
 
 
 --
@@ -274,15 +299,22 @@ restart
 debug loadPackage"Tensors"
 
 R=QQ[x]
-f=map(R^2,R^2,{{0,1},{1,0}})
 M=tm R^2
 f=map(M,M,{{0,1},{1,0}})
-ta ((f**f)*((M_0)**(M_1)))
-f**f
-t=(M_0)**(M_1)
-instance(M,Module)
+t=(M_0)**(M_1)**(M_0)
 g=f**f**f
 g*t
+
+M=tm R^2
+f=map(tm R^1,M,{{1,1}})
+f=map(tm R^3,M,{{1,1},{2,3},{4,5}})
+source f == M
+t=(M_0)**(M_1)**(M_0)
+g=f**f**f
+g*t
+
+N = tm R^1
+N**N**N**N
 
 --check rectangular in tel
 
@@ -370,7 +402,7 @@ N=(M**M)++(M**M)
 (M_1) ** (M_0)
 
 
---TRYING TO IMPROVE EINSTEIN SUMMATION
+--TRYING TO IMPROVE EINSTEIN SUMMATION  
 
 ESUM=EinsteinSummationMethodFunction=new Type of MethodFunction
 esum=new ESUM from method(Dispatch=>Thing)
