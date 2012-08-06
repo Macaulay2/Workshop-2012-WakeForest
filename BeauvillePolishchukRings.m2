@@ -32,12 +32,12 @@ You should have received a copy of the GNU General Public License along with thi
 
       Installation:
 
-      Put the file TautRings.m2 somewhere into the path of Macaulay2      
-      (usually into the directory .Macaulay2/code inside your home directory, type
-      path in M2 to see the path) and do inside M2
+      Start M2 in the directory containing this file and type
 
-      installPackage "TautRings"
-   
+           installPackage "BeauvillePolishchukRings"
+
+      Then the package will be usable when M2 is started in any directory, and this file can
+      be moved or deleted.
 
 *}
 
