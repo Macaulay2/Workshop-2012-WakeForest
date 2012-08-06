@@ -175,11 +175,11 @@ sumOut List := L -> sumOut(L/first,L/(i->toSequence remove(i,0)))
 ----------------
 Tensor=new Type of Vector
 TensorModule = new Type of Module
-module TensorModule := M -> new Module from M
+module TensorModule := M -> new Module from copy M
 
 --Printing TensorModules:
 TensorModule.synonym="tensor module"
-net TensorModule := M -> (net new Module from M)|", "|"tensor of order "|toString(#M.cache.dimensions)|", dimensions "|toString(M.cache.dimensions)
+net TensorModule := M -> (net new Module from copy M)|", "|"tensor of order "|toString(#M.cache.dimensions)|", dimensions "|toString(M.cache.dimensions)
 TensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
      n := rank ambient M;
@@ -204,20 +204,20 @@ TensorModule#{Standard,AfterPrint} = M -> (
 --Method for building tensor modules:
 tm=tensorModule = method()
 tm Module := M -> (
-     Q:=newClass(TensorModule,Tensor,M);
+     Q:=newClass(TensorModule,Tensor,copy M);
      Q.cache.dimensions = {numgens M};
      Q
      )
 tm (Ring,List) := (R,L) -> (
      d:=product L;
-     Q:=newClass(TensorModule,Tensor,R^d);
+     Q:=newClass(TensorModule,Tensor,copy (R^d));
      Q.cache.dimensions = L;
      Q
      )
 tm (Module,List) := (M,L) -> (
      d:=product L;
      if not numgens M == d then error "dimension mismatch";
-     Q:=newClass(TensorModule,Tensor,M);
+     Q:=newClass(TensorModule,Tensor,copy M);
      Q.cache.dimensions = L;
      )
 
@@ -299,6 +299,46 @@ restart
 debug loadPackage"Tensors"
 
 R=QQ[x]
+M = tm R^1
+M**M
+M
+
+--the following works okay:
+N=tm(R,{1,1})
+O=tm(R,{1,1,1})
+N
+O
+N_0
+O_0
+--
+
+--This does not work:
+M=tm(R,{1})
+M**M
+M
+--
+
+--This works:
+M=tm(R,{1})
+N=tm(R,{1,1})
+M
+--
+
+--this works:
+M=tm(R,{1})
+N=tm(R,{1,1})
+M**N
+M
+N
+--
+
+--this does not work:
+N=tm(R,{1,1})
+N**N
+N
+--
+
+
 M=tm R^2
 f=map(M,M,{{0,1},{1,0}})
 t=(M_0)**(M_1)**(M_0)
