@@ -156,32 +156,40 @@ setNmzOption("bigint",true);
 --   method implemented below
 -- multIdeal = method()
 -- arbitrary ideal
-multIdeal(Ideal,Number) := (I,t) -> multIdealViaDmodules(I,t)
+multIdeal(Ideal,QQ) :=
+  multIdeal(Ideal,ZZ) :=
+  (I,t) -> multIdealViaDmodules(I,t)
 -- hyperplane arrangement
 -- multIdeal(Number,CentralArrangement) := (s,A) -> multIdealHyperplaneArrangement(s,A)
 -- multIdeal(Number,CentralArrangement,List) := (s,A,m) -> multIdealHyperplaneArrangement(s,A,m)
 -- monomial
-multIdeal(MonomialIdeal,Number) := (I,t) -> multIdealMonomial(I,t)
+multIdeal(MonomialIdeal,QQ) :=
+  multIdeal(MonomialIdeal,ZZ) :=
+  (I,t) -> multIdealMonomial(I,t)
 -- monomial curve
-multIdeal(Ring,List,Number) := (R,nn,t) -> multIdealMonomialCurve(R,nn,t)
+multIdeal(Ring,List,QQ) :=
+  multIdeal(Ring,List,ZZ) :=
+  (R,nn,t) -> multIdealMonomialCurve(R,nn,t)
 -- generic determinantal
-multIdeal(Ring,List,ZZ,Number) := (R,mm,r,t) -> multIdealGenericDeterminantal(R,mm,r,t)
+multIdeal(Ring,List,ZZ,QQ) :=
+  multIdeal(Ring,List,ZZ,ZZ) :=
+  (R,mm,r,t) -> multIdealGenericDeterminantal(R,mm,r,t)
 
 
 --   a public-facing method to dispatch computation to the appropriate private
 --   method implemented below
 -- lct = method()
 -- arbitrary ideal
-lct(Ideal,Number) := (I,t) -> lctViaDmodules(I,t)
+lct(Ideal) := (I) -> lctViaDmodules(I)
 -- hyperplane arrangement
--- lct(Number,CentralArrangement) := (s,A) -> lctHyperplaneArrangement(s,A)
--- lct(Number,CentralArrangement,List) := (s,A,m) -> lctHyperplaneArrangement(s,A,m)
+-- lct(CentralArrangement) := (A) -> lctHyperplaneArrangement(A)
+-- lct(CentralArrangement,List) := (A,m) -> lctHyperplaneArrangement(A,m)
 -- monomial
-lct(MonomialIdeal,Number) := (I,t) -> lctMonomial(I,t)
+lct(MonomialIdeal) := (I) -> lctMonomial(I)
 -- monomial curve
-lct(Ring,List,Number) := (R,nn,t) -> lctMonomialCurve(R,nn,t)
+lct(Ring,List) := (R,nn) -> lctMonomialCurve(R,nn)
 -- generic determinantal
-lct(Ring,List,ZZ,Number) := (R,mm,r,t) -> lctGenericDeterminantal(R,mm,r,t)
+lct(Ring,List,ZZ) := (R,mm,r) -> lctGenericDeterminantal(R,mm,r)
 
 --------------------------------------------------------------------------------
 -- SHARED ROUTINES -------------------------------------------------------------
@@ -263,7 +271,7 @@ NewtonPolyhedron = method();
 NewtonPolyhedron (MonomialIdeal) := (I) -> (
   
   R := ring I;
-  use R;
+  -- use R;
   nmzFilename = temporaryFileName() ;
   setNmzOption("supp",true);
   
@@ -330,7 +338,7 @@ multIdealMonomial (MonomialIdeal, ZZ) := (I,t) -> multIdealMonomial(I,promote(t,
 multIdealMonomial (MonomialIdeal, QQ) := (I,t) -> (
   
   R := ring I;
-  use R;
+  -- use R;
   local multIdeal;
   
   
@@ -883,9 +891,10 @@ TEST ///
 
 TEST ///
   needsPackage "MultiplierIdeals";
+  debug MultiplierIdeals;
   R := QQ[x,y];
-  use R;
-  I := ideal(y^2-x^3);
+  -- use R;
+  I := ideal(y^2-x^3,R);
   assert(lctViaDmodules(I) == 5/6);
   assert(multIdealViaDmodules(I,1/2) == ideal(1_R));
   assert(multIdealViaDmodules(I,5/6) == ideal(x,y));
@@ -904,7 +913,7 @@ TEST ///
   needsPackage "MultiplierIdeals";
   debug MultiplierIdeals;
   R := QQ[x,y,z];
-  use R;
+  -- use R;
   I := monomialIdeal(x*z^2,y^3,y*z^3,y^2*z^2,x*y^2*z,x^2*y*z,x^3*z,x^2*y^2,x^4*y,x^5,z^6);
   -- this I is integrally closed!
   M1 := NewtonPolyhedron(I); -- integer matrix (A|b) s.t. Newt(I) = {Ax \geq b}
@@ -921,8 +930,9 @@ TEST ///
 -- Compute some LCTs of diagonal monomial ideals
 TEST ///
   needsPackage "MultiplierIdeals";
+  debug MultiplierIdeals;
   R := QQ[x_1..x_5];
-  use R;
+  -- use R;
   for a from 1 to 6 do (
     for b from a to 6 do (
       for c from b to 6 do (
@@ -946,8 +956,9 @@ TEST ///
 -- Threshold computations
 TEST ///
   needsPackage "MultiplierIdeals";
+  debug MultiplierIdeals;
   R := QQ[x,y];
-  use R;
+  -- use R;
   I := monomialIdeal( y^2 , x^3 );
   assert ( thresholdMonomial( I , 1_R ) === (5/6,map(ZZ^1,ZZ^3,{{2, 3, -6}})) );
   assert ( thresholdMonomial( I , x ) === (7/6,map(ZZ^1,ZZ^3,{{2, 3, -6}})) );
@@ -1097,6 +1108,7 @@ assert(multIdealMonomialCurve(R,{2,3,4},3/2) == Dmodules$multiplierIdeal(I,3/2))
 ----Test 10 - monomialSpaceCurveLCT
 TEST ///
 needsPackage "MultiplierIdeals";
+debug MultiplierIdeals;
 R = QQ[x,y,z];
 assert( (lctMonomialCurve(R,{2,3,4})) === 11/6 )
 assert( (lctMonomialCurve(R,{3,4,5})) === 13/9 )
@@ -1111,8 +1123,9 @@ assert( (lctMonomialCurve(R,{3,4,11})) === 19/12 )
 
 TEST ///
   needsPackage "MultiplierIdeals";
+  debug MultiplierIdeals;
   R := QQ[x,y,z];
-  use R;
+  -- use R;
   f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
   A := arrangement f;
   assert(A == arrangement {z, y - z, y + z, x - z, x + z, x - y, x + y});
@@ -1121,6 +1134,7 @@ TEST ///
 
 TEST ///
   needsPackage "MultiplierIdeals";
+  debug MultiplierIdeals;
   R := QQ[x,y,z];
   f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
   A := arrangement f;
@@ -1159,12 +1173,12 @@ document {
 --------------------------------------------------------------------------------
 
 document {
-  Key => {multIdealMonomial,
-         (multIdealMonomial, MonomialIdeal, QQ),
-         (multIdealMonomial, MonomialIdeal, ZZ)
+  Key => {
+         (multIdeal, MonomialIdeal, QQ),
+         (multIdeal, MonomialIdeal, ZZ)
          },
   Headline => "multiplier ideal of a monomial ideal",
-  Usage => "multIdealMonomial(I,t)",
+  Usage => "multIdeal(I,t)",
   Inputs => {
     "I" => MonomialIdeal => {"a monomial ideal in a polynomial ring"},
     "t" => QQ => {"a coefficient"}
@@ -1178,17 +1192,17 @@ document {
   EXAMPLE lines ///
 R = QQ[x,y];
 I = monomialIdeal(y^2,x^3);
-multIdealMonomial(I,5/6)
+multIdeal(I,5/6)
   ///,
   
-  SeeAlso => { "lctMonomial" }
+  SeeAlso => { (lct,MonomialIdeal) }
 }
 
 
 document {
-  Key => {lctMonomial, (lctMonomial, MonomialIdeal)},
+  Key => {(lct, MonomialIdeal)},
   Headline => "log canonical threshold of a monomial ideal",
-  Usage => "lctMonomial I",
+  Usage => "lct I",
   Inputs => {
     "I" => MonomialIdeal => {},
   },
@@ -1202,10 +1216,10 @@ document {
   EXAMPLE lines ///
 R = QQ[x,y];
 I = monomialIdeal(y^2,x^3);
-lctMonomial(I)
+lct(I)
   ///,
   
-  SeeAlso => { "multIdealMonomial" }
+  SeeAlso => { (multIdeal,MonomialIdeal,QQ) }
 }
 
 
@@ -1236,7 +1250,7 @@ I = monomialIdeal(x^13,x^6*y^4,y^9);
 thresholdMonomial(I,x^2*y)
   ///,
   
-  SeeAlso => { "lctMonomial" }
+  SeeAlso => { (lct,MonomialIdeal) }
 }
 
 document { Key => { (thresholdMonomial, MonomialIdeal, RingElement) } }
@@ -1249,13 +1263,12 @@ document { Key => { (thresholdMonomial, MonomialIdeal, List) } }
 
 doc ///
 Key
-  multIdealMonomialCurve
-  (multIdealMonomialCurve,Ring,List,QQ)
-  (multIdealMonomialCurve,Ring,List,ZZ)
+  (multIdeal,Ring,List,QQ)
+  (multIdeal,Ring,List,ZZ)
 Headline
   multiplier ideal of monomial space curve
 Usage
-  I = multIdealMonomialCurve(R,n,t)
+  I = multIdeal(R,n,t)
 Inputs
   R:Ring
   n:List
@@ -1267,7 +1280,7 @@ Description
   Text
   
     Given a monomial space curve {\tt C} and a parameter {\tt t}, the function 
-    {\tt multIdealMonomialCurve} computes the multiplier ideal associated to the embedding of {\tt C}
+    {\tt multIdeal} computes the multiplier ideal associated to the embedding of {\tt C}
     in {\tt 3}-space and the parameter {\tt t}.
     
     More precisely, we assume that {\tt R} is a polynomial ring in three variables, {\tt n = \{a,b,c\}}
@@ -1278,7 +1291,7 @@ Description
     R = QQ[x,y,z];
     n = {2,3,4};
     t = 5/2;
-    I = multIdealMonomialCurve(R,n,t)
+    I = multIdeal(R,n,t)
 
 ///
 
@@ -1286,13 +1299,12 @@ Description
 
 doc ///
 Key
-  lctMonomialCurve
-  (lctMonomialCurve, Ring, List)
+  (lct, Ring, List)
     
 Headline
   log canonical threshold of monomial space curves
 Usage
-  lct = lctMonomialCurve(R,n)
+  lct(R,n)
 Inputs
   R:Ring
   n:List 
@@ -1310,7 +1322,7 @@ Description
   Example
     R = QQ[x,y,z];
     n = {2,3,4};
-    lct = lctMonomialCurve(R,n)
+    lct(R,n)
 ///
 
 
