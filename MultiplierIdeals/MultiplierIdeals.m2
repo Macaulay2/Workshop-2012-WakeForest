@@ -177,21 +177,6 @@ multIdeal(Ring,List,ZZ,QQ) :=
   (R,mm,r,t) -> multIdealGenericDeterminantal(R,mm,r,t)
 
 
---   a public-facing method to dispatch computation to the appropriate private
---   method implemented below
--- lct = method()
--- arbitrary ideal
-lct(Ideal) := (I) -> lctViaDmodules(I)
--- hyperplane arrangement
--- lct(CentralArrangement) := (A) -> lctHyperplaneArrangement(A)
--- lct(CentralArrangement,List) := (A,m) -> lctHyperplaneArrangement(A,m)
--- monomial
-lct(MonomialIdeal) := (I) -> lctMonomial(I)
--- monomial curve
-lct(Ring,List) := (R,nn) -> lctMonomialCurve(R,nn)
--- generic determinantal
-lct(Ring,List,ZZ) := (R,mm,r) -> lctGenericDeterminantal(R,mm,r)
-
 --------------------------------------------------------------------------------
 -- SHARED ROUTINES -------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -250,10 +235,10 @@ multIdealViaDmodules(Ideal,Number) := (I,t) -> (
   Dmodules$multiplierIdeal(I,t)
   );
 
-lctViaDmodules = method()
-lctViaDmodules(Ideal) := (I) -> (
-  Dmodules$lct(I)
-  );
+-- lctViaDmodules = method()
+-- lctViaDmodules(Ideal) := (I) -> (
+--   Dmodules$lct(I)
+--   );
 
 --------------------------------------------------------------------------------
 -- MONOMIAL IDEALS -------------------------------------------------------------
@@ -400,11 +385,7 @@ multIdealMonomial (MonomialIdeal, QQ) := (I,t) -> (
 
 );
 
-
-
--- lctMonomial: lct of monomial ideal
-lctMonomial = method();
-lctMonomial (MonomialIdeal) := (I) -> (
+lct MonomialIdeal := (I) -> (
   
 --  M := NewtonPolyhedron(I);
 --  m := numRows M;
@@ -775,14 +756,13 @@ multIdealMonomialCurve(Ring, List, ZZ) := (R, nn, t) -> (
 -- Output:
 --  * a rational number
 
-lctMonomialCurve = method()
-lctMonomialCurve(Ring,List) := (R, nn) -> lctMonomialCurveFromSortedGens(sortedGens(R,nn));
+lct(Ring,List) := (R,nn) -> lctMonomialCurveFromSortedGens(sortedGens(R,nn))
 
 lctMonomialCurveFromSortedGens = method()
 lctMonomialCurveFromSortedGens(List) :=  ff -> (
      indexList  := intersectionIndexSet(ff);
      curveIdeal := ideal ff;
-     lctTerm    := lctMonomial(termIdeal(curveIdeal));
+     lctTerm    := lct(termIdeal(curveIdeal));
      min (2, lctTerm, 
     min(
          apply(indexList, mm -> 
@@ -856,12 +836,7 @@ multIdealGenericDeterminantal(Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
   return J;
 );
 
-lctGenericDeterminantal = method()
-lctGenericDeterminantal(List,ZZ) := (mm,r) -> (
-  min( apply(1..<r , i -> (mm_0-i)*(mm_1-i)/(r-i)) )
-);
-
-
+lct(List,ZZ) := (mm,r) -> min( apply(1..<r , i -> (mm_0-i)*(mm_1-i)/(r-i)) )
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -885,21 +860,20 @@ TEST ///
 --------------------------------------------------------------------------------
 
 
---------------------------------------------------------------------------------
--- VIA DMODULES ----------------------------------------------------------------
---------------------------------------------------------------------------------
+-- --------------------------------------------------------------------------------
+-- -- VIA DMODULES ----------------------------------------------------------------
+-- --------------------------------------------------------------------------------
 
-TEST ///
-  needsPackage "MultiplierIdeals";
-  debug MultiplierIdeals;
-  R := QQ[x,y];
-  -- use R;
-  I := ideal(y^2-x^3,R);
-  assert(lctViaDmodules(I) == 5/6);
-  assert(multIdealViaDmodules(I,1/2) == ideal(1_R));
-  assert(multIdealViaDmodules(I,5/6) == ideal(x,y));
-  assert(multIdealViaDmodules(I,1) == I);
-///  
+-- TEST ///
+--   needsPackage "MultiplierIdeals";
+--   R := QQ[x,y];
+--   -- use R;
+--   I := ideal(y^2-x^3,R);
+--   assert(lct(I) == 5/6);
+--   assert(multIdealViaDmodules(I,1/2) == ideal(1_R));
+--   assert(multIdealViaDmodules(I,5/6) == ideal(x,y));
+--   assert(multIdealViaDmodules(I,1) == I);
+-- ///  
 
 --------------------------------------------------------------------------------
 -- MONOMIAL IDEALS -------------------------------------------------------------
@@ -930,7 +904,6 @@ TEST ///
 -- Compute some LCTs of diagonal monomial ideals
 TEST ///
   needsPackage "MultiplierIdeals";
-  debug MultiplierIdeals;
   R := QQ[x_1..x_5];
   -- use R;
   for a from 1 to 6 do (
@@ -940,7 +913,7 @@ TEST ///
           for e from d to 6 do (
             I := monomialIdeal(x_1^a,x_2^b,x_3^c,x_4^d,x_5^e);
             l := 1/a+1/b+1/c+1/d+1/e;
-            assert ( lctMonomial(I) === l );
+            assert ( lct I === l );
           );
         );
       );
@@ -956,7 +929,6 @@ TEST ///
 -- Threshold computations
 TEST ///
   needsPackage "MultiplierIdeals";
-  debug MultiplierIdeals;
   R := QQ[x,y];
   -- use R;
   I := monomialIdeal( y^2 , x^3 );
@@ -1108,11 +1080,10 @@ assert(multIdealMonomialCurve(R,{2,3,4},3/2) == Dmodules$multiplierIdeal(I,3/2))
 ----Test 10 - monomialSpaceCurveLCT
 TEST ///
 needsPackage "MultiplierIdeals";
-debug MultiplierIdeals;
 R = QQ[x,y,z];
-assert( (lctMonomialCurve(R,{2,3,4})) === 11/6 )
-assert( (lctMonomialCurve(R,{3,4,5})) === 13/9 )
-assert( (lctMonomialCurve(R,{3,4,11})) === 19/12 )
+assert( (lct(R,{2,3,4})) === 11/6 )
+assert( (lct(R,{3,4,5})) === 13/9 )
+assert( (lct(R,{3,4,11})) === 19/12 )
 ///
 
 
@@ -1123,23 +1094,21 @@ assert( (lctMonomialCurve(R,{3,4,11})) === 19/12 )
 
 TEST ///
   needsPackage "MultiplierIdeals";
-  debug MultiplierIdeals;
   R := QQ[x,y,z];
   -- use R;
   f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
   A := arrangement f;
   assert(A == arrangement {z, y - z, y + z, x - z, x + z, x - y, x + y});
-  assert(lctHyperplaneArrangement(A) == 3/7);
+  assert(lct(A) == 3/7);
 ///
 
 TEST ///
   needsPackage "MultiplierIdeals";
-  debug MultiplierIdeals;
   R := QQ[x,y,z];
   f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
   A := arrangement f;
   assert(A == arrangement {z, y - z, y + z, x - z, x + z, x - y, x + y});
-  assert(multIdealHyperplaneArrangement(3/7,A) == ideal(z,y,x));
+  assert(multIdeal(3/7,A) == ideal(z,y,x));
 ///
 
 
