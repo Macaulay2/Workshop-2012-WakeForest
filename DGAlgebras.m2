@@ -11,7 +11,7 @@ newPackage("DGAlgebras",
      )
 
 export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, cycles,
-	getBasis, koszulComplexDGA, acyclicClosure, toComplex, toComplexMap, liftToDGMap,
+	getBasis, koszulComplexDGA, acyclicClosure, toComplexMap, liftToDGMap,
         killCycles, getGenerators, adjoinVariables, deviations, deviationsToPoincare, expandGeomSeries, zerothHomology,
         torMap, homologyAlgebra, torAlgebra, maxDegree, StartDegree, EndDegree, ringMap,
 	isHomologyAlgebraTrivial, findTrivialMasseyOperation, findNaryTrivialMasseyOperation, AssertWellDefined,
@@ -24,7 +24,6 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
 -- is there a way to present graded pieces of graded A-modules as modules over A_0?
 -- is there a way to make f act like a function for f a DGAlgebraMap?
 
--- [user v1.5] Change toComplex to chainComplex as per conversation with Dan on the M2 Google group (9/14/2010)
 -- [functionality v1.5] Single degree homology(DGAlgebraMap,ZZ)
 -- [functionality v1.5] Lift a map from a semifree DGA to another DGA along a quism
 -- [functionality v1.5] Minimal Models
@@ -129,7 +128,7 @@ setDiff (DGAlgebra,List) := opts -> (A,diffList) -> (
       definingIdeal := ideal mingens (ideal A.ring + sub(ideal polyDifferential(1,A), ambient A.ring));
       if definingIdeal == ideal vars ambient A.ring then A#(symbol zerothHomology) = coefficientRing A.ring else A#(symbol zerothHomology) = (ambient A.ring)/definingIdeal;
    );
-   if opts.InitializeComplex then A.dd = (toComplex(A,totalOddDegree(A)+1)).dd;
+   if opts.InitializeComplex then A.dd = (chainComplex(A,LengthLimit=>totalOddDegree(A)+1)).dd;
    A
 )
 
@@ -221,14 +220,11 @@ koszulComplexDGA Ideal := opts -> I -> (
 
 koszulComplexDGA List := opts -> ringElts -> koszulComplexDGA(ideal ringElts, opts);
 
-toComplex = method(TypicalValue=>ChainComplex)
-toComplex DGAlgebra := A -> (
-   maxDeg := maxDegree A;
+chainComplex DGAlgebra := { LengthLimit => infinity } >> opts -> A -> (
+   maxDeg := min(maxDegree A, opts.LengthLimit);
    if maxDeg == infinity then error "Must specify an upper degree bound if an even generator exists.";
-   toComplex(A,maxDeg)
+   chainComplex(apply(maxDeg, i -> polyDifferential(i+1,A)))
 )
-
-toComplex (DGAlgebra,ZZ) := (A,n) -> chainComplex(apply(n, i -> polyDifferential(i+1,A)))
 
 killCycles = method(TypicalValue=>DGAlgebra,Options => {StartDegree => 1, EndDegree => -1})
 killCycles DGAlgebra := opts -> A -> (
@@ -905,8 +901,8 @@ toComplexMap DGAlgebraMap := opts -> f -> (
    if (opts.EndDegree != -1) then maxDeg = opts.EndDegree;
    if maxDeg == infinity then error "Must specify an upper degree bound if an even generator exists.";
    if (opts.AssertWellDefined) then assert isWellDefined f;
-   Acc := toComplex(A,maxDeg);
-   Bcc := toComplex(B,maxDeg);
+   Acc := chainComplex(A,LengthLimit=>maxDeg);
+   Bcc := chainComplex(B,LengthLimit=>maxDeg);
    if A.ring === B.ring then
       map(Bcc,Acc,i -> toComplexMap(f,i,opts))
    else
@@ -1142,33 +1138,42 @@ setDiff (DGModule,Matrix) := opts -> (M,diffMatrix) -> (
    if diffMatrix.ring =!= M.DGRing.natural then error "Ensure that the differential is defined over the DGAlgebra.";
    M.diff = map(M.natural,M.natural, diffMatrix);
    M.isHomogeneous = isHomogeneous (M.DGRing).ring and checkIsHomogeneous(M);
-   --if opts.InitializeComplex then M.dd = (toComplex(A,totalOddDegree(A)+1)).dd;
+   --if opts.InitializeComplex then M.dd = (chainComplex(A,LengthLimit=>(totalOddDegree(A)+1))).dd;
    M
 )
 
-toComplex DGModule := U -> (
-   maxDeg := maxDegree U;
+chainComplex DGModule := { LengthLimit => infinity } >> opts -> U -> (
+   maxDeg := min(maxDegree U,opts.LengthLimit);
    if maxDeg == infinity then error "Must specify an upper degree bound if an even generator exists.";
-   toComplex(U,maxDeg)
+   chainComplex(apply(maxDeg, i -> polyDifferential(i+1,U)))
 )
-
-toComplex (DGModule,ZZ) := (U,n) -> chainComplex(apply(n, i -> polyDifferential(i+1,U)))
 
 polyDifferential(ZZ,DGModule) := (n,U) -> (
    K := U.DGRing;
    R := U.ring;
-   sourceList := transpose basis(2,U.natural);
-   sourceDegreeList := apply(degrees source sourceList, l -> -drop(l,1));
+   sourceList := transpose basis(n,U.natural);
+   sourceDegreeList := apply(degrees target sourceList, l -> drop(l,1));
    sourceList = entries sourceList;
-   targetList := basis(1,U.natural);
+   targetList := basis(n-1,U.natural);
    targetDegreeList := apply(degrees source targetList, l -> -drop(l,1));
-   tempDiff := matrix {apply(sourceList, l -> (
-      (coeff,basisVec) := coefficients matrix {l};
-      coeff = first flatten entries coeff;
-      (polyDifferential(K,coeff)*(transpose basisVec) + (-1)^(first degree coeff)*coeff*U.diff*(transpose basisVec))
-   ))};
-   tempDiff = sub(last coefficients(tempDiff, Monomials=>targetList),K.ring);
-   map(R^targetDegreeList,R^sourceDegreeList,tempDiff)
+   if #sourceList == 0 and #targetList == 0 then map(R^0, R^0, 0) else
+   if #sourceList == 0 and #targetList > 0 then map(R^targetDegreeList,R^0,0) else
+   if #sourceList > 0 and #targetList == 0 then map(R^0,R^sourceDegreeList,0) else
+   (
+      tempDiff := matrix {apply(sourceList, l -> (
+         (coeff,basisVec) := coefficients matrix {l};
+         coeff = first flatten entries coeff;
+         (polyDifferential(K,coeff)*(transpose basisVec) + (-1)^(first degree coeff)*coeff*U.diff*(transpose basisVec))
+      ))};
+      tempDiff = sub(last coefficients(tempDiff, Monomials=>targetList),K.ring);
+      map(R^targetDegreeList,R^sourceDegreeList,tempDiff)
+   )
+)
+
+chainComplex DGModule := { LengthLimit => infinity } >> opts -> U -> (
+   maxDeg := maxDegree U;
+   if maxDeg == infinity then error "Must specify an upper degree bound if an even generator exists.";
+   chainComplex(apply(maxDeg, i -> polyDifferential(i+1,U)))
 )
 
 TEST ///
@@ -1183,17 +1188,12 @@ degrees U.natural
 use K.natural
 setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
 U.diff
--- working here on polyDifferential, turning the below hard-coded example
--- into a function
-polyDifferential(2,U)
-U.natural
-sourceList = entries transpose basis(2,U.natural)
-tempDiff = matrix {apply(sourceList, l -> (
-   (coeff,basisVec) := coefficients matrix {l};
-   coeff = first flatten entries coeff;
-   (polyDifferential(K,coeff)*(transpose basisVec) + (-1)^(first degree coeff)*coeff*U.diff*(transpose basisVec))
-   ))}
-sub(last coefficients(tempDiff, Monomials=>basis(1,U.natural)),K.ring)
+d0 = polyDifferential(0,U)
+d1 = polyDifferential(1,U)
+d2 = polyDifferential(2,U)
+d3 = polyDifferential(3,U)
+d4 = polyDifferential(4,U)
+chainComplex U
 ///
 
 -- check to make sure that the differential on M is homogeneous.
@@ -1312,10 +1312,10 @@ doc ///
       S = ZZ/101[x,y,z]/ideal{x^3,y^3,z^3,x^2*y^2,y^2*z^2}
       KS = koszulComplexDGA(S,Variable=>"U")
     Text
-      To obtain the chain complex associated to the Koszul complex, one may use toComplex.  One can also obtain this complex
+      To obtain the chain complex associated to the Koszul complex, one may use chainComplex.  One can also obtain this complex
       directly without using the DGAlgebras package by using the command @ TO koszul @.
     Example
-      cxKR = toComplex KR
+      cxKR = chainComplex KR
       prune HH cxKR
     Text
       Since the Koszul complex is a DG algebra, its homology is itself an algebra.  One can obtain this algebra using the command
@@ -1451,7 +1451,7 @@ doc ///
       The resulting @ TO DGAlgebra @ will not be graded since the differential given does not respect the grading due to the degrees assigned in the definition.
     Example
       isHomogeneous(A)
-      Add = toComplex A
+      Add = chainComplex A
       B = freeDGAlgebra(R,{{1,1},{1,1},{1,1},{3,3}})
       B.natural
       setDiff(B,{x,y,z,x*T_2*T_3-y*T_1*T_3+z*T_1*T_2})
@@ -1459,7 +1459,7 @@ doc ///
       The result of the above declaration will be graded.
     Example
       isHomogeneous(B)
-      Bdd = toComplex B
+      Bdd = chainComplex B
     Text  
       Note that the differential is not passed into the constructor.  The reason for this (at the moment)
       is that Macaulay2 does not know what ring the differentials are defined over until after the underlying
@@ -1492,7 +1492,7 @@ doc ///
     Example
       R = ZZ/101[a,b,c]/ideal{a^3,b^3,c^3}
       A = koszulComplexDGA(R)
-      complexA = toComplex A
+      complexA = chainComplex A
       complexA.dd
       ranks = apply(4, i -> numgens prune HH_i(complexA))
       ranks == apply(4, i -> numgens prune HH_i(koszul vars R))
@@ -1520,7 +1520,7 @@ doc ///
       R = ZZ/101[a,b,c]
       I = ideal{a^3,b^3,c^3,a^2*b^2*c^2}
       A = koszulComplexDGA(I)
-      complexA = toComplex A
+      complexA = chainComplex A
       complexA.dd
       ranks = apply(4, i -> numgens prune HH_i(complexA))
       ranks == apply(4, i -> numgens prune HH_i(koszul gens I))
@@ -1585,7 +1585,7 @@ doc ///
       R = ZZ/101[x,y,z]
       A = freeDGAlgebra(R,{{1},{1},{1},{3}})
       setDiff(A,{x,y,z,x*T_2*T_3-y*T_1*T_3+z*T_1*T_2})
-      Add = toComplex A
+      Add = chainComplex A
       Add.dd
     Text
       There are two options that are available for this function, and both are designed to bypass certain initializations
@@ -1706,12 +1706,11 @@ doc ///
 
 doc ///
   Key
-    toComplex
-    (toComplex,DGAlgebra)
+    (chainComplex,DGAlgebra)
   Headline
     Converts a DGAlgebra to a ChainComplex
   Usage
-    C = toComplex A or C = toComplex(A,n)
+    C = chainComplex A or C = chainComplex(A,LengthLimit=>n)
   Inputs
     A:DGAlgebra
   Outputs
@@ -1721,23 +1720,23 @@ doc ///
     Example
       R = ZZ/101[x_1..x_10]
       A = koszulComplexDGA(R)
-      C = toComplex A
+      C = chainComplex A
     Text
       Warning:  The term order that the internal command koszul uses to order the monomials is not GRevLex, and so the differentials
       used in koszul and koszulComplexDGA will not match up exactly.  Also, this command will only execute if all of the variables
-      of the @ TO DGAlgebra @ A are of odd homological degree.  Otherwise, you need to use the function @ TO (toComplex, DGAlgebra, ZZ) @.
+      of the @ TO DGAlgebra @ A are of odd homological degree.  Otherwise, you need to use the function @ TO [(chainComplex, DGAlgebra), LengthLimit] @.
 ///
 
 doc ///
   Key
-    (toComplex,DGAlgebra,ZZ)
+    [(chainComplex,DGAlgebra),LengthLimit]
   Headline
     Converts a DGAlgebra to a ChainComplex
   Usage
-    C = toComplex A or C = toComplex(A,n)
+    C = chainComplex A or C = chainComplex(A,LengthLimit=>n)
   Inputs
     A:DGAlgebra
-    n:ZZ
+    LengthLimit:ZZ
   Outputs
     C:ChainComplex
       The DG algebra A as a ChainComplex
@@ -1748,7 +1747,7 @@ doc ///
     Text
       The above will be a resolution of the residue field over R, since R is a complete intersection.
     Example
-      C = toComplex(A, 10)
+      C = chainComplex(A, LengthLimit=>10)
       apply(10, i -> prune HH_i(C))
 ///
 
@@ -1770,7 +1769,7 @@ doc ///
       R = ZZ/101[a,b,c]/ideal{a^3,b^3,c^3}
       A = koszulComplexDGA(R);
       B = acyclicClosure(A,EndDegree=>3)
-      toComplex(B,8)
+      chainComplex(B,LengthLimit=>8)
       B.diff
   SeeAlso
     (acyclicClosure,Ring)
@@ -1818,7 +1817,7 @@ doc ///
       A = koszulComplexDGA(R)
       S = R/ideal{a^3,a*b*c}
       B = A ** S
-      Bdd = toComplex B
+      Bdd = chainComplex B
       Bdd.dd
 ///
 
@@ -1842,7 +1841,7 @@ doc ///
       A = koszulComplexDGA({a,b})
       B = koszulComplexDGA({c,d})
       C = A ** B
-      Cdd = toComplex C
+      Cdd = chainComplex C
       Cdd.dd
   Caveat
     Currently, the tensor product function does not create a block order on the variables from A and B.
@@ -2833,39 +2832,39 @@ doc ///
 -------------------------------
 
 TEST ///
--- test 0 : isHomogeneous, toComplex, maxDegree
+-- test 0 : isHomogeneous, chainComplex, maxDegree
 R = ZZ/101[x,y,z]
 A1 = freeDGAlgebra(R,{{1},{1},{1},{3}})
 setDiff(A1,{x,y,z,x*T_2*T_3-y*T_1*T_3+z*T_1*T_2})
 assert(not A1.isHomogeneous)
-A1dd = toComplex(A1)
+A1dd = chainComplex A1
 A1dd.dd
 
 A2 = freeDGAlgebra(R,{{1,1},{1,1},{1,1},{3,3}})
 setDiff(A2,{x,y,z,x*T_2*T_3-y*T_1*T_3+z*T_1*T_2})
 assert(A2.isHomogeneous)
-A2dd = toComplex(A2)
+A2dd = chainComplex A2
 A2dd.dd
 
 B1 = koszulComplexDGA(R)
 assert(B1.isHomogeneous)
-B1dd = toComplex(B1)
+B1dd = chainComplex B1
 B1dd.dd
 
 R = ZZ/101[x,y,z]
 R2 = R/ideal {x^2-z^3}
 B2 = koszulComplexDGA(R2)
 assert(not B2.isHomogeneous)
-B2dd = toComplex(B2)
+B2dd = chainComplex B2
 B2dd.dd
 
 R = QQ[x,y,z]
 B = koszulComplexDGA(R)
-toComplex(B)
+chainComplex B
 degrees B.natural
 A = freeDGAlgebra(R,{{1},{1},{1},{3}})
 setDiff(A,{x,y,z,x*T_2*T_3-y*T_1*T_3+z*T_1*T_2})
-Add = toComplex(A)
+Add = chainComplex A
 assert(apply(maxDegree(A)+1, i -> prune HH_i(Add)) == {coker vars R,0,0,coker vars R,0,0,0})
 ///
 
@@ -3046,7 +3045,7 @@ I = ideal(a,b)
 J = ideal(c,d)
 A = koszulComplexDGA(I)
 B = koszulComplexDGA(J)
-Cdd = toComplex(A ** B)
+Cdd = chainComplex (A ** B)
 Cdd.dd
 ///
 
@@ -3116,7 +3115,7 @@ restart
 loadPackage "DGAlgebras"
 R = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3}
 KR = koszulComplexDGA(R)
-toComplex KR
+chainComplex KR
 KR.dd
 HKR = HH KR
 describe HKR
@@ -3359,7 +3358,7 @@ loadPackage "DGAlgebras"
 debug DGAlgebras
 R1 = ZZ/32003[x,y,z]
 A1 = koszulComplexDGA(R1)
-A1Complex = toComplex A1
+A1Complex = chainComplex A1
 A1Complex.dd
 HA1 = homologyAlgebra(A1)
 HA1 = HH A
@@ -3524,13 +3523,13 @@ tally ((flatten entries basis HA2) / degree)
 tally (((flatten entries basis HA2) / degree) / first)
 -- 146 generators and 10662 relations (at least; didn't forceGB properly when I ran it before)
 
--- Tate resolution, toComplex
+-- Tate resolution, chainComplex
 restart
 loadPackage "DGAlgebras"
 debug DGAlgebras
 R = QQ[x,y,z,w]/ideal{x^3,y^4,z^5}
 A = acyclicClosure(R,EndDegree=>1)
-time Add = toComplex(A,20);
+time Add = chainComplex(A,LengthLimit => 20);
 time kRes = res(coker vars R, LengthLimit => 20)
 
 -- Homology
@@ -3622,7 +3621,7 @@ allDiffs = xDiffList | yDiffList | zDiffList | tDiffList
 netList allDiffs
 #allDiffs
 setDiff(A, allDiffs, InitializeDegreeZeroHomology => false)
-complexA = toComplex(A,5)
+complexA = chainComplex(A,LengthLimit=>5)
 -- will not finish
 numgens HH_0(complexA)
 numgens HH_1(complexA)
