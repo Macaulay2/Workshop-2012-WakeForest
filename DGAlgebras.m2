@@ -876,6 +876,8 @@ cartesianPower = (n,myList) -> (
 
 net DGAlgebraMap := f -> net f.natural
 
+DGAlgebraMap RingElement := (f,x) -> f.natural(x)
+
 dgAlgebraMap = method(TypicalValue => DGAlgebraMap)
 dgAlgebraMap (DGAlgebra,DGAlgebra,Matrix) := (B,A,fnMatrix) -> (
    f := new MutableHashTable;
@@ -3362,6 +3364,7 @@ R = ZZ/101[a,b,c]/ideal{a^3+b^3+c^3,a*b*c}
 K1 = koszulComplexDGA(ideal vars R,Variable=>"Y")
 K2 = koszulComplexDGA(ideal {b,c},Variable=>"T")
 f = dgAlgebraMap(K2,K1,matrix{{0,T_1,T_2}})
+f last gens (source f.natural)
 isWellDefined f
 g = dgAlgebraMap(K1,K2,matrix{{Y_2,Y_3}})
 isWellDefined g
