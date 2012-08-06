@@ -53,24 +53,21 @@ dimensions TensorEntryList := L -> (d:={};
      while class L === TensorEntryList do (d=d|{#L},L=L_0);
      return d)
 ----
-
+export{associativeCartesianProduct,isRectangular}
 
 List**List := (L,M) -> flatten for l in L list for m in M list (l,m)
 Sequence**Sequence := (L,M) -> toSequence flatten for l in L list for m in M list (l,m)
-
-cP=cartesianProduct=method()
-cP VisibleList := L -> fold((i,j)->(i**j)/splice,L)
-
-
+acp=associativeCartesianProduct=method()
+acp VisibleList := L -> fold((i,j)->(i**j)/splice,L)
 ---
 isRectangular=method()
 isRectangular VisibleList := L -> (d:=dimensions tel L;
-     inds:=cartesianProduct(d/(i->0..<i));
+     inds:=associativeCartesianProduct(d/(i->0..<i));
      for i in inds do try L_i else return false;
      return true)
 
 
-
+export{einsteinSummation}
 einsteinSummation = method()
 einsteinSummation (List,List) := (tensors,indicesByTensor) -> (
      numberOfTensors:=#tensors;
@@ -98,6 +95,7 @@ einsteinSummation (List,List) := (tensors,indicesByTensor) -> (
 einsteinSummation List := L -> einsteinSummation(L/first,L/(i->toSequence remove(i,0)))
 es=einsteinSummation
 
+export{sumOut}
 sumOut=method()
 sumOut (List,List) := (tensors,indicesByTensor) -> (
      numberOfTensors:=#tensors;
@@ -117,19 +115,19 @@ sumOut (List,List) := (tensors,indicesByTensor) -> (
 sumOut List := L -> sumOut(L/first,L/(i->toSequence remove(i,0)))
 
 ----------------
---Tensor Spaces
+--Tensor Modules
 ----------------
-
+export{TensorModule}
 TensorModule = new Type of Module
 TensorModule.synonym="tensor module"
 tm=tensorModule = method()
 tm Module := M -> (
      Q:=new TensorModule from M;
      Q.cache.dimensions = {numgens M};
-     Q.cache.factors = {M};
+--     Q.cache.factors = {M};
      Q
      )
-net TensorModule := M -> (net new Module from M)|", "|"dimensions: "|toString(M.cache.dimensions)
+net TensorModule := M -> (net new Module from M)|", "|"tensor order "|toString(#M.cache.dimensions)|", dimensions "|toString(M.cache.dimensions)
 TensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
      n := rank ambient M;
@@ -150,7 +148,6 @@ TensorModule#{Standard,AfterPrint} = M -> (
      << endl;
      )
 module TensorModule := M -> new Module from M
-
 dimensions TensorModule := M -> M.cache.dimensions
 dimensions Module := M -> {numgens M}
 dimensions Vector := v -> dimensions module v
@@ -160,11 +157,28 @@ TensorModule**TensorModule := (M,N) -> (
      P:=(module M) ** (module N);
      P=tensorModule P;
      P.cache.dimensions=M.cache.dimensions|N.cache.dimensions;
-     P.cache.factors=M.cache.factors|N.cache.factors;
+--     P.cache.factors=M.cache.factors|N.cache.factors;
+     P
+     )
+TensorModule^ZZ := (M,n) -> (
+     P:=(module M)^n;
+     P=tensorModule P;
+     P.cache.dimensions=toList flatten (n:M.cache.dimensions);
+--     P.cache.factors=toList flatten (n:M.cache.factors);
+     P
+     )
+TensorModule++TensorModule := (M,N) -> (
+     if not #dimensions M == #dimensions N then error "dimension mismatch in TensorModule++TensorModule";
+     P:=(module M)++(module N);
+     P=tensorModule P;
+     P.cache.dimensions=M.cache.dimensions + N.cache.dimensions;
+--     P.cache.factors=M.cache.factors ++ N.cache.factors;
      P
      )
 
+
 ----PICK UP HERE
+export{nestedList}
 nestedList=method()
 nestedList(List,List):=(dims,L) -> (
      if not product dims == #L then error "dimension mismatch in nestedList";
@@ -174,6 +188,9 @@ nestedList(List,List):=(dims,L) -> (
 	  dims = take(dims,{0,-2+#dims}));
      return L)
 tel Vector := v -> tel nestedList (dimensions v,entries v);
+
+
+
 --
 beginDocumentation()
 
@@ -194,7 +211,6 @@ L=nestedList({2,2,2},{1,2,3,4,5,6,7,8})
 L={{{1,2,3},{4,5,6}},{{5,6,7},{8,9,10}}}
 --entry:
 nA(L,(1,1,2))
-A_(i,j)
 
 --slices:
 nA(L,(1,))
@@ -207,26 +223,26 @@ nA(L,(1,,1))
 tel {{1,2},{3,4}}
 tel {L,L}
 
-P=M**M**M
-t=sum for i in 0..7 list i*P_i
-dimensions class t
-t=(M_0)**(M_1)**(M_0)
-tel t
-dimensions class t
-ancestors R^2
-
-
 T = tel L
 dimensions T
+
+R=QQ[x]
+M=tm R^2
+P=M**M**M
+t=sum for i in 0..7 list i*P_i
+dimensions t
+t=(M_0)**(M_1)**(M_0)
+tel t
+dimensions t
 
 (1,2,3)**(4,5,6)
 
 L={{1,2},{3,4},{5,6}}
-cP L
+acp L
 
 isRectangular {{1,2},{3}}
 isRectangular T
-T
+
 ----
 x=symbol x
 R=QQ[x_1..x_27]
@@ -236,11 +252,11 @@ m2=tel entries genericMatrix(R,x_19,3,3)
 
 isRectangular m1
 
-printWidth=1000
 A=tel{{1,2,3},{4,5,6},{7,8,9}}
 B=tel{{11,12,x_1},{14,15,16},{17,18,19}}
 C=tel{{21,22,23},{24,25,26},{27,28,29}}
 
+printWidth=1000
 es({{A,i,j},{B,j,k},{C,j,l}})
 
 
@@ -250,23 +266,16 @@ sumOut{{m0,2,i},{m1,i,1},{m2,i,0}}
 sumOut({m0,m0,m0},{(0,i),(i,1),(j,0)})
 
 -----
-module M
-R^2
+R=QQ[x]
 M=tm R^2
+module M
 
 M.cache.dimensions
 keys M.cache
-N=M
-M
-M=tm R^2
-P=M**M
-((M**M**M)**(M**M**M)).cache.factors
-tensorModule P
-class P
+N=(M**M)++(M**M)
+((M**M**M)**(M**M**M)).cache.dimensions
 
 (M_1) ** (M_0)
-
-class class( (M_1)**(M_0))
 
 
 --TRYING TO IMPROVE EINSTEIN SUMMATION
