@@ -1071,7 +1071,14 @@ document {
   " [math.AG]."},
   PARA {"The implementation for generic determinantal ideals uses ",
   "the unpublished dissertation of Amanda Johnson, U. Michigan, 2003."},
-  PARA {"See: ", TO {(multIdeal,MonomialIdeal,QQ), "multIdeal"}}
+  UL{
+    TO (multIdeal,MonomialIdeal,QQ),
+    TO (lct,MonomialIdeal),
+    TO thresholdMonomial,
+    TO (multIdeal,Ring,List,QQ),
+    TO (lct,Ring,List)
+  }
+  
 }
 
 --------------------------------------------------------------------------------
