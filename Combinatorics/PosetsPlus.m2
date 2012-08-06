@@ -43,9 +43,15 @@ export {
      isSimplicial,
      isJoinPreserving,
      isMeetPreserving,
-     intersectSets 
-     
 
+     -- Crosscuts
+     joinExists,
+     meetExists,
+     intersectSets,
+     isBoundedBelow,
+     isBoundedAbove,
+     isCrosscut,
+     crosscuts
     }
 
 ------------------------------------------
@@ -142,6 +148,18 @@ joinExists (Poset, List) := Boolean => (P,L) -> (
         )
     )
 
+isBoundedAbove = method()
+isBoundedAbove (Poset, List) := Boolean => (P,L) -> (
+     upperBounds := apply(L, a -> set(principalFilter'(P, indexElement(P, a))));
+     if #intersectSets(upperBounds) > 0 then true else false
+     )
+
+isBoundedBelow = method()
+isBoundedBelow (Poset, List) := Boolean => (P,L) -> (
+     lowerBounds := apply(L, a -> set(principalOrderIdeal'(P, indexElement(P, a))));
+     if #intersectSets(lowerBounds) > 0 then true else false
+     )
+
 isCrosscut = method()
 isCrosscut (Poset, List) := Boolean => (P,L) -> (
      M := maximalChains P;
@@ -151,18 +169,22 @@ isCrosscut (Poset, List) := Boolean => (P,L) -> (
 	  S := subsets L;
 	  for s in S do (
 	       if #s > 1 and isTrue then (
-		    Fk := apply(s, a -> set(principalOrderIdeal'(P, indexElement(P, a))));
-    		    if #intersectSets(Fk) > 0 then isTrue = meetExists(P,s);
+    		    if isBoundedBelow(P, s) then isTrue = meetExists(P,s);
 		    if isTrue then (
-			 Fk := apply(s, a -> set(principalFilter'(P, indexElement(P, a))));
-    		    	 if #intersectSets(Fk) > 0 then isTrue = joinExists(P,s);
+    		    	 if isBoundedAbove(P, s) then isTrue = joinExists(P,s);
 			 );
 	       	    );
 	       );
 	  );
      isTrue
      )
-
+	  
+	  
+crosscuts = method()
+crosscuts (Poset) := List => (P) -> (
+     S := subsets P.GroundSet;
+     select( S, s -> isCrosscut(P,s) )
+     )
 
 
 
