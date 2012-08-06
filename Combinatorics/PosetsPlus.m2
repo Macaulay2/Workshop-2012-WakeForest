@@ -67,6 +67,12 @@ posetMap(Poset, Poset, HashTable) := PosetMap => (P1, P2, H) -> (
 map(Poset,Poset,List) := PosetMap => opts -> (P1,P2,M) -> (posetMap(P1,P2,M))
 
 
+eval = method()
+eval(Thing, PosetMap) := Thing => (elt, f) -> (
+     if unique((f.source).GroundSet|{elt}) == (f.source).GroundSet then ((f.GroundMap)#elt) else error "element not in source"   )
+
+Thing / PosetMap := Thing => (elt,f) -> (eval(elt,f))
+
 
 -- methods that check properties of posetMaps
 -- isOrderPreserving
@@ -96,7 +102,7 @@ P1 = poset({a,b,c},{(a,b), (b,c)})
 P2 = poset({x,y},{(x,y)})
 M = {{a,x},{b,y},{c,y}}
 posetMap(P1,P2,M)
-map(P1,P2,M)
+f = map(P1,P2,M)
 
 
 
