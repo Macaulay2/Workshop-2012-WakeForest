@@ -17,12 +17,10 @@ newPackage(
 --2)tensor' to make tensors
 --3)equality testing of tensor spaces
 
-export {TensorArray, tensorArray, nA, tel}
+export {TensorArray, tensorArray, nestedListAccess}
 exportMutable {TemporaryTensorList, TemporaryIndexList}
-
-
 --
-nA = nestedAccess = method()
+nA = nestedListAccess = method()
 nA(Thing,Sequence) := (x,l) -> (
      if l === () then return x else error: "too many indices?")
 nA(VisibleList,Sequence) := (N,l) -> (
@@ -50,10 +48,6 @@ isRectangular VisibleList := L -> (d:=dimensions ta L;
 -----
 TensorArray  = new Type of List
 net TensorArray  := T -> netList new List from T
-ta=tensorArray=method()
-ta List := L -> new TensorArray from L
-ta Thing := x -> x
-TensorArray_Sequence:=(N,s) -> ta nA(N,s)
 TensorArray_ZZ := (N,n) -> N_(1:n)
 -----
 TensorArray_Sequence:=(N,s) -> (
@@ -61,13 +55,36 @@ TensorArray_Sequence:=(N,s) -> (
      if not all(s,i->instance(i,ZZ)) then return (hold N)_(hold s);
      return ta nA(N,s);
      )
-----
-dimensions=method()
+-----dimensions=method()
 dimensions TensorArray := L -> (d:={};
      while class L === TensorArray do (d=d|{#L},L=L_0);
      return d)
+---
+
+
+ta=tensorArray=method()
+tensorArray List := L -> new TensorArray from L
+
+--need to test rectangularity
+--tensorArray Thing := x -> x
+--TensorArray_Sequence:=(N,s) -> ta nA(N,s)
+
+----
 ----
 
+export{nestedList}
+nestedList=method()
+nestedList(List,List):=(dims,L) -> (
+     if not product dims == #L then error "dimension mismatch in nestedList";
+     while #dims>1 do (
+	  d:=last dims;
+	  L = for i in 0..<round(#L/d) list take(L,{i*d,(i+1)*d-1});
+	  dims = take(dims,{0,-2+#dims}));
+     return L)
+
+--
+tensorArray Vector := v -> ta nestedList (dimensions v,entries v);
+--
 
 export{einsteinSummation}
 einsteinSummation = method()
@@ -119,19 +136,26 @@ sumOut List := L -> sumOut(L/first,L/(i->toSequence remove(i,0)))
 ----------------
 --Tensor Modules
 ----------------
-export{TensorModule}
+export{Tensor,TensorModule}
+Tensor=new Type of Vector
 TensorModule = new Type of Module
 TensorModule.synonym="tensor module"
 tm=tensorModule = method()
 tm Module := M -> (
-     Q:=new TensorModule from M;
+     Q:=newClass(TensorModule,Tensor,M);
+     Q.cache.dimensions = {numgens M};
+--     Q.cache.factors = {M};
+     Q
+     )
+tm Module := M -> (
+     Q:=newClass(TensorModule,Tensor,M);
      Q.cache.dimensions = {numgens M};
 --     Q.cache.factors = {M};
      Q
      )
 tm (Ring,List) := (R,L) -> (
      d:=product L;
-     Q:=new TensorModule from R^d;
+     Q:=newClass(TensorModule,Tensor,R^d);
      Q.cache.dimensions = L;
 --     Q.cache.factors = {M};
      Q
@@ -163,8 +187,8 @@ TensorModule#{Standard,AfterPrint} = M -> (
      )
 module TensorModule := M -> new Module from M
 dimensions TensorModule := M -> M.cache.dimensions
-dimensions Vector := v -> (
-     if not instance(class v,TensorModule) then error "'dimensions' expected an element of a TensorModule";
+dimensions Tensor := v -> (
+--     if not instance(class v,TensorModule) then error "'dimensions' expected an element of a TensorModule";
      dimensions class v
      )
 export{toTensor,isTensor}
@@ -211,16 +235,6 @@ TensorModule++TensorModule := (M,N) -> (
 
 
 ----PICK UP HERE
-export{nestedList}
-nestedList=method()
-nestedList(List,List):=(dims,L) -> (
-     if not product dims == #L then error "dimension mismatch in nestedList";
-     while #dims>1 do (
-	  d:=last dims;
-	  L = for i in 0..<round(#L/d) list take(L,{i*d,(i+1)*d-1});
-	  dims = take(dims,{0,-2+#dims}));
-     return L)
-tensorArray Vector := v -> ta nestedList (dimensions v,entries v);
 
 
 --
@@ -236,21 +250,18 @@ end
 
 
 restart
-loadPackage"Tensors"
-tt
+debug loadPackage"Tensors"
 
 R=QQ[x]
 f=map(R^2,R^2,{{0,1},{1,0}})
 M=tm R^2
-errorDepth=0
 f=map(M,M,{{0,1},{1,0}})
 ta ((f**f)*((M_0)**(M_1)))
 f**f
-(M_0)**(M_1)
+t=(M_0)**(M_1)
 instance(M,Module)
 g=f**f**f
 g*t
-
 
 --check rectangular in tel
 
