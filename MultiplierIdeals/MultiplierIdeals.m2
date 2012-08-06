@@ -1165,7 +1165,8 @@ document {
   " ", HREF { "http://arxiv.org/abs/1006.1915" , "arXiv:1006.1915v4" },
   " [math.AG]."},
   PARA {"The implementation for generic determinantal ideals uses ",
-  "the unpublished dissertation of Amanda Johnson, U. Michigan, 2003."}
+  "the unpublished dissertation of Amanda Johnson, U. Michigan, 2003."},
+  PARA {"See: ", TO {(multIdeal,MonomialIdeal,QQ), "multIdeal"}}
 }
 
 --------------------------------------------------------------------------------
