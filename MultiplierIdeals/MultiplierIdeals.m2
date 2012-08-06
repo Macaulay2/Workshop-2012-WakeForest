@@ -425,7 +425,7 @@ lctMonomial (MonomialIdeal) := (I) -> (
   return first thresholdMonomial ( I , 1_(ring(I)) ) ;
 );
 
-  
+export "thresholdMonomial"
 
 -- thresholdMonomial
 -- threshold of inclusion in a multiplier ideal
