@@ -76,6 +76,11 @@ Thing / PosetMap := Thing => (elt,f) -> (eval(elt,f))
 
 -- methods that check properties of posetMaps
 -- isOrderPreserving
+isOrderPreserving = method()
+isOrderPreserving(PosetMap) := Boolean => (f) -> (
+     checkLessThans := unique flatten apply((f.source).GroundSet, elt1 -> apply((f.source).GroundSet, elt2 -> if compare(f.source, elt1, elt2) == true then compare(f.target, (elt1/f),(elt2/f))));
+     not (unique(checkLessThans|{false}) == checkLessThans))
+
 -- isJoinPreserving
 -- isMeetPreserving
 -- isSimplicial
