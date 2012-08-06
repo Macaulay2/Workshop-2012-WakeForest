@@ -1,5 +1,3 @@
-intersectSets = x -> set keys select(tally flatten (keys \ x), n -> n === #x)
-
 if version#"VERSION" <= "1.4" then (
     needsPackage "SimplicialComplexes";
     needsPackage "Graphs";
@@ -44,7 +42,8 @@ export {
      isOrderReversing,
      isSimplicial,
      isJoinPreserving,
-     isMeetPreserving 
+     isMeetPreserving,
+     intersectSets 
      
 
     }
@@ -120,7 +119,28 @@ isMeetPreserving(PosetMap) := Boolean => (f) -> (
 
 
 
+-- for Crosscut
+intersectSets = x -> set keys select(tally flatten (keys \ x), n -> n === #x)
 
+meetExists (Poset, List) := Boolean => (P,L) -> (
+    Fk := apply(L, a -> set(principalOrderIdeal'(P, indexElement(P, a))));
+    lowerBounds := toList intersectSets(Fk);
+    if lowerBounds == {} then false else (
+        M := P.RelationMatrix;
+        heightLowerBounds := flatten apply(lowerBounds, i -> sum entries M_{i});
+        #(select(heightLowerBounds, i -> i == max heightLowerBounds)) <= 1
+        )
+    )
+
+joinExists (Poset, List) := Boolean => (P,L) -> (
+    Fk := apply(L, a -> set(principalFilter'(P, indexElement(P, a))));
+    upperBounds := toList intersectSets(Fk);
+    if upperBounds == {} then false else (
+        M := P.RelationMatrix;
+        heightUpperBounds := flatten apply(upperBounds, i -> sum entries M_{i});
+        #(select(heightUpperBounds, i -> i == max heightUpperBounds)) <= 1
+        )
+    )
 
 
 
