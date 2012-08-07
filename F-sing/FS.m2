@@ -46,6 +46,38 @@ divideFraction = (t1,pp) -> (
 
 ---------------------------------------------------------------
 --***********************************************************--
+--Basic functions for computing powers of elements in        --
+--characteristic p>0.                                        --
+--***********************************************************--
+---------------------------------------------------------------
+
+--Computes the non-terminating base p expansion of an integer
+basePExp = (N,p) ->
+(
+e:=1; while p^e<=N do e = e+1;
+e = e-1;
+E:=new MutableList;
+a:=1; while e>=0 do 
+(
+     while a*p^e<=N do a=a+1;
+     E#e = a-1;
+     N = N - (a-1)*p^e;
+     a=1;
+     e=e-1;
+);
+new List from E
+)
+
+--Computes powers of elements in char p>0 rings using the "Freshman's dream"
+fastExp = (f,N) ->
+(
+     E=basePExp(N,char ring f);
+     product(apply(#E, e -> (sum(apply(terms f, g->g^(p^e))))^(E#e) ))
+)
+
+
+---------------------------------------------------------------
+--***********************************************************--
 --Basic functions for Frobenius powers of ideals and related --
 --constructions (colons).                                    --
 --***********************************************************--
