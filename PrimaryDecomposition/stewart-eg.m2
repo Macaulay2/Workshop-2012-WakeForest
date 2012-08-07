@@ -19,6 +19,7 @@ debug loadPackage("PD", Reload=>true)
   equis/first/degree  
 
   leaves = flatten(equis/splitEquidimFactorsNEWER)
+  leaves = flatten(equis/splitEquidimFactors)
   intersect leaves == I
 
   leaves = drop(leaves, 1)
@@ -87,3 +88,79 @@ debug loadPackage("PD", Reload=>true)
   sub(facs_0_1, {x => F, appl)
 
   -- easiest here would be to use gcd over algebraic function field
+
+  -- start with J = ideal(J_0,J_1,J_2) above.
+  -- Our plan: decompose this ideal
+    splitLeaves = leaves / extendIdeal / purePowerCoordinateChange // flatten / contractToPolynomialRing
+  J = leaves_0
+  J1 = extendIdeal J -- fast
+  J2 = purePowerCoordinateChange J1 -- this is the time-consuming step!
+  J2/ contractToPolynomialRing -- fast
+
+  J
+  A = ZZ/32003[g_2,g_3,r,g_1,g_4,MonomialOrder=>Lex]
+  J1 = sub(J,A)
+  J1 = sub(J1, {r=>r-g_3-g_2})
+  eliminate(J1, {g_2, g_3})  
+  R = ring J1
+  A = (ZZ/32003)(monoid R)
+  B = (ZZ/32003)[gens coefficientRing R]
+  C = frac B
+  D = C (monoid R)
+  describe D
+  describe C
+  describe B
+  J1 = sub(J1, D)
+
+  A = ZZ/32003[g_2, g_3, r, g_1, g_4, MonomialOrder => Lex]
+  B = A[x]
+  F = x^8+3*x^6*g_1^2+(9/16)*x^4*g_1^4+4*x^6*g_4^2+5*x^4*g_1^2*g_4^2+(3/4)*x^2*g_1^4*g_4^2+(9/2)*x^4*g_4^4+(7/4)*x^2*g_1^2*g_4^4+(1/16)*g_1^4*g_4^4+x^2*g_4^6+(1/8)*g_1^2*g_4^6+(1/16)*g_4^8-9*x^5*g_1^2-12*x^5*g_4^2-24*x^3*g_1^2*g_4^2-(9/4)*x*g_1^4*g_4^2-24*x^3*g_4^4-(21/4)*x*g_1^2*g_4^4-3*x*g_4^6-12*x^6-9*x^4*g_1^2-(27/8)*x^2*g_1^4-12*x^4*g_4^2+54*x^2*g_1^2*g_4^2+(9/4)*g_1^4*g_4^2+57*x^2*g_4^4+(21/4)*g_1^2*g_4^4+3*g_4^6+54*x^3*g_1^2+72*x^3*g_4^2-72*x*g_1^2*g_4^2-72*x*g_4^4+54*x^4-27*x^2*g_1^2+(81/16)*g_1^4-36*x^2*g_4^2+45*g_1^2*g_4^2+(81/2)*g_4^4-81*x*g_1^2-108*x*g_4^2-108*x^2+81*g_1^2+108*g_4^2+81   
+  F = sub(F,{x => g_2+g_3+r})
+  G = g_2^2-3*g_3^2
+  m1 = r^2-3
+  m2 = g_3^4+((3*g_1^2+4*g_4^2)/8)*g_3^2+(g_1^2*g_4^2+g_4^4)/16
+  L = ideal(F,G,m1,m2)
+  time gens gb L;
+  L' = L + ideal(g_1 - random kk, g_4 - random kk)
+  time gens gb L';
+  kk = coefficientRing A;
+  B = kk[g_2, g_3, r, MonomialOrder=>Lex]
+  eval1 = map(B,A,vars B | matrix{{random kk, random kk}})
+  eval1 F
+  eval1 G
+  needs "/Users/mike/src/M2-dev/mike/integral-closure-packages/ModularGCD.m2"
+  debug ModularGCD
+  modpGCD(eval1 F, eval1 G, {eval1 m1, eval1 m2})
+
+  use A
+  eval1 = map(A,A,{g_2, g_3, r, g_1, random kk})
+  L1 = eval1 L
+
+
+
+
+  -- goal 1: via CRA and rat recon, determine lexGB of L1 (over kk(g_1)[g_2, g_3, r])
+  rand = () -> (a := random kk; (map(A,A,{g_2, g_3, r, a, 0_A}), a))
+
+  (phi1, p1) = rand()
+  G1 = flatten entries gens gb phi1 L1       
+
+  polyCRA((g1,m1),(g2,m2),t,32003)
+  polyRationalReconstruction(g1,t,m1,32003)
+  
+  (phi2, p2) = rand()
+  G2 = flatten entries gens gb phi2 L1       
+
+  (phi3, p3) = rand()
+  G3 = flatten entries gens gb phi3 L1 
+
+  B = kk[g_2, g_3, r, MonomialOrder=>Lex]
+  eval1 = map(B,A,vars B | matrix{{random kk, random kk}})
+  gens gb eval1 L
+
+  eval2 = map(B,A,vars B | matrix{{random kk, random kk}})
+  gens gb eval2 L
+
+  
+
+
