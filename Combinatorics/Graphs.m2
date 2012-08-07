@@ -39,7 +39,9 @@ export {Graph,
      children,
      neighbors,
      nonneighbors,
-     foreFathers,     
+     foreFathers,
+     reverseDigraph,
+     reverseEdge,    
      displayGraph,
      showTikZ,
      simpleGraph,      
@@ -797,6 +799,7 @@ removeNodes(Digraph,List) := (G,v) -> (
      G = apply(G, x -> (x#0, x#1 - v));
      new Digraph from G
      )
+
 --removeNodes(Digraph,ZZ) := (G,v) -> removeNodes(G, {v})
 
 inducedSubgraph = method()
@@ -993,6 +996,41 @@ cycleGraph(ZZ) := n -> (
      graph(new HashTable from G)
      )
   
+------------------------------------------------
+--Reverse Digraph and reverse edge methods
+------------------------------------------------
+--Input:  Digraph G
+--Output:  Digraph G' with edge(s) reversed
+--Method: Examine each key of G, produce edge 
+--from each element of image set back to key.
+------------------------------------------------
+
+reverseDigraph = method()
+reverseDigraph(Digraph):= G -> (
+     digraph flatten apply(keys G#graph, k -> apply(toList (G#graph)#k, v -> {v,k}))
+     )
+
+reverse(Digraph):= G -> reverseDigraph(G)
+
+------------------------------------------------------
+--As written, if there is a dicycle of length 2,
+--reverseEdge will REMOVE an edge when it is reversed.
+--It's "absorbed" into the other edge of the cycle.
+------------------------------------------------------
+
+reverseEdge = method()
+reverseEdge(List,Digraph):= (e,G)->(
+     edgeSet:=edges G;
+     if #e === 2 then (
+	  if (not member(e,edgeSet)) then return G;
+	  if member(e, edgeSet) then (
+     	       p:=position(edgeSet, i -> (i === e));
+	       digraph replace(p,reverse e,edgeSet)
+	       )
+	  )
+     )
+
+
 
 --------------------
 -- Documentation  --

@@ -1382,6 +1382,8 @@ rankPoset Poset := List => P -> (
     apply(max rk + 1, r -> P.GroundSet_(toList (rks#r)))
     )
 
+rank Poset := List => P -> rankPoset(P)
+
 ------------------------------------------
 -- Relations & relation properties
 ------------------------------------------
