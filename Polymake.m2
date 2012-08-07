@@ -27,7 +27,7 @@ export {
 
 needsPackage "SimpleDoc"
 
-runPolymakePrefix = "export ResourcesDir=/Applications/polymake.app/Contents/Resources;export POLYMAKE_USER_DIR=\"${HOME}/.polymake-macbundle\";export POLYMAKE_BASE_PATH=$ResourcesDir/polymake;export LD_LIBRARY_PATH=$ResourcesDir/lib:$ResourcesDir/include/boost_1_47_0/:$LD_LIBRARY_PATH;export CPLUS_INCLUDE_PATH=$ResourcesDir/include/;export CFLAGS=-I$ResourcesDir/include/;export CPPFLAGS=-I$ResourcesDir/include/;export PERL5LIB=$ResourcesDir/lib/perl5/site_perl/$perlversion/darwin-thread-multi-2level/:$ResourcesDir/polymake/lib/polymake/lib/:$ResourcesDir/lib/perl5/:$ResourcesDir/polymake/lib/polymake/perlx/:$ResourcesDir/polymake/share/polymake/perllib/:$PERL5LIB;/Applications/polymake.app/Contents/Resources/polymake/bin/polymake"
+runPolymakePrefix = "polymake"
 
 runPolymakeCommand = method(TypicalValue => String)
 runPolymakeCommand(String) := (command) -> (
