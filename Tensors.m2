@@ -47,7 +47,12 @@ List**List := (L,M) -> flatten for l in L list for m in M list (l,m)
 Sequence**Sequence := (L,M) -> toSequence flatten for l in L list for m in M list (l,m)
 acp=
 associativeCartesianProduct = method()
-associativeCartesianProduct VisibleList := L -> fold((i,j)->(i**j)/splice,L)
+associativeCartesianProduct VisibleList := L -> (
+     p:=fold((i,j)->(i**j)/splice,L);
+     if not class p_0 === Sequence then p=p/(i->1:i);
+     p
+     )
+
 
 --Compute the initial dimensions of a list;
 --if the list is nested and rectangular
@@ -122,7 +127,7 @@ tensorArray List := L -> (
      )
 tensorArray (List,List) := (dims,L) -> new TensorArray from rnl(dims,L)
 
-tensorArray (Vector,List) := (v,dims) -> new TensorArray from rnl(dims,entries v);
+tensorArray (List,Vector) := (dims,v) -> new TensorArray from rnl(dims,entries v);
 
 --
 
