@@ -1,6 +1,6 @@
 
 --Computes I^{[1/p^e]}, we must be over a perfect field. and working with a polynomial ring
---This is a slightly stripped down function originally due to Moty Katzman.
+--This is a slightly stripped down function due to Moty Katzman.
 ethRoot = (Im,e) -> (
 --     print "Called ethRoot";
      if (isIdeal(Im) != true) then (
