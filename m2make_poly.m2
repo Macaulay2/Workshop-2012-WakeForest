@@ -17,16 +17,18 @@ makeUnsymmetric = L ->(
      )
 
 unfactor = (L, F) -> (
-     Fring = ring F;
+     Fring := ring F;
      T := prods dims L;
-     H := apply(keys T, i -> apply(T#i, j -> {x_(toSequence j), product apply(#j, k ->
+     H := apply(keys T, i -> apply(T#i, j -> {(vars 23)_(toSequence j), product apply(#j, k ->
      			 value (vars k)_(i, j#k))}));
      Hring := QQ[toList set((flatten H)/first)];
+--     Aring := ring H#0#0#1;
      uberRing := Fring**Hring;
      G1 := map(uberRing, Fring);
      G2 := map(uberRing, Hring); 
+--     G3 := map(uberRing, Aring);
      H = applyTable(H, i-> {G2 value i#0, G1 i#1});
-     tmp := F;
+     tmp := G1 F;
      for h in H do tmp = sum for u in h list (
 	       	       (value u#0)*contract(u#1,tmp));
      tmp
@@ -62,8 +64,17 @@ prods = T -> (
      )
 
 end
-restart
 
+restart
+load"m2make_poly.m2"
+L = {{{1,2,3},{4,5,6}},{{1,3,5},{2,4,6}},{{1,4,5,6},{2},{3}}   }
+F = makeUnsymmetric(L);
+unfactor(L,F)
+M = {{{1,2,3},{4,5,6}},{{1,3,5},{2,4,6}},{{1,2,4,5},{3},{6}}}
+G = makeUnsymmetric( M);
+unfactor(M,G)
+
+restart
 mu = {{1,2,4},{3,5}}
 Ind=new MutableHashTable;
 scan (mu, m-> scan (#m,i-> Ind#(m_i) =#m   ));
