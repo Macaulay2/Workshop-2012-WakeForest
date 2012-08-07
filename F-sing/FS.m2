@@ -144,7 +144,8 @@ tauAOverPEMinus1Poly = (fm, a1, e1) -> (
      Rm := ring fm;
      pp := char Rm;
      a2 := a1 % (pp^e1 - 1);
-     k2 := a1 // (pp^e1 - 1); --it seems faster to use the fact that tau(f^(1+k)) = f*tau(f^k) 
+     k2 := a1 // (pp^e1 - 1); --it seems faster to use the fact 
+                              --that tau(f^(1+k)) = f*tau(f^k) 
      fpow := fm^a2;
      IN := eR(ideal(fpow*fm),e1); -- this is going to be the new value.  The *fm is a test element
      -- the previous commands should use the fast power raising when Emily finishes it
@@ -166,7 +167,7 @@ tauPoly = (fm, t1) -> (
      Rm := ring fm; 
      pp := char Rm;
      L1 := divideFraction(t1,pp); --this breaks up t1 into the pieces we need
-     local I1;
+     I1 := ideal(0_Rm);
      --first we compute tau(fm^{a/(p^c-1)})
      if (L1#2 != 0) then 
           I1 = tauAOverPEMinus1Poly(fm,L1#0,L1#2) else I1 = ideal(fm^(L1#0));     
