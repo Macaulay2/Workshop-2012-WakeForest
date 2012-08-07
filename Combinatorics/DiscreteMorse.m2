@@ -5,7 +5,7 @@ if version#"VERSION" <= "1.4" then (
     )
 
 newPackage select((
-    "PosetsPlus",
+    "DiscreteMorse",
         Version => ".1", 
         Date => "6. August 2012",
         Authors => {
