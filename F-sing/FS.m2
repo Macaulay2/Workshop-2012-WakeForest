@@ -108,9 +108,9 @@ frobeniusPower(Ideal,ZZ) := (I,e) ->(
 --This is a slightly stripped down function due to Moty Katzman.
 ethRoot = (Im,e) -> (
      if (isIdeal(Im) != true) then (
-     	  print "ethRoot: You need to pass in an ideal"; print Im; assert false
+     	  error "ethRoot: You need to pass in an ideal"
      );
-     if (not (e >= 0)) then (print "ethRoot: You must pass a nonnegative integer"; assert false);
+     if (not (e >= 0)) then (error "ethRoot: You must pass a nonnegative integer");
      Rm:=ring(Im); --Ambient ring
      pp:=char(Rm); --characteristic
      Sm:=coefficientRing(Rm); --base field
