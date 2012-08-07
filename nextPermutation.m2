@@ -1,6 +1,9 @@
 -- nextPermutation
--- Given a permutation of {1..n} returns another one.
--- The iterator starts at {1..n} and ends at {n..1}.
+-- Given a permutation of a list, returns another one.
+-- The iterator starts at {0..n-1} and ends at {n-1..0}.
+-- It can handle lists with repetition, e.g., {1,1,2,2}
+-- and it can handle any entries that can be compared
+-- with <, e.g., {a,b,c}.
 -- Based on code by tye posted on PerlMonks at
 --   http://www.perlmonks.org/?node_id=29374
 -- retrieved August 7, 2012
