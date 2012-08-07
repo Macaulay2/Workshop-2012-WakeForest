@@ -1160,11 +1160,9 @@ shiftDGModule = method (TypicalValue => DGModule)
 shiftDGModule (DGModule) :=  U -> (
 local shiftedDegrees; local shiftU;
  shiftedDegrees = apply (U.Degrees, x -> {first x+1, last x});
- shiftU = semifreeDGModule (U.DGRing, shiftedDegrees);
- shiftU.diff = -U.diff;)
--------------------------------
--- Mapping Cone of DGModules --
--------------------------------
+ shiftU = semifreeDGModule (U.DGRing, shiftedDegrees),
+ setDiff (shiftU,- (matrix entries U.diff));
+ shiftU)
 
 
 {*semifreeResoution = method(TypicalValue => DGModule, Options=>{LengthLimit=>3})
