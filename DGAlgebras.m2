@@ -1208,7 +1208,7 @@ chainComplex DGModule := { LengthLimit => infinity } >> opts -> U -> (
    if maxDeg == infinity then error "Must specify an upper degree bound if an even generator exists.";
    chainComplex(apply(maxDeg, i -> polyDifferential(i+1,U)))
 )
-
+--Is the above chainComplex the same as that defined in L1234?
 polyDifferential(ZZ,DGModule) := (n,U) -> (
    K := U.DGRing;
    R := U.ring;
