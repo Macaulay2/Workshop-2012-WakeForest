@@ -45,13 +45,13 @@ export {
      isMeetPreserving,
 
      -- Crosscuts
-     joinExists,
-     meetExists,
+     --joinExists, (aren't these exported by Posets?)
+     --meetExists, (can't export these too without conflict)
      intersectSets,
      isBoundedBelow,
      isBoundedAbove,
      isCrosscut,
-     crosscuts
+     crosscuts,
      
      -- fibers
      posetMapFiber,
@@ -59,12 +59,27 @@ export {
     }
 
 ------------------------------------------
+-- Non-exported, strongly prevalent functions
+------------------------------------------
+-- Brought these over from Posets so that PosetsPlus 
+-- would install. Don't need to re-add to
+-- Posets when we pull these methods back.
+------------------------------------------
+
+indexElement := (P,A) -> position(P.GroundSet, i -> i === A)
+
+principalOrderIdeal' := (P, i) -> positions(flatten entries(P.RelationMatrix_i), j -> j != 0)
+
+principalFilter' := (P, i) -> positions(first entries(P.RelationMatrix^{i}), j -> j != 0)
+
+
+------------------------------------------
 ------------------------------------------
 -- Methods
 ------------------------------------------
 ------------------------------------------
-installPackage ("Graphs", FileName => "/Users/sonja/Documents/M2repository/wakeforest2012/WFU-2012/Combinatorics/Graphs.m2")
-installPackage ("Posets", FileName => "/Users/sonja/Documents/M2repository/wakeforest2012/WFU-2012/Combinatorics/Posets.m2")
+--installPackage ("Graphs", FileName => "/Users/sonja/Documents/M2repository/wakeforest2012/WFU-2012/Combinatorics/Graphs.m2")
+--installPackage ("Posets", FileName => "/Users/sonja/Documents/M2repository/wakeforest2012/WFU-2012/Combinatorics/Posets.m2")
 
 PosetMap = new Type of HashTable
 
@@ -130,9 +145,11 @@ isMeetPreserving(PosetMap) := Boolean => (f) -> (
 
 
 -- for Crosscut
+
 intersectSets = x -> set keys select(tally flatten (keys \ x), n -> n === #x)
 
-meetExists (Poset, List) := Boolean => (P,L) -> (
+
+meetExists(Poset, List) := Boolean => (P,L) -> (
     Fk := apply(L, a -> set(principalOrderIdeal'(P, indexElement(P, a))));
     lowerBounds := toList intersectSets(Fk);
     if lowerBounds == {} then false else (
@@ -142,7 +159,8 @@ meetExists (Poset, List) := Boolean => (P,L) -> (
         )
     )
 
-joinExists (Poset, List) := Boolean => (P,L) -> (
+
+joinExists(Poset, List) := Boolean => (P,L) -> (
     Fk := apply(L, a -> set(principalFilter'(P, indexElement(P, a))));
     upperBounds := toList intersectSets(Fk);
     if upperBounds == {} then false else (
@@ -153,19 +171,19 @@ joinExists (Poset, List) := Boolean => (P,L) -> (
     )
 
 isBoundedAbove = method()
-isBoundedAbove (Poset, List) := Boolean => (P,L) -> (
+isBoundedAbove(Poset, List) := Boolean => (P,L) -> (
      upperBounds := apply(L, a -> set(principalFilter'(P, indexElement(P, a))));
      if #intersectSets(upperBounds) > 0 then true else false
      )
 
 isBoundedBelow = method()
-isBoundedBelow (Poset, List) := Boolean => (P,L) -> (
+isBoundedBelow(Poset, List) := Boolean => (P,L) -> (
      lowerBounds := apply(L, a -> set(principalOrderIdeal'(P, indexElement(P, a))));
      if #intersectSets(lowerBounds) > 0 then true else false
      )
 
 isCrosscut = method()
-isCrosscut (Poset, List) := Boolean => (P,L) -> (
+isCrosscut(Poset, List) := Boolean => (P,L) -> (
      M := maximalChains P;
      isTrue := true;
      for c in M do (if #(set(c) * set(L)) != 1 then isTrue = false);
@@ -185,7 +203,7 @@ isCrosscut (Poset, List) := Boolean => (P,L) -> (
 	  
 	  
 crosscuts = method()
-crosscuts (Poset) := List => (P) -> (
+crosscuts(Poset) := List => (P) -> (
      S := subsets P.GroundSet;
      select( S, s -> isCrosscut(P,s) )
      )
@@ -209,7 +227,7 @@ nonnull :=(L) -> (
 
 
 isFiberContractible = method()
-isFiberContractible (PosetMap, Thing) := Boolean => (f, elt) -> (
+isFiberContractible(PosetMap, Thing) := Boolean => (f, elt) -> (
            fiberCmpx := orderComplex(posetMapFiber(f,elt)); 
 	   homDims := nonnull (unique apply(keys HH fiberCmpx, key-> if key =!= symbol ring then (prune HH fiberCmpx)#key));
       	   if #homDims == 1 and homDims_0 == 0 then true else false
@@ -221,6 +239,7 @@ isFiberContractible (PosetMap, Thing) := Boolean => (f, elt) -> (
 
 
 
+end
 
 -- example
 P1 = poset({a,b,c},{(a,b), (b,c)})
