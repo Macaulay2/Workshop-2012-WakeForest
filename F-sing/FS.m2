@@ -44,6 +44,26 @@ divideFraction = (t1,pp) -> (
      {a,b,c}
 )
 
+---------------------------------------------------------------
+--***********************************************************--
+--Basic functions for Frobenius powers of ideals and related --
+--constructions (colons).                                    --
+--***********************************************************--
+---------------------------------------------------------------
+
+--The following raises an ideal to a Frobenius power.  It was written by Moty Katzman
+frobeniusPower=method()
+
+frobeniusPower(Ideal,ZZ) := (I,e) ->(
+     R:=ring I;
+     p:=char R;
+     local u;
+     local answer;
+     G:=first entries gens I;
+     if (#G==0) then answer=ideal(0_R) else answer=ideal(apply(G, u->u^(p^e)));
+     answer
+);
+
 
 ----------------------------------------------------------------
 --************************************************************--
