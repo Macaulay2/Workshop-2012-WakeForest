@@ -488,6 +488,13 @@ showTikZ(Digraph) := opt -> G -> (
      get output
      )
 
+--------------------------------------------------------------------
+-- WANTED:  Alternate Tikz/Tex Functions for Graphs NOT relying on 
+-- Graphviz.  Will export tikz code to include in paper as well.
+--------------------------------------------------------------------
+
+--Will import this week.  Should be different functions for graph vs. digraph.
+
 ------------------
 -- Graph basics --
 ------------------
@@ -1010,7 +1017,10 @@ reverseDigraph(Digraph):= G -> (
      digraph flatten apply(keys G#graph, k -> apply(toList (G#graph)#k, v -> {v,k}))
      )
 
-reverse(Digraph):= G -> reverseDigraph(G)
+--------------------------------------------
+--Not sure how/whether to make this work.
+--reverse(Digraph):= G -> reverseDigraph(G)
+--------------------------------------------
 
 ------------------------------------------------------
 --As written, if there is a dicycle of length 2,

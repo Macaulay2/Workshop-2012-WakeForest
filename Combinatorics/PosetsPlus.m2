@@ -55,7 +55,14 @@ export {
      
      -- fibers
      posetMapFiber,
-     isFiberContractible
+     isFiberContractible,
+     
+     --Morse stuff
+     reverseEdges,
+     isMatching,
+     texMatching,
+     displayMatching,
+     outputTexMatching
     }
 
 ------------------------------------------
@@ -236,6 +243,98 @@ isFiberContractible(PosetMap, Thing) := Boolean => (f, elt) -> (
 
 
 -- discrete morse theory types of things
+
+------------------------------------------------------
+--Given a list of edges E and a digraph G, reverses all
+--edges in E.  Order matters for e in E, and duplicate
+--elements will be ignored.
+------------------------------------------------------
+
+reverseEdges = method()
+reverseEdges(List,Digraph):= (E,G) -> (
+     if all(E, e-> member(e,edges G)) then (
+	  tempGraph:= G;
+	  for e in E do (
+	       tempGraph = reverseEdge(e,G);
+	  );
+          tempGraph
+     )
+     else error "Not a subset of the directed edges of G."
+);
+
+isMatching = method()
+isMatching(List,Digraph):= (M,G) -> (
+     if all(M,e-> member(e,edges G)) then (
+	  if (unique flatten M) == (flatten M) then true else error "Not a matching on G."
+     )
+     else error "Not a subset of the directed edges of G."
+);
+
+isAcyclic = method()
+isAcyclic(Digraph) := G -> not isCyclic(G)
+
+isAcyclicMatching = method()
+isAcyclicMatching(List,Digraph):=(M,G)-> (
+     isMatching(M,G) and isAcyclic(reverseEdges(M,G))
+);
+
+
+displayMatching = method(Options => { symbol SuppressLabels => posets'SuppressLabels, symbol PDFViewer => posets'PDFViewer, symbol Jitter => false })
+displayMatching (List,Poset) := opts -> (M,P) -> (
+    if not instance(opts.PDFViewer, String) then error "The option PDFViewer must be a string.";
+    if not instance(opts.SuppressLabels, Boolean) then error "The option SuppressLabels must be a Boolean.";
+    if not instance(opts.Jitter, Boolean) then error "The option Jitter must be a Boolean.";
+    name := temporaryFileName();
+    outputTexMatching(M,P, concatenate(name, ".tex"), symbol SuppressLabels => opts.SuppressLabels, symbol Jitter => opts.Jitter);
+    run concatenate("pdflatex -output-directory /tmp ", name, " 1>/dev/null");
+    run concatenate(opts.PDFViewer, " ", name,".pdf &");
+    )
+
+outputTexMatching = method(Options => {symbol SuppressLabels => posets'SuppressLabels, symbol Jitter => false});
+outputTexMatching(List,Poset,String) := String => opts -> (M,P,name) -> (
+    if not instance(opts.SuppressLabels, Boolean) then error "The option SuppressLabels must be a Boolean.";
+    if not instance(opts.Jitter, Boolean) then error "The option Jitter must be a Boolean.";
+    fn := openOut name;
+    fn << "\\documentclass[8pt]{article}"<< endl;
+    fn << "\\usepackage{tikz}" << endl;
+    fn << "\\newcommand{\\text}{\\mbox}" << endl;
+    fn << "\\begin{document}" << endl;
+    fn << "\\pagestyle{empty}" << endl << endl;
+    fn << texMatching(M,P, opts) << endl;
+    fn << "\\end{document}" << endl;
+    close fn;
+    get name
+    )
+
+texMatching = method(Options => {symbol SuppressLabels => posets'SuppressLabels, symbol Jitter => false})
+texMatching (List,Poset) := String => opts -> (M,P) -> (
+    if not instance(opts.SuppressLabels, Boolean) then error "The option SuppressLabels must be a Boolean.";
+    if not instance(opts.Jitter, Boolean) then error "The option Jitter must be a Boolean.";
+    -- edge list to be read into TikZ
+    if not P.cache.?coveringRelations then coveringRelations P;
+    if not all(M, e-> member(e,P.cache.coveringRelations)) then error "Edge set not subset of relations.";
+    tempEdgeList:= select(P.cache.coveringRelations, e -> not member(e,M));
+    edgelist := apply(tempEdgeList, r -> concatenate(toString first r, "/", toString last r));
+    revEdgeList := apply(M, r-> concatenate(toString first r, "/", toString last r));
+    -- Find each level of P and set up the positioning of the vertices.
+    if not P.cache.?filtration then filtration P;
+    F := P.cache.filtration;
+    levelsets := apply(F, v -> #v-1);
+    scalew := min{1.5, 15 / (1 + max levelsets)};
+    scaleh := min{2 / scalew, 15 / #levelsets};
+    halflevelsets := apply(levelsets, lvl -> scalew * lvl / 2);
+    spacings := apply(levelsets, lvl -> scalew * toList(0..lvl));
+    -- The TeX String
+    "\\begin{tikzpicture}[scale=1, vertices/.style={draw, fill=black, circle, inner sep=0pt}]\n" |
+    concatenate(
+        for i from 0 to #levelsets - 1 list for j from 0 to levelsets_i list
+            {"\t\\node [vertices", if opts.SuppressLabels then "]" else (", label=right:{" | tex P.GroundSet_(F_i_j) | "}]"),
+             " (",toString F_i_j,") at (-",toString halflevelsets_i,"+",
+             toString ((if opts.Jitter then random(scalew*0.2) else 0) + spacings_i_j),",",toString (scaleh*i),"){};\n"}
+        ) |
+    concatenate("\\foreach \\to/\\from in ", toString edgelist, "\n\\draw [->] (\\to)--(\\from);\n") |
+    concatenate("\\foreach \\to/\\from in ", toString revEdgeList, "\n\\draw [<-,dashed,red] (\\to)--(\\from);\n\\end{tikzpicture}\n")
+    )
 
 
 
