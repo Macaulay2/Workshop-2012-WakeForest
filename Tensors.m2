@@ -6,7 +6,6 @@ newPackage(
 	     {Name => "Andrew Critch"},
 	     {Name => "Luke Oeding"},
 	     {Name => "Claudiu Raicu", Email => "claudiu@math.berkeley.edu", HomePage => "http://math.berkeley.edu/~claudiu/"},
-	     {Name => "Amelia Taylor"}
 	     },
     	Headline => "tensors"
     	)
@@ -23,8 +22,8 @@ newPackage(
 exportMutable {TemporaryTensorList, TemporaryIndexList}
 
 export{associativeCartesianProduct,
-     nestedListAccess,isRectangular,
-     rectangularNestedList}
+     nestedListAccess,isRectangular,rectangularNestedList,
+     tryHashApplication,deepSubstitution}
 export{TensorArray, tensorArray}
 export{einsteinSummation}
 export{Tensor,TensorModule}
@@ -45,7 +44,7 @@ use of nested lists of sequences of indices.
 
 List**List := (L,M) -> flatten for l in L list for m in M list (l,m)
 Sequence**Sequence := (L,M) -> toSequence flatten for l in L list for m in M list (l,m)
-acp=
+acp=--INTERNAL ABBREVIATION
 associativeCartesianProduct = method()
 associativeCartesianProduct VisibleList := L -> (
      p:=fold((i,j)->(i**j)/splice,L);
@@ -57,6 +56,7 @@ associativeCartesianProduct VisibleList := L -> (
 --Compute the initial dimensions of a list;
 --if the list is nested and rectangular
 --this equals its array dimension:
+--INTERNAL METHOD:
 initialDimensions=method()
 initialDimensions List := L -> (d:={};
      while instance(L,List) do (d=d|{#L},L=L_0);
@@ -64,7 +64,7 @@ initialDimensions List := L -> (d:={};
 
 --A recursive function for access to 
 --elements of nested lists:
-nla=
+nla=--INTERNAL ABBREVIATION
 nestedListAccess = method()
 nla(Thing,Sequence) := (x,l) -> (
      if l === () then return x else error: "nestedListAccess: too many indices?")
@@ -75,7 +75,7 @@ nla(VisibleList,Sequence) := (N,l) -> (
 
 ---Recursive function to test if a nested list is rectangular
 ---
-isrect=
+isrect=--INTERNAL ABBREVIATION
 isRectangular = method()
 isrect(Thing) := (x) -> true
 isrect(List) := (L) -> (
@@ -85,7 +85,7 @@ isrect(List) := (L) -> (
 
 --Function to make a rectangular nested list
 --from a list
-rnl=
+rnl=--INTERNAL ABBREVIATION
 rectangularNestedList = method()
 rnl(List,List):=(dims,L) -> (
      if not product dims == #L then error "rectangularNestedList: dimension mismatch";
@@ -94,6 +94,71 @@ rnl(List,List):=(dims,L) -> (
 	  L = for i in 0..<round(#L/d) list take(L,{i*d,(i+1)*d-1});
 	  dims = take(dims,{0,-2+#dims}));
      return L)
+
+-------------------------------------------
+--Summing expresions over symbolic indices
+------------------------------------------
+--Turning a hash table into a function
+--that acts like the identity on missing keys:
+tha=--INTERNAL ABBREVIATION
+tryHashApplication = method()
+tha HashTable := h -> (i -> try h#i else i)
+tha List := L -> tha hashTable L
+
+--Turning a hash table into a function
+--that modifies expressions
+dsub=--INTERNAL ABBREVIATION
+deepSubstitution=method()
+dsub HashTable := h -> (
+     f:=method(Dispatch=>Thing);
+     f Thing := x -> (tha h)x;
+     f BasicList := e -> new class e from (toSequence e)/f;
+     f
+     )
+dsub List := L -> dsub hashTable L
+
+--Same, but recursing only into expressions
+--and sequences; skipping lists to save time
+eass=--INTERNAL METHOD
+expressionAndSequenceSubstitution=method()
+eass HashTable := h -> (
+     f:=method(Dispatch=>Thing);
+     f Thing := x -> (tha h)x;
+     f Sequence := s -> s/f;
+     f Expression := e -> new class e from (toSequence e)/f;
+     f
+     )
+eass List := L -> eass hashTable L
+
+--(replace eass by dsub to recurse into other 
+--BasicLists)
+
+
+--Turning an expression including certain symbols
+--into a function that takes those symbols
+--as arguments, recursing only into sequences
+ef=expressionFunction=method()
+ef (Expression,List) := (exprn,args) -> (
+     if not all(args,i->instance(i,Symbol)) then error "expressionFunction expected a list of symbols";
+     if #args == 0 then return value(exprn);
+     subber:=method(Dispatch=>Thing);
+     subber Sequence := s -> dsub for i in 0..<#s list (args_i => s_i);
+     subber Thing := x -> eass{args_0 => x};
+     f:=method(Dispatch=>Thing);
+     f Thing := x -> value((subber x) exprn);
+     f
+     )
+ef (Thing,List) := (const,args) -> (x -> const)
+
+----Test expressions:
+TEST ///
+(0..5)/(i->value((dsub{j=>i}) (hold 2)^j))
+(0..5)/(i->value((eass{j=>i}) (hold 2)^j))
+f=ef((hold i)^j+k,{i,j,k})
+f(4,5,6)
+///
+----
+
 
 ----------------------------
 --Tensor Arrays
@@ -130,8 +195,81 @@ tensorArray (List,List) := (dims,L) -> new TensorArray from rnl(dims,L)
 tensorArray (List,Vector) := (dims,v) -> new TensorArray from rnl(dims,entries v);
 
 --
+--deep application of functions
+deepApply =method()
+deepApply(Thing,Function):=(x,f) -> f x
+deepApply(List,Function):=(L,f) -> apply(L,(i->deepApply(i,f)))
+TensorArray / Function := (t,f) -> deepApply(t,f)
+Function \ TensorArray := (f,t) -> deepApply(t,f)
+
+--The canonical tensor array, whose entry at
+--position I is I
+tpl=tensorPositionList = method()
+tpl List := dims -> toList((#dims:0)..toSequence(dims/(i->i-1)))
+
+cta=canonicalTensorArray = method()
+cta List := dims -> ta rnl(dims,(tpl dims))
+
+--Building a TensorArray using a function which
+--takes position sequences to values:
+tensorArray (List,Function) := (dims,f) -> (cta dims)/f
 
 
+--Test expressions:
+TEST///
+R=QQ[x]
+A=ta{{1,2,3},{4,5,6},{7,8,9}}
+B=ta{{11,12,x},{14,15,16},{17,18,19}}
+C=ta{{21,22,23},{24,25,26},{27,28,29}}
+C'=ta{{21,22,23},{24,25,26}}
+D=ta({3,3,3},(i,j,k)->i^2+j^2+k^2)
+e=A_(2,j) * B_(j,k) * C_(k,1)
+///
+
+
+-------------------------------
+--Composition of tensor arrays
+-------------------------------
+tac=
+tensorArrayComposition = method()
+tensorArrayComposition (List,List,List) := (tensors,indicesByTensor,summationIndices) -> (
+     if not all(summationIndices,i->instance(i,Symbol)) then error "expected summation indices to be a list of symbols";
+     numberOfTensors:=#tensors;
+     indicesByTensor=indicesByTensor/toSequence;
+     allIndices:=toList set splice indicesByTensor;
+     ZZindices:=(select(allIndices,i->class i === ZZ));
+     indexLocations:= i -> indicesByTensor/(j->positions(j,k->k===i));
+     outputIndices:=toList(((allIndices - (set summationIndices)))-(set ZZindices));
+     tensorsWithIndex:= i -> positions(indexLocations i,j->not j==={});
+     dimTensorAtIndex:=(t,l)->(dimensions(tensors_t))_l;
+     variableIndices:=allIndices-set(ZZindices);
+     --check dimensions match
+     for i in variableIndices do (
+	  idims:=flatten for t in tensorsWithIndex i list (
+	       for l in ((indexLocations i)_t) list dimTensorAtIndex(t,l)
+	       );
+	  if not # set idims == 1 then error("dimension mismatch for index "|toString(i));
+	  );
+     indexRange:= i -> (
+     	  t:= first tensorsWithIndex i;
+     	  l:= first (indexLocations i)_t;
+     	  dimTensorAtIndex(t,l));
+     outputDimensions:=outputIndices/indexRange;   
+     summationDimensions:=summationIndices/indexRange;
+     summationList:=toList((#summationIndices:0)..toSequence(summationDimensions/(i->i-1)));
+     exprn:=product for i in 0..<#tensors list (tensors#i)_(indicesByTensor#i);
+     --need to sum over summation indices:
+     tensorFunction:=s->(
+	  exprn's:=(expressionFunction(exprn,outputIndices)) s;
+	  sum apply(summationList,expressionFunction(exprn's,summationIndices))
+	  );
+     tensorArray(outputDimensions,tensorFunction)
+     )
+tensorArrayComposition (List,List) := (L,summationIndices) -> (
+     tensorArrayComposition(L/first,L/(i->toSequence remove(i,0)),summationIndices)
+     )
+
+--Einstein summation
 einsteinSummation = method()
 einsteinSummation (List,List) := (tensors,indicesByTensor) -> (
      numberOfTensors:=#tensors;
@@ -159,7 +297,7 @@ einsteinSummation (List,List) := (tensors,indicesByTensor) -> (
 einsteinSummation List := L -> einsteinSummation(L/first,L/(i->toSequence remove(i,0)))
 es=einsteinSummation
 
-
+{* Deprecated:
 sumOut=method()
 sumOut (List,List) := (tensors,indicesByTensor) -> (
      numberOfTensors:=#tensors;
@@ -177,6 +315,7 @@ sumOut (List,List) := (tensors,indicesByTensor) -> (
      concatenate for tensorNumber in 1..<numberOfTensors list "*(TemporaryTensorList_"|toString(tensorNumber)|")_"|toString(TemporaryIndexList_tensorNumber));
      return value(sumCommand|summand))
 sumOut List := L -> sumOut(L/first,L/(i->toSequence remove(i,0)))
+*}
 
 ----------------
 --Tensor Modules
@@ -336,7 +475,39 @@ end
 restart
 debug loadPackage"Tensors"
 
+
+A
+B
+C'
+
+printWidth=1000
+
+
+A
+B
+C
+
+x=tac({{A,i,j},{B,i,k},{C,i,l}},{})
+toList x
+
+
+x=sum entries tac({{A,i,0},{B,i,1},{C,i,1}},{})
+
+x_(0,1,1)
+
+es({{A,i,j},{B,i,k},{C,i,l}})
+tac({{A,i,j},{B,i,k},{C,i,l}})
+
+IndexedTensorArray
+
+A_(0,1)
+A(row=1,col=0)
+
+
 R=QQ[x]
+
+ta({2,2,2},(i,j,k)->i+j+k)
+
 
 M = tensorModule(R^8,{2,2,2})
 vec = vector{1,2,3,4,5,6,7,8}
