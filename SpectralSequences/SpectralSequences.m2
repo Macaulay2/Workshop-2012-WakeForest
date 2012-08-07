@@ -147,7 +147,7 @@ filteredHom0 (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> 
      d := spots D;
      pairs := new MutableHashTable;
      scan(c, i -> scan(d, j -> (
-		    k := i-j;
+		    k := j-i;
 		    p := if not pairs#?k then pairs#k = new MutableHashTable else pairs#k;
 		    p#(i,j) = 1;
 		    )));
@@ -164,13 +164,15 @@ filteredHom0 (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> 
 	  map(E#(i-1), E#i, 
 	       matrix table(
 		    E#(i-1).cache.indices, E#i.cache.indices, 
-		    (j,k) -> if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(j#0),D.dd_(k#0))
-		    else if j#0 === k#0 - 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_k#0)
-		    else 0
+		    (j,k) -> map(E#(i-1).cache.components#(E#(i-1).cache.indexComponents#j), 
+			 (E#i).cache.components#((E#i).cache.indexComponents#k),
+			 if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(j#0),D.dd_(k#1))
+		    	 else if j#0 === k#0 - 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_(k#0))
+		    	 else 0)
 		    )
 	       )
-	  )
-     l := if Degree == {1,0} then length c else length d;
+	  );
+     --l := if Degree == {1,0} then length c else length d;
      E --provisionally for testing, makes this like totalHom
      )
     
@@ -318,7 +320,7 @@ filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
      minD:= min D;
      maxD:= max D;
      R:= ring C;
-     T:= totalHom(C,D);
+     T:= filteredHom0(C,D);
      maps := for p from minC+1 to maxC list (
 	  differential := new MutableHashTable;
 	  inclusion := new MutableHashTable;
@@ -376,8 +378,9 @@ needsPackage "SpectralSequences";
 debug SpectralSequences;
 S = QQ[x,y,z];
 F = res ideal (x,y,z)
-T = totalHom (F,F)
-filteredHom(F,F)
+T = totalHom (F,F);
+T1=filteredHom0(F,F)
+
 (spots si)/f
 T_8
 f(0)
