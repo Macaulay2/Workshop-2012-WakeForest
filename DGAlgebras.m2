@@ -42,7 +42,7 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
 -- [functionality v2] isSemiFree
 -- [functionality v2] DGIdeals
 -- [functionality v2] DGModules
--- [functionality v2] DGModuleMap
+-- [functionality v2] DGModueMap
 -- [functionality v2] torDelta - is this possible?  Would be great.
 -- [functionality v2] Golod/Levin/Avramov index? (see paper of Liana)
 -- [functionality v2] Matric Massey products? (see Gulliksen-Levin)
@@ -1152,6 +1152,20 @@ semifreeDGModule (DGAlgebra,List) := (A,degList) -> (
    U.cache#(symbol diffs) = new MutableHashTable;
    new DGModule from U
 )
+
+-------------------------------
+----   Shift DGModule   -------
+-------------------------------
+shiftDGModule = method (TypicalValue => DGModule)
+shiftDGModule (DGModule) :=  U -> (
+local shiftedDegrees; local shiftU;
+ shiftedDegrees = apply (U.Degrees, x -> {first x+1, last x});
+ shiftU = semifreeDGModule (U.DGRing, shiftedDegrees);
+ shiftU.diff = -U.diff;)
+-------------------------------
+-- Mapping Cone of DGModules --
+-------------------------------
+
 
 {*semifreeResoution = method(TypicalValue => DGModule, Options=>{LengthLimit=>3})
 semifreeResolution (Module,DGAlgebra) := opts -> (M,A) -> (
