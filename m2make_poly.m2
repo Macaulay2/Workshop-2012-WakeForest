@@ -11,22 +11,26 @@ makeDets  = (a,mu) -> (
 makeUnsymmetric = L ->(
      Dets := apply(#L, i -> makeDets(vars i, L_i));
      rings := apply(Dets, i -> ring i);
-     uberring := QQ[flatten apply(rings, r->gens r)];
+     uberRing := QQ[flatten apply(rings, r->gens r)];
+     maps :=apply(rings, r -> map(uberRing,r));
+     product apply(#Dets, i -> maps_i(Dets_i))
+     )
+
+unfactor = (L, F) -> (
+     Fring = ring F;
      T := prods dims L;
      H := apply(keys T, i -> apply(T#i, j -> {x_(toSequence j), product apply(#j, k ->
      			 value (vars k)_(i, j#k))}));
      Hring := QQ[toList set((flatten H)/first)];
-     superUberRing := uberring**Hring;
-     maps :=apply(rings, r -> map(superUberRing,r));
-     F := product apply(#Dets, i -> maps_i(Dets_i));
-     G1 := map(superUberRing, uberring);
-     G2 := map(superUberRing, Hring); 
+     uberRing := Fring**Hring;
+     G1 := map(uberRing, Fring);
+     G2 := map(uberRing, Hring); 
      H = applyTable(H, i-> {G2 value i#0, G1 i#1});
      tmp := F;
      for h in H do tmp = sum for u in h list (
 	       	       (value u#0)*contract(u#1,tmp));
      tmp
-    )
+     )
 
 f = (L) -> (
      if #L === 0 then return {{}};
@@ -181,4 +185,26 @@ unfactor:= proc(X,degree,L::list)
 		return temp;
 	fi:
 end proc:
+
+
+
+makeUnsymmetric = L ->(
+     Dets := apply(#L, i -> makeDets(vars i, L_i));
+     rings := apply(Dets, i -> ring i);
+     uberring := QQ[flatten apply(rings, r->gens r)];
+     T := prods dims L;
+     H := apply(keys T, i -> apply(T#i, j -> {x_(toSequence j), product apply(#j, k ->
+     			 value (vars k)_(i, j#k))}));
+     Hring := QQ[toList set((flatten H)/first)];
+     superUberRing := uberring**Hring;
+     maps :=apply(rings, r -> map(superUberRing,r));
+     F := product apply(#Dets, i -> maps_i(Dets_i));
+     G1 := map(superUberRing, uberring);
+     G2 := map(superUberRing, Hring); 
+     H = applyTable(H, i-> {G2 value i#0, G1 i#1});
+     tmp := F;
+     for h in H do tmp = sum for u in h list (
+	       	       (value u#0)*contract(u#1,tmp));
+     tmp
+    )
 
