@@ -148,3 +148,43 @@ sigmaAOverPEMinus1Poly = (fm, a1, e1) -> (
      --return the final ideal and the HSL number of this function
      {IP,count}
 )
+
+
+----------------------------------------------------------------
+--************************************************************--
+--Auxiliary functions for F-signature computations.   --
+--************************************************************--
+----------------------------------------------------------------
+--a function to find the x-intercept of a line passing through two points
+xInt = (x1, y1, x2, y2) ->  x1-(y1/((y1-y2)/(x1-x2)))
+ 
+ 
+--- Computes the F-signature for a specific value a/p^e
+--- Input:
+---	e - some positive integer
+---	a - some positive integer between 0 and p^e
+---	f - some HOMOGENEOUS polynomial in two or three variables in a ring of PRIME characteristic
+--- Output:
+---	returns value of the F-signature of the pair (R, f^{a/p^e})
+     
+fSig = (e, a, f) -> (
+if not isHomogeneous f   
+     then error "expected a homogeneous f";     
+p= char ring f;     
+1-(1/p^(dim(ring f)*e))*degree((ring f)^1/(ideal(apply(first entries vars R, i->i^(p^e)))+ideal(f^a))))     
+
+--- Estimates the F-pure threshold
+--- Input:
+---	t - some positive rational number
+---	b - the f-signature of (R,f^{t/p^e})
+---     e - some positive integer
+---     t1- another rational number > t
+---	f - some HOMOGENEOUS polynomial in two or three variables in a ring of PRIME characteristic
+---
+--- Output:
+---	fSig applied to (e,t1,f)
+---	x-intercept of the line passing through (t,b) and (t1,fSig(e,t1,f))
+
+threshEst = (e,t,b,t1,f)-> (
+{b1=fSig(e,t1,f),xInt(t,b,t1,b1)}
+)
