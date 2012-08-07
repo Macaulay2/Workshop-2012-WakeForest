@@ -125,7 +125,34 @@ posHull (Matrix, Matrix):= (M,N)-> (
      )
 
 posHull Matrix:=M ->(posHull(M,map(QQ^(numRows M),QQ^0,0)))
-
+posHull (Cone,Cone):=(C1,C2)->(posHull {C1,C2})
+posHull Polyhedron:=C1->(posHull {C1})
+     
+posHull List:=L->(
+     datalist:=apply(L,P->(
+	       if instance(P,Polyhedron) then (
+		    if not P#?"Vertices" and not P#?"Points" then computeRays P;
+		    if P#?"Vertices" then return(dehom P#"Vertices",dehom P#"LinealitySpace");
+		    return(dehom P#"Points",dehom P#"InputLineality")		    
+		    )
+	       else if instance(P,Cone) then (
+		    if not P#?"Rays" and not P#?"InputRays" then computeRays P;
+		    if P#?"Rays" then return(P#"Rays",P#"LinearSpan");
+		    return(P#"InputRays",P#"InputLineality")		    		    
+		    )
+	       else if instance(P,Matrix) then (
+		    return(promote(transpose P,QQ),map(QQ^0,numRows P,0))
+		    )
+	       else (
+		    return(transpose P#0,transpose P#1)		    
+		    )
+	       ));
+     rlist:= matrix apply(datalist,i->{i#0});
+     llist:= matrix apply(datalist,i->{i#1});
+     new Cone from hashTable {
+	  "InputLineality"=>llist,
+  	  "InputRays"=>rlist}     
+     )
 
 intersection = method()
 intersection (Matrix,Matrix):=(M,N)->(
@@ -243,6 +270,8 @@ normalizeCoordinates=M->transpose matrix {apply(numRows M,i->(v:=(transpose M)_{
 	  if v_(0,0)==0 then return  v;
 	  ((1/(v_(0,0)))*v)))}
 --assume that coordinates are normalized
+dehom=M->transpose (transpose (M_(toList(1..numColumns M-1))))
+     
 dehomCoordinates=M->(
      MT:=transpose M;
      DM:=transpose (M_(toList(1..numColumns M-1)));
