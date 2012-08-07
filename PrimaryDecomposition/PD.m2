@@ -79,7 +79,7 @@ factors = (F) -> (
 
 makeFiberRings = method()
 makeFiberRings(List) := (baseVars) -> (
-   -- This function takes an ideal I and a list of variables baseVars as input
+   -- This function takes a list of variables baseVars as input
    -- and returns a pair of matrices (mons, cs) where mons are the monomials in the ideal
    -- of lead terms of a gb of I, and cs are the coefficients, but with respect to
    -- a product order kk[fiberVars][baseVars].  See example below for behavior
