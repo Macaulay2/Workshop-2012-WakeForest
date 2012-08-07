@@ -278,6 +278,10 @@ isAcyclicMatching(List,Digraph):=(M,G)-> (
      isMatching(M,G) and isAcyclic(reverseEdges(M,G))
 );
 
+isAcyclicMatching(List,Poset):=(M,P)-> (
+     isMatching(M,hasseDiagram P) and isAcyclic(reverseEdges(M,hasseDiagram P))
+)
+
 
 displayMatching = method(Options => { symbol SuppressLabels => posets'SuppressLabels, symbol PDFViewer => posets'PDFViewer, symbol Jitter => false })
 displayMatching (List,Poset) := opts -> (M,P) -> (
