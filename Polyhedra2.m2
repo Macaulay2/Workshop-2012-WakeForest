@@ -5,7 +5,7 @@
 -- PROGRAMMER : Nathan Ilten 
 -- UPDATE HISTORY : August 2012 
 ---------------------------------------------------------------------------
-newPackage("VeryNewPolyhedra",
+newPackage("Polyhedra2",
     Headline => "A package for computations with convex polyhedra",
     Version => ".1",
     Date => "August 5, 2011",
@@ -91,6 +91,7 @@ convexHull (Matrix,Matrix):=(M,N)->(convexHull(M,N,map(QQ^(numRows M),QQ^0,0)))
 convexHull Matrix :=M->(convexHull(M,map(QQ^(numRows M),QQ^0,0)))
 
 convexHull (Polyhedron,Polyhedron):=(P1,P2)->convexHull {P1,P2}
+convexHull (Cone,Cone):=(C1,C2)->posHull {C1,C2}
 
 convexHull List := L->(
    datalist:=apply(L,P->(
@@ -128,15 +129,49 @@ posHull Matrix:=M ->(posHull(M,map(QQ^(numRows M),QQ^0,0)))
 
 intersection = method()
 intersection (Matrix,Matrix):=(M,N)->(
-     new Cone from hashTable {
+     if not numColumns N ==1 then return new Cone from hashTable {
 	  "Equations"=>promote(- N,QQ),
-  	  "Inequalities"=>promote(- M,QQ)}
+  	  "Inequalities"=>promote(- M,QQ)};
+     intersection(M,N,map(QQ^0,QQ^(numColumns M),0),map(QQ^numColumns M,QQ^0,0))
      )	  
 
 intersection Matrix:=M->(intersection(M,map(QQ^0,QQ^(numColumns M),0)))
 
+intersection (Matrix,Matrix,Matrix,Matrix):=(M,v,N,w)->(
+     new Polyhedron from hashTable {
+	  "Inequalities"=>promote(v|-M,QQ),
+ 	  "Equations"=>promote(w|-N,QQ)
+	  }
+     )     
 
+intersection (Cone,Cone):=(P1,P2)->intersection {P1,P2}
+intersection (Polyhedron,Polyhedron):=(P1,P2)->intersection {P1,P2}
 
+intersection List := L -> (
+     datalist:=apply(L,P->(
+	       if instance(P,Polyhedron) then (
+		    if not P#?"Facets" and not P#?"Inequalities" then computeFacets P;
+		    if P#?"Facets" then return(P#"Facets",P#"LinearSpan");
+		    return(P#"Inequalities",P#"Equations")		    
+		    )
+	       else if instance(P,Cone) then (
+		    if not P#?"Facets" and not P#?"Inequalities" then computeFacets P;
+		    if P#?"Facets" then return(homRays P#"Facets",homRays P#"LinearSpan");
+		    return(homRays P#"Inequalities",homRays P#"Equations")		    		    
+		    )
+	       else if instance(P,Sequence) then (
+		    return(promote(P#1|(-P#0),QQ),map(QQ^(numRows P#0),QQ^(1+numColumns P#0),0))
+		    )
+	       else (
+		    return(map(QQ^(numRows P#0),QQ^(1+numColumns P#0),0),promote(P#1|(-P#0),QQ))		    
+		    )
+	       ));
+     ilist:=matrix apply(datalist,i->{i#0});
+     elist:=matrix apply(datalist,i->{i#1});
+     new Polyhedron from hashTable{
+	  "Inequalities"=>ilist,
+ 	  "Equations"=>elist}
+     )
 
 hyperplanes = method()
 hyperplanes Cone := P -> (
