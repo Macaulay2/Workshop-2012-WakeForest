@@ -47,7 +47,8 @@ export {
   "spectralSequence",
   "SpectralSequenceSheet",
   "totalHom",
-  "filteredHom"
+  "filteredHom",
+  "spots"
   }
 
 -- symbols used as keys
@@ -86,7 +87,7 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 FilteredComplex = new Type of HashTable
 FilteredComplex.synonym = "filtered chain complex"
 
-spots := K -> select(keys K, i -> class i === ZZ)
+spots = K -> select(keys K, i -> class i === ZZ)
 max FilteredComplex := K -> max spots K
 min FilteredComplex := K -> min spots K
 
@@ -139,28 +140,31 @@ filteredComplex ChainComplex := C -> (
   g := map(C, C, i -> 0*id_(C#i));
   return filteredComplex{g})
 
-filteredHom0 = method(Options => {Degree => {1,0}})
-filteredHom0 (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
+Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
      R := C.ring;
-     if R =!= D.ring then error "expected chain complexes over the same ring";
+     if R =!= D.ring then error "expected graded modules over the same ring";
      c := spots C;
      d := spots D;
      pairs := new MutableHashTable;
      scan(c, i -> scan(d, j -> (
 		    k := j-i;
 		    p := if not pairs#?k then pairs#k = new MutableHashTable else pairs#k;
-		    p#(i,j) = 1;
-		    )));
+		    p#(i,j) = 1;)));
      scan(keys pairs, k -> pairs#k = sort keys pairs#k);
-     E := new ChainComplex;
+     E := new GradedModule;
      E.ring = R;
      scan(keys pairs, k-> (
 	   	p := pairs#k;
-		E#k = directSum(apply(p, v -> v => Hom(C_(v#0), D_(v#1) )));
-		)
-	  );
-     e := spots E;
-     scan(e, i -> if E#?i and E#?(i-1) then E.dd#i = 
+		E#k = directSum(apply(p, v -> v => Hom(C_(v#0), D_(v#1) )));));
+     E)
+
+Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
+     R := C.ring;
+     if R =!= D.ring then error "expected chain complexes over the same ring";
+     complete C;
+     complete D;
+     E := chainComplex (lookup( Hom, GradedModule, GradedModule))(C,D);
+     scan(spots E, i -> if E#?i and E#?(i-1) then E.dd#i = 
 	  map(E#(i-1), E#i, 
 	       matrix table(
 		    E#(i-1).cache.indices, E#i.cache.indices, 
@@ -168,14 +172,18 @@ filteredHom0 (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> 
 			 (E#i).cache.components#((E#i).cache.indexComponents#k),
 			 if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(j#0),D.dd_(k#1))
 		    	 else if j#0 === k#0 - 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_(k#0))
-		    	 else 0)
-		    )
-	       )
-	  );
-     --l := if Degree == {1,0} then length c else length d;
+		    	 else 0))));
+     E)
+
+
+filteredHom0 = method(Options => {Degree => {1,0}})
+filteredHom0 (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
+     E= Hom(C,D);
+     --S^1/(ideal (x,y,z))l := if Degree == {1,0} then length c else length d;
      E --provisionally for testing, makes this like totalHom
      )
-    
+
+
 
 --------------------------------------------------------------------------------
 -- spectral sequences
@@ -378,9 +386,13 @@ needsPackage "SpectralSequences";
 debug SpectralSequences;
 S = QQ[x,y,z];
 F = res ideal (x,y,z)
-T = totalHom (F,F);
-T1=filteredHom0(F,F)
-
+T0=Hom (F,F);
+T1=filteredHom0(F,F);
+T==T1
+k=2
+G=chainComplex(apply(select(spots F, j-> j>k), i -> F.dd_i))[-k]
+T1=Hom(G,F);
+(T1#(-1)).cache.indices
 (spots si)/f
 T_8
 f(0)
