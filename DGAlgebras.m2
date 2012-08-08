@@ -17,7 +17,7 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
 	isHomologyAlgebraTrivial, findTrivialMasseyOperation, findNaryTrivialMasseyOperation, AssertWellDefined,
 	isGolod, isGolodHomomorphism, GenDegreeLimit, RelDegreeLimit, TMOLimit,
 	InitializeDegreeZeroHomology, InitializeComplex, isAcyclic, getDegNModule, polydifferential, 
-	semifreeDGModule, DGRing, homologyModule, DGModule, DGModuleMap, dgModuleMap
+	semifreeDGModule, DGRing, homologyModule, DGModule, DGModuleMap, dgModuleMap, shiftDGModule
 }
 
 -- Questions:
