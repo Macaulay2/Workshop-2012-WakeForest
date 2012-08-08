@@ -14,7 +14,6 @@ newPackage(
  --for this package to work  
    
 --ToDo:
---3) Tensor#net ... 
 --4) command for dropping 1's in dimension list
 --5) TensorArray afterprint
 --6) Make multiplication faster
@@ -31,6 +30,14 @@ export{Tensor,TensorModule}
 export{tensor',isTensor}
 export{sumOut}
 
+-----------------------
+--Error methods
+-----------------------
+assertClasses=method()
+assertClasses (List,Type) := (L,T) -> if not all(L,i->instance(i,T)) then (
+     error ("expected list entries of type "|toString(T)|"s"))
+assertClasses (List,Type,String) := (L,T,context) -> if not all(L,i->instance(i,T)) then (
+     error (context|" expected list entries of type "|toString(T)|"s"))
 
 --
 ---------------------------
@@ -181,7 +188,7 @@ rea Thing := x -> x
 ef=expressionFunction=method()
 ef (Expression,List) := (exprn,args) -> (
      exprn=rea exprn;
-     if not all(args,i->instance(i,Symbol)) then error "expressionFunction expected a list of symbols";
+     assertClasses(args,Symbol,"expressionFunction(Expression,List)");
      if #args == 0 then return value(exprn);
      subber:=method(Dispatch=>Thing);
      subber Sequence := s -> tis for i in 0..<#s list (args_i => s_i);
@@ -368,36 +375,30 @@ sumOut List := L -> sumOut(L/first,L/(i->toSequence remove(i,0)))
 ----------------
 Tensor=new Type of Vector
 Tensor.cache = new CacheTable
+vector Tensor := t -> new Vector from t
 
 TensorModule = new Type of Module
+TensorModule.cache = new CacheTable
 module TensorModule := M -> new Module from M
+------
+--Using dimensions method previously defined for
+--TensorArrays now for...
+dimensions Module := numgens M
+dimensions TensorModule := M -> M.dimensions
 
 --Printing TensorModules:
 TensorModule.synonym="tensor module"
 net TensorModule := M -> (net new Module from M)|
-     ", "|
-     "tensor order "|toString(#M.cache.dimensions)|
-     ", dimensions "|toString(M.cache.dimensions)
+     "{"|(fold(M.dimensions,(i,j)->(toString i)|"x"|(toString j)))|"}";
 TensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
      n := rank ambient M;
      << concatenate(interpreterDepth:"o") << lineNumber << " : "
      << ring M
-     << "-TensorModule";
-{*
-     if M.?generators then
-     if M.?relations then << ", subquotient of " << ambient M
-     else << ", submodule of " << ambient M
-     else if M.?relations then << ", quotient of " << ambient M
-     else if n > 0 then (
-	  << ", free";
-	  if not all(degrees M, d -> all(d, zero)) 
-	  then << ", degrees " << if degreeLength M === 1 then flatten degrees M else degrees M;
-	  );
-*}
+     << "-TensorModule of order "|toString(#M.dimensions)|
+     ", dimensions "|toString(M.dimensions);
      << endl;
      )
-
 -------------------------------------
 --Method for building tensor modules:
 -------------------------------------
@@ -406,77 +407,86 @@ TensorModule#{Standard,AfterPrint} = M -> (
 cacheCopy = method()
 cacheCopy Thing := M -> hashTable ((pairs M)|{symbol cache => new CacheTable from M.cache})
 
---Copy a module into a TensorModule
---without the new cache table entries:
-tm'=method()
-tm' Module := M -> new TensorModule of Tensor from cacheCopy M;
-
 --Build tensor modules:
 tm=tensorModule = method()
+
+--make a free module into a tensor module:
+tm (Ring,List) := (R,dimeneions) -> (
+     d:=product dimensions;
+     new TensorModule of Tensor from (
+	  new HashTable from (pairs R^d)|{
+      	       symbol factors => {M},
+     	       symbol dimensions => dimensions}
+     	  );
+     )
+
+--make a possibly non-free module into an order 1 tensor module, 
+--for tensoring with other such modules to build higher-order
+--non-free tensor modules:
 tm Module := M -> (
-     Q:=tm' M;
-     Q.cache.dimensions = {numgens M};
-     Q
+      new TensorModule of Tensor from (
+       	   new HashTable from (pairs M)|{
+		symbol factors => {M},
+       	   	symbol dimensions => {numgens M}}
+	   );
      )
-tm (Ring,List) := (R,L) -> (
-     d:=product L;
---     Q:=newClass(TensorModule,Tensor, (R^d));
-     Q:=tm'(R^d);
-     Q.cache.dimensions = L;
-     Q
-     )
-tm (Module,List) := (M,L) -> (
-     d:=product L;
+tm TensorModule := identity
+
+--this is conceptually weird if M is not free and #L>1
+tm (Module,List) := (M,dimensions) -> (
+     d:=product dimensions;
      if not numgens M == d then error "dimension mismatch";
-     Q:=tm' M;
-     Q.cache.dimensions = L;
-     Q
+      new TensorModule of Tensor from (
+	   new HashTable from (pairs M)|{
+	   	symbol factors => {M},
+       	   	symbol dimensions => dimensions});
      )
-tm Vector := v -> class v;
+*}
 
-------
---Using dimensions method previously defined for
---TensorArrays now for...
-dimensions TensorModule := M -> M.cache.dimensions
-dimensions Tensor := v -> (
-     dimensions class v
+--Get the ambient tensor module of a tensor:
+tm Tensor := t -> class t;
+--perhaps this should instead be
+--t-> (classes := ancestors class t;
+--     return classes#(position(classes,i->class i===TensorModule))
+--     )
+
+
+--Tensor module from a list of modules to tensor product,
+--which themselves may be tensor modules
+tm (List) := (factors) -> (
+     assertClasses(factors,Module,"tensorModule(List)");
+     dims:=flatten(factors/dimensions);
+      new TensorModule of Tensor from (
+	   new HashTable from (pairs M)|{
+	   	symbol factors => factors,
+       	   	symbol dimensions => dims});
      )
+*}
+
+dimensions Tensor := t -> dimensions tm t
+
+
+
 
 ----------------------------
---Equality of tensor modules
+--Old: Equality of tensor modules
 ----------------------------
-TensorModule == TensorModule := (M,N) -> (
-     module N == module N
-     and M.cache.dimensions == N.cache.dimensions)
+--TensorModule == TensorModule := (M,N) -> (
+--     module N == module N
+--     and M.cache.dimensions == N.cache.dimensions)
 --note this is stornger than "===", which
 --ignores the cache!
 
 ----------------------------
 --TensorModule combinations
 ----------------------------
-TensorModule**TensorModule := (M,N) -> (
-     P:=(module M) ** (module N);
-     P=tensorModule P;
-     P.cache.dimensions=M.cache.dimensions|N.cache.dimensions;
---     P.cache.factors=M.cache.factors|N.cache.factors;
-     P
-     )
-TensorModule^ZZ := (M,n) -> (
-     P:=(module M)^n;
-     P=tensorModule P;
-     P.cache.dimensions=toList flatten (n:M.cache.dimensions);
---     P.cache.factors=toList flatten (n:M.cache.factors);
-     P
-     )
-TensorModule++TensorModule := (M,N) -> (
+TensorModule^ZZ := (M,n) -> tm toList (n:M)
+
+-TensorModule++TensorModule := (M,N) -> (
      if not #dimensions M == #dimensions N then error "dimension mismatch in TensorModule++TensorModule";
      P:=(module M)++(module N);
-     P=tensorModule P;
-     P.cache.dimensions=M.cache.dimensions + N.cache.dimensions;
---     P.cache.factors=M.cache.factors ++ N.cache.factors;
-     P
+     tm(P,M.dimensions + N.dimensions)
      )
-
 
 ----------------------------------------------
 --Conversions between Tensors and TensorArrays
@@ -546,7 +556,7 @@ Tensor**Tensor := (v,w) -> (
      
 Tensor _ Sequence := (v,L) -> (
      M := tensorModule v;
-     dims := M.cache.dimensions;
+     dims := M.dimensions;
      if not #L == #dims then error "dimension mismatch";
      ind := L#0;
      for i from 0 to #L-2 do ind = ind*dims#i + L#(i+1);
@@ -556,11 +566,22 @@ Tensor _ Sequence := (v,L) -> (
 
 Tensor ^ ZZ := (t,n) -> fold(for i in 0..<n list t,(i,j)->i**j)
 
+TEST ///
+R=QQ[x]
+M=tm(R,{2,2})
+N=tm(R,{4})
+assert(M==R^4)--they are equal as modules
+assert(not M===R^4)
+assert(not M==N)
+M===N--unfortunately; can't change this.
+h=new MutableHashTable
+h#M=1
+h#N==1--unfortunately
+///
+M=
 --
 beginDocumentation()
 
-TEST ///
-///
 
 TEST  ///
 ///
@@ -739,10 +760,10 @@ R=QQ[x]
 M=tm R^2
 module M
 
-M.cache.dimensions
+M.dimensions
 keys M.cache
 N=(M**M)++(M**M)
-((M**M**M)**(M**M**M)).cache.dimensions
+((M**M**M)**(M**M**M)).dimensions
 
 (M_1) ** (M_0)
 
