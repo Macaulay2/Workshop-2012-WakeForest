@@ -16,26 +16,23 @@ P = nextSubset (S,P)
 P = nextSubset (S,P)
 P = nextSubset (S,P)
 *}
-nextSubset = method(Options=>{Size=>0,IncludingGreater=>true})
-nextSubset ZZ := o -> (n) -> new List from (0..(o.Size-1))
+nextSubset = method(Options=>{Size=>null})
+nextSubset ZZ := o -> (n) -> (
+  if o.Size === null then return {}
+  else if o.Size <= n then return new List from (0..(o.Size-1))
+  else return null;
+)
 nextSubset (ZZ,Nothing) := o -> (n,P) -> null
 nextSubset (ZZ,List) := o -> (n,P) -> (
-  currentSize := #P;
-  wantedSize := o.Size;
+  if ((o.Size =!= null) and (o.Size != #P)) then error "current subset not the expected size";
   -- Last one?
-  lastone := ((o.Size == 0 and currentSize == 0) or (P#0 == n-currentSize));
-  if lastone and not o.IncludingGreater then return null;
-  if lastone and o.IncludingGreater then (
-    wantedSize = currentSize + 1;
-    if wantedSize > n then return null else return nextSubset(n,Size=>wantedSize)
-  );
-  
-  -- impossible?
-  if wantedSize > n then return null;
+  lastone := (#P == 0) or (P#0 == n-#P);
+  if lastone and o.Size =!= null then return null;
+  if lastone and o.Size === null then return nextSubset(n,Size=>(#P+1));
   
   -- Find the position to change.
   p := 0;
-  while ( p < currentSize-1 and (P#p)+1 == P#(p+1) ) do p = p+1;
+  while ( p < #P-1 and (P#p)+1 == P#(p+1) ) do p = p+1;
   P = replace(p,(P#p)+1,P);
   while ( (p = p-1) >= 0 ) do P = replace(p,p,P);
   
