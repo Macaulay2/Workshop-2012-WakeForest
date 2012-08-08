@@ -4,7 +4,7 @@ newPackage(
     	Date => "August 5, 2012",
     	Authors => {
 	     {Name => "Andrew Critch"},
-	     {Name => "Claudiu Raicu", Email => "claudiu@math.berkeley.edu", HomePage => "http://math.berkeley.edu/~claudiu/"},
+	     {Name => "Claudiu Raicu", Email => "claudiu@math.berkeley.edu", HomePage => "http://math.berkeley.edu/~claudiu/"}
 	     },
     	Headline => "tensors"
     	)
@@ -627,272 +627,57 @@ h#N==1--unfortunately
 M=
 --
 beginDocumentation()
+{*     doc ///
+        Key
+	  TensorArray
+        Headline
+	  The class of all tensor arrays
+        Usage
+        Inputs
+        Outputs
+        Consequences
+         Item
+        Description
+         Text
+         Code
+         Pre
+         Example
+        Subnodes
+        Caveat
+        SeeAlso
+     ///
+*}
 
-
-TEST  ///
+doc ///
+Key
+  TensorArray
+  (symbol _,TensorArray,ZZ)
+Headline
+  The class of all tensor arrays
+Description
+  Text
+   Tensor arrays are cool
+   
+  Example
+   2*3
+    
 ///
 
+doc///
+Key
+  (symbol **,TensorArray,TensorArray)
+Headline
+  tensor product of arrays
+Caveat
+  not yet implemented
+///
+
+TEST  ///
+assert(1 === 1)
+///
 end
 
-
 restart
-debug loadPackage"Tensors"
-
---comparison with matrix multiplication:
-n=20
-me=for i in 1..n list for j in 1..n list i^2+j^2;
-m=matrix me;
-t=ta me;
---3.6 secs with ds, n=9
---0.09 secs with dsub, n=9
-time tt=tac({{t,i,j},{t,j,k}},{j});
---0.000043 secs:
-time (m*m);
-
-
-A
-B
-C'
-
-printWidth=1000
-
-
-A
-B
-C
-
-x=tac({{A,i,j},{B,i,k},{C,i,l}},{})
-toList x
-
-
-x=sum entries tac({{A,i,0},{B,i,1},{C,i,1}},{})
-
-x_(0,1,1)
-
-es({{A,i,j},{B,i,k},{C,i,l}})
-tac({{A,i,j},{B,i,k},{C,i,l}})
-
-IndexedTensorArray
-
-A_(0,1)
-A(row=1,col=0)
-
-
-R=QQ[x]
-
-ta({2,2,2},(i,j,k)->i+j+k)
-
-
-M = tensorModule(R^8,{2,2,2})
-vec = vector{1,2,3,4,5,6,7,8}
-v = new M from vec
-
-v_{0,0,1}
-v_(1,1,0)
-
-tav = tensorArray v
-tav_(0,0,1)
-
-
---the following works okay:
-N=tm(R,{1,1})
-O=tm(R,{1,1,1})
-N
-O
-N_0
-O_0
---
-
---this works:
-M=tm(R,{1})
-N=tm(R,{1,1})
-M**N
-M
-N
---
-
---this does not work:
-N=tm(R,{1,1})
-N**N
-N
---
-
-
-M=tm R^2
-f=map(tm R^1,M,{{1,1}})
-f=map(tm R^3,M,{{1,1},{2,3},{4,5}})
-t=(M_0)**(M_1)**(M_0)
-g=f**f**(id_(M))
-g*t
-
-N = tm R^1
-N**N**N**N
-
---check rectangular in tel
-
-L={{1,2},{3,4}}
-tensor'(ta tensor'({L,L,L},M++M++M),M)
-t=tensor'({L,L+L,L+L+L+L},((tm R^3)**M))
-tensor'(ta t,((tm R^3)**M))==t
-
-
-while not all(L,i->not class i == List)
-
-new Function from flatten
-
-
-
-L=rectangularNestedList({2,2,2},{1,2,3,4,5,6,7,8})
-
-L={{{1,2,3},{4,5,6}},{{5,6,7},{8,9,10}}}
---entry:
-nla(L,(1,1,2))
-
---slices:
-nla(L,(1,))
-nla(L,(1,,))
-nla(L,(,1,))
-nla(L,(,,1))
-nla(L,(,1,1))
-nla(L,(1,,1))
-
-ta {{1,2},{3,4}}
-ta {L,L}
-
-T = ta L
-dimensions T
-
-R=QQ[x]
-M=tm R^2
-P=M**M**M
-t=sum for i in 0..7 list i*P_i
-dimensions t
-t=(M_0)**(M_1)**(M_0)
-ta t
-dimensions t
-
-(1,2,3)**(4,5,6)
-
-L={{1,2},{3,4},{5,6}}
-acp L
-
-isRectangular {{1,2},{3}}
-isRectangular T
-
-----
-x=symbol x
-R=QQ[x_1..x_27]
-m0=ta entries genericMatrix(R,3,3)
-m1=ta entries genericMatrix(R,x_10,3,3)
-m2=ta entries genericMatrix(R,x_19,3,3)
-
-isRectangular m1
-
-A=tel{{1,2,3},{4,5,6},{7,8,9}}
-B=tel{{11,12,x_1},{14,15,16},{17,18,19}}
-C=tel{{21,22,23},{24,25,26},{27,28,29}}
-
-printWidth=1000
-es({{A,i,j},{B,j,k},{C,j,l}})
-
-
-----
-sumOut({m0,m1,m2},{(2,i),(i,1),(i,0)})
-sumOut{{m0,2,i},{m1,i,1},{m2,i,0}}
-sumOut({m0,m0,m0},{(0,i),(i,1),(j,0)})
-
------
-R=QQ[x]
-M=tm R^2
-module M
-
-M#(gs"dimensions")
-keys M.cache
-N=(M**M)++(M**M)
-((M**M**M)**(M**M**M))#(gs"dimensions")
-
-(M_1) ** (M_0)
-
-
---TRYING TO IMPROVE EINSTEIN SUMMATION  
-
-ESUM=EinsteinSummationMethodFunction=new Type of MethodFunction
-esum=new ESUM from method(Dispatch=>Thing)
-ESUM_List := (esum,inds) -> (
-     if not all(inds,i->instance(i,Symbol)) then error "expected a list of Symbols";
-     f = i->1;
-     r
-     )
-esum_{i,j}
-getParsing (hold 1+2)
-(expression 1+2)+(expression 1+2)
-hold 1+2
-
-hold' = method(Dispatch => Thing, TypicalValue => Expression)
-hold' Expression := identity
-hold' Thing := x -> ((new Holder from {x})+(new Holder from {x}))
-hold' 1+2+3
-
-test=new Keyword from abc
-test
-f = method(Dispatch=>Thing)
-f Thing:= x -> (Holder{x}+Holder{x})
-f 1
-f 1+2
-f(hold 1+2)
-f hold 1+2
-(hold 1) ..< (hold 5)
-value ((hold M)_0)
-Holder{1}
-
-new Sum from {hold 1+2,hold 1+2}
-
-
-(new Expression from {3})+(new Expression from {3})
-new Sum from {hold (M_0)_j,M_0}
-
-
-f=method()
-f Thing:= x -> new Holder from {hold x+hold x}
-f(hold 1+2)
-
-es(A_(2,3) * B_(j,k))
-A
-
-f hold i
-i=hold i
-(hold symbol M)_(hold symbol i)
-hold a_k
-hold m_k
-
-(f 1+2)
-(f 1)+2
-f(1+2)
---     return (hold x)+(hold x);
-     return s+s;
-     )
-f(hold 1+2)
-f 1+2
-
-g=f@@hold
-g 1+2
-f hold 1+2
-code hold
-f(hold i*j)
-(hold 1+2)+(hold 3+4)
-
-KeyWord 
-class(for)
-
-f (hold i*j)
-g=hold
-g i*j
-
-(hold i*j) + (hold i*j)
-s= hold i*j
-s+s
-
-
-
-
-
+uninstallPackage"Tensors"
+installPackage"Tensors"
+viewHelp"Tensors"
