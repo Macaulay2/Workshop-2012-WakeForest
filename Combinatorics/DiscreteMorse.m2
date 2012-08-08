@@ -52,7 +52,22 @@ export {
      --operation to display Matchings
      texMatching,
      displayMatching,
-     outputTexMatching
+     outputTexMatching,
+     
+     --helper functions to remove after debugging
+     indexElement,
+     cellVariables,
+     indexToCell,
+     cellToIndex,
+     indexToFace,
+     faceToIndex,
+     
+     --exported cached symbols
+     cells,
+     indextocell,
+     celltoindex,
+     facetoindex,
+     indextoface
     }
 
 ------------------------------------------
@@ -282,6 +297,130 @@ criticalCells(MorseMatching):= M ->(
      )
 )
 
+------------------------------------------------------
+------------------------------------------------------
+--Morse Collapsing Functions
+------------------------------------------------------
+------------------------------------------------------
+
+------------------------------------------------------
+------------------------------------------------------
+--Various helper functions for Morse Collapsing
+------------------------------------------------------
+--Makes cell variables c_(i,j):
+cellVariables=method()
+cellVariables(MorseMatching) := M ->(
+     if M.cache.?cells then (
+	  M.cache.cells
+     )
+     else (
+	  local c;
+     	  D := M.cache.complex;
+     	  F := apply(toList(0..dim D), i-> (fVector D)#i);
+     	  varIndices := apply(#F, i-> apply(F_i, j-> (i,j)));
+     	  M.cache.cells = apply(varIndices, i-> apply(i, j-> (symbol c)_j))
+     )
+)
+------------------------------------------------------
+------------------------------------------------------
+
+------------------------------------------------------
+------------------------------------------------------
+--Makes four hash tables for converting between cells, faces, and indices:
+------------------------------------------------------
+------------------------------------------------------
+--Index to Cell
+------------------------------------------------------
+------------------------------------------------------
+indexToCell = method()
+indexToCell(MorseMatching) := M -> (
+     if M.cache.?indextocell then (
+	  M.cache.indextocell
+     )
+     else (
+     D:= M.cache.complex;
+     C:= cellVariables(M);
+     M.cache.indextocell = hashTable flatten apply(# C, fdim -> 
+     	  apply(#(C_fdim), j ->
+	       {indexElement(M.inclusionPoset,support(flatten entries D.cache.faces#fdim)_j),(C_fdim)_j}))
+     )
+)
+------------------------------------------------------
+------------------------------------------------------
+--Cell Variables to Indices:
+------------------------------------------------------
+------------------------------------------------------
+cellToIndex = method()
+cellToIndex(MorseMatching):= M -> (
+     if M.cache.?celltoindex then (
+	  M.cache.celltoindex
+     )
+     else (
+	  K:=indexToCell(M);
+     	  M.cache.celltoindex = hashTable apply(keys M.cache.indextocell, i -> {M.cache.indextocell#i, i})
+     )
+)
+------------------------------------------------------
+------------------------------------------------------
+--Indexes to Faces:
+------------------------------------------------------
+------------------------------------------------------
+indexToFace = method()
+indexToFace(MorseMatching):= M -> (
+     if M.cache.?indextoface then (
+     	  M.cache.indextoface
+     )
+     else (
+	  D:= M.cache.complex;
+     	  C:= cellVariables(M);
+     	  M.cache.indextoface = hashTable flatten apply(#C, fdim -> 
+     	       apply(#(C_fdim), j ->
+	       	    {indexElement(M.inclusionPoset,support(flatten entries D.cache.faces#fdim)_j),support(flatten entries D.cache.faces#fdim)_j}))
+     )
+)
+------------------------------------------------------
+------------------------------------------------------
+--Faces to Indices:
+------------------------------------------------------
+------------------------------------------------------
+faceToIndex = method()
+faceToIndex(MorseMatching):= M -> (
+     if M.cache.?facetoindex then (
+     	  M.cache.facetoindex
+     )
+     else (
+	  D:=M.cache.complex;
+	  C:=cellVariables(M);
+	  K:=indexToFace(M);
+	  M.cache.facetoindex = hashTable apply(keys M.cache.indextoface, i -> {M.cache.indextoface#i, i})
+     )
+)
+
+------------------------------------------------------
+--METHOD:  simplicialCollapse
+--
+--INPUT:  MorseMatching
+--
+--OUTPUT:  {CWComplex, ChainComplex}
+-- 
+--
+------------------------------------------------------
+
+
+
+------------------------------------------------------
+--METHOD:  collapseCell
+--
+--INPUT:  
+--
+--OUTPUT:  
+-- 
+--
+------------------------------------------------------
+
+
+
+
 
 ------------------------------------------------------------------
 ------------------------------------------------------------------
@@ -381,7 +520,7 @@ texMatching (List,Poset) := String => opts -> (M,P) -> (
              toString ((if opts.Jitter then random(scalew*0.2) else 0) + spacings_i_j),",",toString (scaleh*i),"){};\n"}
         ) |
     concatenate("\\foreach \\to/\\from in ", toString edgelist, "\n\\draw [-] (\\to)--(\\from);\n") |
-    concatenate("\\foreach \\to/\\from in ", toString revEdgeList, "\n\\draw [<<-,red] (\\to)--(\\from);\n\\end{tikzpicture}\n")
+    concatenate("\\foreach \\to/\\from in ", toString revEdgeList, "\n\\draw [<<-,thick, red] (\\to)--(\\from);\n\\end{tikzpicture}\n")
     )
 
 texMatching(List,SimplicialComplex) := String => opts -> (M,D) -> (
