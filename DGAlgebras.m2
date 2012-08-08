@@ -899,31 +899,6 @@ isWellDefined DGAlgebraMap := f -> (
 )
 
 
------ DGModuleMap functions --------
-
-net DGModuleMap := f -> net f.natural
-
-dgModuleMap = method(TypicalValue => DGModuleMap)
-dgModuleMap (DGModule,DGModule,Matrix) := (V,U,fnMatrix) -> (
-   -- the source and target must be modules over the same DGAlgebra
-   assert(U.DGRing === V.DGRing);  
-   f := new MutableHashTable;
-   f#(symbol source) = U;
-   f#(symbol target) = V;
-   f#(symbol natural) = map(V.natural,U.natural,sub(fnMatrix,U.DGRing.natural));
-   -- morphisms of DGModules are graded linear over the base DGAlgebra 
-   new DGAlgebraMap from f
-)
-
-target DGAlgebraMap := f -> f.target
-source DGAlgebraMap := f -> f.source
-
--- overload isWellDefined for DGAlgebraMap
-isWellDefined DGAlgebraMap := f -> (
-   A := source f;
-   B := target f;
-   all(apply(gens A.natural, x -> f.natural(A.diff(x)) == B.diff(f.natural(x))), identity)
-)
 
 toComplexMap = method(TypicalValue=>ChainComplexMap,Options=>{EndDegree=>-1,AssertWellDefined=>true})
 toComplexMap DGAlgebraMap := opts -> f -> (
@@ -1152,6 +1127,33 @@ semifreeDGModule (DGAlgebra,List) := (A,degList) -> (
    U.cache#(symbol diffs) = new MutableHashTable;
    new DGModule from U
 )
+
+----- DGModuleMap functions --------
+
+net DGModuleMap := f -> net f.natural
+
+dgModuleMap = method(TypicalValue => DGModuleMap)
+dgModuleMap (DGModule,DGModule,Matrix) := (V,U,fnMatrix) -> (
+   -- the source and target must be modules over the same DGAlgebra
+   assert(U.DGRing === V.DGRing);  
+   f := new MutableHashTable;
+   f#(symbol source) = U;
+   f#(symbol target) = V;
+   f#(symbol natural) = map(V.natural,U.natural,sub(fnMatrix,U.DGRing.natural));
+   -- morphisms of DGModules are graded linear over the base DGAlgebra 
+   new DGModuleMap from f
+)
+
+target DGModuleMap := f -> f.target
+source DGModuleMap := f -> f.source
+
+-- overload isWellDefined for DGModuleMap
+isWellDefined DGModuleMap := f -> (
+   U := source f;
+   V := target f;
+   all(apply(numgens U.natural, i -> f.natural*(U.diff*(U.natural_i)) == V.diff*(f.natural*(U.natural_i))), identity)
+)
+
 
 -------------------------------
 ----   Shift DGModule   -------
@@ -1476,7 +1478,7 @@ doc ///
       U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
       setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
       V = semifreeDGModule(K,{{0,0},{1,1},{2,3}})
-      setDiff(U,sub(matrix{{0,x,-T_1},{0,0,x^2},{0,0,0}}, K.natural))
+      setDiff(V,sub(matrix{{0,x,-T_1},{0,0,x^2},{0,0,0}}, K.natural))
       f = dgModuleMap(V,U,sub(matrix{{1,0,0},{0,x,0},{0,0,1}},K.natural))
     Text
       Once we define the DGModuleMap, it is a good idea to check to see if it indeed satisfies the Leibniz rule.  This can be checked by using
