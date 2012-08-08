@@ -149,7 +149,7 @@ isMeetPreserving(PosetMap) := Boolean => (f) -> (
 intersectSets = x -> set keys select(tally flatten (keys \ x), n -> n === #x)
 
 
-meetExists(Poset, List) := Boolean => (P,L) -> (
+meetExists (Poset, List) := Boolean => (P,L) -> (
     Fk := apply(L, a -> set(principalOrderIdeal'(P, indexElement(P, a))));
     lowerBounds := toList intersectSets(Fk);
     if lowerBounds == {} then false else (
@@ -160,7 +160,7 @@ meetExists(Poset, List) := Boolean => (P,L) -> (
     )
 
 
-joinExists(Poset, List) := Boolean => (P,L) -> (
+joinExists (Poset, List) := Boolean => (P,L) -> (
     Fk := apply(L, a -> set(principalFilter'(P, indexElement(P, a))));
     upperBounds := toList intersectSets(Fk);
     if upperBounds == {} then false else (
@@ -171,44 +171,55 @@ joinExists(Poset, List) := Boolean => (P,L) -> (
     )
 
 isBoundedAbove = method()
-isBoundedAbove(Poset, List) := Boolean => (P,L) -> (
+isBoundedAbove (Poset, List) := Boolean => (P,L) -> (
      upperBounds := apply(L, a -> set(principalFilter'(P, indexElement(P, a))));
-     if #intersectSets(upperBounds) > 0 then true else false
+     if #intersectSets(upperBounds) > 0 or #L == 0 then true else false
      )
 
 isBoundedBelow = method()
-isBoundedBelow(Poset, List) := Boolean => (P,L) -> (
+isBoundedBelow (Poset, List) := Boolean => (P,L) -> (
      lowerBounds := apply(L, a -> set(principalOrderIdeal'(P, indexElement(P, a))));
-     if #intersectSets(lowerBounds) > 0 then true else false
+     if #intersectSets(lowerBounds) > 0 or #L == 0 then true else false
      )
 
 isCrosscut = method()
-isCrosscut(Poset, List) := Boolean => (P,L) -> (
-     M := maximalChains P;
-     isTrue := true;
-     for c in M do (if #(set(c) * set(L)) != 1 then isTrue = false);
-     if isTrue then (
-	  S := subsets L;
-	  for s in S do (
-	       if #s > 1 and isTrue then (
-    		    if isBoundedBelow(P, s) then isTrue = meetExists(P,s);
-		    if isTrue then (
-    		    	 if isBoundedAbove(P, s) then isTrue = joinExists(P,s);
-			 );
+isCrosscut (Poset, List) := Boolean => (P,L) -> (
+          M := maximalChains P;
+	  isTrue := true;
+	  if not isSubset(L,P.GroundSet) then isTrue = false;
+     	  for c in M do (if #(set(c) * set(L)) != 1 then isTrue = false);
+     	  if isTrue then (
+	       S := subsets L;
+	       for s in S do (
+	       	    if #s > 1 and isTrue then (
+    		    	 if isBoundedBelow(P, s) then isTrue = meetExists(P,s);
+		    	 if isTrue then (
+    		    	      if isBoundedAbove(P, s) then isTrue = joinExists(P,s);
+			      );
+	       	    	 );
 	       	    );
 	       );
-	  );
-     isTrue
-     )
+     	  isTrue
+	  )
 	  
 	  
 crosscuts = method()
-crosscuts(Poset) := List => (P) -> (
+crosscuts (Poset) := List => (P) -> (
      S := subsets P.GroundSet;
      select( S, s -> isCrosscut(P,s) )
      )
 
 
+crosscutComplex = method(Options => { symbol VariableName => getSymbol "v", symbol CoefficientRing => QQ })
+crosscutComplex (Poset, List) := SimplicialComplex => opts -> (P, L) -> (
+     if not isCrosscut(P,L) then error "expected crosscut as second argument" else (
+     	  boundedSubsets := select(subsets(L), s -> #s > 0 and (isBoundedAbove(P,s) or isBoundedBelow(P,s)));   
+     	  s := opts.VariableName;
+     	  R := (opts.CoefficientRing)(monoid [s_0..s_(#L - 1)]);
+     	  H := hashTable apply(#L, k -> (L_k, k));
+     	  simplicialComplex apply(boundedSubsets, boundedSet -> product apply(boundedSet, t -> R_(H#t)))
+	  )
+     )
 
 
 
@@ -336,6 +347,145 @@ doc ///
         poset
 ///
 
+
+doc ///
+     Key     
+     	  isBoundedAbove
+	  (isBoundedAbove, Poset, List)
+     Headline
+     	  checks whether a set of elements in a poset is bounded above
+     Usage
+     	  isBoundedAbove(P,L)
+     Inputs
+     	  P : Poset
+	       a poset
+	  L : List
+	       a list of elements in the poset P 
+     Outputs
+     	  Boolean
+     Description
+    	  Text
+	       This method tests whether the set L is bounded from above in the poset P
+	  Example
+	       P = poset({(a,e), (e,g), (b,e), (b,f), (c,f), (f,g), (d,d)})
+	       L1 = {a,b,c,d}
+	       L2 = {a,b,c}
+	       isBoundedAbove(P,L1)
+	       isBoundedAbove(P,L2)	       
+     SeeAlso
+     	  isBoundedBelow
+///
+
+doc ///
+     Key     
+     	  isBoundedBelow
+	  (isBoundedBelow, Poset, List)
+     Headline
+     	  checks whether a set of elements in a poset is bounded below
+     Usage
+     	  isBoundedBelow(P,L)
+     Inputs
+     	  P : Poset
+	       a poset
+	  L : List
+	       a list of elements in the poset P 
+     Outputs
+     	  Boolean
+     Description
+    	  Text
+	       This method tests whether the set L is bounded from below in the poset P
+	  Example
+	       P = poset({(a,e), (e,g), (b,e), (b,f), (c,f), (f,g), (d,d)})
+	       L1 = {e,f}
+	       L2 = {a,b}
+	       isBoundedBelow(P,L1)
+	       isBoundedBelow(P,L2)	       
+     SeeAlso
+     	  isBoundedAbove
+///
+
+
+doc ///
+     Key     
+     	  isCrosscut
+	  (isCrosscut, Poset, List)
+     Headline
+     	  checks whether a set of elements in a poset is a crosscut
+     Usage
+     	  isCrosscut(P,L)
+     Inputs
+     	  P : Poset
+	       a poset
+	  L : List
+	       a list of elements in the poset P 
+     Outputs
+     	  Boolean
+     Description
+    	  Text
+	       This method tests whether the set L in the poset P is a crosscut
+	  Example
+	       P = poset({(a,e), (e,g), (b,e), (b,f), (c,f), (f,g), (d,d)})
+	       L1 = {a,b,c}
+	       L2 = {a,b,c,d}
+	       isCrosscut(P,L1)
+	       isCrosscut(P,L2)	       
+     SeeAlso
+     	  crosscuts
+///
+
+doc ///
+     Key     
+     	  crosscuts
+	  (crosscuts, Poset)
+     Headline
+     	  lists all crosscuts in a poset
+     Usage
+     	  L = crosscuts(P)
+     Inputs
+     	  P : Poset
+	       a poset 
+     Outputs
+     	  L : List
+	       a list of subsets of P
+     Description
+    	  Text
+	       This method returns the list of crosscuts in the poset P
+	  Example
+	       P = poset({(a,e), (e,g), (b,e), (b,f), (c,f), (f,g), (d,d)})
+	       crosscuts(P)	       
+     SeeAlso
+     	  isCrosscut
+///
+
+doc ///
+     Key     
+     	  crosscutComplex
+	  (crosscutComplex, Poset, List)
+	  [crosscutComplex, VariableName]
+	  [crosscutComplex, CoefficientRing]
+     Headline
+     	  returns the crosscut complex of a crosscut in a poset
+     Usage
+     	  crosscutComplex(P,L)
+     Inputs
+     	  P : Poset
+	       a poset
+	  L : List
+	       a list of elements in the poset P giving a crosscut 
+     Outputs
+     	  simplicialComplex
+     Description
+    	  Text
+	       This method returns the crosscut complex of the crosscut L in the poset P
+	  Example
+	       P = poset({(a,e), (e,g), (b,e), (b,f), (c,f), (f,g), (d,d)})
+	       L = {a,b,c,d}
+	       crosscutComplex(P,L)       
+     SeeAlso
+     	  isCrosscut
+///
+
+
 -- _
 
 
@@ -348,3 +498,22 @@ doc ///
 -------------------------
 -- TESTS
 -------------------------
+
+TEST ///
+    P = poset({(a,e), (e,g), (b,e), (b,f), (c,f), (f,g), (d,d)})
+    L1 = {a,b,c}
+    L2 = {a,b,c,d}
+    L3 = {e,f}
+    L4 = {d,e,f}
+    cx = crosscutComplex(P,L2)
+    R = cx.ring
+    assert ( isBoundedAbove(P, L1) == true )
+    assert ( isBoundedAbove(P, L2) == false )
+    assert ( isBoundedBelow(P, L1) == false )
+    assert ( isBoundedBelow(P, L3) == true )
+    assert ( isCrosscut(P, L1) == false )
+    assert ( isCrosscut(P, L2) == true )
+    assert ( isCrosscut(P, L4) == true )
+    assert ( sort apply(crosscuts(P), s -> sort s) == sort {{a,b,c,d}, {d,e,f}, {d,g}} )
+    assert ( sort flatten entries cx.facets == sort {R_3, R_0*R_1*R_2} )
+/// 
