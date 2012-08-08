@@ -4,18 +4,28 @@ newPackage(
     	Date => "August 5, 2012",
     	Authors => {
 	     {Name => "Andrew Critch"},
-	     {Name => "Luke Oeding"},
 	     {Name => "Claudiu Raicu", Email => "claudiu@math.berkeley.edu", HomePage => "http://math.berkeley.edu/~claudiu/"},
 	     },
     	Headline => "tensors"
     	)
  --Macaulay2-1.4/share/Macaulay2/Core/matrix1.m2 
- --needs to replaced
- --for this package to work  
+ --needs to replaced for this package to work 
+
+--searchable tag for problems:
+--a.c. problem!
+
+   
+--protect Symbol makes something a symbol
+--within the scope of the package
    
 --ToDo:
 --stop all new Module from M
 --fix vector Tensor :=...
+--fix tm R^3
+--luke wants to identify deg 1 part of the 
+--coordinate ring of a tensor space with the
+--dual to the space, and
+--wants pieces of a resolution to be R-TensorModules
 --1) IndexedTensorArrays
 --3) change printing of non-free tensor modules
 --5) TensorArray afterprint
@@ -40,6 +50,7 @@ export{sumOut}
 gs = getSymbol --causing a problem!!!!!
 --turning module inso a symbol!!
 --also means I can't set the value of the symbol in the package...
+
 
 --smus "factors"
 --protect factors
@@ -446,6 +457,7 @@ tm (Ring,List) := (R,dims) -> (
 	       symbol module => R^d}
      	  )
      )
+
 
 --make a possibly non-free module into an order 1 tensor module, 
 --for tensoring with other such modules to build higher-order
