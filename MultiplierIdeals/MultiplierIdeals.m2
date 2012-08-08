@@ -120,7 +120,6 @@ newPackage(
 --------------------------------------------------------------------------------
 
 export {
-      thresholdMonomial,
       logCanonicalThreshold
       }
 
@@ -356,7 +355,7 @@ multIdeal (MonomialIdeal, QQ) := (I,t) -> (
 
 
 
--- thresholdMonomial
+-- logCanonicalThreshold ( MonomialIdeal , RingElement )
 -- threshold of inclusion in a multiplier ideal
 -- input:
 --  1. a monomial ideal I
@@ -370,8 +369,7 @@ multIdeal (MonomialIdeal, QQ) := (I,t) -> (
 --  In other words, the line joining the origin to the vector (v+(1,..,1)) hits the boundary of Newt(I)
 --  at (1/t)*(v+(1,..,1)), and the vector (1/t)*(v+(1,..,1)) lies on the facets defined by the rows of (A' | -b')
 --  (via: (A'|-b')(w|1)^transpose >= 0 )
-thresholdMonomial = method();
-thresholdMonomial (MonomialIdeal , RingElement) := (I , mon) -> (
+logCanonicalThreshold (MonomialIdeal , RingElement) := (I , mon) -> (
   if ( leadMonomial(mon) != mon ) then (
     error("Second input must be a monomial (input was ",mon,")");
   );
@@ -403,7 +401,7 @@ thresholdMonomial (MonomialIdeal , RingElement) := (I , mon) -> (
   return ( threshVal , facetMatrix );
 );
 
-logCanonicalThreshold (MonomialIdeal) := (I) -> first thresholdMonomial ( I , 1_(ring(I)) )
+logCanonicalThreshold (MonomialIdeal) := (I) -> first logCanonicalThreshold ( I , 1_(ring(I)) )
 
 --------------------------------------------------------------------------------
 -- MONOMIAL CURVES -------------------------------------------------------------
@@ -870,11 +868,11 @@ TEST ///
   R := QQ[x,y];
   -- use R;
   I := monomialIdeal( y^2 , x^3 );
-  assert ( thresholdMonomial( I , 1_R ) === (5/6,map(ZZ^1,ZZ^3,{{2, 3, -6}})) );
-  assert ( thresholdMonomial( I , x ) === (7/6,map(ZZ^1,ZZ^3,{{2, 3, -6}})) );
+  assert ( logCanonicalThreshold( I , 1_R ) === (5/6,map(ZZ^1,ZZ^3,{{2, 3, -6}})) );
+  assert ( logCanonicalThreshold( I , x ) === (7/6,map(ZZ^1,ZZ^3,{{2, 3, -6}})) );
   I = monomialIdeal( x^3 , x*y , y^4 );
-  assert ( thresholdMonomial( I , 1_R ) === (1/1,map(ZZ^2,ZZ^3,{{1, 2, -3}, {3, 1, -4}})) );
-  assert ( thresholdMonomial( I , x ) === (4/3,map(ZZ^1,ZZ^3,{{1, 2, -3}})) );
+  assert ( logCanonicalThreshold( I , 1_R ) === (1/1,map(ZZ^2,ZZ^3,{{1, 2, -3}, {3, 1, -4}})) );
+  assert ( logCanonicalThreshold( I , x ) === (4/3,map(ZZ^1,ZZ^3,{{1, 2, -3}})) );
 ///
 
 --------------------------------------------------------------------------------
@@ -1076,7 +1074,7 @@ document {
   UL{
     TO (multIdeal,MonomialIdeal,QQ),
     TO (logCanonicalThreshold,MonomialIdeal),
-    TO thresholdMonomial,
+    TO (logCanonicalThreshold,MonomialIdeal,RingElement),
     TO (multIdeal,Ring,List,QQ),
     TO (logCanonicalThreshold,Ring,List)
   }
@@ -1140,11 +1138,10 @@ logCanonicalThreshold(I)
 
 document {
   Key => {
-    thresholdMonomial,
-    (thresholdMonomial, MonomialIdeal, RingElement)
+    (logCanonicalThreshold, MonomialIdeal, RingElement)
   },
   Headline => "thresholds of multiplier ideals of monomial ideals",
-  Usage => "thresholdMonomial(I,m)",
+  Usage => "logCanonicalThreshold(I,m)",
   Inputs => {
     "I" => MonomialIdeal => {},
     "m" => RingElement => {"a monomial"}
@@ -1165,7 +1162,7 @@ document {
   EXAMPLE lines ///
 R = QQ[x,y];
 I = monomialIdeal(x^13,x^6*y^4,y^9);
-thresholdMonomial(I,x^2*y)
+logCanonicalThreshold(I,x^2*y)
   ///,
   
   SeeAlso => { (logCanonicalThreshold,MonomialIdeal) }
