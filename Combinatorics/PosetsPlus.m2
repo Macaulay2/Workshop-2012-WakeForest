@@ -88,8 +88,15 @@ principalFilter' := (P, i) -> positions(first entries(P.RelationMatrix^{i}), j -
 --installPackage ("Graphs", FileName => "/Users/sonja/Documents/M2repository/wakeforest2012/WFU-2012/Combinatorics/Graphs.m2")
 --installPackage ("Posets", FileName => "/Users/sonja/Documents/M2repository/wakeforest2012/WFU-2012/Combinatorics/Posets.m2")
 
+
+---------------------
+-- PosetMaps
+---------------------
+
+-- defining a PosetMap, the inputs are source poset, target poset, and a hashtable or list depending on which instance of the method
 PosetMap = new Type of HashTable
 
+-- the input of a list is pairs (a,b) where a maps to b
 posetMap= method()
 posetMap(Poset, Poset, List):= PosetMap => (P1,P2,M) -> (     
 	if all(M, m -> #m ===2 ) and (sort apply(M, m-> first m) == sort P1.GroundSet) 
@@ -99,14 +106,13 @@ posetMap(Poset, Poset, List):= PosetMap => (P1,P2,M) -> (
 	) else error "Not a map on posets."
 )
 
-
 posetMap(Poset, Poset, HashTable) := PosetMap => (P1, P2, H) -> (
 	new PosetMap from hashTable {symbol source => P1, symbol target => P2, symbol GroundMap => H, symbol cache => new CacheTable})
-
 
 map(Poset,Poset,List) := PosetMap => opts -> (P1,P2,M) -> (posetMap(P1,P2,M))
 
 
+-- evaluating a posetMap at an element in the source poset
 eval = method()
 eval(Thing, PosetMap) := Thing => (elt, f) -> (
      if unique((f.source).GroundSet|{elt}) == (f.source).GroundSet then ((f.GroundMap)#elt) else error "element not in source"   )
@@ -114,27 +120,27 @@ eval(Thing, PosetMap) := Thing => (elt, f) -> (
 Thing / PosetMap := Thing => (elt,f) -> (eval(elt,f))
 
 
--- methods that check properties of posetMaps
--- isOrderPreserving, reversing, and simplicial
+
+
+-- check if a PosetMap is order preserving
 isOrderPreserving = method()
 isOrderPreserving(PosetMap) := Boolean => (f) -> (
      checkLessThans := unique flatten apply((f.source).GroundSet, elt1 -> apply((f.source).GroundSet, elt2 -> if compare(f.source, elt1, elt2) == true then compare(f.target, (elt1/f),(elt2/f))));
      not (unique(checkLessThans|{false}) == checkLessThans))
 
+-- check if a PosetMap is order reversing
 isOrderReversing=method()
 isOrderReversing(PosetMap) := Boolean => (f) -> (
      checkLessThans := unique flatten apply((f.source).GroundSet, elt1 -> apply((f.source).GroundSet, elt2 -> if compare(f.source, elt1, elt2) == true then compare(f.target, (elt2/f),(elt1/f))));
      not (unique(checkLessThans|{false}) == checkLessThans))
 
+-- check if a PosetMap is simplicial
 isSimplicial = method()
 isSimplicial(PosetMap) := Boolean => (f) -> (
      if isOrderPreserving(f)== true or  isOrderReversing(f)== true then true else false
      )
 
-
--- isJoinPreserving
--- isMeetPreserving
-
+-- check if a PosetMap is join preserving
 isJoinPreserving = method()
 isJoinPreserving(PosetMap) := Boolean => (f) -> (
      setOfJoins := select(subsets((f.source).GroundSet,2), pair -> joinExists((f.source),pair_0, pair_1)); -- note this excludes elements with itself
@@ -142,6 +148,7 @@ isJoinPreserving(PosetMap) := Boolean => (f) -> (
      not (unique(checkJoins|{false}) == checkJoins)
      )
 
+-- check if a PosetMap is meet preserving
 isMeetPreserving = method()
 isMeetPreserving(PosetMap) := Boolean => (f) -> (
      setOfMeets := select(subsets((f.source).GroundSet,2), pair -> meetExists((f.source),pair_0, pair_1)); -- note this excludes elements with itself
@@ -149,13 +156,45 @@ isMeetPreserving(PosetMap) := Boolean => (f) -> (
      not (unique(checkMeets|{false}) == checkMeets)
      )
 
+-- 
+posetMapFiber = method()
+posetMapFiber(PosetMap, Thing) := Poset => (f,elt) -> (
+     elts := select((f.source).GroundSet, preim -> (f.GroundMap)#preim == elt);
+     subposet (f.source, elts)
+     )
+
+posetMapFiber(PosetMap, List) := Poset => (f,L) -> (
+     elts := unique flatten apply(L, elt -> select((f.source).GroundSet, preim -> (f.GroundMap)#preim == elt));
+     subposet (f.source, elts)
+     )
+
+nonnull :=(L) -> (
+     select(L, i-> i =!= null))
 
 
--- for Crosscut
 
+isFiberContractible = method()
+isFiberContractible(PosetMap, Thing) := Boolean => (f, elt) -> (
+           fiberCmpx := orderComplex(posetMapFiber(f,elt)); 
+	   homDims := nonnull (unique apply(keys HH fiberCmpx, key-> if key =!= symbol ring then (prune HH fiberCmpx)#key));
+      	   if #homDims == 1 and homDims_0 == 0 then true else false
+	   )
+      
+isFiberContractible(PosetMap, List) := Boolean => (f, L) -> (
+      fiberCmpx := orderComplex(posetMapFiber(f,L)); 
+      homDims := nonnull (unique apply(keys HH fiberCmpx, key-> if key =!= symbol ring then (prune HH fiberCmpx)#key));
+      if #homDims == 1 and homDims_0 == 0 then true else false
+     )      
+
+
+
+-----------------------
+-- for Crosscut Complex
+-----------------------
+-- function needed to intersect a list of sets rather than just 2 sets
 intersectSets = x -> set keys select(tally flatten (keys \ x), n -> n === #x)
 
-
+-- adding to the method meetExists, to check that the meet of a list of elements exists
 meetExists (Poset, List) := Boolean => (P,L) -> (
     Fk := apply(L, a -> set(principalOrderIdeal'(P, indexElement(P, a))));
     lowerBounds := toList intersectSets(Fk);
@@ -166,7 +205,7 @@ meetExists (Poset, List) := Boolean => (P,L) -> (
         )
     )
 
-
+-- adding to the method joinExists, to check that the join of a list of elements exists
 joinExists (Poset, List) := Boolean => (P,L) -> (
     Fk := apply(L, a -> set(principalFilter'(P, indexElement(P, a))));
     upperBounds := toList intersectSets(Fk);
@@ -177,18 +216,21 @@ joinExists (Poset, List) := Boolean => (P,L) -> (
         )
     )
 
+-- checking that a set of elements in a poset is bounded above
 isBoundedAbove = method()
 isBoundedAbove (Poset, List) := Boolean => (P,L) -> (
      upperBounds := apply(L, a -> set(principalFilter'(P, indexElement(P, a))));
      if #intersectSets(upperBounds) > 0 or #L == 0 then true else false
      )
 
+-- checking that a set of elements in a poset is bounded below
 isBoundedBelow = method()
 isBoundedBelow (Poset, List) := Boolean => (P,L) -> (
      lowerBounds := apply(L, a -> set(principalOrderIdeal'(P, indexElement(P, a))));
      if #intersectSets(lowerBounds) > 0 or #L == 0 then true else false
      )
 
+-- determining if a subset of a poset is a crosscut
 isCrosscut = method()
 isCrosscut (Poset, List) := Boolean => (P,L) -> (
           M := maximalChains P;
@@ -209,14 +251,14 @@ isCrosscut (Poset, List) := Boolean => (P,L) -> (
      	  isTrue
 	  )
 	  
-	  
+-- finds all crosscuts in a poset	  
 crosscuts = method()
 crosscuts (Poset) := List => (P) -> (
      S := subsets P.GroundSet;
      select( S, s -> isCrosscut(P,s) )
      )
 
-
+-- given a poset and a list of elements, checks that the list is a crosscut and if so retruns the crosscut complex
 crosscutComplex = method(Options => { symbol VariableName => getSymbol "v", symbol CoefficientRing => QQ })
 crosscutComplex (Poset, List) := SimplicialComplex => opts -> (P, L) -> (
      if not isCrosscut(P,L) then error "expected crosscut as second argument" else (
