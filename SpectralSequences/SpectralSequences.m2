@@ -170,7 +170,7 @@ filteredComplex ChainComplex := C -> (
   c := drop(spots C,-1);
   filteredComplex apply(c, i -> (
 	    E := truncate(C,i);
-	    map(C,E, j -> if j > i then map(C_j, E_j, 0) 
+	    map(C,E, j -> if j < i then map(C_j, E_j, 0) 
 		 else map(C_j, E_j, 1)))))
 
   
