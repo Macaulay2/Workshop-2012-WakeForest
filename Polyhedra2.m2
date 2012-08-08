@@ -45,7 +45,7 @@ UsePolymake = (options Polyhedra2).Configuration#"UsePolymake"
 PolymakePath = (options Polyhedra2).Configuration#"PolymakePath"
 
 export {
-     	"toPolyhedron",
+     	"coneToPolyhedron",
 	"directProduct",
 	"UsePolymake",
 	"PolymakePath",
@@ -330,9 +330,9 @@ minkowskiSum(Cone,Cone) := (C1,C2) -> (
      posHull((rays C1)|(rays C2),(linSpace C1)|linSpace C2))
 
 
-minkowskiSum(Cone,Polyhedron) := (C,P) -> minkowskiSum(toPolyhedron C,P)
+minkowskiSum(Cone,Polyhedron) := (C,P) -> minkowskiSum(coneToPolyhedron C,P)
 
-minkowskiSum(Polyhedron,Cone) := (P,C) -> minkowskiSum(P,toPolyhedron C)
+minkowskiSum(Polyhedron,Cone) := (P,C) -> minkowskiSum(P,coneToPolyhedron C)
 
 QQ * Polyhedron := (k,P) -> (
      -- Checking for input errors
@@ -350,8 +350,8 @@ QQ * Polyhedron := (k,P) -> (
      if P#?"Dim" then Q#"Dim"=P#"Dim";
      Q)
       
-toPolyhedron=method()
-toPolyhedron Cone:=P->(
+coneToPolyhedron=method()
+coneToPolyhedron Cone:=P->(
      Q:=new Polyhedron from hashTable {};
      if P#?"InputRays" then Q#"InputRays"=homRays(P#"InputRays");
      if P#?"InputLineality" then Q#"InputLineality"=homRays P#"InputLineality";
@@ -373,8 +373,8 @@ Cone + Polyhedron := minkowskiSum
 Cone + Cone := minkowskiSum
 
 directProduct = method ()
-directProduct(Cone,Polyhedron) :=(C,P)->directProduct((toPolyhedron C),P)
-directProduct (Polyhedron ,Cone):=(P,C)->directProduct(P,(toPolyhedron C))
+directProduct(Cone,Polyhedron) :=(C,P)->directProduct((coneToPolyhedron C),P)
+directProduct (Polyhedron ,Cone):=(P,C)->directProduct(P,(coneToPolyhedron C))
 
 directProduct (Polyhedron, Polyhedron):=(P1,P2)->(
      --very lazy implementation; we should really check what keys exist
