@@ -213,6 +213,7 @@ f(4,5,6)
 ----------------------------
 TensorArray  = new Type of List
 net TensorArray  := T -> netList new List from T
+TensorArray.cache = new CacheTable
 TensorArray_ZZ := (N,n) -> N_(1:n)
 -----
 TensorArray_Sequence:=(N,s) -> (
@@ -369,6 +370,8 @@ sumOut List := L -> sumOut(L/first,L/(i->toSequence remove(i,0)))
 --Tensor Modules
 ----------------
 Tensor=new Type of Vector
+Tensor.cache = new CacheTable
+
 TensorModule = new Type of Module
 module TensorModule := M -> new Module from M
 
@@ -484,33 +487,66 @@ TensorModule++TensorModule := (M,N) -> (
 ------
 tensor' = method()
 tensor' (List,TensorModule) := (L,M) -> (
-     t:=tensorArray L;
-     if not dimensions t == dimensions M then error "tensor' (List,TensorModule): dimension mismatch";
-     new M from vector ultimate(flatten,L)
+     a:=tensorArray L;
+     if not dimensions a == dimensions M then error "tensor' (List,TensorModule): dimension mismatch";
+     t:=new M from vector ultimate(flatten,L);
+     TensorArray.cache#t = a;
+     Tensor.cache#a = t;
+     t
      )
-tensor' TensorArray := t -> (
-     dims:=dimensions t;
-     f:=ultimate(flatten,t);
+tensor' TensorArray := a -> (
+     if TensorArray.cache#?a then return TensorArray.cache#a;     
+     dims:=dimensions a;
+     f:=ultimate(flatten,a);
      R:=commonRing f;
      M:=tensorModule(R,dims);
-     new M from vector f
+     t:=new M from vector f;
+     TensorArray.cache#t = a;
+     Tensor.cache#a = t;
+     t     
      )
 
 tensor' List := L -> tensor' tensorArray L;
+
+
+------
+
 ------
 isTensor=method()
 isTensor Thing := x -> instance(class x,TensorModule)
 ------
-tensorArray Tensor := t -> new TensorArray from rnl (dimensions t,entries t);
+tensorArray Tensor := t -> (
+     if TensorArray.cache#?t then return TensorArray.cache#t;
+     a := new TensorArray from rnl (dimensions t,entries t);
+     TensorArray.cache#t = a;
+     Tensor.cache#a = t;
+     a
+     )
+
 ------
 
 ------
+vector Tensor := t -> new (module t) from t
+Tensor+Tensor := (v,w) -> (
+     if not tm v == tm w then error "Tensor+Tensor not from the same TensorModule";
+     new (tm v) from (vector v)+(vector w)
+     )
+Tensor-Tensor := (v,w) -> (
+     if not tm v == tm w then error "Tensor-Tensor not from the same TensorModule";
+     new (tm v) from (vector v)-(vector w)
+     )
+RingElement*Tensor := (r,w) -> (
+     if not ring r == ring w then error "RingElement*Tensor not over the same ring";
+     new (tm w) from r*(vector w)
+     )
+Tensor*RingElement := (w,r) -> r*w
 Tensor**Tensor := (v,w) -> (
      M:=(tm v)**(tm w);
-     new M from (new vector from v)**(new vector from w)
+     new M from (vector v)**(vector w)
      )
+
      
-Tensor _ List := (v,L) -> (
+Tensor _ Sequence := (v,L) -> (
      M := tensorModule v;
      dims := M.cache.dimensions;
      if not #L == #dims then error "dimension mismatch";
@@ -518,8 +554,6 @@ Tensor _ List := (v,L) -> (
      for i from 0 to #L-2 do ind = ind*dims#i + L#(i+1);
      v_ind
      )
-
-Tensor _ Sequence := (v,L) -> v_(toList L)
 
 
 Tensor ^ ZZ := (t,n) -> fold(for i in 0..<n list t,(i,j)->i**j)
