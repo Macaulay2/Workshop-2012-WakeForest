@@ -1,7 +1,7 @@
 -- -*- coding: utf-8 -*-
 
 --needsPackage "Polymake"
-needsPackage "Polyhedra"
+needsPackage "Polyhedra2"
 
 newPackage(
 	"gfanInterface2",
@@ -73,7 +73,6 @@ export {
 	gfanTropicalRank, -- v0.4 -- done! 
 	gfanTropicalStartingCone, -- done!
 	gfanTropicalTraverse, -- done!
-	gfanTropicalVariety, -- done by Josephine
 	gfanTropicalWeilDivisor, -- v0.4
 	gfanFunctions, -- for testing purposes
 --	gfanParsePolyhedralFan, -- for external use
@@ -1350,9 +1349,8 @@ gfanResultantFan (List) := opts -> (tuple) -> (
      
      if(type===PolynomialRing) then vectorConfiguration = tuple/exponents;
                     
-     input := gfanVectorListListToString(vectorConfiguration)|gfanVectorToString(opts#"special");
-	  
-     gfanParsePolyhedralFan runGfanCommand("gfan _resultantfan", opts, input)
+     inPut := gfanVectorListListToString(vectorConfiguration)|gfanVectorToString(opts#"special");
+     gfanParsePolyhedralFan runGfanCommand("gfan _resultantfan", opts, inPut)
 )
 
 --------------------------------------------------------
@@ -1679,33 +1677,6 @@ gfanTropicalWeilDivisor (PolymakeFan, PolymakeFan) := opts -> (F,G) -> (
 	out
 )
 
---------------------------------------------------------
--- tropicalStartingCone and tropicalTraverse
---------------------------------------------------------
-
--- this function was made because there were some problems with parsing output from gfan_tropicalstartingcone
-
-gfanTropicalVariety = method( Options => {
-	"stable" => false, 
-	"symmetry" => null, 
-	"disableSymmetryTest" => false})
-gfanTropicalVariety List := opts -> L -> (
- 	data := gfanRingToString(ring first L) | gfanPolynomialListToString(L);
-	tmpFile := gfanMakeTemporaryFile data;
-	startArgs := gfanArgumentToString("gfan _tropicalstartingcone", "stable", opts#"stable");
-	traverseArgs := concatenate apply(keys opts, key -> gfanArgumentToString("gfan _tropicaltraverse", key, opts#key));
-	ex := gfanPath | "gfan _tropicalstartingcone" | startArgs | " < " | tmpFile | " | " | gfanPath | "gfan _tropicaltraverse" | traverseArgs | " > " | tmpFile | ".out" | " 2> " | tmpFile | ".err";
-	if gfanVerbose then << ex << endl;
-	run ex;
-	out := get(tmpFile | ".out");
-	gfanRemoveTemporaryFile tmpFile;
-	gfanRemoveTemporaryFile(tmpFile | ".out");
-	gfanRemoveTemporaryFile(tmpFile | ".err");
-	gfanParsePolyhedralFan out
-     )
-gfanTropicalVariety Ideal := opts -> I -> (
-     gfanTropicalVariety(I_*, opts)
-     )
 
 
 --------------------------------------------------------
@@ -3763,7 +3734,7 @@ installPackage("gfanInterface2", DebuggingMode=>true, RemakeAllDocumentation => 
 
 loadPackage "gfanInterface2"
 loadPackage("gfanInterface2", Configuration => { 
-	"path" => "/Applications/Macaulay2-1.3.1/libexec/Macaulay2/x86_64-MacOS-10.6/",
+--	"path" => "/Applications/Macaulay2-1.3.1/libexec/Macaulay2/x86_64-MacOS-10.6/",
 	"keepfiles" => true,
 	"verbose" => true
 	}) 
@@ -3839,3 +3810,16 @@ I = ideal"bg-aj-cf, bh-ak-df, bi-al-ef, ck-bm-dj, ch-am-dg, cl-ej-bn, ci-eg-an, 
 C = gfanTropicalStartingCone I_*; 
 D = gfanTropicalTraverse(C, "symmetry" => {{0,8,7,6,5,4,3,2,1,14,13,11,12,10,9}, {5,6,7,8,0,9,10,11,1,12,13,2,14,3,4}})
 
+--- examples of resultants and tropical hypersurface reconstruction (for gfan version 0.6)
+restart
+loadPackage("gfanInterface2", Configuration => { 
+--	"path" => "/usr/local/bin/",
+	"path" => "/home/gtmath/Documents/math/software/gfan0.6beta/",	
+	"keepfiles" => true,
+	"verbose" => true
+	}) 
+A = {{{0,0},{1,0},{0,1}},{{0,0},{1,0},{2,1}},{{0,0},{0,1},{1,2}}}
+gfanResultantFan (A, "special" => {0,1,1,0,1,1,0,1,1})
+QQ[x,y,z]
+A = {x+y+z,x+y+z,x+y+z}
+gfanResultantFan (A, "special" => {0,1,1,0,1,1,0,1,1})
