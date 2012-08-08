@@ -36,6 +36,17 @@ matrixFun = T -> (
 --	  p = (#L_0)*listSize(drop(L, 1))
 --	  ))
 
+f = (L) -> (
+     if #L === 0 then return {{}};
+     a := L#0;
+     L = drop(L,1);
+     flatten for i from 0 to a-1 list (
+	  M := f L;
+	  M/(m -> prepend(i,m))
+	  )
+     )
+
+
 makeDets  = (str,mu) -> (
      -- mu is a list of a filled tableau
      Ind :=  apply(mu, m -> apply(#m, i-> apply(#m,j -> (m_i, j))) );
@@ -84,3 +95,15 @@ R = ring U;
 matrixFun T
 listSize L
 helper(T#1)
+
+
+end
+
+restart
+load "amelia-list.m2"
+ L = {2,3,1}
+
+f {}
+f{3}
+f{3,2}
+f L
