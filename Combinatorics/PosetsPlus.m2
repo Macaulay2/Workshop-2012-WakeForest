@@ -276,14 +276,14 @@ atomSupport(Poset) := List => (P) -> (
 
 
 
-end
+
 
 -- example
-P1 = poset({a,b,c},{(a,b), (b,c)})
-P2 = poset({x,y},{(x,y)})
-M = {{a,x},{b,y},{c,y}}
-posetMap(P1,P2,M)
-f = map(P1,P2,M)
+--P1 = poset({a,b,c},{(a,b), (b,c)})
+--P2 = poset({x,y},{(x,y)})
+--M = {{a,x},{b,y},{c,y}}
+--posetMap(P1,P2,M)
+--f = map(P1,P2,M)
 
 
 
@@ -300,57 +300,19 @@ beginDocumentation()
 -- Front Page
 doc ///
     Key
-        Posets
+        PosetsPlus
     Headline
-        a package for working with partially ordered sets
+        a package for working with partially ordered sets, which is an addition to Posets
     Description
         Text
-            This package defines @TO "Poset"@ as a new data type and provides
-            routines which use or produce posets.  A poset (partially ordered
-            set) is a set together with a binary relation satisfying reflexivity,
-            antisymmetry, and transitivity.
-        Text
-            @SUBSECTION "Contributors"@
-            --
-            The following people have generously contributed code to the package: 
-            @HREF("http://www.math.cornell.edu/People/Grads/fisher.html","Kristine Fisher")@,
-            @HREF("http://www.mathstat.dal.ca/~handrew/","Andrew Hoefel")@,
-            @HREF("http://www.math.purdue.edu/~nkummini/","Manoj Kummini")@,
-            @HREF("mailto:stephen.sturgeon\@uky.edu", "Stephen Sturgeon")@, and 
-            @HREF("http://people.math.gatech.edu/~jyu67/Josephine_Yu/Main.html", "Josephine Yu")@.
-        Text
-            @SUBSECTION "Other acknowledgements"@
-            --
-            A few methods in this package have been ported from John Stembridge's Maple 
-            package implementing posets, which is available at
-            @HREF "http://www.math.lsa.umich.edu/~jrs/maple.html#posets"@.  
+            This package adds some functionality to the existing package Posets.  Later versions will be
+	    incorporated into the Posets package.
+       
 ///
 
 ------------------------------------------
 -- Data type & constructor
 ------------------------------------------
-
--- The Poset Type
-doc ///
-    Key
-        Poset
-        GroundSet
-        RelationMatrix
-        Relations
-    Headline
-        a class for partially ordered sets (posets)
-    Description
-        Text
-            This class is a type of HashTable which represents finite posets.  It consists
-            of a ground set, a list of relationships ${a,b}$ where $a \leq b$, and a matrix
-            encoding these relations.
-        Example
-            G = {1,2,3,4};                  -- the ground set
-            R = {{1,2},{1,3},{2,4},{3,4}};  -- a list of relations "generating" all relations
-            P = poset(G, R)                 -- the poset with its relations matrix computed
-    SeeAlso
-        poset
-///
 
 
 doc ///
@@ -522,3 +484,6 @@ TEST ///
     assert ( sort apply(crosscuts(P), s -> sort s) == sort {{a,b,c,d}, {d,e,f}, {d,g}} )
     assert ( sort flatten entries cx.facets == sort {R_3, R_0*R_1*R_2} )
 /// 
+
+
+end
