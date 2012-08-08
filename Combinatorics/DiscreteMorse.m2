@@ -38,6 +38,8 @@ export {
      isAcyclic,
      isMorseMatching,
      
+     --computations with Morse matchings
+     criticalCells,
      
      --operations on inclusion poset
      reverseEdges,
@@ -106,12 +108,13 @@ reverseEdges(List,Poset):= (E,P) -> (
 --
 --INPUT:  (Edges M, digraph G)
 --        (Edges M, poset P)
+--     	  (Edges M, simplicial complex D)
 --
 --OUTPUT:  Boolean
 --
 --Given a list of edges M in a matching and a digraph G
---(or poset P), checks if M is a matching on G (or
---hasseDiagram P.)
+--(or poset P or simplicial complex D), checks if M is
+--a matching on G (or hasseDiagram P / facePoset D.)
 ------------------------------------------------------
 
 isMatching = method()
@@ -132,31 +135,70 @@ isMatching(List,Poset):= (M,P) -> (
      else error "Not a subset of the directed edges of G."
 );
 
+isMatching(List,SimplicialComplex):= (M,D) -> (
+     --Note that this method passes in the edges using the original names of elements.
+     P:=dropElements(facePoset D,{{}});
+     E:=apply(M, m -> {indexElement(P,m_0), indexElement(P,m_1)});
+     G:=hasseDiagram P;
+     if all(E,e-> member(e,edges G)) then (
+	  if (unique flatten E) == (flatten E) then true else error "Not a matching on G."
+     )
+     else error "Not a subset of the directed edges of G."
+);
+
 ------------------------------------------------------
 --METHOD:  isAcyclic
 --
 --INPUT:  Digraph G
+--     	  (Edges M, Poset)
+--     	  (Edges M, Simplicial Complex)
 --
 --OUTPUT:  Boolean
 --
 --Given a digraph G, checks acyclicity of G.
+--Given a list of edges and poset/simplicial complex,
+--checks acyclicity of inclusion poset with edges
+--in list M reversed.
 ------------------------------------------------------
 
 
 isAcyclic = method()
 isAcyclic(Digraph) := G -> not isCyclic(G)
 
+isAcyclic(List,Poset):= (M,P) -> (
+     --Note that this method passes in the edges using the INDICES of poset elements, not the original names.
+     G:=hasseDiagram P;
+     if all(M,e-> member(e,edges G)) then (
+	  if isAcyclic(reverseEdges(M,G)) then true else error "Not acyclic."
+     )
+     else error "Not a subset of the directed edges of G."
+);
+
+isAcyclic(List,SimplicialComplex):= (M,D) -> (
+     --Note that this method passes in the edges using the original names of elements.
+     P:=dropElements(facePoset D,{{}});
+     E:=apply(M, m -> {indexElement(P,m_0), indexElement(P,m_1)});
+     G:=hasseDiagram P;
+     if all(E,e-> member(e,edges G)) then (
+	  if isAcyclic(reverseEdges(E,G)) then true else error "Not acyclic."
+     )
+     else error "Not a subset of the covering relations in face inclusion poset."
+);
+
+
 ------------------------------------------------------
 --METHOD:  isMorseMatching
 --
 --INPUT:  (Edges M, digraph G)
 --        (Edges M, poset P)
+--     	  (Edges M, SimplicialComplex)
 --
 --OUTPUT:  Boolean
 --
 --Given a list of edges M in a matching and a digraph G
---(or poset P), checks if M is a Morse matching on G
---(or on the hasseDiagram of P.)
+--(or poset P or simplicial complex), checks if M is a
+-- Morse matching on G (or on the hasseDiagram of P or 
+--facePoset D.)
 ------------------------------------------------------
 
 isMorseMatching = method()
@@ -214,6 +256,33 @@ morseMatching(List,SimplicialComplex) := MorseMatching => (M, D) -> (
 	)
 
 
+------------------------------------------------------
+--METHOD:  criticalCells
+--
+--INPUT:  MorseMatching
+--
+--OUTPUT:  List of Critical Cells
+--
+-- Given a Morse matching M, this method produces
+-- a list of critical cells of the matching.
+-- This function will work with EITHER a Morse matching
+-- directly from an inclusion poset, or from a matching
+-- on the faces of a simplicial complex.
+------------------------------------------------------
+
+criticalCells = method()
+criticalCells(MorseMatching):= M ->(
+     if M.cache.?criticalCells then (
+	  M.cache.criticalCells
+     )
+     else (
+	  indx:=select(toList (0..#M.inclusionPoset.GroundSet-1), i -> not member(i,flatten M.matching));
+     	  M.cache.criticalCells = (M.inclusionPoset.GroundSet)_indx;
+	  M.cache.criticalCells
+     )
+)
+
+
 ------------------------------------------------------------------
 ------------------------------------------------------------------
 --toString and Net for Displaying Permutations
@@ -226,6 +295,11 @@ toString MorseMatching := M -> toString apply(M.matching, p-> (M.inclusionPoset_
 net MorseMatching := M -> toString M
 
 
+------------------------------------------------------------------
+------------------------------------------------------------------
+--Functions for Latex / TikZ display
+------------------------------------------------------------------
+------------------------------------------------------------------
 
 ------------------------------------------------------
 --METHOD:  displayMatching
