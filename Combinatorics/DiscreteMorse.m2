@@ -82,7 +82,7 @@ reverseEdges(List,Digraph):= (E,G) -> (
      if all(E, e-> member(e,edges G)) then (
 	  tempGraph:= G;
 	  for e in E do (
-	       tempGraph = reverseEdge(e,G);
+	       tempGraph = reverseEdge(e,tempGraph);
 	  );
           tempGraph
      )
@@ -94,7 +94,7 @@ reverseEdges(List,Poset):= (E,P) -> (
      if all(E, e-> member(e,edges G)) then (
 	  tempGraph:= G;
 	  for e in E do (
-	       tempGraph = reverseEdge(e,G);
+	       tempGraph = reverseEdge(e,tempGraph);
 	  );
           tempGraph
      )
@@ -171,8 +171,9 @@ isMorseMatching(List,Poset):=(M,P)-> (
 
 isMorseMatching(List,SimplicialComplex):=(M,D)-> (
      --This method inputs matching in terms of ORIGINAL face names.
-     P:=facePoset D;
-     isMorseMatching(M,hasseDiagram P)
+     P:=dropElements(facePoset D,{{}});
+     E:=apply(M, m -> {indexElement(P,m_0), indexElement(P,m_1)});
+     isMorseMatching(E,hasseDiagram P)
 )
 
 ------------------------------------------------------
@@ -202,7 +203,7 @@ morseMatching(List,Poset):= MorseMatching => (M, P) -> (
 )
 
 morseMatching(List,SimplicialComplex) := MorseMatching => (M, D) -> (
-     	P:=facePoset(D);
+     	P:=dropElements(facePoset D, f -> f == {});
 	--Note that this method passes in lists of pairs of faces of D, converts them to INDEX edges, then passes into
 	--the earlier function for morseMatching(List,Poset).
 	--E is a conversion of M into index elements.
@@ -213,6 +214,16 @@ morseMatching(List,SimplicialComplex) := MorseMatching => (M, D) -> (
 	)
 
 
+------------------------------------------------------------------
+------------------------------------------------------------------
+--toString and Net for Displaying Permutations
+------------------------------------------------------------------
+------------------------------------------------------------------
+
+
+toString MorseMatching := M -> toString apply(M.matching, p-> (M.inclusionPoset_(p_0)=>M.inclusionPoset_(p_1)))
+
+net MorseMatching := M -> toString M
 
 
 
@@ -242,7 +253,7 @@ displayMatching (List,Poset) := opts -> (M,P) -> (
     )
 
 displayMatching (List,SimplicialComplex) := opts -> (M,D) -> (
-    P:=facePoset(D);
+    P:=dropElements(facePoset D, f -> f == {});
     E:=apply(M, m -> {indexElement(P,m_0), indexElement(P,m_1)});
     displayMatching(E,P,opts)
     )
@@ -276,7 +287,7 @@ texMatching (List,Poset) := String => opts -> (M,P) -> (
     if not P.cache.?coveringRelations then coveringRelations P;
     if not all(M, e-> member(e,P.cache.coveringRelations)) then error "Edge set not subset of relations.";
     --removed edges to emptyset here - stylistic choice.
-    tempEdgeList:= select(select(P.cache.coveringRelations, e -> not member(e,M)), b -> b_0 =!= 0);
+    tempEdgeList:= select(P.cache.coveringRelations, e -> not member(e,M));
     edgelist := apply(tempEdgeList, r -> concatenate(toString first r, "/", toString last r));
     revEdgeList := apply(M, r-> concatenate(toString first r, "/", toString last r));
     -- Find each level of P and set up the positioning of the vertices.
@@ -295,12 +306,12 @@ texMatching (List,Poset) := String => opts -> (M,P) -> (
              " (",toString F_i_j,") at (-",toString halflevelsets_i,"+",
              toString ((if opts.Jitter then random(scalew*0.2) else 0) + spacings_i_j),",",toString (scaleh*i),"){};\n"}
         ) |
-    concatenate("\\foreach \\to/\\from in ", toString edgelist, "\n\\draw [->] (\\to)--(\\from);\n") |
-    concatenate("\\foreach \\to/\\from in ", toString revEdgeList, "\n\\draw [<-,dashed,red] (\\to)--(\\from);\n\\end{tikzpicture}\n")
+    concatenate("\\foreach \\to/\\from in ", toString edgelist, "\n\\draw [-] (\\to)--(\\from);\n") |
+    concatenate("\\foreach \\to/\\from in ", toString revEdgeList, "\n\\draw [<<-,red] (\\to)--(\\from);\n\\end{tikzpicture}\n")
     )
 
 texMatching(List,SimplicialComplex) := String => opts -> (M,D) -> (
-     P:=facePoset(D);
+     P:=dropElements(facePoset D, f -> f == {});
      texMatching(M,P)
 )
 
