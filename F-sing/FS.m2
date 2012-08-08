@@ -44,6 +44,16 @@ divideFraction = (t1,pp) -> (
      {a,b,c}
 )
 
+--this finds the a/pp^e1 nearest t1 from above
+findNearPthPowerAbove = (t1, pp, e1) -> (
+     ceiling(t1*pp^e1)/pp^e1
+)
+
+--this finds the a/pp^e1 nearest t1 from below
+findNearPthPowerBelow = (t1, pp, e1) -> (
+     floor(t1*pp^e1)/pp^e1
+)
+
 ---------------------------------------------------------------
 --***********************************************************--
 --Basic functions for computing powers of elements in        --
