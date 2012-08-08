@@ -1,3 +1,4 @@
+
 --Test ideals in Gorenstein rings scratch document
 
 load "FS.m2"
@@ -70,6 +71,7 @@ ascendIdeal = (Jk, hk, ek) -> (
      --we do the following
      while (isSubset(IN, IP) == false) do(
      	  IP = IN;
+--	  error "help";
 	  IN = eR(ideal(hk)*IP, ek)+IP
      );
 
