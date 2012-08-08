@@ -156,23 +156,24 @@ isMeetPreserving(PosetMap) := Boolean => (f) -> (
      not (unique(checkMeets|{false}) == checkMeets)
      )
 
--- 
+-- computes the fiber (as a subposet of the source poset) of a point under a PosetMap
 posetMapFiber = method()
 posetMapFiber(PosetMap, Thing) := Poset => (f,elt) -> (
      elts := select((f.source).GroundSet, preim -> (f.GroundMap)#preim == elt);
      subposet (f.source, elts)
      )
-
+-- computes the fiber of a list of elements under the poset map
 posetMapFiber(PosetMap, List) := Poset => (f,L) -> (
      elts := unique flatten apply(L, elt -> select((f.source).GroundSet, preim -> (f.GroundMap)#preim == elt));
      subposet (f.source, elts)
      )
 
+-- non exported function needed for the lower down functions
 nonnull :=(L) -> (
      select(L, i-> i =!= null))
 
 
-
+-- checks if fibers are contractible, either over an element or a list of elements
 isFiberContractible = method()
 isFiberContractible(PosetMap, Thing) := Boolean => (f, elt) -> (
            fiberCmpx := orderComplex(posetMapFiber(f,elt)); 
@@ -272,45 +273,15 @@ crosscutComplex (Poset, List) := SimplicialComplex => opts -> (P, L) -> (
 
 
 
--- methods dealing with fibers
--- compute fibers over a point in the target
--- check contractability of fibers
-posetMapFiber = method()
-posetMapFiber(PosetMap, Thing) := Poset => (f,elt) -> (
-     elts := select((f.source).GroundSet, preim -> (f.GroundMap)#preim == elt);
-     subposet (f.source, elts)
-     )
-
-posetMapFiber(PosetMap, List) := Poset => (f,L) -> (
-     elts := unique flatten apply(L, elt -> select((f.source).GroundSet, preim -> (f.GroundMap)#preim == elt));
-     subposet (f.source, elts)
-     )
-
-nonnull :=(L) -> (
-     select(L, i-> i =!= null))
 
 
-
-isFiberContractible = method()
-isFiberContractible(PosetMap, Thing) := Boolean => (f, elt) -> (
-           fiberCmpx := orderComplex(posetMapFiber(f,elt)); 
-	   homDims := nonnull (unique apply(keys HH fiberCmpx, key-> if key =!= symbol ring then (prune HH fiberCmpx)#key));
-      	   if #homDims == 1 and homDims_0 == 0 then true else false
-	   )
-      
-isFiberContractible(PosetMap, List) := Boolean => (f, L) -> (
-      fiberCmpx := orderComplex(posetMapFiber(f,L)); 
-      homDims := nonnull (unique apply(keys HH fiberCmpx, key-> if key =!= symbol ring then (prune HH fiberCmpx)#key));
-      if #homDims == 1 and homDims_0 == 0 then true else false
-     )      
-
-
-
----
---to do with finite atomic lattices
-
+--------------------------
+--finite atomic lattices
+--------------------------
+-- non-exported, computes the list of atoms just by their index in the ground set, for the purposes of storing the support in the cache
 atoms' := (P) -> unique apply(select(coveringRelations P, R -> any(minimalElements P, elt -> (elt === R#0))), rels -> indexElement(P,rels_1))
 
+-- for a poset (needs to be changed to give an error if not an f.a.l.) computes the support in the atoms of each element in the poset
 atomSupport = method()
 atomSupport(Poset) := List => (P) -> (
      atomSet := set atoms'(P);
