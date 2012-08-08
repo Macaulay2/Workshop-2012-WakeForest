@@ -494,8 +494,9 @@ tensor' (List,TensorModule) := (L,M) -> (
      Tensor.cache#a = t;
      t
      )
+--cache not working
 tensor' TensorArray := a -> (
-     if TensorArray.cache#?a then return TensorArray.cache#a;     
+     if Tensor.cache#?a then return Tensor.cache#a;     
      dims:=dimensions a;
      f:=ultimate(flatten,a);
      R:=commonRing f;
