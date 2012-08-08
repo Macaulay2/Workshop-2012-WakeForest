@@ -4,18 +4,25 @@ gbRationalReconstruction = method()
 gbRationalReconstruction (Ideal,List) := (L, paramList) -> (
   A := ring L;
   kk := coefficientRing A;
-  if #paramList === 0 then return flatten entries gens gb L;
+  if #paramList === 0 then return (flatten entries gens gb L,1);
   
   evalVar := first paramList;
   paramList = drop(paramList,1);
   ratResult := null;
   (loopG,loopE) := (null,null);
   loopCount := 0;
+  (G,newTotal) := (null,totalLoopCount);
+  usedCoords := set {};
+  totalLoops := 0;
   while ratResult === null do (
     loopCount = loopCount+1;
+    -- this next three lines ensure we do not pick the same specialization twice for a coordinate
     a := random kk;
+    while member(a,usedCoords) do a = random kk;
+    usedCoords = usedCoords + set {a};
     randMap := map(A,A,{evalVar => a});
-    G := gbRationalReconstruction(randMap L,paramList);
+    (G,subLoops) := gbRationalReconstruction(randMap L,paramList);
+    totalLoops = totalLoops + subLoops;
     if loopG === null then (loopG, loopE) = (G,evalVar-a) else (
        H := for i from 0 to #G-1 list (
           polyCRA((loopG#i,loopE), (G#i,evalVar-a), evalVar, char kk)
@@ -28,7 +35,10 @@ gbRationalReconstruction (Ideal,List) := (L, paramList) -> (
        if retVal === null then break;
        first retVal
     );
-    if #rrLoopG == #loopG then (<< "(loopCount,paramList) : " << (loopCount,#paramList) << endl; return rrLoopG;)
+    if #rrLoopG == #loopG then (
+	 << "(totalLoopCount,loopCount,paramList) : " << (totalLoops,loopCount,#paramList) << endl;
+	 return (rrLoopG,totalLoops);
+    )
   );
 )  
 
@@ -70,33 +80,43 @@ I = ideal(h*j*l-2*e*g+16001*c*j+16001*a*l,h*j*k-2*e*f+16001*b*j+16001*a*k,h*j^2+
        	  d*f*h*k*l-b*h^2*k*l-8001*d^2*k^2*l+2*d*f^2*g-2*b*f*g*h+16001*c*d*f*k+16001*b*d*g*k-16001*b*c*h*k+16001*b*d*f*l-16001*b^2*h*l-8001*b^2*c,d*f*h*k^2-b*h^2*k^2-8001*d^2*k^3+2*d*f^3-2*b*f^2*h+
        	  16000*b*d*f*k+b^2*h*k-8001*b^3)
 independentSet = support first independentSets I
+time gbRationalReconstruction(I,independentSet)
+
+-- cut down on some variables
+S = ZZ/32003[a,b,c,g,h,j,k,l,MonomialOrder=>Lex]
+phi = map(S,R,matrix{{a,b,c,random kk, random kk, random kk, g,h,j,k,l}})
+independentSet = support first independentSets phi I
+time gbRationalReconstruction(phi I, independentSet)
+
+-- see what the gb over fraction field is
 (RU,KR) = makeFiberRings(independentSet)
-IKR = sub(I, KR)
+IKR = sub(phi I, KR)
 netList flatten entries gens gb IKR
-
-gbRationalReconstruction(I,independentSet)
-
+-- works!
   
-  rand = () -> (a := random kk; (map(A,A,{g_2, g_3, r, a, 0_A}), a))
+-- cut down on fewer variables
+S = ZZ/32003[a,b,c,d,g,h,j,k,l,MonomialOrder=>Lex]
+phi = map(S,R,matrix{{a,b,c,d, random kk, random kk, g,h,j,k,l}})
+independentSet = support first independentSets phi I
+time ratGB = gbRationalReconstruction(phi I, independentSet)
 
-  (phi1, p1) = rand()
-  G1 = flatten entries gens gb phi1 L1       
+-- see what the gb over fraction field is
+(RU,KR) = makeFiberRings(independentSet)
+IKR = sub(phi I, KR)
+netList flatten entries gens gb IKR
+-- works (now with denominators)!
 
-  polyCRA((g1,m1),(g2,m2),t,32003)
-  polyRationalReconstruction(g1,t,m1,32003)
-  
-  (phi2, p2) = rand()
-  G2 = flatten entries gens gb phi2 L1       
+-- with many variables in the independent set, the number of evaluations grow exponentially...
 
-  (phi3, p3) = rand()
-  G3 = flatten entries gens gb phi3 L1 
+-- cut down on still fewer variables
+S = ZZ/32003[a,b,c,d,e,g,h,j,k,l,MonomialOrder=>Lex]
+phi = map(S,R,matrix{{a,b,c,d,e, random kk, g,h,j,k,l}})
+independentSet = support first independentSets phi I
+time ratGB = gbRationalReconstruction(phi I, independentSet)
 
-  (phi4, p4) = rand()
-  G4 = flatten entries gens gb phi4 L1 
+-- see what the gb over fraction field is
+(RU,KR) = makeFiberRings(independentSet)
+IKR = sub(phi I, KR)
+netList flatten entries gens gb IKR
+-- works!
 
-  -- loop this!
-  (H1,e1) = polyCRA((G1_1,g_1-p1),(G2_1,g_1-p2), g_1, 32003)  
-  (H2,e2) = polyCRA((G3_1,g_1-p3),(H1,e1), g_1, 32003)  
-  (H3,e3) = polyCRA((G4_1,g_1-p4),(H2,e2), g_1, 32003)  
-  polyRationalReconstruction(H3,g_1,e3,32003) 
-)
