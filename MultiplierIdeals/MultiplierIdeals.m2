@@ -84,7 +84,7 @@ newPackage(
        },
       Headline => "multiplier ideals, log canonical thresholds, and jumping numbers",
       PackageImports=>{"ReesAlgebra","Normaliz"},
-      PackageExports=>{"Dmodules","HyperplaneArrangements"},
+      PackageExports=>{"HyperplaneArrangements"},
       DebuggingMode=>false
       )
 
@@ -202,12 +202,13 @@ keynumber = (I) -> (
   and other optional arguments provided in Dmodules
 *}
 
+{*
 multIdeal(Ideal,QQ) :=
   multIdeal(Ideal,ZZ) :=
   (I,t) -> Dmodules$multiplierIdeal(I,t)
 
 logCanonicalThreshold(Ideal) := (I) -> Dmodules$lct(I)
-
+*}
 
 --------------------------------------------------------------------------------
 -- MONOMIAL IDEALS -------------------------------------------------------------
