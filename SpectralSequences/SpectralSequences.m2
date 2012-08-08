@@ -22,11 +22,8 @@ newPackage(
   Date => "4 August 2012",
   Authors => {{
       Name => "Nathan Grieve", 
-      Email => "nathangrieve@mast.queensu.ca"},     
-      {
-      Name => "David Berlekamp", 
-      Email => "daffyd@math.berkeley.edu", 
-      HomePage => "http://www.math.berkeley.edu/~daffyd"},
+      Email => "nathangrieve@mast.queensu.ca"},
+
     {
       Name => "Adam Boocher", 
       Email => "aboocher@math.berkeley.edu", 
@@ -48,11 +45,8 @@ export {
   "filteredComplex",
   "SpectralSequence",
   "spectralSequence",
-  "SpectralSequenceSheet",
-  "totalHom",
-  "filteredHom",
-  "spots"
-  }
+  "SpectralSequenceSheet"
+   }
 
 -- symbols used as keys
 protect minF
@@ -90,9 +84,10 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 FilteredComplex = new Type of HashTable
 FilteredComplex.synonym = "filtered chain complex"
 
-spots = K -> select(keys K, i -> class i === ZZ)
+spots := K -> select(keys K, i -> class i === ZZ)
 max FilteredComplex := K -> max spots K
 min FilteredComplex := K -> min spots K
+
 
 FilteredComplex ^ ZZ := ChainComplex => (K,p) -> (
      -- We assume that spots form a consecutive sequence of integers
@@ -101,6 +96,18 @@ FilteredComplex ^ ZZ := ChainComplex => (K,p) -> (
   if K#?p then K#p else if p < minK then K#minK else if p > maxK then K#maxK
   else error "expected no gaps in filtration")
 
+FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
+     all(min(min C,min D)..max (max C,max D),i-> C^i == D^i)
+     )
+
+FilteredComplex _ ZZ := ChainComplexMap => (K,p) -> (
+     minK := min K;
+     Source := K^p;
+     Target := K^minK;
+     f:= i -> inducedMap(Target_i,Source_i);
+     map(Target,Source,f)
+     )
+
 net FilteredComplex := K -> (
      -- Don't want to display all filtered pieces
      -- Should we display the quotients rather than the submodules?
@@ -108,8 +115,7 @@ net FilteredComplex := K -> (
   v := between("", apply(sort spots K, p -> p | " : " | net K^p));
   if #v === 0 then "0" else stack v)
 
-filteredComplex = method(
-  TypicalValue => FilteredComplex)
+filteredComplex = method(TypicalValue => FilteredComplex)
 
 filteredComplex List := L -> (
   local maps;
@@ -130,83 +136,20 @@ filteredComplex List := L -> (
 	 error "expected all map to have the same target"));
      
   Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
-  P := {0 => C} | for p to #maps-1 list (
-       F:= image maps#p;
-       p => chainComplex for i from min F to max F - 1 list (
-	    inducedMap(F_i,F_(i+1), matrix C.dd_(i+1))
-	    ));
+  P := {0 => C} | for p to #maps-1 list p => image maps#p;
   if (last P)#1 != Z then P = P | {#maps+1 => Z};
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
     
---truncate C below ith spot, i.e. set everything below homological degree i to 0
-truncateQuot = method();
-truncateQuot (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
-  complete C;
-  if i >= max C then chainComplex gradedModule (ring C)^0 
-  else chainComplex apply(drop(spots C,1), k -> if k > i then C.dd_k else if k===i then 
-       map(0*C_(k-1), C_k, 0) else map(0*C_(k-1),0*C_k,0)))    
-
-
---truncate C above ith spot, i.e. set everything above homological degree i to 0
-truncate (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
-  complete C;
-  if i < min C then chainComplex gradedModule (ring C)^0
-  else chainComplex apply(drop(spots C,1), k -> if k <= i then C.dd_k else if k===i+1 then 
-       map(C_(k-1), 0*C_k, 0) else map(0*C_(k-1),0*C_k,0)))   
-    
 filteredComplex ChainComplex := C -> (
   complete C;
-  c := drop(spots C,-1);
-  filteredComplex apply(c, i -> (
-	    E := truncate(C,i);
-	    map(C,E, j -> if j > i then map(C_j, E_j, 0) 
-		 else map(C_j, E_j, 1)))))
-
-  
-Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
-  R := C.ring;
-  if R =!= D.ring then error "expected graded modules over the same ring";
-  c := spots C;
-  d := spots D;
-  pairs := new MutableHashTable;
-  scan(c, i -> scan(d, j -> (
-		 k := j-i;
-		 p := if not pairs#?k then pairs#k = new MutableHashTable else pairs#k;
-		 p#(i,j) = 1;)));
-  scan(keys pairs, k -> pairs#k = sort keys pairs#k);
-  E := new GradedModule;
-  E.ring = R;
-  scan(keys pairs, k-> (
-	    p := pairs#k;
-	    E#k = directSum(apply(p, v -> v => Hom(C_(v#0), D_(v#1) )));));
-  E)
-
-Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
-  R := C.ring;
-  if R =!= D.ring then error "expected chain complexes over the same ring";
-  complete C;
-  complete D;
-  E := chainComplex lookup( Hom, GradedModule, GradedModule)(C,D);
-  scan(spots E, i -> if E#?i and E#?(i-1) then E.dd#i = 
-       map(E#(i-1), E#i, 
-	    matrix table(
-		 E#(i-1).cache.indices, E#i.cache.indices, 
-		 (j,k) -> map(E#(i-1).cache.components#(E#(i-1).cache.indexComponents#j), 
-		      (E#i).cache.components#((E#i).cache.indexComponents#k),
-		      if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(j#0),D.dd_(k#1))
-		      else if j#0 === k#0 - 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_(k#0))
-		      else 0))));
-  E)	    
-
-
-filteredHom = method(Options => {Degree => {1,0}})
-filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
-     E:= Hom(C,D);
-     
-     --S^1/(ideal (x,y,z))l := if Degree == {1,0} then length c else length d;
-     E --provisionally for testing, makes this like totalHom
+  g := map(C, C, i -> 0*id_(C#i));
+  return filteredComplex{g})
+    
+prune FilteredComplex := FilteredComplex => opts -> F -> (
+     C := prune (F^(min F));
+     P := {0 => C} | for p from min F + 1 to max F list p => prune (F^p);
+     return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable}
      )
-
 
 
 --------------------------------------------------------------------------------
@@ -241,48 +184,39 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
     symbol cache => CacheTable}
 )
 
-{* Old version of construction 
-cycles := (K,r,p,q) -> (
-  ker inducedMap(K^0^(p+q+1) / K^(p+r)^(p+q+1), K^p^(p+q), (K^0).dd_(-p-q)))
-
- 
-boundaries := (K,r,p,q) -> (
-  image ((K^(p-r+1)).dd_(-p-q+1)) + image id_(K^(p+1)^(p+q)))
-
-*}
-
 invSubmodule := (d,C) -> (
      g := inducedMap ((target d)/C,target d);
      f := g * d;
      ker f
      )
 
+
 pageA := (r, F,p,q) -> (
-d:= (F^p).dd_(-p-q);
-M:= source d;
-N:= source (F^(p+r)).dd_(-p-q-1);
-P:= invSubmodule (d, N);
-A:= intersect (M,P);
-dA:= inducedMap(N, A, matrix d);
-{A, dA}
-)
+     d:=(F^(min F)).dd_(-p-q);
+     M:= (F^p)_(-p-q);
+     N:= (F^(p+r))_(-p-q-1);
+     P:= invSubmodule (d, N);
+     A:= intersect (M,P);
+     dA:= inducedMap (N, A, d);
+     {A, dA}
+     )
 
 pageA2 := (r,F,p,q) -> (
-A:= pageA(r-1,F,p-r+1,q+r-2);
-image A_1
-)
+     A:= pageA(r-1,F,p-r+1,q+r-2);
+     image A_1
+     )
 
 pageZ := (r, F,p,q) -> (
      A:= pageA(r,F,p,q);
-     d:= (F^(p+1)).dd_(-p-q);
-     M:= source d;
+     d:= (F^(min F)).dd_(-p-q);
+     M:= (F^(p+1))_(-p-q);
      (A_0 + M)/M
      )
 
 pageB := (r,F,p,q) -> (
      A:= pageA2(r,F,p,q);
-     d:= (F^(p+1)).dd_(-p-q);
-     M:= source d;
+     d:= (F^(min F)).dd_(-p-q);
+     M:= (F^(p+1))_(-p-q);
      (A+M)/M
      )
 
@@ -297,83 +231,176 @@ pageE :=  (r,F,p,q) -> (
 SpectralSequenceSheet = new Type of MutableHashTable
 SpectralSequenceSheet.synonym = "spectral sequence sheet"
 
+
 SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
   F := filteredComplex E;
   L := for p from E.minF to E.maxF list (
-    M:= for q from E.minH - E.maxF to E.maxH - E.minF list (
-      S := pageE(r,F,p,q);
-      if S != 0 then 
-      {{p,q},inducedMap(pageE(r,F,p+r,q-r+1),S,matrix (F^(p+1)).dd_(-p-q))}
-      else continue
-      );
-    if M != {} then M else continue
- );
+       for q from E.minH - E.maxF to E.maxH - E.minF list (
+	    if pageE(r,F,p,q)!= 0 then {{p,q}, pageE(r,F,p,q)} else continue	    )
+       );
   new SpectralSequenceSheet from flatten L | {symbol zero => E.zero} 
   )
 
 
 SpectralSequenceSheet ^ List := Module => (Er,L) -> (
-       if Er#?L then source Er#L else Er.zero
+       if Er#?L then Er#L else Er.zero
        ) 
-  
 
-tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))     
 
--- hHom1 makes a filtered complex from double complex of hom of chain complexes with horizontal filtration
+truncate (ZZ, ChainComplex):= ChainComplex => (i,F) -> (
+     S:= ring F;
+     L:= apply(toList(min F+1..max F), p -> (
+	       if p < i then map(S^0, S^0,0) 
+	       else if p == i then map(S^0,F_i,0)
+	       else F.dd_p));
+     truncated:= (chainComplex L)[min F];
+     f:= j -> if j < i then map(F_j,truncated_j,0) else id_(F_j);
+     g:= j -> if j < i then map(truncated_j,F_j,0) else id_(F_j);
+     {truncated,map(F,truncated,f),map(truncated,F,g)}
+     )
 
-filteredHom0 = method(Options => {Degree => {1,0}})
-filteredHom0 (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
+
+     
+discrete = method ();
+discrete ChainComplex := FilteredComplex => C -> (
      minC:= min C;
      maxC:= max C;
-     minD:= min D;
-     maxD:= max D;
-     R:= ring C;
-     T:= Hom(C,D);
-     maps := for p from minC+1 to maxC list (
-	  differential := new MutableHashTable;
-	  inclusion := new MutableHashTable;
-	  for k from minC - maxD to maxC - minD - 1 do (
-	       LCp:= toList(max(p,k+minD)..min(maxC,k+maxD));
-	       LDp:= toList(max(p,k+1+minD)..min(maxC,k+maxD+1));
-	       S := if LCp == {} then R^0 
-	       else directSum apply (LCp, i -> i => Hom(C_i,D_(i-k)));
-	       Ta := if LDp == {} then R^0 
-	       else directSum apply (LDp, i -> i => Hom(C_i,D_(i-k-1)));
-	       differential#k = map(Ta,S,0);
-	       inclusion#k = if LCp == {} then map(T_(maxC - minD -k),S,0) 
-	       else (T_(maxC -minD-k))_(new Array from LCp)
-	       );
-     	  si:= chainComplex apply (rsort keys differential,k-> differential#k);
-	  f:= k -> (
-	       if k != 0 then inclusion#(maxC -minD - k)
-	       else map (T_k,si_k,0)
-	       );
-	  map(T,si,f)
-	  );
+     maps:= apply(toList(minC..maxC), p -> (truncate(p,C))_1);
      filteredComplex maps
      )
-       
+	  
 
--- totTensor gives the total complex of the tensor product of chain complexes
+tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))
 
-totTensor := (C,D)-> (
-     n:= length C;
-     m:= length D;
-     L:= for k from -m-n to -1 list (
-	  LC:= toList(max(0,-k-m)..min(n,-k));
-	  LD:= toList(max(0,-k-1-m)..min(n,-k-1));
-	  f:= (i,j) -> (if i == j then (-1)^i* C_i ** D.dd_(-i-k)
-	       else if i - 1 == j then C.dd_i ** D_(-i-k)
-	       else map(C_j ** D_(-j-k-1), C_i ** D_(-i-k),0)
-	       );
-	  S := directSum apply (LC, i-> C_i ** D_(-i-k));
-	  T := directSum apply (LD, i-> C_i ** D_(-i-k-1));
-	  map(T,S,tmap(LC,LD,f))
+     
+-- Hom of chain complexes gives the total complex of double complex of hom of chain complexes.
+
+Hom (ChainComplex,ChainComplex) := ChainComplex => (C,D)-> (
+     minC := min C;
+     maxC := max C;
+     minD := min D;
+     maxD := max D;
+     L:= for k from minC - maxD to maxC - minD - 1 list (
+	  LC:= toList(max(minC,k+minD)..min(maxC,k+maxD));
+	  LD:= toList(max(minC,k+1+minD)..min(maxC,k+maxD+1));
+ 	  f:= (i,j) -> (
+	       if i == j then (-1)^k*Hom(C_i,D.dd_(i-k))
+	       else if i + 1 == j then Hom(C.dd_(i+1),D_(i-k))
+	       else map(Hom(C_j,D_(j-k-1)),Hom(C_i,D_(i-k)),0)
+          );
+	  S := directSum apply (LC, i-> i => Hom(C_i,D_(i-k)));
+	  T := directSum apply (LD, i-> i => Hom(C_i,D_(i-k-1)));
+	  map(T,S, tmap(LC,LD,f))
 	  );
      chainComplex reverse L
      )
 
+
+Hom (ChainComplex, ChainComplexMap) := ChainComplexMap => (K,f) -> (
+     F:= source f;
+     G:= target f;
+     S:= Hom(K,F); 
+     T:= Hom(K,G);
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then Hom(K_i,f_(i-k)) else map(Hom(K_j,G_(j-k)),Hom(K_i,F_(i-k)),0));
+	  L:= toList(max (min K,k + min F)..min(max K,k + max F));
+	  tmap (L,L,g)
+	  );
+     maps:= k -> map(T_k,S_k,m (max K - min F - k));
+     map(T,S,maps)
+     )
+
+Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,K) -> (
+     F:= source f;
+     G:= target f;
+     S:= Hom(G, K); 
+     T:= Hom(F, K);
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then Hom(f_i,K_(i-k)) else map(Hom(F_j,K_(j-k)),Hom(G_i,K_(i-k)),0));
+	  L:= toList(max (min F,k + min K)..min(max F,k + max K));
+	  tmap (L,L,g)
+	  );
+     maps:= k -> map(T_k,S_k,m (max F - min K - k));
+     map(T,S,maps)
+     )
+
+
+
+
+
+-- fHom makes a filter complex from double complex of hom of chain complexes with horizontal filtration     
+fHom = method();
+fHom (ChainComplex, ChainComplex):= FilteredComplex => (C,D) -> (
+     minC:= min C;
+     maxC:= max C;
+     maps := for p from minC to maxC list (
+	  trun := truncate(p,C);
+	  Hom(trun_2,D)       );
+     filteredComplex maps
+     )
+		    
+Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,D) -> fHom(K^(min K),D)
+    
+     {*		    
+Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,D) -> (
+     C:= K^(min K);
+     minC:= min C;
+     maxC:= max C;
+     maps := for p from minC to maxC list (
+	  trun := truncate(p,C);
+	  Hom(trun_2,D)       );
+     filteredComplex maps
+     )
+  *}
+
+Hom (ChainComplex,FilteredComplex):= FilteredComplex => (C,D) -> (
+     maps:= apply(toList(min D..max D),p -> Hom(C,D_p));
+     filteredComplex maps
+     )
   
+
+
+ChainComplexMap ** ChainComplex := ChainComplexMap => (f,K) -> (
+     F:= source f;
+     G:= target f;
+     S:= F ** K; 
+     T:= G ** K; 
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then f_i ** K_(k-i) else map(G_j ** K_(k-j),F_i ** K_(k-i),0));
+	  L:= toList(max (min F,k - max K)..min(max F,k - min K));
+	  tmap (L,L,g)
+	  );
+     maps:= k -> map(T_k,S_k,m k);
+     map(T,S,maps)
+     )
+
+ChainComplex ** ChainComplexMap := ChainComplexMap => (K,f) -> (
+     F:= source f;
+     G:= target f;
+     S:= K ** F;
+     T:= K ** G;
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then K_i ** f_(k-i) else map(K_j ** G_(k-j),K_i ** F_(k-i),0));
+	  L:= toList(max (min F,k - max K)..min(max F,k - min K));
+	  tmap (L,L,g)
+	  );
+     maps:= k -> map(T_k,S_k,m k);
+     map(T,S,maps)
+     )
+
+     
+
+
+FilteredComplex ** ChainComplex := FilteredComplex => (C,D) -> (
+     maps := apply(toList(min C..max C), p -> C_p ** D);
+     filteredComplex maps
+     )
+
+ChainComplex ** FilteredComplex := FilteredComplex => (C,D) -> (
+     maps := apply(toList(min D..max D), p -> C ** D_p);
+     filteredComplex maps
+     )
+
 end
 
 --------------------------------------------------------------------------------
@@ -381,28 +408,40 @@ end
 restart
 needsPackage "SpectralSequences";
 debug SpectralSequences;
-S = QQ[x,y,z];
-F = res (mm = ideal (x,y,z))
-filteredComplex F
-T0=Hom (F,F);
-T1=filteredHom0(F,F);
-T==T1
-k=2
-G=chainComplex(apply(select(spots F, j-> j>k), i -> F.dd_i))[-k]
-T1=Hom(G,F);
-(T1#(-1)).cache.indices
-(spots si)/f
-T_8
-f(0)
-keys inclusion
-E = spectralSequence K
-filteredComplex E
-chainComplex E
-keys E
+S = QQ[x,y]
+I = ideal (x,y)
+F = res I
+G = discrete F
+Hom(F,G)
+Hom(G,F)
+fHom(F,F)
+G^0 == F
 
+T = G ** F
+E = spectralSequence T
+E0 = E_0
+keys E_0
+E1 = E_1
+keys E1
+prune E1^{0,-2}
+prune E1^{0,-1}
+prune E1^{0,-3}
+E2 = E_2
+supportSpectralSequenceSheet E2
+prune E2^{2,-3}
+prune E2^{1,-3}
+prune E2^{0,-3}
 
-F = filteredComplex E
+E3 = E_3
+supportSpectralSequenceSheet E3
+prune E3^{3,-4}
+prune E3^{2,-4}
+prune E3^{1,-4}
+prune E3^{0,-4}
 
+T = totalTensor(F,F)
+T.dd
+G = filteredTensor(F,F)
 
 -- Nathan's first example
 id_(QQ^1) || 0*id_(QQ
@@ -420,10 +459,6 @@ K = filteredComplex{D0,D1,D2}
 code(net,Variety)
 
 
-
-epq(FilteredCoChainComplex,ZZ,ZZ,ZZ):=
-(FK,p,q,r)->(  ((zpq(FK,p,q,r)+bpq(FK,p,q,r)) / bpq(FK,p,q,r)) )
-
 -- filtration by successive skeleta of the real projective plane
 S = QQ[a..f];
 D = simplicialComplex monomialIdeal(a*b*c, a*b*f, a*c*e, a*d*e, a*d*f, b*c*d,
@@ -440,32 +475,10 @@ K = filteredComplex {D,D1,D0,Z}
 E = spectralSequence K
 E_0
 
-SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
-  F = filteredComplex E
-  L = for p from E.minF to E.maxF list (
-    for q from E.minH - E.maxF to E.maxH - E.minF list (
-      S := pageE(r,F,p,q);
-      if S != 0 then 
-      {{p,q},inducedMap(pageE(r,F,p+r,q-r+1),S,matrix (F^(p+1)).dd_(-p-q))}
-      else continue
-      ));
-  new SpectralSequenceSheet from flatten L 
-  )
-
-
 code(chainComplex, SimplicialComplex)
 ring faces(2,D)
 
 break
-p = 2
-maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
-    i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk)))
-
-length C
-maps = apply(3, i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))
-chainComplex 
-L#(p+1)
-C
 
 
 chainComplex SimplicialComplex := (D) -> (
@@ -475,5 +488,4 @@ chainComplex SimplicialComplex := (D) -> (
   else chainComplex apply(0..d, r -> boundary(r,D));
   if D.cache.?labels then C[0] else C[1]
   )
-
 
