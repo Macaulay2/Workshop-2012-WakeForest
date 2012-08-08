@@ -18,8 +18,8 @@
 needsPackage "SimplicialComplexes"
 newPackage(
   "SpectralSequences",
-  Version => "0.1'",
-  Date => "4 August 2012",
+  Version => "0.2'",
+  Date => "8 August 2012",
   Authors => {{
       Name => "Nathan Grieve", 
       Email => "nathangrieve@mast.queensu.ca"},     
@@ -49,8 +49,6 @@ export {
   "SpectralSequence",
   "spectralSequence",
   "SpectralSequenceSheet",
-  "totalHom",
-  "filteredHom",
   "spots"
   }
 
@@ -102,16 +100,7 @@ FilteredComplex ^ ZZ := ChainComplex => (K,p) -> (
   else error "expected no gaps in filtration")
 
 FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
-     all(min(min C,min D)..max (max C,max D),i-> C^i == D^i)
-     )
-
-FilteredComplex _ ZZ := ChainComplexMap => (K,p) -> (
-     minK := min K;
-     Source := K^p;
-     Target := K^minK;
-     f:= i -> inducedMap(Target_i,Source_i);
-     map(Target,Source,f)
-     )
+  all(min(min C,min D)..max (max C,max D),i-> C^i == D^i))
 
 net FilteredComplex := K -> (
      -- Don't want to display all filtered pieces
@@ -138,25 +127,11 @@ filteredComplex List := L -> (
 	 error "expected sequence of chain complexes");
     C = target maps#0;	       	       	    -- all filtrations are exhaustive
     if any(#maps, p-> target maps#p != C) then (
-	 error "expected all map to have the same target"));
-     
+	 error "expected all map to have the same target"));     
   Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
-  P := {0 => C} | for p to #maps-1 list (
-       F:= image maps#p;
-       p => chainComplex for i from min F to max F - 1 list (
-	    inducedMap(F_i,F_(i+1), matrix C.dd_(i+1))
-	    ));
+  P := {0 => C} | apply (#maps, p -> p+1 => image maps#p);
   if (last P)#1 != Z then P = P | {#maps+1 => Z};
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
-    
---truncate C below ith spot, i.e. set everything below homological degree i to 0
-truncateQuot = method();
-truncateQuot (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
-  complete C;
-  if i >= max C then chainComplex gradedModule (ring C)^0 
-  else chainComplex apply(drop(spots C,1), k -> if k > i then C.dd_k else if k===i then 
-       map(0*C_(k-1), C_k, 0) else map(0*C_(k-1),0*C_k,0)))    
-
 
 --truncate C above ith spot, i.e. set everything above homological degree i to 0
 truncate (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
@@ -167,12 +142,7 @@ truncate (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
     
 filteredComplex ChainComplex := C -> (
   complete C;
-  c := drop(spots C,-1);
-  filteredComplex apply(c, i -> (
-	    E := truncate(C,i);
-	    map(C,E, j -> if j < i then map(C_j, E_j, 0) 
-		 else map(C_j, E_j, 1)))))
-
+  filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))
   
 Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
   R := C.ring;
@@ -197,7 +167,7 @@ Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
   if R =!= D.ring then error "expected chain complexes over the same ring";
   complete C;
   complete D;
-  E := chainComplex lookup( Hom, GradedModule, GradedModule)(C,D);
+  E := chainComplex (lookup( Hom, GradedModule, GradedModule))(C,D);
   scan(spots E, i -> if E#?i and E#?(i-1) then E.dd#i = 
        map(E#(i-1), E#i, 
 	    matrix table(
@@ -208,16 +178,6 @@ Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
 		      else if j#0 === k#0 - 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_(k#0))
 		      else 0))));
   E)	    
-
-
-filteredHom = method(Options => {Degree => {1,0}})
-filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
-     E:= Hom(C,D);
-     
-     --S^1/(ideal (x,y,z))l := if Degree == {1,0} then length c else length d;
-     E --provisionally for testing, makes this like totalHom
-     )
-
 
 
 --------------------------------------------------------------------------------
@@ -249,15 +209,12 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
     symbol minH => - max K^0,
     symbol filteredComplex => K,
     symbol zero => K.zero,
-    symbol cache => CacheTable}
-)
+    symbol cache => CacheTable})
 
 invSubmodule := (d,C) -> (
      g := inducedMap ((target d)/C,target d);
      f := g * d;
-     ker f
-     )
-
+     ker f)
 
 pageA := (r, F,p,q) -> (
      d:=(F^(min F)).dd_(-p-q);
@@ -266,35 +223,28 @@ pageA := (r, F,p,q) -> (
      P:= invSubmodule (d, N);
      A:= intersect (M,P);
      dA:= inducedMap (N, A, d);
-     {A, dA}
-     )
+     {A, dA})
 
 pageA2 := (r,F,p,q) -> (
      A:= pageA(r-1,F,p-r+1,q+r-2);
-     image A_1
-     )
+     image A_1)
 
 pageZ := (r, F,p,q) -> (
      A:= pageA(r,F,p,q);
      d:= (F^(min F)).dd_(-p-q);
      M:= (F^(p+1))_(-p-q);
-     (A_0 + M)/M
-     )
+     (A_0 + M)/M)
 
 pageB := (r,F,p,q) -> (
      A:= pageA2(r,F,p,q);
      d:= (F^(min F)).dd_(-p-q);
      M:= (F^(p+1))_(-p-q);
-     (A+M)/M
-     )
+     (A+M)/M)
 
-pageE = method ();
 pageE :=  (r,F,p,q) -> (
     Z:= pageZ(r,F,p,q);
     B:= pageB(r,F,p,q);
-    Z/B
-    ) 
-
+    Z/B) 
 
 SpectralSequenceSheet = new Type of MutableHashTable
 SpectralSequenceSheet.synonym = "spectral sequence sheet"
@@ -308,47 +258,13 @@ SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
       {{p,q},inducedMap(pageE(r,F,p+r,q-r+1),S,matrix (F^(p+1)).dd_(-p-q))}
       else continue
       );
-    if M != {} then M else continue
- );
-  new SpectralSequenceSheet from flatten L | {symbol zero => E.zero} 
-  )
+    if M != {} then M else continue);
+  new SpectralSequenceSheet from flatten L | {symbol zero => E.zero} )
 
 
-SpectralSequenceSheet ^ List := Module => (Er,L) -> (
-       if Er#?L then source Er#L else Er.zero
-       ) 
-  
-
-
-truncate (ZZ, ChainComplex):= ChainComplex => (i,F) -> (
-     S:= ring F;
-     L:= apply(toList(min F+1..max F), p -> (
-	       if p < i then map(S^0, S^0,0) 
-	       else if p == i then map(S^0,F_i,0)
-	       else F.dd_p));
-     truncated:= (chainComplex L)[min F];
-     f:= j -> if j < i then map(F_j,truncated_j,0) else id_(F_j);
-     g:= j -> if j < i then map(truncated_j,F_j,0) else id_(F_j);
-     {truncated,map(F,truncated,f),map(truncated,F,g)}
-     )
-
-
+SpectralSequenceSheet ^ List := Module => (Er,L) -> (if Er#?L then source Er#L else Er.zero) 
      
-discrete = method ();
-discrete ChainComplex := FilteredComplex => C -> (
-     minC:= min C;
-     maxC:= max C;
-     maps:= apply(toList(minC..maxC), p -> (truncate(p,C))_1);
-     filteredComplex maps
-     )
-	  
-
 tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))
-
-	  );
-     chainComplex reverse L
-     )
-
 
 Hom (ChainComplex, ChainComplexMap) := ChainComplexMap => (K,f) -> (
      F:= source f;
@@ -361,8 +277,7 @@ Hom (ChainComplex, ChainComplexMap) := ChainComplexMap => (K,f) -> (
 	  tmap (L,L,g)
 	  );
      maps:= k -> map(T_k,S_k,m (max K - min F - k));
-     map(T,S,maps)
-     )
+     map(T,S,maps))
 
 Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,K) -> (
      F:= source f;
@@ -375,45 +290,18 @@ Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,K) -> (
 	  tmap (L,L,g)
 	  );
      maps:= k -> map(T_k,S_k,m (max F - min K - k));
-     map(T,S,maps)
-     )
-
-
-
-
-
--- fHom makes a filter complex from double complex of hom of chain complexes with horizontal filtration     
-fHom = method();
-fHom (ChainComplex, ChainComplex):= FilteredComplex => (C,D) -> (
-     minC:= min C;
-     maxC:= max C;
-     maps := for p from minC to maxC list (
-	  trun := truncate(p,C);
-	  Hom(trun_2,D)       );
-     filteredComplex maps
-     )
+     map(T,S,maps))
 		    
-Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,D) -> fHom(K^(min K),D)
-    
-     {*		    
 Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,D) -> (
-     C:= K^(min K);
+     C:= chainComplex K;
      minC:= min C;
      maxC:= max C;
-     maps := for p from minC to maxC list (
-	  trun := truncate(p,C);
-	  Hom(trun_2,D)       );
-     filteredComplex maps
-     )
-  *}
-
+     maps := for p from minC to maxC list (Hom(inducedMap(C,truncate(C,p)),D));
+     filteredComplex maps)
+    
 Hom (ChainComplex,FilteredComplex):= FilteredComplex => (C,D) -> (
-     maps:= apply(toList(min D..max D),p -> Hom(C,D_p));
-     filteredComplex maps
-     )
+     filteredComplex apply(toList(min D..max D),p -> Hom(C,D_p)))
   
-
-
 ChainComplexMap ** ChainComplex := ChainComplexMap => (f,K) -> (
      F:= source f;
      G:= target f;
@@ -422,11 +310,9 @@ ChainComplexMap ** ChainComplex := ChainComplexMap => (f,K) -> (
      m:= k -> (
 	  g:= (i,j) -> (if i == j then f_i ** K_(k-i) else map(G_j ** K_(k-j),F_i ** K_(k-i),0));
 	  L:= toList(max (min F,k - max K)..min(max F,k - min K));
-	  tmap (L,L,g)
-	  );
+	  tmap (L,L,g));
      maps:= k -> map(T_k,S_k,m k);
-     map(T,S,maps)
-     )
+     map(T,S,maps))
 
 ChainComplex ** ChainComplexMap := ChainComplexMap => (K,f) -> (
      F:= source f;
@@ -439,21 +325,13 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (K,f) -> (
 	  tmap (L,L,g)
 	  );
      maps:= k -> map(T_k,S_k,m k);
-     map(T,S,maps)
-     )
+     map(T,S,maps))
 
-     
+FilteredComplex ** ChainComplex := FilteredComplex => (K,D) -> (
+     filteredComplex apply(toList(min K..max K), p -> inducedMap(chainComplex K,K^p) ** D))
 
-
-FilteredComplex ** ChainComplex := FilteredComplex => (C,D) -> (
-     maps := apply(toList(min C..max C), p -> C_p ** D);
-     filteredComplex maps
-     )
-
-ChainComplex ** FilteredComplex := FilteredComplex => (C,D) -> (
-     maps := apply(toList(min D..max D), p -> C ** D_p);
-     filteredComplex maps
-     )
+ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
+     filteredComplex apply(toList(min K..max K), p -> C ** inducedMap(chainComplex K,K^p)))
 
 end
 
@@ -462,10 +340,14 @@ end
 restart
 needsPackage "SpectralSequences";
 debug SpectralSequences;
-S = QQ[x,y]
-I = ideal (x,y)
-F = res I
-G = discrete F
+S = QQ[x,y];
+I = ideal (x,y);
+F = res I;
+FF=filteredComplex F;
+Hom(FF,F)
+prune (F**F)
+
+
 Hom(F,G)
 Hom(G,F)
 fHom(F,F)
