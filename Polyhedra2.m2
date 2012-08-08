@@ -82,7 +82,7 @@ globalAssignment PolyhedralObject
 
 net PolyhedralObject := 
 P -> (
-	goodkeys := select(keys P, k -> not member(k, {"rawstring", "rawblocks", "header"}));
+	goodkeys := select(keys P, k -> not match("Gfan", k) and not match("Polymake", k));
 	stack apply(goodkeys, k -> (net k) | " => " | (net P#k))
 )
 
@@ -441,7 +441,7 @@ doc ///
 			C = gfanGroebnerCone markedPolynomialList {{x*y*z}, { x*y*z + z*w^2*x + y^2*w*x}}
 			keys C
 			C#"Dim"
-			C#"GfanHeader"
+			C#"GfanFileHeader"
 
 		Text
 			Most of the keys refer to polyhedral information, while the keys starting with {\tt"Gfan"} refers to parsing information.
