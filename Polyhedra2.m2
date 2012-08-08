@@ -2,7 +2,7 @@
 ---------------------------------------------------------------------------
 --
 -- PURPOSE: Computations with convex polyhedra 
--- PROGRAMMER : Nathan Ilten 
+-- PROGRAMMER : Nathan Ilten, Josephine Yu, Qingchun Ren 
 -- UPDATE HISTORY : August 2012 
 ---------------------------------------------------------------------------
 newPackage("Polyhedra2",
@@ -12,14 +12,18 @@ newPackage("Polyhedra2",
     Authors => {
          {Name => "Nathan Ilten",
 	  HomePage => "http://math.berkeley.edu/~nilten",
-	  Email => "nilten@math.berkeley.edu"}},
+	  Email => "nilten@math.berkeley.edu"},
+     	  {Name => "Qingchun Ren"},
+	  {Name => "Josephine Yu"}
+     },
+    Configuration => {"UsePolymake"=>false,"PolymakePath"=>"./"},
     DebuggingMode => true
     )
 
 ---------------------------------------------------------------------------
 -- COPYRIGHT NOTICE:
 --
--- Copyright 2012 Nathan Ilten
+-- Copyright 2012 Nathan Ilten, Josephine Yu, and Qingchun Ren 
 -- Some parts copyright 2010 Rene Birkner
 --
 --
@@ -37,9 +41,15 @@ newPackage("Polyhedra2",
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 --
 ---------------------------------------------------------------------------
-
+UsePolymake = (options Polyhedra2).Configuration#"UsePolymake"
+PolymakePath = (options Polyhedra2).Configuration#"PolymakePath"
 
 export {
+     	"UsePolymake",
+	"PolymakePath",
+     	"emptyPolyhedron",
+	"isEmpty",
+	"minkowskiSum",
 	"dualCone",
 	"affineHull",
 	"intersection",
@@ -49,42 +59,13 @@ export {
 	"ambDim",
 	"hyperplanes",
 	"halfspaces",
-	"PolyhedralObject", 
-	"Cone", 
 	"convexHull", 
 	"posHull"}
 	
 needsPackage "FourierMotzkin"
+needsPackage "PolyhedralObjects"
+if value UsePolymake then needsPackage "PolymakeInterface"
 
-
-
--- Defining the new type PolyhedralObject
-PolyhedralObject = new Type of MutableHashTable
-globalAssignment PolyhedralObject
-
--- Defining the new type Polyhedron
-Polyhedron = new Type of PolyhedralObject
-Polyhedron.synonym = "convex polyhedron"
-globalAssignment Polyhedron
-
--- Defining the new type Cone
-Cone = new Type of PolyhedralObject
-Cone.synonym = "convex rational cone"
-globalAssignment Cone
-
--- Defining the new type Fan
-Fan = new Type of PolyhedralObject
-globalAssignment Fan
-
--- Defining the new type PolyhedralComplex
-PolyhedralComplex = new Type of PolyhedralObject
-globalAssignment PolyhedralObject
-
-net PolyhedralObject := 
-P -> (
-	goodkeys := select(keys P, k -> not match("Gfan", k) and not match("Polymake", k));
-	stack apply(goodkeys, k -> (net k) | " => " | (net P#k))
-)
 
 Cone == Cone := (C1,C2)->(
      (set entries rays C1 === set entries rays C2) and 
@@ -292,7 +273,7 @@ ambDim Polyhedron:=C->(
       C#"AmbientDim")
 
 
-dim Cone:=C->(if not C#?"Dim" then C#"Dim"=ambDim C-numRows ((hyperplanes C)_0);C#"Dim")
+dim Cone:=C->(if not C#?"Dim" then C#"Dim"=ambDim C-numRows ((hyperplanes C));C#"Dim")
 dim Polyhedron:=C->(if not C#?"Dim" then C#"Dim"=ambDim C-numRows ((hyperplanes C)_0);C#"Dim")
 
 affineHull = method ()
@@ -311,6 +292,76 @@ dualCone Cone:=C->(
      if C#?"Inequalities" then C2#"InputRays"=C#"Inequalities";
      if C#?"Equations" then C2#"InputLineality"=C#"Equations";
      C2)
+
+
+
+emptyPolyhedron=method ()
+emptyPolyhedron ZZ:=n->(
+     if n < 1 then error("The ambient dimension must be positive");
+     C:=convexHull map(QQ^n,QQ^0,0);
+     C#"AmbientDim"=n;
+     C#"Dim"=-1;
+     C)
+     
+
+isEmpty=method()
+isEmpty Polyhedron:=P->(dim P==-1)
+
+minkowskiSum = method()
+
+minkowskiSum(Polyhedron,Polyhedron) := (P1,P2) -> (
+     if (ambDim P1) =!= (ambDim P2) then error("Polyhedral objects must lie in the same space");
+     if isEmpty P1 or isEmpty P2 then emptyPolyhedron ambDim P1 else if P1 == P2 then 2 * P1;
+     V1 := vertices P1;
+     V2 := vertices P2;
+     R := promote(rays P1 | rays P2,QQ) | map(target V1,QQ^1,0);
+     Vnew := map(target V1,QQ^0,0);
+     -- Collecting all sums of vertices of P1 with vertices of P2
+     Vnew = matrix {unique flatten apply(numColumns V1, i -> apply(numColumns V2, j -> V1_{i}+V2_{j}))};
+     convexHull(Vnew,R))
+
+
+
+minkowskiSum(Cone,Cone) := (C1,C2) -> (
+     -- Checking for input errors
+     if (ambDim C1) =!= (ambDim C2) then error("Cones must lie in the same space");
+     posHull((rays C1)|(rays C2),(linSpace C1)|linSpace C2))
+
+
+minkowskiSum(Cone,Polyhedron) := (C,P) -> minkowskiSum(convexHull {C},P)
+
+minkowskiSum(Polyhedron,Cone) := (P,C) -> minkowskiSum(P,convexHull {C})
+
+QQ * Polyhedron := (k,P) -> (
+     -- Checking for input errors
+     if k <= 0 then error("The factor must be strictly positiv");
+     Q:=new Polyhedron from hashTable {};
+     if P#?"InputRays" then Q#"InputRays"=homCoordinates(k*(dehomCoordinates P#"InputRays")_0,(dehomCoordinates P#"InputRays")_1);
+     if P#"InputLineality" then Q#"InputLineality"=P#"InputLineality";
+     if P#"Rays" then Q#"Rays"=homCoordinates(k*(dehomCoordinates P#"Rays")_0,(dehomCoordinates P#"Rays")_1);
+     if P#?"LinealitySpace" then Q#"LinealitySpace"=P#"LinealitySpace";
+     if P#?"Inequalities" then Q#"Inequalities"=((k*(P#"Inequalities")_{0})|(P#"Inequalities")_(toList(1..numColumns P#"Inequalities")));
+     if P#?"Equations" then Q#"Equations"=P#"Equations";
+     if P#?"Facets" then Q#"Facets"=((k*(P#"Facets")_{0})|(P#"Facets")_(toList(1..numColumns P#?"Facets")));
+     if P#?"LinSpan" then Q#"LinSpan"=P#"LinSpan";
+     if P#?"AmbDim" then Q#"AmbDim"=P#"AmbDim";
+     if P#?"Dim" then Q#"Dim"=P#"Dim";
+     Q)
+      
+
+
+ZZ * Polyhedron := (k,P) -> promote(k,QQ) * P
+
+Polyhedron + Polyhedron := minkowskiSum
+Polyhedron + Cone := minkowskiSum
+Cone + Polyhedron := minkowskiSum
+Cone + Cone := minkowskiSum
+
+
+
+
+
+
 --Non-exported stuff
 
 --rows are coordinates as in Polymake
@@ -380,74 +431,5 @@ computeRays Polyhedron := C -> (
 beginDocumentation()
 
 
-doc ///
-	Key
-		"PolyhedralObject"
-	Description
-		Text
-			{\tt PolyhedralObject} is the superclass of @TO"Polyhedron"@, @TO"Cone"@, @TO"Fan"@, and @TO "PolydralComplex"@.
-			It stores properties of polyhedral objects.
 
-			If the {\tt PolyhedralObject} is obtained as output of the software Gfan via the gfanInterface2 package, then we store their own string representation ({\tt "GfanFileRawString"}), along with parsed blocks ({\tt "GfanFileRawBlocks"}) and a separated header ({\tt "GfanFileHeader"}).  The name of the Gfan file is stored in {\tt "GfanFileName"}.
-
-		Example
-			QQ[x,y];
-			F = gfanToPolyhedralFan {markedPolynomialList {{x},{x+y}}}
-			keys F
-			F#"Dim"
-			F#"GfanFileName"
-			F#"GfanFileHeader"
-			F#"GfanFileRawString"
-
-	SeeAlso
-		Fan
-	        Cone
-///
-
-doc ///
-	Key
-		"Fan"
-	Description
-		Text
-			A {\tt Fan} is a type of @TO "PolymakeObject"@ which stores various information
-			about a polyhedral fan. A {\tt Fan} is structured as @TO "HashTable"@ with strings for	keys that point to the stored information.
-
-		Example
-			QQ[x,y];
-			F = gfanToPolyhedralFan {markedPolynomialList {{x},{x+y}}}
-			keys F
-			F#"Dim"
-			F#"GfanFileHeader"
-
-		Text
-			Most of the keys refer to polyhedral information, while the keys starting with {\tt"Gfan"} refers to parsing information.
-
-	SeeAlso
-		PolyhedralObject
-		Cone
-///
-
-doc ///
-	Key
-		"Cone"
-	Description
-		Text
-			A {\tt Cone} is a type of @TO "PolymakeObject"@ which stores various information
-			about a polyhedral cone. A {\tt Cone} is structured as @TO "Hashtable"@ with strings for
-			keys that point to the stored information.
-
-		Example
-			R = QQ[x,y,z,w]; 
-			C = gfanGroebnerCone markedPolynomialList {{x*y*z}, { x*y*z + z*w^2*x + y^2*w*x}}
-			keys C
-			C#"Dim"
-			C#"GfanFileHeader"
-
-		Text
-			Most of the keys refer to polyhedral information, while the keys starting with {\tt"Gfan"} refers to parsing information.
-
-	SeeAlso
-		PolyhedralObject
-		Fan
-///
 
