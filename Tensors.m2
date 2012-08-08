@@ -34,8 +34,9 @@ export{Tensor,TensorModule}
 export{tensor',isTensor}
 export{sumOut}
 
-factors = getSymbol "factors"
-gs = getSymbol
+--factors = getSymbol "factors"
+gs = getSymbol --causing a problem!!!!!
+--turning module inso a symbol!!
 
 --smus "factors"
 --protect factors
@@ -400,6 +401,7 @@ vector Tensor := t -> new Vector from t
 TensorModule = new Type of Module
 TensorModule.cache = new CacheTable
 module TensorModule := M -> new Module from M
+module Module := identity
 ------
 --Using dimensions method previously defined for
 --TensorArrays now for...
@@ -426,7 +428,7 @@ TensorModule#{Standard,AfterPrint} = M -> (
 --Copy an ImmutableHashTable with a CacheTable:
 cacheCopy = method()
 cacheCopy Thing := M -> hashTable ((pairs M)|{symbol cache => new CacheTable from M.cache})
-
+symbol module
 --Build tensor modules:
 tm=tensorModule = method()
 
@@ -437,7 +439,7 @@ tm (Ring,List) := (R,dims) -> (
 	  new HashTable from (pairs R^d)|{
       	       gs"factors" =>  {M},
      	       gs"dimensions" =>  dims,
-	       gs"module" => R^d}
+	       symbol module => R^d}
      	  )
      )
 
@@ -449,7 +451,7 @@ tm Module := M -> (
        	   new HashTable from (pairs M)|{
 		gs"factors" =>  {M},
        	   	gs"dimensions" =>  {numgens M},
-	        gs"module" => M}
+	        symbol module => M}
 	   );
      )
 tm TensorModule := identity
@@ -462,11 +464,14 @@ tm (Module,List) := (M,dims) -> (
 	   new HashTable from (pairs M)|{
 	   	gs"factors" =>  {M},
        	   	gs"dimensions" =>  dims,
-	        gs"module" => M});
+	        symbol module => M});
      )
 
 --Get the ambient tensor module of a tensor:
 tm Tensor := t -> class t;
+module Tensor := t -> module class t;
+
+
 --perhaps this should instead be
 --t-> (classes := ancestors class t;
 --     return classes#(position(classes,i->class i===TensorModule))
@@ -483,7 +488,7 @@ tm List := (fctrs) -> (
 	   new HashTable from (pairs M)|{
 	   	gs"factors" => fctrs,
        	   	gs"dimensions" => dims,
-	        gs"module" => M})
+	        symbol module => M})
      )
 
 ----------------------------
@@ -552,7 +557,7 @@ tensorArray Tensor := t -> (
 net Tensor := t -> net tensorArray t;
 ------
 
-------
+------NEEDS FIXING:
 vector Tensor := t -> new (module t) from t
 Tensor+Tensor := (v,w) -> (
      if not tm v == tm w then error "Tensor+Tensor not from the same TensorModule";
