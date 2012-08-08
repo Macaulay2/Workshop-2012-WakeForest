@@ -14,9 +14,7 @@ newPackage(
  --for this package to work  
    
 --ToDo:
---1) t_(1,0,0) should work directly
---2) tensor' to make tensors
---3) equality testing of tensor spaces
+--3) Tensor#net ... 
 --4) command for dropping 1's in dimension list
 --5) TensorArray afterprint
 --6) Make multiplication faster
@@ -35,7 +33,6 @@ export{sumOut}
 
 
 --
-
 ---------------------------
 --Methods for nested lists
 ---------------------------
@@ -520,7 +517,7 @@ tensorArray Tensor := t -> (
      if TensorArray.cache#?t then return TensorArray.cache#t;
      a := new TensorArray from rnl (dimensions t,entries t);
      TensorArray.cache#t = a;
-     Tensor.cache#a = t;
+--     Tensor.cache#a = t; the array does not retain the base ring!
      a
      )
 
