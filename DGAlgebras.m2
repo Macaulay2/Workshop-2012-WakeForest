@@ -1167,6 +1167,31 @@ local shiftedDegrees; local shiftU;
  shiftU)
 
 
+-----------------------------
+-- Direct Sum of DGModules --
+-----------------------------
+DGModule ++ DGModule := (U,V) -> (
+     if U.DGRing =!= V.DGRing then error "DGModules must be defined over the same DGAlgebra.";
+     if ((U.diff =!= {}) and (V.diff =!= {})) then (
+     W := new MutableHashTable;
+     W#(symbol natural) = (U.natural ++ V.natural);
+     W#(symbol Degrees) = degrees (U.natural ++ V.natural);
+     W#(symbol DGRing) = U.DGRing;
+     W#(symbol ring) = U.ring;
+     W#(symbol diff) = (U.diff | 0) || (0 | V.diff);
+     W#(symbol isHomogeneous) = (U.isHomogeneous and V.isHomogeneous);
+     W#(symbol cache) = new CacheTable;
+     W.cache#(symbol homology) = new MutableHashTable;
+     W.cache#(symbol homologyModule) = new MutableHashTable;
+     W.cache#(symbol diffs) = new MutableHashTable;
+     new DGModule from W) else error "Must first define differentials for both DGModules.";
+)
+--------------------------------
+-- Mapping Cone of DGModules  --
+--------------------------------
+
+
+
 {*semifreeResoution = method(TypicalValue => DGModule, Options=>{LengthLimit=>3})
 semifreeResolution (Module,DGAlgebra) := opts -> (M,A) -> (
    -- The below code follows the construction in proposition 2.2.7 in the IFR notes.
