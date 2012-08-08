@@ -246,6 +246,19 @@ isFiberContractible(PosetMap, List) := Boolean => (f, L) -> (
 
 
 
+---
+--to do with finite atomic lattices
+
+atoms' := (P) -> unique apply(select(coveringRelations P, R -> any(minimalElements P, elt -> (elt === R#0))), rels -> indexElement(P,rels_1))
+
+atomSupport = method()
+atomSupport(Poset) := List => (P) -> (
+     atomSet := set atoms'(P);
+     P.cache.indexedAtomSupport = apply(#P.GroundSet, i -> toList(atomSet*(set(principalOrderIdeal'(P,i)))));
+     apply(P.cache.indexedAtomSupport, elt-> apply(elt, i-> P.GroundSet_i))           
+     )
+
+
 
 end
 
