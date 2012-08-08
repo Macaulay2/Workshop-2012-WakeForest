@@ -22,8 +22,11 @@ newPackage(
   Date => "4 August 2012",
   Authors => {{
       Name => "Nathan Grieve", 
-      Email => "nathangrieve@mast.queensu.ca"},
-
+      Email => "nathangrieve@mast.queensu.ca"},     
+      {
+      Name => "David Berlekamp", 
+      Email => "daffyd@math.berkeley.edu", 
+      HomePage => "http://www.math.berkeley.edu/~daffyd"},
     {
       Name => "Adam Boocher", 
       Email => "aboocher@math.berkeley.edu", 
@@ -135,50 +138,71 @@ filteredComplex List := L -> (
   if (last P)#1 != Z then P = P | {#maps+1 => Z};
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
     
+--truncate C below ith spot, i.e. set everything below homological degree i to 0
+truncateQuot = method();
+truncateQuot (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
+  complete C;
+  if i >= max C then chainComplex gradedModule (ring C)^0 
+  else chainComplex apply(drop(spots C,1), k -> if k > i then C.dd_k else if k===i then 
+       map(0*C_(k-1), C_k, 0) else map(0*C_(k-1),0*C_k,0)))    
+
+
+--truncate C above ith spot, i.e. set everything above homological degree i to 0
+truncate (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
+  complete C;
+  if i < min C then chainComplex gradedModule (ring C)^0
+  else chainComplex apply(drop(spots C,1), k -> if k <= i then C.dd_k else if k===i+1 then 
+       map(C_(k-1), 0*C_k, 0) else map(0*C_(k-1),0*C_k,0)))   
+    
 filteredComplex ChainComplex := C -> (
   complete C;
-  g := map(C, C, i -> 0*id_(C#i));
-  return filteredComplex{g})
+  c := drop(spots C,-1);
+  filteredComplex apply(c, i -> (
+	    E := truncate(C,i);
+	    map(C,E, j -> if j > i then map(C_j, E_j, 0) 
+		 else map(C_j, E_j, 1)))))
 
+  
 Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
-     R := C.ring;
-     if R =!= D.ring then error "expected graded modules over the same ring";
-     c := spots C;
-     d := spots D;
-     pairs := new MutableHashTable;
-     scan(c, i -> scan(d, j -> (
-		    k := j-i;
-		    p := if not pairs#?k then pairs#k = new MutableHashTable else pairs#k;
-		    p#(i,j) = 1;)));
-     scan(keys pairs, k -> pairs#k = sort keys pairs#k);
-     E := new GradedModule;
-     E.ring = R;
-     scan(keys pairs, k-> (
-	   	p := pairs#k;
-		E#k = directSum(apply(p, v -> v => Hom(C_(v#0), D_(v#1) )));));
-     E)
+  R := C.ring;
+  if R =!= D.ring then error "expected graded modules over the same ring";
+  c := spots C;
+  d := spots D;
+  pairs := new MutableHashTable;
+  scan(c, i -> scan(d, j -> (
+		 k := j-i;
+		 p := if not pairs#?k then pairs#k = new MutableHashTable else pairs#k;
+		 p#(i,j) = 1;)));
+  scan(keys pairs, k -> pairs#k = sort keys pairs#k);
+  E := new GradedModule;
+  E.ring = R;
+  scan(keys pairs, k-> (
+	    p := pairs#k;
+	    E#k = directSum(apply(p, v -> v => Hom(C_(v#0), D_(v#1) )));));
+  E)
 
 Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
-     R := C.ring;
-     if R =!= D.ring then error "expected chain complexes over the same ring";
-     complete C;
-     complete D;
-     E := chainComplex (lookup( Hom, GradedModule, GradedModule))(C,D);
-     scan(spots E, i -> if E#?i and E#?(i-1) then E.dd#i = 
-	  map(E#(i-1), E#i, 
-	       matrix table(
-		    E#(i-1).cache.indices, E#i.cache.indices, 
-		    (j,k) -> map(E#(i-1).cache.components#(E#(i-1).cache.indexComponents#j), 
-			 (E#i).cache.components#((E#i).cache.indexComponents#k),
-			 if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(j#0),D.dd_(k#1))
-		    	 else if j#0 === k#0 - 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_(k#0))
-		    	 else 0))));
-     E)
+  R := C.ring;
+  if R =!= D.ring then error "expected chain complexes over the same ring";
+  complete C;
+  complete D;
+  E := chainComplex lookup( Hom, GradedModule, GradedModule)(C,D);
+  scan(spots E, i -> if E#?i and E#?(i-1) then E.dd#i = 
+       map(E#(i-1), E#i, 
+	    matrix table(
+		 E#(i-1).cache.indices, E#i.cache.indices, 
+		 (j,k) -> map(E#(i-1).cache.components#(E#(i-1).cache.indexComponents#j), 
+		      (E#i).cache.components#((E#i).cache.indexComponents#k),
+		      if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(j#0),D.dd_(k#1))
+		      else if j#0 === k#0 - 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_(k#0))
+		      else 0))));
+  E)	    
 
 
-filteredHom0 = method(Options => {Degree => {1,0}})
-filteredHom0 (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
-     E= Hom(C,D);
+filteredHom = method(Options => {Degree => {1,0}})
+filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
+     E:= Hom(C,D);
+     
      --S^1/(ideal (x,y,z))l := if Degree == {1,0} then length c else length d;
      E --provisionally for testing, makes this like totalHom
      )
@@ -293,42 +317,18 @@ SpectralSequenceSheet ^ List := Module => (Er,L) -> (
        ) 
   
 
-tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))
-
-     
--- totHom gives the total complex of double complex of hom of chain complexes.
-totalHom = method ();
-totalHom(ChainComplex,ChainComplex) := ChainComplex => (C,D)-> (
-     minC := min C;
-     maxC := max C;
-     minD := min D;
-     maxD := max D;
-     L:= for k from minC - maxD to maxC - minD - 1 list (
-	  LC:= toList(max(minC,k+minD)..min(maxC,k+maxD));
-	  LD:= toList(max(minC,k+1+minD)..min(maxC,k+maxD+1));
- 	  f:= (i,j) -> (
-	       if i == j then (-1)^(i+j)*Hom(C_i,D.dd_(i-k))
-	       else if i + 1 == j then Hom(C.dd_(i+1),D_(i-k))
-	       else map(Hom(C_j,D_(j-k-1)),Hom(C_i,D_(i-k)),0)
-          );
-
-	  S := directSum apply (LC, i-> i => Hom(C_i,D_(i-k)));
-	  T := directSum apply (LD, i-> i => Hom(C_i,D_(i-k-1)));
-	  map(T,S, tmap(LC,LD,f))
-	  );
-     chainComplex reverse L
-     )
+tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))     
 
 -- hHom1 makes a filtered complex from double complex of hom of chain complexes with horizontal filtration
 
-filteredHom = method(Options => {Degree => {1,0}})
-filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
+filteredHom0 = method(Options => {Degree => {1,0}})
+filteredHom0 (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
      minC:= min C;
      maxC:= max C;
      minD:= min D;
      maxD:= max D;
      R:= ring C;
-     T:= filteredHom0(C,D);
+     T:= Hom(C,D);
      maps := for p from minC+1 to maxC list (
 	  differential := new MutableHashTable;
 	  inclusion := new MutableHashTable;
@@ -352,8 +352,7 @@ filteredHom (ChainComplex, ChainComplex):= FilteredComplex => opts -> (C,D) -> (
 	  );
      filteredComplex maps
      )
-     
-  
+       
 
 -- totTensor gives the total complex of the tensor product of chain complexes
 
@@ -374,8 +373,6 @@ totTensor := (C,D)-> (
      chainComplex reverse L
      )
 
-
-
   
 end
 
@@ -385,7 +382,8 @@ restart
 needsPackage "SpectralSequences";
 debug SpectralSequences;
 S = QQ[x,y,z];
-F = res ideal (x,y,z)
+F = res (mm = ideal (x,y,z))
+filteredComplex F
 T0=Hom (F,F);
 T1=filteredHom0(F,F);
 T==T1
