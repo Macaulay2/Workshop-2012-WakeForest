@@ -1110,14 +1110,25 @@ document {
        " [math.AG]."
        },
 
-  UL{
-    TO (multiplierIdeal,MonomialIdeal,QQ),
-    TO (logCanonicalThreshold,MonomialIdeal),
-    TO (logCanonicalThreshold,MonomialIdeal,RingElement),
-    TO (multiplierIdeal,Ring,List,QQ),
-    TO (logCanonicalThreshold,Ring,List)
-  }
+--   UL{
+--     TO (multiplierIdeal,MonomialIdeal,QQ),
+--     TO (logCanonicalThreshold,MonomialIdeal),
+--     TO (logCanonicalThreshold,MonomialIdeal,RingElement),
+--     TO (multiplierIdeal,Ring,List,QQ),
+--     TO (logCanonicalThreshold,Ring,List)
+--   }
   
+}
+
+--------------------------------------------------------------------------------
+-- MULTIPLIER IDEAL ------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+document {
+  Key => {
+         multiplierIdeal
+         },
+  Headline => "multiplier ideal"
 }
 
 --------------------------------------------------------------------------------
