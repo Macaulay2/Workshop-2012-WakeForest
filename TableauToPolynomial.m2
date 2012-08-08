@@ -22,7 +22,7 @@ tableauToPoly List := RingElement => o -> L -> (
      unfactor(L, F, o.Variable)
      )
 
-makeDets = (a,mu) -> (
+makeDets = (b,mu) -> (
      -- mu is a list giving a filled tableau and a is a symbol intended
      -- to be a new indexexed variable.  The return is a product of
      -- the determinants of matrices built from the variables
@@ -31,19 +31,23 @@ makeDets = (a,mu) -> (
      --- a hash table giving the entries of the
      --- Tableau as keys and the size of the column it is in as the
      --- value as a list. 
-     R := QQ(monoid[flatten apply( #(flatten mu)  ,p->apply(Ind#(p+1)#0 , i->  a_(p+1,i) )) ]);
-     Ma :=apply( mu, m->apply(m,  p->apply(Ind#(p)#0 , i-> R_(a_(p,i)) ))); 
+     R := QQ(monoid[flatten apply( #(flatten mu) ,p->apply(Ind#(p+1)#0 , 
+	  i->  (first b)_(last b,p+1,i) )) ]);
+     Ma :=apply( mu, m->apply(m,  p->apply(Ind#(p)#0 , i-> R_((first b)_(last b,p,i)) ))); 
      --- Ma is the matrix of new vars from which we make the determinants. 
      product apply(Ma, ma -> det matrix ma)
      )
+
+protect a
 
 makeUnsymmetric = L ->(
      -- L is a nested list giving filled tableau.  
      -- Return in a product of the results form makeDets applied to
      -- each tableau.  
-     Dets := apply(#L, i -> makeDets(vars i, L_i));
+--     a := local a;
+     Dets := apply(#L, i -> makeDets(a_i, L_i));
      rings := apply(Dets, i -> ring i);
-     uberRing := QQ[flatten apply(rings, r->gens r)]; 
+     uberRing := bigRing(rings);
      --- a ring of all the rings corresponding to the determinants. 
      maps :=apply(rings, r -> map(uberRing,r)); 
      product apply(#Dets, i -> maps_i(Dets_i))
@@ -56,7 +60,7 @@ unfactor = (L, F, v) -> (
      Fring := ring F;
      T := prods dims L;
      H := apply(keys T, i -> apply(T#i, j -> { product apply(#j, k ->
-     			 value (vars k)_(i, j#k)), (getSymbol v)_(toSequence j)})); 
+		    	 Fring_(a_(k,i,j#k)), (getSymbol v)_(toSequence j))}));
      --- a nested list of pairs, the product of vars from the det
      --- rings with first index the same, and the new corresponding
      --- indexed variable with index corresponding to the second
@@ -93,6 +97,10 @@ listRecursion = (L) -> (
 	  )
      )
 
+bigRing = (L) -> (
+     if #L === 0 then return coefficientRing L_0;
+     L_0**bigRing(drop(L,1))
+     )
 
 elemsize = (k,Li) -> for m in Li do (if member(k,m) then return #m)
 -- takes an element k and a nested list L and returns the number of
@@ -134,3 +142,4 @@ mu2 = {{1,2,4},{3,5}}
 mu3 = {{1,3,5},{2,4}}
 L = {mu1, mu2, mu3}
 tableauToPoly L
+a
