@@ -579,4 +579,207 @@ o22 = (1202132, 1202086)
 
 o22 : Sequence
 
-i23 : 
+i23 : x := getSymbol "x"
+stdio:23:1:(3): warning: local declaration of x shields variable with same name
+
+o23 = x
+
+o23 : Symbol
+
+i24 : aa := getSymbol "bb"
+
+o24 = bb
+
+o24 : Symbol
+
+i25 : aa = 5
+
+o25 = 5
+
+i26 : value getSymbol "bb"
+
+o26 = bb
+
+o26 : Symbol
+
+i27 : bb = 5555
+
+o27 = 5555
+
+i28 : value getSymbol "bb"
+
+o28 = 5555
+
+i29 : aa
+
+o29 = 5
+
+i30 : o24
+
+o30 = bb
+
+o30 : Symbol
+
+i31 : value oo
+
+o31 = 5555
+
+i32 : o24
+
+o32 = bb
+
+o32 : Symbol
+
+i33 : o24 <- 878787
+
+o33 = 878787
+
+i34 : bb
+
+o34 = 878787
+
+i35 : aa
+
+o35 = 5
+
+i36 : o24
+
+o36 = bb
+
+o36 : Symbol
+
+i37 : o24 = 100!
+
+o37 = 9332621544394415268169923885626670049071596826438162146859296389521759999322991560894146397
+      6156518286253697920827223758251185210916864000000000000000000000000
+
+i38 : o24
+
+o38 = 9332621544394415268169923885626670049071596826438162146859296389521759999322991560894146397
+      6156518286253697920827223758251185210916864000000000000000000000000
+
+i39 : o40
+
+o39 = o40
+
+o39 : Symbol
+
+i40 : o40
+
+o40 = o40
+
+o40 : Symbol
+
+i41 : o40
+
+o41 = o40
+
+o41 : Symbol
+
+i42 : o39
+
+o42 = o40
+
+o42 : Symbol
+
+i43 : (o43=7;asdf)
+
+o43 = asdf
+
+o43 : Symbol
+
+i44 : o43
+
+o44 = 7            -- ???????????????
+
+i45 : ooo
+
+o45 = asdf
+
+o45 : Symbol
+
+i46 : o43
+
+o46 = 7
+
+i47 : dictionary symbol o43 , dictionary symbol o44
+
+o47 = (User#"private dictionary", OutputDictionary)
+
+o47 : Sequence
+
+i48 : dictionaryPath 
+
+o48 = {Foooo.Dictionary, SimpleDoc.Dictionary, User#"private dictionary", User.Dictionary,
+      -------------------------------------------------------------------------------------------
+      Elimination.Dictionary, LLLBases.Dictionary, IntegralClosure.Dictionary,
+      -------------------------------------------------------------------------------------------
+      PrimaryDecomposition.Dictionary, Classic.Dictionary, TangentCone.Dictionary,
+      -------------------------------------------------------------------------------------------
+      ReesAlgebra.Dictionary, ConwayPolynomials.Dictionary, Core.Dictionary, OutputDictionary,
+      -------------------------------------------------------------------------------------------
+      PackageDictionary}
+
+o48 : List
+
+i49 : M = ZZ^5
+
+        5
+o49 = ZZ
+
+o49 : ZZ-module, free
+
+i50 : peek M
+
+o50 = Module of Vector{cache => CacheTable{...2...}                           }
+                       numgens => 5
+                       RawFreeModule => free(rank 5 degrees = {1, 1, 1, 1, 1})
+                       ring => ZZ
+
+i51 : mutable M
+
+o51 = false
+
+i52 : M#foo = bar
+stdio:52:7:(3): error: attempted to modify an immutable hash table
+
+i53 : mutable ideal 4
+
+o53 = false
+
+i54 : mutable Ideal
+
+o54 = true
+
+i55 : unique { ZZ^5, ZZ^4, ZZ^5 }
+
+         5    4
+o55 = {ZZ , ZZ }
+
+o55 : List
+
+i56 : unique { QQ[x], QQ[x] }
+
+o56 = {QQ[x], QQ[x]}
+
+o56 : List
+
+i57 : unique { QQ[x], QQ[x,y], QQ[x,x,x] }
+
+o57 = {QQ[x], QQ[x, y], QQ[x, x, x]}
+
+o57 : List
+
+i58 : R = QQ[x]
+
+o58 = QQ[x]
+
+o58 : PolynomialRing
+
+i59 : R[y]
+
+o59 = QQ[x][y]
+
+o59 : PolynomialRing
+
+i60 : 
