@@ -148,7 +148,7 @@ return prepend(n,ans)
 -- Example: 10*x_1*x_3+20*x_1^2*x_3-> {{{2, 3}, 20}, {{1, 3}, 10}}
 polynomialToList = (f) -> (
 M:={};
-M:=flatten entries monomials f;
+M=flatten entries monomials f;
 ans:={};
 for i from 0 to #M-1 do (
 ans=append(ans, {monomialToList(M_i), coefficient(M_i,f)})     
