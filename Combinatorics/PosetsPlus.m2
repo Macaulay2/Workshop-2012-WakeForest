@@ -439,7 +439,7 @@ doc ///
      	  isCrosscut
 ///
 
-{*doc ///
+doc ///
      Key
           crosscutComplex
 	  (crosscutComplex, Poset, List)
@@ -457,7 +457,7 @@ doc ///
 	  VariableName=>Symbol
 	  CoefficientRing=>Ring
      Outputs
-     	  C : simplicialComplex
+     	  C : SimplicialComplex
      Description
     	  Text
 	       This method returns the crosscut complex of the crosscut L in the poset P
@@ -467,10 +467,11 @@ doc ///
 	       crosscutComplex(P,L)       
      SeeAlso
      	  isCrosscut
-///*}
+///
 
 
--- _
+
+
 
 
 
