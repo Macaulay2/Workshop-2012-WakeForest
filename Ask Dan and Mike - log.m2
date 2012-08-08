@@ -475,4 +475,108 @@ o5 = f
 o5 : QQ[f , f , f , f , f ]
          1   2   3   4   5
 
-i6 : 
+i6 : newPackage "Foooo"
+
+o6 = Foooo
+
+o6 : Package
+
+i7 : x = getSymbol "x"
+
+o7 = x
+
+o7 : Symbol
+
+i8 : f = () -> x
+
+o8 = f
+
+o8 : FunctionClosure
+
+i9 : export "f" 
+
+o9 = {f}
+
+o9 : List
+
+i10 : endPackage "Foooo"
+--warning: symbol "f" in User#"private dictionary" is shadowed by a symbol in Foooo.Dictionary
+--  use the synonym f$0
+
+o10 = Foooo
+
+o10 : Package
+
+i11 : f()
+
+o11 = x
+
+o11 : Symbol
+
+i12 : oo===x
+
+o12 = true
+
+i13 : R := QQ(monoid[r_1 .. r_5 ])
+
+o13 = QQ[r , r , r , r , r ]
+          1   2   3   4   5
+
+o13 : PolynomialRing
+
+i14 : r_1
+
+o14 = r
+       1
+
+o14 : IndexedVariable
+
+i15 : R_(symbol r_2)
+
+o15 = r
+       2
+
+o15 : QQ[r , r , r , r , r ]
+          1   2   3   4   5
+
+i16 : x := local x
+
+o16 = x
+
+o16 : Symbol
+
+i17 : U = QQ[x]
+
+o17 = U
+
+o17 : PolynomialRing
+
+i18 : x
+
+o18 = x
+
+o18 : U
+
+i19 : symbol x
+
+o19 = x
+
+o19 : Symbol
+
+i20 : global x
+
+o20 = x
+
+o20 : Symbol
+
+i21 : symbol x === global x
+
+o21 = false
+
+i22 : hash symbol x, hash global x
+
+o22 = (1202132, 1202086)
+
+o22 : Sequence
+
+i23 : 
