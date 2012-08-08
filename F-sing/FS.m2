@@ -240,13 +240,19 @@ sigmaAOverPEMinus1Poly = (fm, a1, e1) -> (
 
 ----------------------------------------------------------------
 --************************************************************--
---Functions for computing test ideals, and related objects.   --
+--Functions for checking whether a ring/pair is F-pure/regular--
 --************************************************************--
 ----------------------------------------------------------------
 
---this function determines if a pair (R, f^t) is F-regular, R is a polynomial ring.
+--this function determines if a pair (R, f^t) is F-regular, R is a polynomial ring.  
 isFRegularPoly = (f1, t1) -> (
      isSubset(ideal(1_(ring f1)), tauPoly(f1,t1))
+)
+
+--this function checks whether (R, f1^a1) is F-pure at the prime ideal m1
+isSharplyFPurePoly = (f1, a1, e1,m1) -> (
+     if (isPrime m1 == false) then error "isSharplyFPurePoly: expected a prime ideal.";
+     not (isSubset(ideal(f1^a1), frobeniusPower(m1,e1)))
 )
 
 
