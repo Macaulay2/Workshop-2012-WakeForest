@@ -1219,6 +1219,65 @@ logCanonicalThreshold(I,x^2*y)
 }
 
 
+--------------------------------------------------------------------------------
+-- HYPERPLANE ARRANGEMENTS -----------------------------------------------------
+--------------------------------------------------------------------------------
+
+document {
+  Key => {
+         (multiplierIdeal,Number,CentralArrangement,List),
+         (multiplierIdeal,Number,CentralArrangement)
+         },
+  Headline => "multiplier ideal of a hyperplane arrangement",
+  Usage => "multiplierIdeal(s,A,m)",
+  Inputs => {
+    "s" => Number => {"a coefficient"},
+    "A" => CentralArrangement => {"a central hyperplane arrangement"},
+    "m" => List => {"a list of weights for the hyperplanes in A"}
+  },
+  Outputs => {
+    Ideal => {}
+  },
+  "Computes the multiplier ideal of the ideal of A with coefficient s ",
+  "using the package ", TO HyperplaneArrangements, ".",
+  
+  EXAMPLE lines ///
+R = QQ[x,y,z];
+f = toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
+A = arrangement f;
+multiplierIdeal(3/7,A)
+  ///,
+  
+  SeeAlso => { (logCanonicalThreshold,CentralArrangement) }
+}
+
+
+document {
+  Key => {
+    (logCanonicalThreshold, CentralArrangement)
+  },
+  Headline => "log canonical threshold of a hyperplane arrangement",
+  Usage => "logCanonicalThreshold A",
+  Inputs => {
+    "A" => CentralArrangement => {"a central hyperplane arrangement"}
+  },
+  Outputs => {
+    QQ => {}
+  },
+  "Computes the log canonical threshold of a hyperplane arrangement A ",
+  "(the least positive value of t such that the multiplier ideal ",
+  "of A with coefficient t is a proper ideal).",
+  
+  EXAMPLE lines ///
+R = QQ[x,y,z];
+f = toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
+A = arrangement f;
+logCanonicalThreshold(A)
+  ///,
+  
+  SeeAlso => { (multiplierIdeal,Number,CentralArrangement) }
+}
+
 
 --------------------------------------------------------------------------------
 -- MONOMIAL CURVE --------------------------------------------------------------
