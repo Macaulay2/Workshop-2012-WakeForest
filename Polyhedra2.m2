@@ -80,6 +80,11 @@ globalAssignment Fan
 PolyhedralComplex = new Type of PolyhedralObject
 globalAssignment PolyhedralObject
 
+net PolyhedralObject := 
+P -> (
+	goodkeys := select(keys P, k -> not member(k, {"rawstring", "rawblocks", "header"}));
+	stack apply(goodkeys, k -> (net k) | " => " | (net P#k))
+)
 
 Cone == Cone := (C1,C2)->(
      (set entries rays C1 === set entries rays C2) and 
@@ -373,4 +378,76 @@ computeRays Polyhedron := C -> (
 
 
 beginDocumentation()
+
+
+doc ///
+	Key
+		"PolyhedralObject"
+	Description
+		Text
+			{\tt PolyhedralObject} is the superclass of @TO"Polyhedron"@, @TO"Cone"@, @TO"Fan"@, and @TO "PolydralComplex"@.
+			It stores properties of polyhedral objects.
+
+			If the {\tt PolyhedralObject} is obtained as output of the software Gfan via the gfanInterface2 package, then we store their own string representation ({\tt "GfanFileRawString"}), along with parsed blocks ({\tt "GfanFileRawBlocks"}) and a separated header ({\tt "GfanFileHeader"}).  The name of the Gfan file is stored in {\tt "GfanFileName"}.
+
+		Example
+			QQ[x,y];
+			F = gfanToPolyhedralFan {markedPolynomialList {{x},{x+y}}}
+			keys F
+			F#"Dim"
+			F#"GfanFileName"
+			F#"GfanFileHeader"
+			F#"GfanFileRawString"
+
+	SeeAlso
+		Fan
+	        Cone
+///
+
+doc ///
+	Key
+		"Fan"
+	Description
+		Text
+			A {\tt Fan} is a type of @TO "PolymakeObject"@ which stores various information
+			about a polyhedral fan. A {\tt Fan} is structured as @TO "HashTable"@ with strings for	keys that point to the stored information.
+
+		Example
+			QQ[x,y];
+			F = gfanToPolyhedralFan {markedPolynomialList {{x},{x+y}}}
+			keys F
+			F#"Dim"
+			F#"GfanFileHeader"
+
+		Text
+			Most of the keys refer to polyhedral information, while the keys starting with {\tt"Gfan"} refers to parsing information.
+
+	SeeAlso
+		PolyhedralObject
+		Cone
+///
+
+doc ///
+	Key
+		"Cone"
+	Description
+		Text
+			A {\tt Cone} is a type of @TO "PolymakeObject"@ which stores various information
+			about a polyhedral cone. A {\tt Cone} is structured as @TO "Hashtable"@ with strings for
+			keys that point to the stored information.
+
+		Example
+			R = QQ[x,y,z,w]; 
+			C = gfanGroebnerCone markedPolynomialList {{x*y*z}, { x*y*z + z*w^2*x + y^2*w*x}}
+			keys C
+			C#"Dim"
+			C#"GfanHeader"
+
+		Text
+			Most of the keys refer to polyhedral information, while the keys starting with {\tt"Gfan"} refers to parsing information.
+
+	SeeAlso
+		PolyhedralObject
+		Fan
+///
 
