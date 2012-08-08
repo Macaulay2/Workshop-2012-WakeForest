@@ -45,7 +45,9 @@ UsePolymake = (options Polyhedra2).Configuration#"UsePolymake"
 PolymakePath = (options Polyhedra2).Configuration#"PolymakePath"
 
 export {
-     	"UsePolymake",
+     	"toPolyhedron",
+	"directProduct",
+	"UsePolymake",
 	"PolymakePath",
      	"emptyPolyhedron",
 	"isEmpty",
@@ -328,9 +330,9 @@ minkowskiSum(Cone,Cone) := (C1,C2) -> (
      posHull((rays C1)|(rays C2),(linSpace C1)|linSpace C2))
 
 
-minkowskiSum(Cone,Polyhedron) := (C,P) -> minkowskiSum(convexHull {C},P)
+minkowskiSum(Cone,Polyhedron) := (C,P) -> minkowskiSum(toPolyhedron C,P)
 
-minkowskiSum(Polyhedron,Cone) := (P,C) -> minkowskiSum(P,convexHull {C})
+minkowskiSum(Polyhedron,Cone) := (P,C) -> minkowskiSum(P,toPolyhedron C)
 
 QQ * Polyhedron := (k,P) -> (
      -- Checking for input errors
@@ -348,20 +350,50 @@ QQ * Polyhedron := (k,P) -> (
      if P#?"Dim" then Q#"Dim"=P#"Dim";
      Q)
       
+toPolyhedron=method()
+toPolyhedron Cone:=P->(
+     Q:=new Polyhedron from hashTable {};
+     if P#?"InputRays" then Q#"InputRays"=homRays(P#"InputRays");
+     if P#?"InputLineality" then Q#"InputLineality"=homRays P#"InputLineality";
+     if P#?"Rays" then Q#"Rays"=homRays P#"Rays";
+     if P#?"LinealitySpace" then Q#"LinealitySpace"=homRays P#"LinealitySpace";
+     if P#?"Inequalities" then Q#"Inequalities"=homRays P#"Inequalities";
+     if P#?"Equations" then Q#"Equations"=homRays P#"Equations";
+     if P#?"Facets" then Q#"Facets"=homRays P#"Facets";
+     if P#?"LinSpan" then Q#"LinSpan"=homRays P#"LinSpan";
+     if P#?"AmbDim" then Q#"AmbDim"=P#"AmbDim";
+     if P#?"Dim" then Q#"Dim"=P#"Dim";      
+      Q)
 
 
 ZZ * Polyhedron := (k,P) -> promote(k,QQ) * P
 
-Polyhedron + Polyhedron := minkowskiSum
-Polyhedron + Cone := minkowskiSum
+
 Cone + Polyhedron := minkowskiSum
 Cone + Cone := minkowskiSum
 
+directProduct = method ()
+directProduct(Cone,Polyhedron) :=(C,P)->directProduct((toPolyhedron C),P)
+directProduct (Polyhedron ,Cone):=(P,C)->directProduct(P,(toPolyhedron C))
 
+directProduct (Polyhedron, Polyhedron):=(P1,P2)->(
+     --very lazy implementation; we should really check what keys exist
+     C:=convexHull((vertices P1)++(vertices P2),(rays P1)++(rays P2),linSpace P1++linSpace P2);
+     C#"LinealitySpace"=C#"InputLineality";
+     C#"Rays"=C#"InputRays";
+     C     )
 
+directProduct (Cone, Cone):=(P1,P2)->(
+     --very lazy implementation; we should really check what keys exist
+     C:=posHull(rays P1++rays P2,linSpace P1++linSpace P2);
+     C#"LinealitySpace"=C#"InputLineality";
+     C#"Rays"=C#"InputRays";
+     C
+     )
 
-
-
+PolyhedralObject * PolyhedralObject := directProduct
+Polyhedron + Polyhedron := minkowskiSum
+Polyhedron + Cone := minkowskiSum
 --Non-exported stuff
 
 --rows are coordinates as in Polymake
