@@ -258,7 +258,7 @@ isSharplyFPurePoly = (f1, a1, e1,m1) -> (
 
 ----------------------------------------------------------------
 --************************************************************--
---Auxiliary functions for F-signature computations.   --
+--Auxiliary functions for F-signature and Fpt computations.   --
 --************************************************************--
 ----------------------------------------------------------------
 --a function to find the x-intercept of a line passing through two points
@@ -294,4 +294,27 @@ fSig = (e1, a1, f1) -> (
 
 threshInt = (e,t,b,t1,f)-> (
 {b1=fSig(e,t1,f),xInt(t,b,t1,b1)}
+)
+
+
+---f-pure threshold estimation
+---e is the max depth to search in
+---finalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
+threshEst=(f,e, finalCheck)->(
+     --error "help";
+     p:=char ring f;
+     n:=nu(f,e);
+     --error "help more";
+     if (isFRegularPoly(f,(n/(p^e-1)))==false) then n/(p^e-1)
+     else (
+	  --error "help most";
+	  ak:=threshInt(e,(n-1)/p^e,fSig(e,n-1,f),n,f); 
+	  --if (DEBUG == true) then error "help mostest";
+	  if ( (n+1)/p^e == (ak#1) ) then (ak#1)
+	  else if (finalCheck == true) then ( 
+	       if (isFRegularPoly(f,(ak#1) )==false) then (ak#1)
+	       else {(ak#1),(n+1)/p^e} 
+	  )
+	  else {(ak#1),(n+1)/p^e}
+     )
 )
