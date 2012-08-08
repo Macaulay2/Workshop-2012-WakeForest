@@ -107,6 +107,7 @@ frobeniusPower(Ideal,ZZ) := (I,e) ->(
 --Computes I^{[1/p^e]}, we must be over a perfect field. and working with a polynomial ring
 --This is a slightly stripped down function due to Moty Katzman.
 ethRoot = (Im,e) -> (
+     error "step ethRoot";
      if (isIdeal(Im) != true) then (
      	  error "ethRoot: You need to pass in an ideal"
      );
@@ -131,7 +132,7 @@ ethRoot = (Im,e) -> (
      L2:=mingens L;
      L3:=first entries L2;
      L4:=apply(L3, t->substitute(t,M));
-     use(Rm);
+     use(Rm); --THIS NEEDS TO BE FIXED
      substitute(ideal L4,Rm)
 )
 
