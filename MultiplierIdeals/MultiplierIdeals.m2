@@ -1053,7 +1053,8 @@ beginDocumentation()
 document { 
   Key => MultiplierIdeals,
   Headline => "A package for computing multiplier ideals",
-  PARA {EM "MultiplierIdeals", " is a package for computing multiplier ideals, ",
+  PARA {EM "MultiplierIdeals", " is a package for computing multiplier ideals ",
+  "and log canonical thresholds, ",
   "using specialized routines wherever possible. "},
   SUBSECTION "References",
   PARA {
@@ -1120,6 +1121,13 @@ document {
          multiplierIdeal
          },
   Headline => "multiplier ideal"
+}
+
+document {
+  Key => {
+         logCanonicalThreshold
+         },
+  Headline => "log canonical threshold"
 }
 
 --------------------------------------------------------------------------------
