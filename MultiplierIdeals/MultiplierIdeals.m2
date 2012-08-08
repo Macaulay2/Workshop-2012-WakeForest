@@ -23,7 +23,7 @@
 --------------------------------------------------------------------------------
 
 {*
-  multIdeal
+  multiplierIdeal
 
    Compute multiplier ideal of an ideal, using various strategies.
    - For general ideals, use Dmodules package.
@@ -120,6 +120,7 @@ newPackage(
 --------------------------------------------------------------------------------
 
 export {
+      multiplierIdeal,
       logCanonicalThreshold
       }
 
@@ -146,6 +147,7 @@ setNmzOption("bigint",true);
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
+multiplierIdeal = method();
 logCanonicalThreshold = method();
 
 --------------------------------------------------------------------------------
@@ -202,8 +204,8 @@ keynumber = (I) -> (
 *}
 
 {*
-multIdeal(Ideal,QQ) :=
-  multIdeal(Ideal,ZZ) :=
+multiplierIdeal(Ideal,QQ) :=
+  multiplierIdeal(Ideal,ZZ) :=
   (I,t) -> Dmodules$multiplierIdeal(I,t)
 
 logCanonicalThreshold(Ideal) := (I) -> Dmodules$lct(I)
@@ -245,7 +247,7 @@ NewtonPolyhedron (MonomialIdeal) := (I) -> (
   
 );
 
--- multIdeal of monomialIdeal
+-- multiplierIdeal of monomialIdeal
 -- input: monomialIdeal I, rational number t
 -- output: multiplier ideal J(I^t)
 ----
@@ -288,8 +290,8 @@ NewtonPolyhedron (MonomialIdeal) := (I) -> (
 ---- for v in Int(t*Newt(I)); then use Macaulay2 to quotient by the product
 ---- of the variables, corresponding to Howald's (1,...,1).
 
-multIdeal (MonomialIdeal, ZZ) := (I,t) -> multIdeal(I,promote(t,QQ))
-multIdeal (MonomialIdeal, QQ) := (I,t) -> (
+multiplierIdeal (MonomialIdeal, ZZ) := (I,t) -> multiplierIdeal(I,promote(t,QQ))
+multiplierIdeal (MonomialIdeal, QQ) := (I,t) -> (
   
   R := ring I;
   -- use R;
@@ -303,7 +305,7 @@ multIdeal (MonomialIdeal, QQ) := (I,t) -> (
   ) else if ( t >= keynumber I ) then (
     
     s := 1 + floor(t-keynumber(I));
-    multIdeal = I^s*multIdeal(I,t-s) ;
+    multIdeal = I^s*multiplierIdeal(I,t-s) ;
   
   ) else (
     
@@ -654,7 +656,7 @@ intersectionIndexSet = (ff) -> (
      );
 
 
--- multIdealMonomialCurve
+-- multiplierIdeal of MonomialCurve
 --
 -- Compute multiplier ideal of the defining ideal of a monomial space curve, ie., a curve in
 -- affine 3-space parametrized by monomials, t->(t^a,t^b,t^c).
@@ -666,8 +668,8 @@ intersectionIndexSet = (ff) -> (
 -- Output:
 --  * an ideal
 
-multIdeal (Ring, List, ZZ) := (R, nn, t) -> multIdeal(R,nn,promote(t,QQ))
-multIdeal (Ring, List, QQ) := (R, nn, t) -> (
+multiplierIdeal (Ring, List, ZZ) := (R, nn, t) -> multiplierIdeal(R,nn,promote(t,QQ))
+multiplierIdeal (Ring, List, QQ) := (R, nn, t) -> (
      ff := sortedGens(R,nn);
      curveIdeal := affineMonomialCurveIdeal(R,nn);
      
@@ -675,7 +677,7 @@ multIdeal (Ring, List, QQ) := (R, nn, t) -> (
      
      
      symbpow := symbolicPowerCurveIdeal(curveIdeal , floor(t-1));
-     term    := multIdeal(termIdeal(curveIdeal) , t);
+     term    := multiplierIdeal(termIdeal(curveIdeal) , t);
      
      validl  := intersect apply(indexList ,
                      mm -> exceptionalDivisorValuationIdeal(R,ff,mm,
@@ -717,15 +719,12 @@ logCanonicalThreshold(Ring,List) := (R,nn) -> (
 -- HYPERPLANE ARRANGEMENTS -----------------------------------------------------
 --------------------------------------------------------------------------------
 
-{*
-multIdealHyperplaneArrangement = method()
-multIdealHyperplaneArrangement(Number,CentralArrangement) := (s,A) -> (
+multiplierIdeal(Number,CentralArrangement) := (s,A) -> (
   HyperplaneArrangements$multIdeal(s,A)
   );
-multIdealHyperplaneArrangement(Number,CentralArrangement,List) := (s,A,m) -> (
+multiplierIdeal(Number,CentralArrangement,List) := (s,A,m) -> (
   HyperplaneArrangements$multIdeal(s,A,m)
   );
-*}
 
 
 logCanonicalThreshold(CentralArrangement) := (A) -> HyperplaneArrangements$lct(A)
@@ -751,8 +750,8 @@ genericDeterminantalSymbolicPower := (R,m,n,r,a) -> (
 );
 
 
-multIdeal (Ring,List,ZZ,ZZ) := (R,mm,r,c) -> multIdeal(R,mm,r,promote(c,QQ))
-multIdeal (Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
+multiplierIdeal (Ring,List,ZZ,ZZ) := (R,mm,r,c) -> multiplierIdeal(R,mm,r,promote(c,QQ))
+multiplierIdeal (Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
   m := mm_0;
   n := mm_1;
   
@@ -806,9 +805,9 @@ TEST ///
 --   -- use R;
 --   I := ideal(y^2-x^3,R);
 --   assert(logCanonicalThreshold(I) == 5/6);
---   assert(multIdealViaDmodules(I,1/2) == ideal(1_R));
---   assert(multIdealViaDmodules(I,5/6) == ideal(x,y));
---   assert(multIdealViaDmodules(I,1) == I);
+--   assert(multiplierIdealViaDmodules(I,1/2) == ideal(1_R));
+--   assert(multiplierIdealViaDmodules(I,5/6) == ideal(x,y));
+--   assert(multiplierIdealViaDmodules(I,1) == I);
 -- ///  
 
 --------------------------------------------------------------------------------
@@ -1001,12 +1000,12 @@ needsPackage"Dmodules";
 debug MultiplierIdeals;
 
 R = QQ[x,y,z];
-assert( (multIdeal(R,{2,3,4},1)) == ideal 1_R )
-assert( (multIdeal(R,{2,3,4},7/6)) == ideal 1_R )
-assert( (multIdeal(R,{2,3,4},20/7)) == ideal(y^2*z-x*z^2,x^2*z-z^2,y^3-x*y*z,x*y^2-z^2,x^2*y-y*z,x^3-x*z) )
-assert( (multIdeal(R,{3,4,5},11/5)) == ideal(y^2-x*z,x^2*y-z^2,x^3-y*z) )
+assert( (multiplierIdeal(R,{2,3,4},1)) == ideal 1_R )
+assert( (multiplierIdeal(R,{2,3,4},7/6)) == ideal 1_R )
+assert( (multiplierIdeal(R,{2,3,4},20/7)) == ideal(y^2*z-x*z^2,x^2*z-z^2,y^3-x*y*z,x*y^2-z^2,x^2*y-y*z,x^3-x*z) )
+assert( (multiplierIdeal(R,{3,4,5},11/5)) == ideal(y^2-x*z,x^2*y-z^2,x^3-y*z) )
 I = affineMonomialCurveIdeal(R,{2,3,4})
-assert(multIdeal(R,{2,3,4},3/2) == Dmodules$multiplierIdeal(I,3/2))
+assert(multiplierIdeal(R,{2,3,4},3/2) == Dmodules$multiplierIdeal(I,3/2))
 ///
 
 
@@ -1044,7 +1043,7 @@ TEST ///
   f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
   A := arrangement f;
   assert(A == arrangement {z, y - z, y + z, x - z, x + z, x - y, x + y});
-  assert(multIdeal(3/7,A) == ideal(z,y,x));
+  assert(multiplierIdeal(3/7,A) == ideal(z,y,x));
 ///
 
 
@@ -1072,10 +1071,10 @@ document {
   PARA {"The implementation for generic determinantal ideals uses ",
   "the unpublished dissertation of Amanda Johnson, U. Michigan, 2003."},
   UL{
-    TO (multIdeal,MonomialIdeal,QQ),
+    TO (multiplierIdeal,MonomialIdeal,QQ),
     TO (logCanonicalThreshold,MonomialIdeal),
     TO (logCanonicalThreshold,MonomialIdeal,RingElement),
-    TO (multIdeal,Ring,List,QQ),
+    TO (multiplierIdeal,Ring,List,QQ),
     TO (logCanonicalThreshold,Ring,List)
   }
   
@@ -1087,11 +1086,11 @@ document {
 
 document {
   Key => {
-         (multIdeal, MonomialIdeal, QQ),
-         (multIdeal, MonomialIdeal, ZZ)
+         (multiplierIdeal, MonomialIdeal, QQ),
+         (multiplierIdeal, MonomialIdeal, ZZ)
          },
   Headline => "multiplier ideal of a monomial ideal",
-  Usage => "multIdeal(I,t)",
+  Usage => "multiplierIdeal(I,t)",
   Inputs => {
     "I" => MonomialIdeal => {"a monomial ideal in a polynomial ring"},
     "t" => QQ => {"a coefficient"}
@@ -1105,7 +1104,7 @@ document {
   EXAMPLE lines ///
 R = QQ[x,y];
 I = monomialIdeal(y^2,x^3);
-multIdeal(I,5/6)
+multiplierIdeal(I,5/6)
   ///,
   
   SeeAlso => { (logCanonicalThreshold,MonomialIdeal) }
@@ -1132,7 +1131,7 @@ I = monomialIdeal(y^2,x^3);
 logCanonicalThreshold(I)
   ///,
   
-  SeeAlso => { (multIdeal,MonomialIdeal,QQ) }
+  SeeAlso => { (multiplierIdeal,MonomialIdeal,QQ) }
 }
 
 
@@ -1176,12 +1175,12 @@ logCanonicalThreshold(I,x^2*y)
 
 doc ///
 Key
-  (multIdeal,Ring,List,QQ)
-  (multIdeal,Ring,List,ZZ)
+  (multiplierIdeal,Ring,List,QQ)
+  (multiplierIdeal,Ring,List,ZZ)
 Headline
   multiplier ideal of monomial space curve
 Usage
-  I = multIdeal(R,n,t)
+  I = multiplierIdeal(R,n,t)
 Inputs
   R:Ring
   n:List
@@ -1193,7 +1192,7 @@ Description
   Text
   
     Given a monomial space curve {\tt C} and a parameter {\tt t}, the function 
-    {\tt multIdeal} computes the multiplier ideal associated to the embedding of {\tt C}
+    {\tt multiplierIdeal} computes the multiplier ideal associated to the embedding of {\tt C}
     in {\tt 3}-space and the parameter {\tt t}.
     
     More precisely, we assume that {\tt R} is a polynomial ring in three variables, {\tt n = \{a,b,c\}}
@@ -1204,7 +1203,7 @@ Description
     R = QQ[x,y,z];
     n = {2,3,4};
     t = 5/2;
-    I = multIdeal(R,n,t)
+    I = multiplierIdeal(R,n,t)
 
 ///
 
