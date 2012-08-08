@@ -17,7 +17,8 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
 	isHomologyAlgebraTrivial, findTrivialMasseyOperation, findNaryTrivialMasseyOperation, AssertWellDefined,
 	isGolod, isGolodHomomorphism, GenDegreeLimit, RelDegreeLimit, TMOLimit,
 	InitializeDegreeZeroHomology, InitializeComplex, isAcyclic, getDegNModule, polydifferential, 
-	semifreeDGModule, DGRing, homologyModule, DGModule, DGModuleMap, dgModuleMap, shiftDGModule
+	semifreeDGModule, DGRing, homologyModule, DGModule, DGModuleMap, dgModuleMap, shift, diffs,
+	shiftMap, inverseShiftMaps
 }
 
 -- Questions:
@@ -59,6 +60,8 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
 -- protected symbols (I don't want to export these symbols, but I use them internally in the code at various places)
 protect diffs
 protect basisAlgebra
+protect shiftMap
+protect inverseShiftMap
 
 -- Defining the new type DGAlgebra
 DGAlgebra = new Type of MutableHashTable
@@ -1158,13 +1161,29 @@ isWellDefined DGModuleMap := f -> (
 -------------------------------
 ----   Shift DGModule   -------
 -------------------------------
-shiftDGModule = method (TypicalValue => DGModule)
-shiftDGModule (DGModule) :=  U -> (
-local shiftedDegrees; local shiftU;
- shiftedDegrees = apply (U.Degrees, x -> {first x+1, last x});
- shiftU = semifreeDGModule (U.DGRing, shiftedDegrees),
- setDiff (shiftU,- (matrix entries U.diff));
- shiftU)
+shift = method (TypicalValue => DGModule)
+shift (DGModule) :=  U -> (
+ shiftedDegrees := apply (U.Degrees, x -> {first x+1, last x});
+ W := semifreeDGModule (U.DGRing, shiftedDegrees);
+ setDiff (W,- (matrix entries U.diff));
+--shiftU := new DGModule from W;
+--The bijection that increases degrees by 1.
+W.cache#(symbol shiftMap) = dgModuleMap(W, U, id_(U.natural));
+--The bijection that decreases degrees by 1.
+W.cache#(symbol inverseShiftMap) = dgModuleMap(U, W, id_(W.natural));
+-- shiftU.cache#(symbol shiftMapInverse) = 	   
+ W)
+
+-------------------------
+-- Shift a DGModuleMap --
+-------------------------
+--shift = method (TypicalValue => DGModuleMap)
+shift (DGModuleMap) := (f) -> (
+     shiftV := shift(f.target);
+     shiftU := shift(f.source);
+     shiftedMap := dgModuleMap(shiftV, shiftU, f.natural);
+     shiftedMap
+     )
 
 
 -----------------------------
@@ -1172,7 +1191,8 @@ local shiftedDegrees; local shiftU;
 -----------------------------
 DGModule ++ DGModule := (U,V) -> (
      if U.DGRing =!= V.DGRing then error "DGModules must be defined over the same DGAlgebra.";
-     if ((U.diff =!= {}) and (V.diff =!= {})) then (
+     if ((class U.diff =!= Matrix) or (class V.diff =!= Matrix)) 
+       then error "Must first define differentials as matricies for both DGModules.";
      W := new MutableHashTable;
      W#(symbol natural) = (U.natural ++ V.natural);
      W#(symbol Degrees) = degrees (U.natural ++ V.natural);
@@ -1184,12 +1204,35 @@ DGModule ++ DGModule := (U,V) -> (
      W.cache#(symbol homology) = new MutableHashTable;
      W.cache#(symbol homologyModule) = new MutableHashTable;
      W.cache#(symbol diffs) = new MutableHashTable;
-     new DGModule from W) else error "Must first define differentials for both DGModules.";
+     new DGModule from W
 )
 --------------------------------
 -- Mapping Cone of DGModules  --
 --------------------------------
-
+--overloading cone(ChainComplex)
+cone (DGModuleMap) := f -> (
+--     if U.DGRing =!= V.DGRing then error "DGModules must be defined over the same DGAlgebra.";
+--     if ((class U.diff =!= Matrix) or (class V.diff =!= Matrix)) 
+--       then error "Must first define differentials as matricies for both DGModules.";
+if not (isWellDefined(f)) then error "DGModule map is not well defined.";
+     U := f.source; 
+     V := f.target;
+     shiftU := shift(U); 
+     shiftV := shift(V);
+     shiftedMap := shift(f);
+     W := new MutableHashTable;
+     W#(symbol natural) = (V.natural ++ shiftU.natural);
+     W#(symbol Degrees) = degrees (V.natural ++ shiftU.natural);
+     W#(symbol DGRing) = U.DGRing;
+     W#(symbol ring) = U.ring;
+     W#(symbol diff) = (V.diff | (shiftV.cache.inverseShiftMap.natural)*(shiftedMap.natural)) || (0 | shiftU.diff);
+     W#(symbol isHomogeneous) = (U.isHomogeneous and V.isHomogeneous); -- is this right?
+     W#(symbol cache) = new CacheTable;
+     W.cache#(symbol homology) = new MutableHashTable;
+     W.cache#(symbol homologyModule) = new MutableHashTable;
+     W.cache#(symbol diffs) = new MutableHashTable;
+     new DGModule from W
+)     
 
 
 {*semifreeResoution = method(TypicalValue => DGModule, Options=>{LengthLimit=>3})
@@ -1264,6 +1307,7 @@ chainComplex DGModule := { LengthLimit => infinity } >> opts -> U -> (
    chainComplex(apply(maxDeg, i -> polyDifferential(i+1,U)))
 )
 
+-- Use these to test Direct Sum of GDModules and shift(DGModule).
 TEST ///
 restart
 debug loadPackage "DGAlgebras"
