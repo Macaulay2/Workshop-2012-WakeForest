@@ -1561,7 +1561,7 @@ doc ///
       Once we define the DGModuleMap, it is a good idea to check to see if it indeed satisfies the Leibniz rule.  This can be checked by using
       isWellDefined.
     Example
-    --  isWellDefined f
+     isWellDefined f
     Text
       Once one has a DGAlgebraMap, one can also obtain the underlying map of complexes via toComplexMap.
     Example
