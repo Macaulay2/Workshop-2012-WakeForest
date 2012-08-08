@@ -759,8 +759,10 @@ multiplierIdeal (Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
     error "not enough variables in ring";
   );
   X := genericMatrix(R,m,n);
-  I := minors(X,r);
   J := ideal(1_R);
+  
+  -- should do:
+  -- use keynumber to reduce coefficient 'c' before computing this
   
   for i from 1 to r do (
     ai := floor( c * (r+1-i) ) - (n-i+1)*(m-i+1);
@@ -778,17 +780,6 @@ logCanonicalThreshold(List,ZZ) := (mm,r) -> min( apply(1..<r , i -> (mm_0-i)*(mm
 -- TESTS -----------------------------------------------------------------------
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-
---------------------------------------------------------------------------------
--- SIMPLE TESTS ----------------------------------------------------------------
---------------------------------------------------------------------------------
-
-TEST ///
-///
-
-TEST ///
-  needsPackage "MultiplierIdeals";
-///
 
 --------------------------------------------------------------------------------
 -- SHARED ROUTINES -------------------------------------------------------------
@@ -1346,6 +1337,65 @@ Description
     logCanonicalThreshold(R,n)
 ///
 
+
+--------------------------------------------------------------------------------
+-- GENERIC DETERMINANTAL -------------------------------------------------------
+--------------------------------------------------------------------------------
+
+document {
+  Key => {
+         (multiplierIdeal,Ring,List,ZZ,QQ),
+         (multiplierIdeal,Ring,List,ZZ,ZZ)
+         },
+  Headline => "multiplier ideal of a generic determinantal ideal",
+  Usage => "multiplierIdeal(R,L,r,t)",
+  Inputs => {
+    "R" => Ring => {"a ring"},
+    "L" => List => {"dimensions {m,n} of a matrix"},
+    "r" => ZZ => {"the size of minors generating the determinantal ideal"},
+    "t" => QQ => {"a coefficient"}
+  },
+  Outputs => {
+    Ideal => {}
+  },
+  "Computes the multiplier ideal of the ideal of ",
+  TEX ///$r \times r$///, " minors in a ", TEX ///$m \times n$///,
+  " matrix whose entries are independent variables in the ring R ",
+  "(a generic matrix).",
+  
+  EXAMPLE lines ///
+R = QQ[x_1..x_20];
+multiplierIdeal(R,{4,5},2,5/7)
+  ///,
+  
+  SeeAlso => { (logCanonicalThreshold,List,ZZ) }
+}
+
+
+document {
+  Key => {
+    (logCanonicalThreshold,List,ZZ)
+  },
+  Headline => "log canonical threshold of a generic determinantal ideal",
+  Usage => "multiplierIdeal(L,r)",
+  Inputs => {
+    "L" => List => {"dimensions {m,n} of a matrix"},
+    "r" => ZZ => {"the size of minors generating the determinantal ideal"}
+  },
+  Outputs => {
+    QQ => {}
+  },
+  "Computes the log canonical threshold of the ideal of ",
+  TEX ///$r \times r$///, " minors in a ", TEX ///$m \times n$///,
+  " matrix whose entries are independent variables ",
+  "(a generic matrix).",
+  
+  EXAMPLE lines ///
+logCanonicalThreshold({4,5},2)
+  ///,
+  
+  SeeAlso => { (multiplierIdeal,Ring,List,ZZ) }
+}
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
