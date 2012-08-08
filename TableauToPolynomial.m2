@@ -14,6 +14,8 @@ needsPackage"SimpleDoc"
 
 export {tableauToPoly}
 
+protect a  -- needed to make intermediate rings. 
+
 tableauToPoly = method(TypicalValue => RingElement, Options => {Variable => "w"})
 tableauToPoly List := RingElement => o -> L -> (
      -- L is a nested list giving a set of filled tableau.
@@ -38,8 +40,6 @@ makeDets = (b,mu) -> (
      product apply(Ma, ma -> det matrix ma)
      )
 
-protect a
-
 makeUnsymmetric = L ->(
      -- L is a nested list giving filled tableau.  
      -- Return in a product of the results form makeDets applied to
@@ -60,7 +60,7 @@ unfactor = (L, F, v) -> (
      Fring := ring F;
      T := prods dims L;
      H := apply(keys T, i -> apply(T#i, j -> { product apply(#j, k ->
-		    	 Fring_(a_(k,i,j#k)), (getSymbol v)_(toSequence j))}));
+		    	 Fring_(a_(k,i,j#k))), (getSymbol v)_(toSequence j)}));
      --- a nested list of pairs, the product of vars from the det
      --- rings with first index the same, and the new corresponding
      --- indexed variable with index corresponding to the second
@@ -98,7 +98,8 @@ listRecursion = (L) -> (
      )
 
 bigRing = (L) -> (
-     if #L === 0 then return coefficientRing L_0;
+     -- Takes a list of rings of arbitrary length and returns the tensor product of those rings. 
+     if #L === 1 then return L_0;
      L_0**bigRing(drop(L,1))
      )
 
@@ -137,6 +138,7 @@ end
 
 restart
 loadPackage"TableauToPolynomial"
+debug TableauToPolynomial
 mu1 = {{1,2,3},{4,5}}
 mu2 = {{1,2,4},{3,5}}
 mu3 = {{1,3,5},{2,4}}
