@@ -14,6 +14,7 @@ newPackage(
  --for this package to work  
    
 --ToDo:
+--fix vector Tensor :=...
 --1) IndexedTensorArrays
 --3) change printing of non-free tensor modules
 --5) TensorArray afterprint
@@ -400,7 +401,7 @@ vector Tensor := t -> new Vector from t
 
 TensorModule = new Type of Module
 TensorModule.cache = new CacheTable
-module TensorModule := M -> new Module from M
+module TensorModule := M -> M.module
 module Module := identity
 ------
 --Using dimensions method previously defined for
@@ -410,7 +411,7 @@ dimensions TensorModule := M -> M#(gs"dimensions")
 
 --Printing TensorModules:
 TensorModule.synonym="tensor module"
-net TensorModule := M -> (net new Module from M)|
+net TensorModule := M -> (net module M)|
      "{"|(fold(M#(gs"dimensions")/toString,(i,j)->i|"x"|j))|"}";
 TensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
