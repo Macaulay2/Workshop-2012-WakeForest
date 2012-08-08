@@ -1,4 +1,5 @@
 restart
+loadPackage"FourTiTwo"
 loadPackage ("Graphs", FileName => "/Users/sonja/Documents/M2repository/wakeforest2012/WFU-2012/Combinatorics/Graphs.m2")
 loadPackage ("Posets", FileName => "/Users/sonja/Documents/M2repository/wakeforest2012/WFU-2012/Combinatorics/Posets.m2") -- just load
 installPackage ("PosetsPlus", FileName => "/Users/sonja/Documents/M2repository/wakeforest2012/WFU-2012/Combinatorics/PosetsPlus.m2")
