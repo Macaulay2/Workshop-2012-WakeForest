@@ -520,7 +520,7 @@ tensorArray Tensor := t -> (
 --     Tensor.cache#a = t; the array does not retain the base ring!
      a
      )
-
+net Tensor := t -> net tensorArray t;
 ------
 
 ------
