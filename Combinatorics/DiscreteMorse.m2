@@ -63,6 +63,9 @@ export {
      faceToIndex,
      faceToCell,
      cellToFace,
+     cellConverter,
+     currentCellPosition,
+     dimensionFetcher,
      
      --exported cached symbols
      cells,
@@ -330,7 +333,7 @@ cellVariables(MorseMatching) := M ->(
 
 ------------------------------------------------------
 ------------------------------------------------------
---Makes four hash tables for converting between cells, faces, and indices:
+--Makes six hash tables for converting between cells, faces, and indices:
 ------------------------------------------------------
 ------------------------------------------------------
 --Index to Cell
@@ -402,7 +405,7 @@ faceToIndex(MorseMatching):= M -> (
 
 ------------------------------------------------------
 ------------------------------------------------------
---Cells to Faces, Faces to Cells
+--Cells to Faces
 ------------------------------------------------------
 ------------------------------------------------------
 faceToCell = method()
@@ -418,6 +421,11 @@ faceToCell(MorseMatching):= M -> (
      	  M.cache.facetocell = hashTable apply(keys K, k-> {k,J#(K#k)})
      )
 )
+------------------------------------------------------
+------------------------------------------------------
+--Faces to Cells
+------------------------------------------------------
+------------------------------------------------------
 cellToFace = method()
 cellToFace(MorseMatching):= M -> (
      if M.cache.?celltoface then (
@@ -437,9 +445,8 @@ cellToFace(MorseMatching):= M -> (
 --Given an edge in matching M, converts to cell format.
 ------------------------------------------------------
 ------------------------------------------------------
-
 cellConverter = method()
-cellConverter(List):= E -> (
+cellConverter(List,MorseMatching):= (E,M) -> (
      --This name fetcher function assumes the input is an edge in ORIGINAL matching, 
      --e.g. {{x},{x,y}}.
      F:=faceToCell(M);
@@ -450,20 +457,36 @@ cellConverter(List):= E -> (
 ------------------------------------------------------
 ------------------------------------------------------
 --Examines list of cells NOT yet removed by collapse.
+--After using stripCells, this index may change.
 ------------------------------------------------------
 ------------------------------------------------------
 
 currentCellPosition = method()
-currentCellPosition(IndexedVariable):= c -> (
+currentCellPosition(IndexedVariable,MorseMatching):= (c,M) -> (
      d:= first last c;
-     --Note that at first collapse, this will be
+     --Note that before first collapse, this will be
      --the same as the index of c_(i,j).
      --This is NOT a constant.
      {d,position(M.cache.cells_d, i-> i === c)}
 )
 
-
-
+------------------------------------------------------
+------------------------------------------------------
+--Be careful about using this, as this actually removes
+--cells from M.cache.cells.
+------------------------------------------------------
+------------------------------------------------------
+stripCells = method()
+stripCells(List,MorseMatching):= (e,M) ->(
+     if not M.cache.?cells then cellVariables M;
+     E := cellConverter(e,M);
+     C1 := currentCellPosition(E_0,M);
+     C2 := currentCellPosition(E_1,M);
+     if (C1_1 === null) or (C2_1 === null) then error "Already removed edge.";
+     cellList := M.cache.cells;
+     cellList = replace(first C1,drop(cellList_(first C1),{C1_1,C1_1}),cellList);
+     M.cache.cells = replace(first C2,drop(cellList_(first C2),{C2_1,C2_1}),cellList)
+)
 
 ------------------------------------------------------
 ------------------------------------------------------
@@ -473,7 +496,7 @@ currentCellPosition(IndexedVariable):= c -> (
 ------------------------------------------------------
 
 dimensionFetcher = method()
-dimensionFetcher(List):= E -> (
+dimensionFetcher(List,MorseMatching):= (E,M) -> (
      --This fetcher function assumes the input is an edge in ORIGINAL matching, 
      --e.g. {{x},{x,y}}.
      F:=faceToCell(M);
@@ -481,29 +504,34 @@ dimensionFetcher(List):= E -> (
      first last F#(first E)
 )
 
+
+
 ------------------------------------------------------
 --METHOD:  simplicialCollapse
 --
 --INPUT:  MorseMatching
 --
---OUTPUT:  {CWComplex, ChainComplex}
+--OUTPUT:  (List,ChainComplex)
+--     List of critical cells and chain complex of
+--     maps after contraction by Morse matching.
 -- 
---
 ------------------------------------------------------
-
 
 
 ------------------------------------------------------
 --METHOD:  collapseCell
 --
---INPUT:  
+--INPUT:  (List,MorseMatching)
 --
 --OUTPUT:  
 -- 
 --
 ------------------------------------------------------
 
-
+collapseCell = method()
+collapseCell(List,MorseMatching):= (E,M) ->(
+     
+)
 
 
 

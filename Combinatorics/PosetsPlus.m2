@@ -439,34 +439,35 @@ doc ///
      	  isCrosscut
 ///
 
+
 doc ///
      Key
           crosscutComplex
-	  (crosscutComplex, Poset, List)
+	  (crosscutComplex,Poset,List)
 	  [crosscutComplex,VariableName]
 	  [crosscutComplex,CoefficientRing]
      Headline
           returns the crosscut complex of a crosscut in a poset
      Usage
-     	  C = crosscutComplex(P,L)
+          C = crosscutComplex(P,L)
      Inputs
-     	  P : Poset
+          P:Poset
 	       a poset
-	  L : List
-	       a list of elements in the poset P giving a crosscut 
+	  L:List
+	       a list of elements in the poset P giving a crosscut
 	  VariableName=>Symbol
 	  CoefficientRing=>Ring
      Outputs
-     	  C : SimplicialComplex
+          C:simplicialComplex
      Description
-    	  Text
+          Text
 	       This method returns the crosscut complex of the crosscut L in the poset P
 	  Example
 	       P = poset({(a,e), (e,g), (b,e), (b,f), (c,f), (f,g), (d,d)})
 	       L = {a,b,c,d}
-	       crosscutComplex(P,L)       
+	       crosscutComplex(P,L) 
      SeeAlso
-     	  isCrosscut
+          isCrosscut
 ///
 
 
