@@ -504,8 +504,11 @@ isTensor Thing := x -> instance(class x,TensorModule)
 tensorArray Tensor := t -> new TensorArray from rnl (dimensions t,entries t);
 ------
 
---
+------
 Tensor**Tensor := (v,w) -> (
+     M:=(tm v)**(tm w);
+     new M from (new vector from v)**(new vector from w)
+     )
      
 Tensor _ List := (v,L) -> (
      M := tensorModule v;
