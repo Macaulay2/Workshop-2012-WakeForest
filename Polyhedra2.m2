@@ -40,6 +40,7 @@ newPackage("Polyhedra2",
 
 
 export {
+	"linSpan",
 	"intersection",
 	"linSpace",
 	"vertices",
@@ -264,6 +265,8 @@ linSpace Polyhedron := P -> (
 	if P#?"Rays" then return transpose P#"LinealitySpace";
 	computeRays P;
 	transpose P#"LinealitySpace")
+   
+
 
 ambDim = method ()
 ambDim Cone:=C->(
@@ -283,6 +286,9 @@ ambDim Polyhedron:=C->(
       C#"AmbientDim")
 
 
+dim Cone:=C->(if not C#?"Dim" then C#"Dim"=ambDim C-numRows ((hyperplanes C)_0);C#"Dim")
+dim Polyhedron:=C->(if not C#?"Dim" then C#"Dim"=ambDim C-numRows ((hyperplanes C)_0);C#"Dim")
+
 
 
 
@@ -291,7 +297,7 @@ ambDim Polyhedron:=C->(
 --rows are coordinates as in Polymake
 homCoordinates=(M,N)->((map(QQ^(numRows M),QQ^1,(i,j)->1)|M)||(map(QQ^(numRows N),QQ^1,0)|N))
 homRays=(N)->(map(QQ^(numRows N),QQ^1,0)|N)
-homPoints=(N)->(map(QQ^(numRows N),QQ^1,1)|N)
+homPoints=(N)->(map(QQ^(numRows N),QQ^1,(i,j)->1)|N)
 --makes first coordinate 1 or 0
 normalizeCoordinates=M->transpose matrix {apply(numRows M,i->(v:=(transpose M)_{i};
 	  if v_(0,0)==0 then return  v;
@@ -339,8 +345,10 @@ computeRays Cone := C -> (
 computeRays Polyhedron := C -> (
      local fm;
      if not C#?"Facets" and not C#?"Inequalities" then computeFacets C;
-     if C#?"Facets" then fm=fourierMotzkin(transpose C#"Facets",transpose C#"LinearSpan")
-     else fm=fourierMotzkin(transpose C#"Inequalities",transpose C#"Equations");
+     if C#?"Facets" then fm=fourierMotzkin(
+	  transpose (C#"Facets"||map(QQ^1,QQ^(numColumns C#"Facets"),(i,j)->(if j==0 then 1 else 0))),transpose C#"LinearSpan")
+     else fm=fourierMotzkin(
+	  transpose (C#"Inequalities"||map(QQ^1,QQ^(numColumns C#"Inequalities"),(i,j)->(if j==0 then 1 else 0))),transpose C#"Equations");
      C#"Rays"=normalizeCoordinates (-transpose fm_0);
      C#"LinealitySpace"=-transpose fm_1;
      )
