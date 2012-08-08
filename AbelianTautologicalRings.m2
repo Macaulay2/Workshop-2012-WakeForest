@@ -73,7 +73,9 @@ assert(modelRing(5,AbelianVarietyType=>"Prym") === QQ[x_1,x_2,x_3,x_4])
 
 abelianTautologicalRing=method(TypicalValue=>Ring, Options=>{AbelianVarietyType=>"Jacobian"})
 abelianTautologicalRing ZZ := opts -> g -> (
+if g < 0 then error "The dimension of the abelian variety must be positive.";     
 S:=modelRing(g);
+if g < 2 then return S;
 --generate Polishchuk relations       
 trivialRels:={}; 
 Rels:={}; 
