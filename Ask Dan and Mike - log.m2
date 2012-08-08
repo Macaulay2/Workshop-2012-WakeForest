@@ -340,4 +340,139 @@ i56 : x
 
 o56 = 3         -- oops
 
-i57 : 
+i57 : R = QQ[a..e]
+
+o57 = R
+
+o57 : PolynomialRing
+
+i58 : R_2
+
+o58 = c
+
+o58 : R
+
+i59 : R_"c"
+
+o59 = c
+
+o59 : R
+
+i60 : 3_R
+
+o60 = 3
+
+o60 : R
+
+i61 : symbol c
+
+o61 = c
+
+o61 : Symbol
+
+i62 : value oo
+
+o62 = c
+
+o62 : R
+
+i63 : S = QQ( monoid [ e_1 .. e_5 ] )
+stdio:65:19:(3):[1]: error: no method for binary operator _ applied to objects:
+--            e (of class R)
+--      _     1 (of class ZZ)
+
+i64 : S = QQ( monoid [ symbol e_1 .. symbol e_5 ] )
+warning: clearing value of symbol e to allow access to subscripted variables based on it
+       : debug with expression   debug 3903   or with command line option   --debug 3903
+
+o64 = S
+
+o64 : PolynomialRing
+
+i65 : e_1
+
+o65 = e
+       1
+
+o65 : S
+
+i66 : T := QQ( monoid [ symbol f_1 .. symbol f_5 ] )
+
+o66 = QQ[f , f , f , f , f ]
+          1   2   3   4   5
+
+o66 : PolynomialRing
+
+i67 : f_1
+
+o67 = {*Function[../../trunk/M2/Macaulay2/m2/classes.m2:66:44-66:59]*}
+
+o67 : FunctionClosure
+
+i68 : f
+
+o68 = f
+
+o68 : FunctionClosure
+
+i69 : symbol f_1
+
+o69 = f
+       1
+
+o69 : IndexedVariable
+
+i70 : value oo 
+
+o70 = f
+       1
+
+o70 : IndexedVariable
+
+i71 : use T
+warning: clearing value of symbol f to allow access to subscripted variables based on it
+       : debug with expression   debug 3406   or with command line option   --debug 3406
+stdio:73:1:(3): error: assignment to protected variable 'f'
+
+i72 : restart
+Macaulay2, version 1.4.0.1
+with packages: ConwayPolynomials, Elimination, IntegralClosure, LLLBases, PrimaryDecomposition,
+               ReesAlgebra, TangentCone
+
+i1 : T := QQ( monoid [ symbol f_1 .. symbol f_5 ] )
+
+o1 = QQ[f , f , f , f , f ]
+         1   2   3   4   5
+
+o1 : PolynomialRing
+
+i2 : f_1
+
+o2 = f
+      1
+
+o2 : IndexedVariable
+
+i3 : value oo
+
+o3 = f
+      1
+
+o3 : IndexedVariable
+
+i4 : use T
+
+o4 = QQ[f , f , f , f , f ]
+         1   2   3   4   5
+
+o4 : PolynomialRing
+
+i5 : value o2
+
+o5 = f
+      1
+
+o5 : QQ[f , f , f , f , f ]
+         1   2   3   4   5
+
+i6 : 
