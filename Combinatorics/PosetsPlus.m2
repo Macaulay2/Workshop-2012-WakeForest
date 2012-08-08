@@ -52,10 +52,15 @@ export {
      isBoundedAbove,
      isCrosscut,
      crosscuts,
+     crosscutComplex,
      
      -- fibers
      posetMapFiber,
      isFiberContractible
+     
+     --finite atomic lattices
+     atomSupport
+     indexedAtomSupport
     }
 
 ------------------------------------------
