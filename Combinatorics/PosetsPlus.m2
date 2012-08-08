@@ -284,9 +284,11 @@ atoms' := (P) -> unique apply(select(coveringRelations P, R -> any(minimalElemen
 -- for a poset (needs to be changed to give an error if not an f.a.l.) computes the support in the atoms of each element in the poset
 atomSupport = method()
 atomSupport(Poset) := List => (P) -> (
-     atomSet := set atoms'(P);
+     if isLattice(P) then ( if isAtomic (P) then
+     (atomSet := set atoms'(P);
      P.cache.indexedAtomSupport = apply(#P.GroundSet, i -> toList(atomSet*(set(principalOrderIdeal'(P,i)))));
-     apply(P.cache.indexedAtomSupport, elt-> apply(elt, i-> P.GroundSet_i))           
+     apply(P.cache.indexedAtomSupport, elt-> apply(elt, i-> P.GroundSet_i))) else error "this is not an atomic lattice") 
+     else error "this is not a lattice"           
      )
 
 
