@@ -14,6 +14,7 @@ newPackage(
  --for this package to work  
    
 --ToDo:
+--stop all new Module from M
 --fix vector Tensor :=...
 --1) IndexedTensorArrays
 --3) change printing of non-free tensor modules
@@ -38,6 +39,7 @@ export{sumOut}
 --factors = getSymbol "factors"
 gs = getSymbol --causing a problem!!!!!
 --turning module inso a symbol!!
+--also means I can't set the value of the symbol in the package...
 
 --smus "factors"
 --protect factors
@@ -238,6 +240,7 @@ f(4,5,6)
 --Tensor Arrays
 ----------------------------
 TensorArray  = new Type of List
+TensorArray**TensorArray := (a,b) -> error "not implemented yet"
 net TensorArray  := T -> netList new List from T
 TensorArray.cache = new CacheTable
 TensorArray_ZZ := (N,n) -> N_(1:n)
@@ -438,7 +441,7 @@ tm (Ring,List) := (R,dims) -> (
      d:=product dims;
      new TensorModule of Tensor from (
 	  new HashTable from (pairs R^d)|{
-      	       gs"factors" =>  {M},
+      	       gs"factors" =>  {R^d},
      	       gs"dimensions" =>  dims,
 	       symbol module => R^d}
      	  )
@@ -477,17 +480,22 @@ module Tensor := t -> module class t;
 --t-> (classes := ancestors class t;
 --     return classes#(position(classes,i->class i===TensorModule))
 --     )
-dimensions Tensor := t -> dimensions tm t
+tmf=--[INTERNAL]
+tensorModuleFactors=method()
+tmf TensorModule := T -> T#(gs"factors")
+tmf Module := M -> {M}
 
+dimensions Tensor := t -> dimensions tm t
 --Tensor module from a list of modules to tensor product,
 --which themselves may be tensor modules
 tm List := (fctrs) -> (
      assertClasses(fctrs,Module,"tensorModule(List)");
      dims:=flatten(fctrs/dimensions);
-     M:=fold(fctrs/(m->new Module from m),(i,j)->i**j);
+     f:=flatten(fctrs/tmf);
+     M:=fold(fctrs/module,(i,j)->i**j);
       new TensorModule of Tensor from (
 	   new HashTable from (pairs M)|{
-	   	gs"factors" => fctrs,
+	   	gs"factors" => f,
        	   	gs"dimensions" => dims,
 	        symbol module => M})
      )
@@ -590,6 +598,7 @@ Tensor _ Sequence := (v,L) -> (
 
 
 Tensor ^ ZZ := (t,n) -> fold(for i in 0..<n list t,(i,j)->i**j)
+
 
 TEST ///
 R=QQ[x]
