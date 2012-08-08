@@ -84,6 +84,102 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 --------------------------------------------------------------------------------
 -- CODE
 --------------------------------------------------------------------------------
+
+--truncate C above ith spot, i.e. set everything above homological degree i to 0
+truncate (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
+  complete C;
+  if i < min C then chainComplex gradedModule (ring C)^0
+  else chainComplex apply(drop(spots C,1), k -> if k <= i then C.dd_k else if k===i+1 then 
+       map(C_(k-1), 0*C_k, 0) else map(0*C_(k-1),0*C_k,0)))   
+    
+Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
+  R := C.ring;
+  if R =!= D.ring then error "expected graded modules over the same ring";
+  c := spots C;
+  d := spots D;
+  pairs := new MutableHashTable;
+  scan(c, i -> scan(d, j -> (
+		 k := j-i;
+		 p := if not pairs#?k then pairs#k = new MutableHashTable else pairs#k;
+		 p#(i,j) = 1;)));
+  scan(keys pairs, k -> pairs#k = sort keys pairs#k);
+  E := new GradedModule;
+  E.ring = R;
+  scan(keys pairs, k-> (
+	    p := pairs#k;
+	    E#k = directSum(apply(p, v -> v => Hom(C_(v#0), D_(v#1) )));));
+  E)
+
+Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
+  R := C.ring;
+  if R =!= D.ring then error "expected chain complexes over the same ring";
+  complete C;
+  complete D;
+  E := chainComplex (lookup( Hom, GradedModule, GradedModule))(C,D);
+  scan(spots E, i -> if E#?i and E#?(i-1) then E.dd#i = 
+       map(E#(i-1), E#i, 
+	    matrix table(
+		 E#(i-1).cache.indices, E#i.cache.indices, 
+		 (j,k) -> map(E#(i-1).cache.components#(E#(i-1).cache.indexComponents#j), 
+		      (E#i).cache.components#((E#i).cache.indexComponents#k),
+		      if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(j#0),D.dd_(k#1))
+		      else if j#0 === k#0 - 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_(k#0))
+		      else 0))));
+  E)	    		    
+
+tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))
+
+Hom (ChainComplex, ChainComplexMap) := ChainComplexMap => (K,f) -> (
+     F:= source f;
+     G:= target f;
+     S:= Hom(K,F); 
+     T:= Hom(K,G);
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then Hom(K_i,f_(i-k)) else map(Hom(K_j,G_(j-k)),Hom(K_i,F_(i-k)),0));
+	  L:= toList(max (min K,k + min F)..min(max K,k + max F));
+	  tmap (L,L,g)
+	  );
+     maps:= k -> map(T_k,S_k,m (max K - min F - k));
+     map(T,S,maps))
+
+Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,K) -> (
+     F:= source f;
+     G:= target f;
+     S:= Hom(G, K); 
+     T:= Hom(F, K);
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then Hom(f_i,K_(i-k)) else map(Hom(F_j,K_(j-k)),Hom(G_i,K_(i-k)),0));
+	  L:= toList(max (min F,k + min K)..min(max F,k + max K));
+	  tmap (L,L,g)
+	  );
+     maps:= k -> map(T_k,S_k,m (max F - min K - k));
+     map(T,S,maps))
+  
+ChainComplexMap ** ChainComplex := ChainComplexMap => (f,K) -> (
+     F:= source f;
+     G:= target f;
+     S:= F ** K; 
+     T:= G ** K; 
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then f_i ** K_(k-i) else map(G_j ** K_(k-j),F_i ** K_(k-i),0));
+	  L:= toList(max (min F,k - max K)..min(max F,k - min K));
+	  tmap (L,L,g));
+     maps:= k -> map(T_k,S_k,m k);
+     map(T,S,maps))
+
+ChainComplex ** ChainComplexMap := ChainComplexMap => (K,f) -> (
+     F:= source f;
+     G:= target f;
+     S:= K ** F;
+     T:= K ** G;
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then K_i ** f_(k-i) else map(K_j ** G_(k-j),K_i ** F_(k-i),0));
+	  L:= toList(max (min F,k - max K)..min(max F,k - min K));
+	  tmap (L,L,g)
+	  );
+     maps:= k -> map(T_k,S_k,m k);
+     map(T,S,maps))
+
 -- constructing filtered complexes
 FilteredComplex = new Type of HashTable
 FilteredComplex.synonym = "filtered chain complex"
@@ -133,52 +229,19 @@ filteredComplex List := L -> (
   if (last P)#1 != Z then P = P | {#maps+1 => Z};
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
---truncate C above ith spot, i.e. set everything above homological degree i to 0
-truncate (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
-  complete C;
-  if i < min C then chainComplex gradedModule (ring C)^0
-  else chainComplex apply(drop(spots C,1), k -> if k <= i then C.dd_k else if k===i+1 then 
-       map(C_(k-1), 0*C_k, 0) else map(0*C_(k-1),0*C_k,0)))   
-    
 filteredComplex ChainComplex := C -> (
   complete C;
-  filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))
-  
-Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
-  R := C.ring;
-  if R =!= D.ring then error "expected graded modules over the same ring";
-  c := spots C;
-  d := spots D;
-  pairs := new MutableHashTable;
-  scan(c, i -> scan(d, j -> (
-		 k := j-i;
-		 p := if not pairs#?k then pairs#k = new MutableHashTable else pairs#k;
-		 p#(i,j) = 1;)));
-  scan(keys pairs, k -> pairs#k = sort keys pairs#k);
-  E := new GradedModule;
-  E.ring = R;
-  scan(keys pairs, k-> (
-	    p := pairs#k;
-	    E#k = directSum(apply(p, v -> v => Hom(C_(v#0), D_(v#1) )));));
-  E)
+  filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))  
 
-Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
-  R := C.ring;
-  if R =!= D.ring then error "expected chain complexes over the same ring";
-  complete C;
-  complete D;
-  E := chainComplex (lookup( Hom, GradedModule, GradedModule))(C,D);
-  scan(spots E, i -> if E#?i and E#?(i-1) then E.dd#i = 
-       map(E#(i-1), E#i, 
-	    matrix table(
-		 E#(i-1).cache.indices, E#i.cache.indices, 
-		 (j,k) -> map(E#(i-1).cache.components#(E#(i-1).cache.indexComponents#j), 
-		      (E#i).cache.components#((E#i).cache.indexComponents#k),
-		      if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(j#0),D.dd_(k#1))
-		      else if j#0 === k#0 - 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_(k#0))
-		      else 0))));
-  E)	    
-
+Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,D) -> (
+     C:= chainComplex K;
+     minC:= min C;
+     maxC:= max C;
+     maps := for p from minC to maxC list (Hom(inducedMap(C,truncate(C,p)),D));
+     filteredComplex maps)
+    
+Hom (ChainComplex,FilteredComplex):= FilteredComplex => (C,D) -> (
+     filteredComplex apply(toList(min D..max D),p -> Hom(C,D_p)))
 
 --------------------------------------------------------------------------------
 -- spectral sequences
@@ -193,6 +256,7 @@ net SpectralSequence := E -> (
   else net expression E)
 expression SpectralSequence := E -> new FunctionApplication from {
   spectralSequence, filteredComplex E}
+
 
 filteredComplex SpectralSequence := FilteredComplex => E -> (
   E.filteredComplex)
@@ -211,10 +275,11 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
     symbol zero => K.zero,
     symbol cache => CacheTable})
 
+--get the inverse image of C under the map d
 invSubmodule := (d,C) -> (
-     g := inducedMap ((target d)/C,target d);
-     f := g * d;
-     ker f)
+  g := inducedMap ((target d)/C,target d);
+  f := g * d;
+  ker f)
 
 pageA := (r, F,p,q) -> (
      d:=(F^(min F)).dd_(-p-q);
@@ -264,69 +329,6 @@ SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
 
 SpectralSequenceSheet ^ List := Module => (Er,L) -> (if Er#?L then source Er#L else Er.zero) 
      
-tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))
-
-Hom (ChainComplex, ChainComplexMap) := ChainComplexMap => (K,f) -> (
-     F:= source f;
-     G:= target f;
-     S:= Hom(K,F); 
-     T:= Hom(K,G);
-     m:= k -> (
-	  g:= (i,j) -> (if i == j then Hom(K_i,f_(i-k)) else map(Hom(K_j,G_(j-k)),Hom(K_i,F_(i-k)),0));
-	  L:= toList(max (min K,k + min F)..min(max K,k + max F));
-	  tmap (L,L,g)
-	  );
-     maps:= k -> map(T_k,S_k,m (max K - min F - k));
-     map(T,S,maps))
-
-Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,K) -> (
-     F:= source f;
-     G:= target f;
-     S:= Hom(G, K); 
-     T:= Hom(F, K);
-     m:= k -> (
-	  g:= (i,j) -> (if i == j then Hom(f_i,K_(i-k)) else map(Hom(F_j,K_(j-k)),Hom(G_i,K_(i-k)),0));
-	  L:= toList(max (min F,k + min K)..min(max F,k + max K));
-	  tmap (L,L,g)
-	  );
-     maps:= k -> map(T_k,S_k,m (max F - min K - k));
-     map(T,S,maps))
-		    
-Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,D) -> (
-     C:= chainComplex K;
-     minC:= min C;
-     maxC:= max C;
-     maps := for p from minC to maxC list (Hom(inducedMap(C,truncate(C,p)),D));
-     filteredComplex maps)
-    
-Hom (ChainComplex,FilteredComplex):= FilteredComplex => (C,D) -> (
-     filteredComplex apply(toList(min D..max D),p -> Hom(C,D_p)))
-  
-ChainComplexMap ** ChainComplex := ChainComplexMap => (f,K) -> (
-     F:= source f;
-     G:= target f;
-     S:= F ** K; 
-     T:= G ** K; 
-     m:= k -> (
-	  g:= (i,j) -> (if i == j then f_i ** K_(k-i) else map(G_j ** K_(k-j),F_i ** K_(k-i),0));
-	  L:= toList(max (min F,k - max K)..min(max F,k - min K));
-	  tmap (L,L,g));
-     maps:= k -> map(T_k,S_k,m k);
-     map(T,S,maps))
-
-ChainComplex ** ChainComplexMap := ChainComplexMap => (K,f) -> (
-     F:= source f;
-     G:= target f;
-     S:= K ** F;
-     T:= K ** G;
-     m:= k -> (
-	  g:= (i,j) -> (if i == j then K_i ** f_(k-i) else map(K_j ** G_(k-j),K_i ** F_(k-i),0));
-	  L:= toList(max (min F,k - max K)..min(max F,k - min K));
-	  tmap (L,L,g)
-	  );
-     maps:= k -> map(T_k,S_k,m k);
-     map(T,S,maps))
-
 FilteredComplex ** ChainComplex := FilteredComplex => (K,D) -> (
      filteredComplex apply(toList(min K..max K), p -> inducedMap(chainComplex K,K^p) ** D))
 
