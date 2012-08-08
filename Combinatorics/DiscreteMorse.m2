@@ -61,13 +61,17 @@ export {
      cellToIndex,
      indexToFace,
      faceToIndex,
+     faceToCell,
+     cellToFace,
      
      --exported cached symbols
      cells,
      indextocell,
      celltoindex,
      facetoindex,
-     indextoface
+     indextoface,
+     facetocell,
+     celltoface
     }
 
 ------------------------------------------
@@ -394,6 +398,87 @@ faceToIndex(MorseMatching):= M -> (
 	  K:=indexToFace(M);
 	  M.cache.facetoindex = hashTable apply(keys M.cache.indextoface, i -> {M.cache.indextoface#i, i})
      )
+)
+
+------------------------------------------------------
+------------------------------------------------------
+--Cells to Faces, Faces to Cells
+------------------------------------------------------
+------------------------------------------------------
+faceToCell = method()
+faceToCell(MorseMatching):= M -> (
+     if M.cache.?facetocell then (
+	  M.cache.facetocell
+     )
+     else (
+     	  D:=M.cache.complex;
+     	  C:=cellVariables(M);
+     	  K:=faceToIndex(M);
+     	  J:=indexToCell(M);
+     	  M.cache.facetocell = hashTable apply(keys K, k-> {k,J#(K#k)})
+     )
+)
+cellToFace = method()
+cellToFace(MorseMatching):= M -> (
+     if M.cache.?celltoface then (
+	  M.cache.celltoface
+     )
+     else (
+	  D:=M.cache.complex;
+	  C:=cellVariables(M);
+	  K:=cellToIndex(M);
+	  J:=indexToFace(M);
+	  M.cache.celltoface = hashTable apply(keys K, k-> {k,J#(K#k)})
+     )
+)
+
+------------------------------------------------------
+------------------------------------------------------
+--Given an edge in matching M, converts to cell format.
+------------------------------------------------------
+------------------------------------------------------
+
+cellConverter = method()
+cellConverter(List):= E -> (
+     --This name fetcher function assumes the input is an edge in ORIGINAL matching, 
+     --e.g. {{x},{x,y}}.
+     F:=faceToCell(M);
+     --outputs cell names
+     {F#(first E), F#(last E)}
+)
+
+------------------------------------------------------
+------------------------------------------------------
+--Examines list of cells NOT yet removed by collapse.
+------------------------------------------------------
+------------------------------------------------------
+
+currentCellPosition = method()
+currentCellPosition(IndexedVariable):= c -> (
+     d:= first last c;
+     --Note that at first collapse, this will be
+     --the same as the index of c_(i,j).
+     --This is NOT a constant.
+     {d,position(M.cache.cells_d, i-> i === c)}
+)
+
+
+
+
+------------------------------------------------------
+------------------------------------------------------
+--Given an edge in matching M, calculates dimension of
+--lower dimensional cell.
+------------------------------------------------------
+------------------------------------------------------
+
+dimensionFetcher = method()
+dimensionFetcher(List):= E -> (
+     --This fetcher function assumes the input is an edge in ORIGINAL matching, 
+     --e.g. {{x},{x,y}}.
+     F:=faceToCell(M);
+     --outputs the dimension of smaller edge
+     first last F#(first E)
 )
 
 ------------------------------------------------------
