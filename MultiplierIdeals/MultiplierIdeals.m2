@@ -1062,14 +1062,42 @@ beginDocumentation()
 document { 
   Key => MultiplierIdeals,
   Headline => "A package for computing multiplier ideals",
-  PARA {EM "MultiplierIdeals", " is a package for computing multiplier ideals. "},
-  PARA {"The implementation for monomial ideals uses Howald's Theorem."},
-  PARA {"The implementation for monomial curves is based on the algorithm given in ",
-  "H.M. Thompson's paper ", ITALIC "Multiplier Ideals of Monomial Space Curves",
-  " ", HREF { "http://arxiv.org/abs/1006.1915" , "arXiv:1006.1915v4" },
-  " [math.AG]."},
-  PARA {"The implementation for generic determinantal ideals uses ",
-  "the unpublished dissertation of Amanda Johnson, U. Michigan, 2003."},
+  PARA {EM "MultiplierIdeals", " is a package for computing multiplier ideals, ",
+  "using specialized routines wherever possible. "},
+  SUBSECTION "References",
+  PARA {
+       "[BL] ",
+       "Blickle, Manuel and Lazarsfeld, Robert ",
+       EM "An informal introduction to multiplier ideals. ",
+       "Trends in commutative algebra, 87–114, ",
+       "Math. Sci. Res. Inst. Publ., 51, Cambridge Univ. Press, Cambridge, 2004."
+       },
+  PARA {
+       "[H] ",
+       "Howald, J.A. ",
+       EM "Multiplier ideals of monomial ideals. ",
+       "Trans. Amer. Math. Soc. 353 (2001), no. 7, 2665–2671"
+       },
+  PARA {
+       "[J] ",
+       "Johnson, Amanda ",
+       EM "Multiplier ideals of determinantal ideals. ",
+       "Thesis (Ph.D.)–University of Michigan. 2003"
+       },
+  PARA {
+       "[L] ",
+       "Lazarsfeld, Robert ",
+       EM "Positivity in algebraic geometry. II. ",
+       "2004 "
+       },
+  PARA {
+       "[T] ",
+       "Thompson, H.M. ",
+       EM "Multiplier Ideals of Monomial Space Curves, ",
+       HREF { "http://arxiv.org/abs/1006.1915" , "arXiv:1006.1915v4" },
+       " [math.AG]."
+       },
+
   UL{
     TO (multiplierIdeal,MonomialIdeal,QQ),
     TO (logCanonicalThreshold,MonomialIdeal),
