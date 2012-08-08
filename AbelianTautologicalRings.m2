@@ -1,5 +1,5 @@
 newPackage(
-	"BeauvillePolishchukRings",
+	"AbelianTautologicalRings",
     	Version => "1.0",
     	Date => "August 5, 2012",
     	Authors => {{Name => "Maxim Arap", 
@@ -34,7 +34,7 @@ You should have received a copy of the GNU General Public License along with thi
 
       Start M2 in the directory containing this file and type
 
-           installPackage "BeauvillePolishchukRings"
+           installPackage "AbelianTautologicalRings"
 
       Then the package will be usable when M2 is started in any directory, and this file can
       be moved or deleted.
@@ -43,7 +43,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 
 
-export{"modelRing","beauvillePolishchukRing","AbelianVarietyType"}
+export{"modelRing","abelianTautologicalRing","AbelianVarietyType","polishchukD"}
 
 
 
@@ -61,31 +61,77 @@ modelRing ZZ := opts -> g -> (
        degs:=apply(g-1,i->{i+1,i});
        S:=QQ[variables,Degrees=>degs];
        S#"AbelianVarietyType"=opts.AbelianVarietyType;
+       S#"Dim"=g;
        return S
        )
 
 TEST ///
-debug TautRings
---R=QQ[x_1..x_9]
---assert(isContiguous {x_2,x_3,x_6,x_4,x_5,x_8,x_7})
---assert(not isContiguous {x_1,x_2,x_5,x_3})
+debug AbelianTautologicalRings
+assert(modelRing(5) === QQ[x_1,x_2,x_3,x_4])
+assert(modelRing(5,AbelianVarietyType=>"Prym") === QQ[x_1,x_2,x_3,x_4])
 ///
 
-beauvillePolishchukRing=method(TypicalValue=>Ring, Options=>{AbelianVarietyType=>"Jacobian"})
-beauvillePolishchukRing ZZ := opts -> g -> (
-       S:=modelRing(g);
-       I:=ideal(S_0);
-       R:=S/I;
-       R#"AbelianVarietyType"=opts.AbelianVarietyType;
-       return R
-       )
-  
+abelianTautologicalRing=method(TypicalValue=>Ring, Options=>{AbelianVarietyType=>"Jacobian"})
+abelianTautologicalRing ZZ := opts -> g -> (
+S:=modelRing(g);
+--generate Polishchuk relations       
+trivialRels:={}; 
+Rels:={}; 
+allRels:={};
+for j from 1 to g do (
+     --get trivial relations of degree j
+     trivialRels=flatten entries basis({g,j},S);
+     for i from 0 to g do (
+	  --generate Polishchuk relations of codimension i from trivial relations
+	  Rels=apply(#trivialRels, t->polishchukD(trivialRels_t, i));
+	  for k from 0 to #Rels-1 do (
+	       if Rels_k != 0 then allRels=append(allRels, Rels_k)
+	       )
+	  )
+);
+I:=ideal(allRels);
+R:=S/(sub(I,S));
+R#"AbelianVarietyType"=opts.AbelianVarietyType;
+R#"Dim"=g;
+return R
+)
+
+--print part of Moonen diamond (unformatted):
+--for j from 0 to S#"Dim" do print for i from S#"Dim"-j to S#"Dim" list hilbertFunction({i,S#"Dim"-j}, S) 
+
+polishchukD=method(TypicalValue=>RingElement)  
+polishchukD RingElement := (f) -> (     
+S:= ring f;
+if f==0 then return 0_S;
+g:=0;
+mcpairs:={};
+if S#?"Dim" then g=S#"Dim" else error "The ring of f is missing the Dim attribute";
+M := flatten entries monomials(f);
+mcpairs = apply(#M, i -> {M_i,coefficient(M_i,f)});     
+ans:=0_S;
+mi:=0;
+Dmi:=0;
+for i from 0 to #M-1 do (
+mi=monomialToList(M_i);
+Dmi=monomialD(mi,g);
+for j from 0 to #Dmi-1 do ( 
+ans = ans + (mcpairs_i_1)*(Dmi_j_1)*(listToMonomial(Dmi_j_0,S))     
+     ));     
+return ans     
+     )  
+
+polishchukD (RingElement,ZZ) := (f,n) -> (       
+F:=f;
+for i from 1 to n do F = polishchukD(F);     
+return F
+     )
+
   
 ----------------------------------------------------------------------------------
 -- Private functions
 ----------------------------------------------------------------------------------
 
--- Converts a monomial in a polynomial ring to a list. 
+-- Converts a monomial to a list. 
 -- The first variable in the ring (usually x_1) plays a special role. 
 -- Examples: x_1*x_3->{1,3}; x_2*x_3^2 -> {0,2,3,3}; x_1^2*x_2^2*x_3^3 -> {2,2,2,3,3,3}
 monomialToList = (m) -> (
@@ -94,6 +140,18 @@ n:=e_0;
 e=drop(e,{0,0});
 ans:=flatten apply(#e, i ->apply(e_i,j-> i+2));
 return prepend(n,ans)
+)
+
+-- Converts a polynomial ring to a list of lists: {list representing a monomial, coefficient}  
+-- Example: 10*x_1*x_3+20*x_1^2*x_3-> {{{2, 3}, 20}, {{1, 3}, 10}}
+polynomialToList = (f) -> (
+M:={};
+M:=flatten entries monomials f;
+ans:={};
+for i from 0 to #M-1 do (
+ans=append(ans, {monomialToList(M_i), coefficient(M_i,f)})     
+);     
+return ans        
 )
 
 -- Converts a list L to a monomial in the ring R. 
@@ -114,6 +172,17 @@ ans=ans*(v_(ai-1))^(bi)
 );
 return ans
 )
+
+-- Converts a list of lists: {list representing a monomial, coefficient} to a polynomial in the ring R. 
+-- Examples: {{{2,3},10},{{0,2,3},20}}-> 10*x_1^2*x_3  + 20*x_2*x_3
+listToPolynomial = (M,R) -> (
+ans:=0;
+for i from 0 to #M-1 do (
+     ans=ans+M_i_1*listToMonomial(M_i_0,R)
+);
+return ans
+)
+
 
 -- Polishchuk D operator for Jacobians for monomials only. 
 -- Input: list L that represents the monomial and the dimension g of the Jacobian.
@@ -145,6 +214,44 @@ ans=append(ans, {Lhat,binomial(ni+nj,ni)})
 return ans
 )
 
+--Computes Polishchuk's operator Delta for monomials in list form, [P05, p.883]
+--Input: List representing a monomial, as described in listToMonomial
+--Output: list of lists, each of which consists of a list representing a monomial and an integer 
+--representing the coefficient in front of that monomial: {list representing a monomial, coefficient} 
+monomialListDelta = (L) -> (
+n:=L_0;
+L=drop(L,{0,0});
+k:=#L;
+ans:={};
+Lhat:={};
+ni:=0;
+nj:=0;
+for i from 0 to #L-2 do (
+for j from i+1 to #L-1 do (
+ni=L_i;
+nj=L_j;
+Lhat=drop(drop(L,{j,j}),{i,i});
+Lhat=sort append(Lhat,ni+nj-1);
+Lhat=prepend(n,Lhat);
+ans=append(ans, {Lhat,binomial(ni+nj,ni)})
+));
+return ans
+)
+
+--Computes Polishchuk's operator Delta for polynomials in list form, [P05, p.883]
+--Input: list of lists: {list representing a monomial, coefficient} 
+--Output: list of lists: {list representing a monomial, coefficient} 
+listDelta = (M) -> (
+ans:={};
+for i from 0 to #M-1 do (
+mi:=M_i_0;
+Deltami:=monomialListDelta(mi);
+for t from 0 to #Deltami-1 do (
+ans=append(ans, {Deltami_t_0, (M_i_1)*(Deltami_t_1)})     
+     ));     
+return ans     
+     )
+
 
 
 ----------------------------------------------------------------------------------
@@ -155,7 +262,7 @@ beginDocumentation()
 
 doc ///
   Key
-    BeauvillePolishchukRings
+    AbelianTautologicalRings
   Headline
     Construction of tautological rings of cycles on Jacobian and Prym varieties and operators on them
   Description
@@ -244,17 +351,17 @@ doc ///
      modelRing(9,AbelianVarietyType=>"Prym")
      
   SeeAlso
-   beauvillePolishchukRing
+   abelianTautologicalRing
 ///
 
 doc ///
   Key
-    (beauvillePolishchukRing, ZZ)
-    beauvillePolishchukRing
+    (abelianTautologicalRing, ZZ)
+    abelianTautologicalRing
   Headline
     Construct the Beauville-Polishchuk ring of an abelian variety (default: "Jacobian") of dimension g. 
   Usage
-    beauvillePolishchukRing(g)
+    abelianTautologicalRing(g)
   Inputs
     g:ZZ
         dimension of the abelian variety
@@ -264,12 +371,40 @@ doc ///
    Text
     Construct the Beauville-Polishchuk ring of an abelian variety (default: "Jacobian") of dimension g. 
    Example
-     beauvillePolishchukRing(10)
-     beauvillePolishchukRing(9, AbelianVarietyType=>"Prym")
+     abelianTautologicalRing(10)
+     abelianTautologicalRing(9, AbelianVarietyType=>"Prym")
      
   SeeAlso
    modelRing
 ///
+
+doc ///
+  Key
+    polishchukD
+    (polishchukD, RingElement)
+    (polishchukD, RingElement, ZZ)
+  Headline
+    Polishchuk D operator. 
+  Usage
+    polishchukD(f)
+    polishchukD(f,n)
+  Inputs
+    f:RingElement
+        an element of a ring returned by modelRing or abelianTautologicalRing FIXME hyperlink the functions  
+    n:ZZ
+        an integer to specify the number of iterations of the Polishchuk operator to be applied
+  Outputs
+    :RingElement
+  Description
+   Text
+    Apply the Polishchuk D operator, see [P05] FIXME. 
+   Example
+     S=modelRing(5);
+     polishchukD(x_1^2*x_2*x_3);
+     polishchukD(x_1^2*x_2*x_3,2);
+--  SeeAlso
+///
+
 
 doc ///
   Key
@@ -299,12 +434,12 @@ doc ///
 
 doc ///
   Key
-    [beauvillePolishchukRing, AbelianVarietyType]
+    [abelianTautologicalRing, AbelianVarietyType]
   Headline
-    Option to specify the type of abelian variety whose beauvillePolishchukRing will be created.
+    Option to specify the type of abelian variety whose abelianTautologicalRing will be created.
   Description
    Text
-    @TO Option@ to specify the type of abelian variety whose beauvillePolishchukRing will be created.
+    @TO Option@ to specify the type of abelian variety whose abelianTautologicalRing will be created.
 
     It takes @TO String@ value "Jacobian" or "Prym" (default is "Jacobian").
 ///
