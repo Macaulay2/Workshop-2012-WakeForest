@@ -301,7 +301,7 @@ threshInt = (e,t,b,t1,f)-> (
 ---f-pure threshold estimation
 ---e is the max depth to search in
 ---finalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
-threshEst=(f,e, finalCheck)->(
+threshEst={finalCheck=> true} >> o -> (f,e)->(
      --error "help";
      p:=char ring f;
      n:=nu(f,e);
@@ -312,7 +312,7 @@ threshEst=(f,e, finalCheck)->(
 	  ak:=threshInt(e,(n-1)/p^e,fSig(e,n-1,f),n,f); 
 	--  if (DEBUG == true) then error "help mostest";
 	  if ( (n+1)/p^e == (ak#1) ) then (ak#1)
-	  else if (finalCheck == true) then ( 
+	  else if (o.finalCheck == true) then ( 
 	       if ((isFRegularPoly(f,(ak#1) )) ==false ) then ( error "HELP!"; (ak#1))
 	       else {(ak#1),(n+1)/p^e} 
 	  )
