@@ -1091,7 +1091,19 @@ document {
        "2004 "
        },
   PARA {
+       "[M] ",
+       "Mustaţă, Mircea ",
+       EM "Multiplier ideals of hyperplane arrangements. ",
+       "Trans. Amer. Math. Soc. 358 (2006), no. 11, 5015–5023."
+       },
+  PARA {
        "[T] ",
+       "Teitler, Zach ",
+       EM "A note on Mustaţă's computation of multiplier ideals of hyperplane arrangements. ",
+       "Proc. Amer. Math. Soc. 136 (2008), no. 5, 1575–1579."
+       },
+  PARA {
+       "[Th] ",
        "Thompson, H.M. ",
        EM "Multiplier Ideals of Monomial Space Curves, ",
        HREF { "http://arxiv.org/abs/1006.1915" , "arXiv:1006.1915v4" },
