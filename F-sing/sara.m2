@@ -2,21 +2,6 @@
 xInt = (x1, y1, x2, y2) ->  x1-(y1/((y1-y2)/(x1-x2)))
  
  
---- Computes the F-signature for a specific value a/p^e
---- Input:
----	e - some positive integer
----	a - some positive integer between 0 and p^e
----	f - some HOMOGENEOUS polynomial in two or three variables in a ring of PRIME characteristic
----
---- Output:
----	returns value of the F-signature of the pair (R, f^{a/p^e})
-
-fSig = (e1, a1, f1) -> (
-     R1:=ring f1;
-     pp= char ring f1;     
-     1-(1/p^(dim(R1)*e1))*
-          degree( (ideal(apply(first entries vars R1, i->i^(pp^e1)))+ideal(fastExp(f1,a1) ))) 
-)     
      
 --- 
 --- Input:
@@ -37,22 +22,25 @@ threshInt = (e,t,b,t1,f)-> (
 
 
 ---f-pure threshold estimation
-
-threshEst=(f,e)->(
---error "help";
-p:=char ring f;
-n:=nu(f,e);
---error "help more";
-if (isFRegularPoly(f,(n/(p^e-1)))==false) then n/(p^e-1)
-else (
---error "help most";
-ak:=threshInt(e,(n-1)/p^e,fSig(e,n-1,f),n,f); 
---if (DEBUG == true) then error "help mostest";
-if ( (n+1)/p^e == (ak#1) ) then (ak#1)
-else if (isFRegularPoly(f,(ak#1) )==false) then (ak#1)
-else
-{(ak#1),(n+1)/p^e}
-)
+---e is the max depth to search in
+---finalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
+threshEst=(f,e, finalCheck)->(
+     --error "help";
+     p:=char ring f;
+     n:=nu(f,e);
+     --error "help more";
+     if (isFRegularPoly(f,(n/(p^e-1)))==false) then n/(p^e-1)
+     else (
+	  --error "help most";
+	  ak:=threshInt(e,(n-1)/p^e,fSig(e,n-1,f),n,f); 
+	  --if (DEBUG == true) then error "help mostest";
+	  if ( (n+1)/p^e == (ak#1) ) then (ak#1)
+	  else if (finalCheck == true) then ( 
+	       if (isFRegularPoly(f,(ak#1) )==false) then (ak#1)
+	       else {(ak#1),(n+1)/p^e} 
+	  )
+	  else {(ak#1),(n+1)/p^e}
+     )
 )
 
 
