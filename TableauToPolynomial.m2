@@ -71,7 +71,7 @@ unfactor = (L, F, v) -> (
      G1 := map(uberRing, Fring);  --- G1, G2 map to the big ring and
      G2 := map(uberRing, Hring); 
      H = applyTable(H, i-> {G1 i#0, G2 value i#1});
-     tmp := G1 F;
+     tmp := G1 F; print(#terms(tmp));
      for h in H do tmp = sum for u in h list ((value u#1)*contract(u#0,tmp));
      mapList := join(apply(#gens Fring, i -> 0), gens Hring);
      G3 := map(Hring, uberRing, mapList);
@@ -138,10 +138,38 @@ end
 
 restart
 loadPackage"TableauToPolynomial"
-debug TableauToPolynomial
+--debug TableauToPolynomial
 mu1 = {{1,2,3},{4,5}}
 mu2 = {{1,2,4},{3,5}}
 mu3 = {{1,3,5},{2,4}}
 L = {mu1, mu2, mu3}
-tableauToPoly L
-a
+tableauToPoly( L,Variable =>"x");
+# terms oo
+
+
+load"./tensors/standardTableaux.m2"
+tabToMat = L->  matrix apply(L,ll -> ll| apply(#L#0 - #ll,i-> 0))
+myT=(standardTableaux({3,3},{1,1,1,1,1,1}))
+apply(myT,ll->tabToMat( ll))
+
+
+f1=tableauToPoly( apply({0,1,2,3}, i-> myT_i));
+R = ring(f1)
+f2=tableauToPoly( apply({0,1,2,4}, i-> myT_i));
+f3=tableauToPoly( apply({0,1,3,4}, i-> myT_i));
+f4=tableauToPoly( apply({0,2,3,4}, i-> myT_i));
+f5=tableauToPoly( apply({1,2,3,4}, i-> myT_i));
+betti ideal ({f1,f2,f3,f4,f5}/(i-> sub(i,R)))
+
+
+myT=(standardTableaux({2,2,2},{1,1,1,1,1,1}))
+apply(myT,ll->tabToMat( ll))
+
+
+f1=tableauToPoly( apply({0,1,2,3}, i-> myT_i));
+R = ring(f1)
+f2=tableauToPoly( apply({0,1,2,4}, i-> myT_i));
+f3=tableauToPoly( apply({0,1,3,4}, i-> myT_i));
+f4=tableauToPoly( apply({0,2,3,4}, i-> myT_i));
+f5=tableauToPoly( apply({1,2,3,4}, i-> myT_i));
+betti ideal ({f1,f2,f3,f4,f5}/(i-> sub(i,R)))
