@@ -26,6 +26,8 @@ if version#"VERSION" <= "1.4" then (
     needsPackage "Posets";
     )
 
+needsPackage"SimpleDoc" 
+
 -- Load configurations
 posets'PDFViewer = if instance((options Posets).Configuration#"DefaultPDFViewer", String) then (options Posets).Configuration#"DefaultPDFViewer" else "open";
 posets'Precompute = if instance((options Posets).Configuration#"DefaultPrecompute", Boolean) then (options Posets).Configuration#"DefaultPrecompute" else true;
@@ -322,14 +324,14 @@ doc ///
      Headline
      	  checks whether a set of elements in a poset is bounded above
      Usage
-     	  isBoundedAbove(P,L)
+     	  i = isBoundedAbove(P,L)
      Inputs
      	  P : Poset
 	       a poset
 	  L : List
 	       a list of elements in the poset P 
      Outputs
-     	  Boolean
+     	  i : Boolean
      Description
     	  Text
 	       This method tests whether the set L is bounded from above in the poset P
@@ -350,14 +352,14 @@ doc ///
      Headline
      	  checks whether a set of elements in a poset is bounded below
      Usage
-     	  isBoundedBelow(P,L)
+     	  i = isBoundedBelow(P,L)
      Inputs
      	  P : Poset
 	       a poset
 	  L : List
 	       a list of elements in the poset P 
      Outputs
-     	  Boolean
+     	  i : Boolean
      Description
     	  Text
 	       This method tests whether the set L is bounded from below in the poset P
@@ -379,14 +381,14 @@ doc ///
      Headline
      	  checks whether a set of elements in a poset is a crosscut
      Usage
-     	  isCrosscut(P,L)
+     	  i = isCrosscut(P,L)
      Inputs
      	  P : Poset
 	       a poset
 	  L : List
 	       a list of elements in the poset P 
      Outputs
-     	  Boolean
+     	  i : Boolean
      Description
     	  Text
 	       This method tests whether the set L in the poset P is a crosscut
@@ -415,7 +417,7 @@ doc ///
      	  L : List
 	       a list of subsets of P
      Description
-    	  Text
+          Text
 	       This method returns the list of crosscuts in the poset P
 	  Example
 	       P = poset({(a,e), (e,g), (b,e), (b,f), (c,f), (f,g), (d,d)})
@@ -424,23 +426,25 @@ doc ///
      	  isCrosscut
 ///
 
-doc ///
-     Key     
-     	  crosscutComplex
+{*doc ///
+     Key
+          crosscutComplex
 	  (crosscutComplex, Poset, List)
-	  [crosscutComplex, VariableName]
-	  [crosscutComplex, CoefficientRing]
+	  [crosscutComplex,VariableName]
+	  [crosscutComplex,CoefficientRing]
      Headline
-     	  returns the crosscut complex of a crosscut in a poset
+          returns the crosscut complex of a crosscut in a poset
      Usage
-     	  crosscutComplex(P,L)
+     	  C = crosscutComplex(P,L)
      Inputs
      	  P : Poset
 	       a poset
 	  L : List
 	       a list of elements in the poset P giving a crosscut 
+	  VariableName=>Symbol
+	  CoefficientRing=>Ring
      Outputs
-     	  simplicialComplex
+     	  C : simplicialComplex
      Description
     	  Text
 	       This method returns the crosscut complex of the crosscut L in the poset P
@@ -450,7 +454,7 @@ doc ///
 	       crosscutComplex(P,L)       
      SeeAlso
      	  isCrosscut
-///
+///*}
 
 
 -- _
