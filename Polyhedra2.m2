@@ -79,6 +79,25 @@ PolyhedralComplex = new Type of PolyhedralObject
 globalAssignment PolyhedralObject
 
 
+Cone == Cone := (C1,C2)->(
+     if (not (C1#?"Rays" and C2#"Rays")) and (not (C1#?"Facets" and C2#?"Facets")) then (
+	  if C1#?"Rays" then rays C2
+	  else if C2#?"Rays" then rays C1
+	  else (halfspaces C1;halfspaces C2));
+     if C1#?"Rays" and C2#?"Rays" then return (
+	  C1#"Rays"==C2#"Rays" and C1#"LinealitySpace"==C2#"LinealitySpace");
+     C1#"Facets"==C2#"Facets" and C1#"LinearSpan"==C2#"LinearSpan")
+
+Polyhedron == Polyhedron := (C1,C2)->(
+     if (not (C1#?"Vertices" and C2#"Vertices")) and (not (C1#?"Facets" and C2#?"Facets")) then (
+	  if C1#?"Vertices" then rays C2
+	  else if C2#?"Vertices" then rays C1
+	  else (halfspaces C1;halfspaces C2));
+     if C1#?"Vertices" and C2#?"Vertices" then return (
+	  C1#"Vertices"==C2#"Vertices" and C1#"LinealitySpace"==C2#"LinealitySpace");
+     C1#"Facets"==C2#"Facets" and C1#"AffineHull"==C2#"AffineHull")
+	  
+
 convexHull = method()
 convexHull (Matrix,Matrix,Matrix):=(M,N,L)->(
      new Polyhedron from hashTable {
@@ -137,7 +156,7 @@ posHull List:=L->(
 		    )
 	       else if instance(P,Cone) then (
 		    if not P#?"Rays" and not P#?"InputRays" then computeRays P;
-		    if P#?"Rays" then return(P#"Rays",P#"LinearSpan");
+		    if P#?"Rays" then return(P#"Rays",P#"LinealitySpace");
 		    return(P#"InputRays",P#"InputLineality")		    		    
 		    )
 	       else if instance(P,Matrix) then (
@@ -159,15 +178,15 @@ intersection (Matrix,Matrix):=(M,N)->(
      if not numColumns N ==1 then return new Cone from hashTable {
 	  "Equations"=>promote(- N,QQ),
   	  "Inequalities"=>promote(- M,QQ)};
-     intersection(M,N,map(QQ^0,QQ^(numColumns M),0),map(QQ^numColumns M,QQ^0,0))
+     intersection(M,N,map(QQ^0,QQ^(1+numColumns M),0),map(QQ^0,QQ^0,0))
      )	  
 
 intersection Matrix:=M->(intersection(M,map(QQ^0,QQ^(numColumns M),0)))
 
 intersection (Matrix,Matrix,Matrix,Matrix):=(M,v,N,w)->(
      new Polyhedron from hashTable {
-	  "Inequalities"=>promote(v|-M,QQ),
- 	  "Equations"=>promote(w|-N,QQ)
+	  "Inequalities"=>promote(v|(-M),QQ),
+ 	  "Equations"=>promote(w|(-N),QQ)
 	  }
      )     
 
@@ -178,7 +197,7 @@ intersection List := L -> (
      datalist:=apply(L,P->(
 	       if instance(P,Polyhedron) then (
 		    if not P#?"Facets" and not P#?"Inequalities" then computeFacets P;
-		    if P#?"Facets" then return(P#"Facets",P#"LinearSpan");
+		    if P#?"Facets" then return(P#"Facets",P#"AffineHull");
 		    return(P#"Inequalities",P#"Equations")		    
 		    )
 	       else if instance(P,Cone) then (
@@ -208,7 +227,7 @@ hyperplanes Cone := P -> (
 
 hyperplanes Polyhedron := P -> (
 	if not P#?"Facets" then computeFacets P;
-	M:=P#"LinearSpan";
+	M:=P#"AffineHull";
 	(-M_(toList(1..numColumns M-1)),M_{0})
 	)
 
@@ -254,6 +273,22 @@ linSpace Polyhedron := P -> (
 	computeRays P;
 	transpose P#"LinealitySpace")
 
+ambDim = method ()
+ambDim Cone:=C->(
+     if not C#?"ConeAmbientDim" then (
+     if C#?"Rays" then C#"ConeAmbientDim"=numColumns C#"Rays" 	  
+     else if C#?"InputRays" then C#"ConeAmbientDim"=numColumns C#"InputRays" 	  
+     else if C#?"Inequalities" then C#"ConeAmbientDim"=numColumns C#"Inequalities" 	  
+     else C#"ConeAmbientDim"=numColumns C#"Facets"); 	  
+      C#"ConeAmbientDim")
+ 
+ambDim Polyhedron:=C->(
+     if not C#?"AmbientDim" then (
+     if C#?"Vertices" then C#"AmbientDim"=numColumns C#"Vertices" -1 	  
+     else if C#?"Points" then C#"AmbientDim"=numColumns C#"Points" -1	  
+     else if C#?"Inequalities" then C#"AmbientDim"=numColumns C#"Inequalities"-1 	  
+     else C#"AmbientDim"=numColumns C#"Facets"-1); 	  
+      C#"AmbientDim")
 
 
 
@@ -296,7 +331,7 @@ computeFacets Polyhedron :=C->(
      if C#?"Vertices" then fm=fourierMotzkin(transpose  C#"Vertices",transpose C#"LinealitySpace")
      else fm=fourierMotzkin(transpose  C#"Points",transpose C#"InputLineality");
      C#"Facets"=-transpose fm_0;
-     C#"LinearSpan"=-transpose fm_1;     
+     C#"AffineHull"=-transpose fm_1;     
      )
 
 computeRays = method ()
@@ -312,7 +347,7 @@ computeRays Cone := C -> (
 computeRays Polyhedron := C -> (
      local fm;
      if not C#?"Facets" and not C#?"Inequalities" then computeFacets C;
-     if C#?"Facets" then fm=fourierMotzkin(transpose C#"Facets",transpose C#"LinearSpan")
+     if C#?"Facets" then fm=fourierMotzkin(transpose C#"Facets",transpose C#"AffineHull")
      else fm=fourierMotzkin(transpose C#"Inequalities",transpose C#"Equations");
      C#"Vertices"=normalizeCoordinates (-transpose fm_0);
      C#"LinealitySpace"=-transpose fm_1;
