@@ -127,59 +127,6 @@ Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
 		      else 0))));
   E)	    		    
 
-tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))
-
-Hom (ChainComplex, ChainComplexMap) := ChainComplexMap => (K,f) -> (
-     F:= source f;
-     G:= target f;
-     S:= Hom(K,F); 
-     T:= Hom(K,G);
-     m:= k -> (
-	  g:= (i,j) -> (if i == j then Hom(K_i,f_(i-k)) else map(Hom(K_j,G_(j-k)),Hom(K_i,F_(i-k)),0));
-	  L:= toList(max (min K,k + min F)..min(max K,k + max F));
-	  tmap (L,L,g)
-	  );
-     maps:= k -> map(T_k,S_k,m (max K - min F - k));
-     map(T,S,maps))
-
-Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,K) -> (
-     F:= source f;
-     G:= target f;
-     S:= Hom(G, K); 
-     T:= Hom(F, K);
-     m:= k -> (
-	  g:= (i,j) -> (if i == j then Hom(f_i,K_(i-k)) else map(Hom(F_j,K_(j-k)),Hom(G_i,K_(i-k)),0));
-	  L:= toList(max (min F,k + min K)..min(max F,k + max K));
-	  tmap (L,L,g)
-	  );
-     maps:= k -> map(T_k,S_k,m (max F - min K - k));
-     map(T,S,maps))
-  
-ChainComplexMap ** ChainComplex := ChainComplexMap => (f,K) -> (
-     F:= source f;
-     G:= target f;
-     S:= F ** K; 
-     T:= G ** K; 
-     m:= k -> (
-	  g:= (i,j) -> (if i == j then f_i ** K_(k-i) else map(G_j ** K_(k-j),F_i ** K_(k-i),0));
-	  L:= toList(max (min F,k - max K)..min(max F,k - min K));
-	  tmap (L,L,g));
-     maps:= k -> map(T_k,S_k,m k);
-     map(T,S,maps))
-
-ChainComplex ** ChainComplexMap := ChainComplexMap => (K,f) -> (
-     F:= source f;
-     G:= target f;
-     S:= K ** F;
-     T:= K ** G;
-     m:= k -> (
-	  g:= (i,j) -> (if i == j then K_i ** f_(k-i) else map(K_j ** G_(k-j),K_i ** F_(k-i),0));
-	  L:= toList(max (min F,k - max K)..min(max F,k - min K));
-	  tmap (L,L,g)
-	  );
-     maps:= k -> map(T_k,S_k,m k);
-     map(T,S,maps))
-
 -- constructing filtered complexes
 FilteredComplex = new Type of HashTable
 FilteredComplex.synonym = "filtered chain complex"
@@ -188,12 +135,15 @@ spots = K -> select(keys K, i -> class i === ZZ)
 max FilteredComplex := K -> max spots K
 min FilteredComplex := K -> min spots K
 
+FilteredComplex ^ InfiniteNumber :=
 FilteredComplex ^ ZZ := ChainComplex => (K,p) -> (
      -- We assume that spots form a consecutive sequence of integers
   maxK := max K;                   -- all filtrations are separated
   minK := min K;      	      	   -- all filtrations are exhaustive
   if K#?p then K#p else if p < minK then K#minK else if p > maxK then K#maxK
   else error "expected no gaps in filtration")
+
+chainComplex FilteredComplex := ChainComplex => K -> K^-infinity
 
 FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
   all(min(min C,min D)..max (max C,max D),i-> C^i == D^i))
@@ -311,6 +261,59 @@ pageE :=  (r,F,p,q) -> (
     B:= pageB(r,F,p,q);
     Z/B) 
 
+tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))
+
+Hom (ChainComplex, ChainComplexMap) := ChainComplexMap => (K,f) -> (
+     F:= source f;
+     G:= target f;
+     S:= Hom(K,F); 
+     T:= Hom(K,G);
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then Hom(K_i,f_(i-k)) else map(Hom(K_j,G_(j-k)),Hom(K_i,F_(i-k)),0));
+	  L:= toList(max (min K,k + min F)..min(max K,k + max F));
+	  tmap (L,L,g)
+	  );
+     maps:= k -> map(T_k,S_k,m (max K - min F - k));
+     map(T,S,maps))
+
+Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,K) -> (
+     F:= source f;
+     G:= target f;
+     S:= Hom(G, K); 
+     T:= Hom(F, K);
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then Hom(f_i,K_(i-k)) else map(Hom(F_j,K_(j-k)),Hom(G_i,K_(i-k)),0));
+	  L:= toList(max (min F,k + min K)..min(max F,k + max K));
+	  tmap (L,L,g)
+	  );
+     maps:= k -> map(T_k,S_k,m (max F - min K - k));
+     map(T,S,maps))
+  
+ChainComplexMap ** ChainComplex := ChainComplexMap => (f,K) -> (
+     F:= source f;
+     G:= target f;
+     S:= F ** K; 
+     T:= G ** K; 
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then f_i ** K_(k-i) else map(G_j ** K_(k-j),F_i ** K_(k-i),0));
+	  L:= toList(max (min F,k - max K)..min(max F,k - min K));
+	  tmap (L,L,g));
+     maps:= k -> map(T_k,S_k,m k);
+     map(T,S,maps))
+
+ChainComplex ** ChainComplexMap := ChainComplexMap => (K,f) -> (
+     F:= source f;
+     G:= target f;
+     S:= K ** F;
+     T:= K ** G;
+     m:= k -> (
+	  g:= (i,j) -> (if i == j then K_i ** f_(k-i) else map(K_j ** G_(k-j),K_i ** F_(k-i),0));
+	  L:= toList(max (min F,k - max K)..min(max F,k - min K));
+	  tmap (L,L,g)
+	  );
+     maps:= k -> map(T_k,S_k,m k);
+     map(T,S,maps))
+
 SpectralSequenceSheet = new Type of MutableHashTable
 SpectralSequenceSheet.synonym = "spectral sequence sheet"
 
@@ -325,7 +328,6 @@ SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
       );
     if M != {} then M else continue);
   new SpectralSequenceSheet from flatten L | {symbol zero => E.zero} )
-
 
 SpectralSequenceSheet ^ List := Module => (Er,L) -> (if Er#?L then source Er#L else Er.zero) 
      
@@ -345,7 +347,7 @@ debug SpectralSequences;
 S = QQ[x,y];
 I = ideal (x,y);
 F = res I;
-FF=filteredComplex F;
+FF=filteredComplex F
 Hom(FF,F)
 prune (F**F)
 
