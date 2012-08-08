@@ -43,9 +43,9 @@ export {
      reverseEdges,
      
      --components of matchings,
-     "edges",
-     "complex",
-     "poset",
+     matching,
+     complex,
+     inclusionPoset,
      
      --operation to display Matchings
      texMatching,
@@ -169,6 +169,12 @@ isMorseMatching(List,Poset):=(M,P)-> (
      isMatching(M,hasseDiagram P) and isAcyclic(reverseEdges(M,hasseDiagram P))
 )
 
+isMorseMatching(List,SimplicialComplex):=(M,D)-> (
+     --This method inputs matching in terms of ORIGINAL face names.
+     P:=facePoset D;
+     isMorseMatching(M,hasseDiagram P)
+)
+
 ------------------------------------------------------
 --TYPE:  MorseMatching
 --METHOD:  morseMatching
@@ -190,7 +196,7 @@ morseMatching= method()
 morseMatching(List,Poset):= MorseMatching => (M, P) -> (
      --Note that this method passes in the edges using the INDICES of poset elements, not the original names.
      if isMorseMatching(M,P) then (
-     	  new MorseMatching from hashTable {symbol edges => M, symbol poset => P,symbol cache => new CacheTable}
+     	  new MorseMatching from hashTable {symbol matching => M, symbol inclusionPoset => P,symbol cache => new CacheTable}
      )
      else error "Not a Morse Matching on P."
 )
@@ -269,7 +275,8 @@ texMatching (List,Poset) := String => opts -> (M,P) -> (
     -- edge list to be read into TikZ
     if not P.cache.?coveringRelations then coveringRelations P;
     if not all(M, e-> member(e,P.cache.coveringRelations)) then error "Edge set not subset of relations.";
-    tempEdgeList:= select(P.cache.coveringRelations, e -> not member(e,M));
+    --removed edges to emptyset here - stylistic choice.
+    tempEdgeList:= select(select(P.cache.coveringRelations, e -> not member(e,M)), b -> b_0 =!= 0);
     edgelist := apply(tempEdgeList, r -> concatenate(toString first r, "/", toString last r));
     revEdgeList := apply(M, r-> concatenate(toString first r, "/", toString last r));
     -- Find each level of P and set up the positioning of the vertices.
