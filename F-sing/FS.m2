@@ -82,9 +82,34 @@ fastExp = (f,N) ->
 --***********************************************************--
 ---------------------------------------------------------------
 
+--Lists \nu_I(p^d) for d = 1,...,e 
+nuList = method();
+nuList (Ideal,ZZ) := (I,e) ->
+(
+     m = ideal(first entries vars ring I); 
+     L = new MutableList;
+     N=0;
+     for d from 1 to e do 
+     (	  
+	  J = ideal(apply(first entries gens I, g->fastExp(g, N, char ring I)));
+	  N=N+1;
+	  while isSubset(I*J, frobeniusPower(m,d))==false do (N = N+1; J = I*J);
+     	  L#(d-1) = N-1;
+	  N = p*(N-1)
+     );
+     L
+)
+nuList (RingElement,ZZ) := (f,e) -> nuList(ideal(f),e)
 
+--Gives \nu_I(p^e)
+nu = method();
+nu (Ideal,ZZ) := (I,e) -> (nuList(I,e))#(e-1)
+nu (RingElement, ZZ) := (f,e) -> nu(ideal(f),e)
 
-
+--Gives a list of \nu_I(p^d)/p^d for d=1,...,e
+FPTApproxList = method();
+FPTApproxList (Ideal,ZZ) := (I,e) -> apply(#nuList(I,e), i->((nuList(I,e))#i)/p^(i+1)) 
+FPTApproxList (RingElement,ZZ) := (f,e) -> FPTApproxList(ideal(f),e)
 
 
 ---------------------------------------------------------------
@@ -114,21 +139,18 @@ frobeniusPower(Ideal,ZZ) := (I,e) ->(
 --************************************************************--
 ----------------------------------------------------------------
 
-
 --Computes I^{[1/p^e]}, we must be over a perfect field. and working with a polynomial ring
 --This is a slightly stripped down function due to Moty Katzman.
 ethRoot = (Im,e) -> (
---     error "step ethRoot";
      if (isIdeal(Im) != true) then (
-     	  error "ethRoot: You need to pass in an ideal"
+     	  print "ethRoot: You need to pass in an ideal"; print Im; assert false
      );
-     if (not (e >= 0)) then (error "ethRoot: You must pass a nonnegative integer");
+     if (not (e >= 0)) then (print "ethRoot: You must pass a nonnegative integer"; assert false);
      Rm:=ring(Im); --Ambient ring
      pp:=char(Rm); --characteristic
      Sm:=coefficientRing(Rm); --base field
      n:=rank source vars(Rm); --number of variables
      vv:=first entries vars(Rm); --the variables
-     --This definition of the ring NEEDS TO BE FIXED, we shouldn't be fixing Y_i
      R1:=Sm[vv, Y_1..Y_n, MonomialOrder=>ProductOrder{n,n},MonomialSize=>32]; -- a new ring with new variables
      J0:=apply(1..n, i->Y_i-substitute(vv#(i-1)^(pp^e),R1)); -- 
      --print J0;
@@ -144,7 +166,7 @@ ethRoot = (Im,e) -> (
      L2:=mingens L;
      L3:=first entries L2;
      L4:=apply(L3, t->substitute(t,M));
-     use(Rm); --THIS NEEDS TO BE FIXED
+     use(Rm);
      substitute(ideal L4,Rm)
 )
 
@@ -157,8 +179,7 @@ tauAOverPEMinus1Poly = (fm, a1, e1) -> (
      Rm := ring fm;
      pp := char Rm;
      a2 := a1 % (pp^e1 - 1);
-     k2 := a1 // (pp^e1 - 1); --it seems faster to use the fact 
-                              --that tau(f^(1+k)) = f*tau(f^k) 
+     k2 := a1 // (pp^e1 - 1); --it seems faster to use the fact that tau(f^(1+k)) = f*tau(f^k) 
      fpow := fm^a2;
      IN := eR(ideal(fpow*fm),e1); -- this is going to be the new value.  The *fm is a test element
      -- the previous commands should use the fast power raising when Emily finishes it
@@ -180,7 +201,7 @@ tauPoly = (fm, t1) -> (
      Rm := ring fm; 
      pp := char Rm;
      L1 := divideFraction(t1,pp); --this breaks up t1 into the pieces we need
-     I1 := ideal(0_Rm);
+     local I1;
      --first we compute tau(fm^{a/(p^c-1)})
      if (L1#2 != 0) then 
           I1 = tauAOverPEMinus1Poly(fm,L1#0,L1#2) else I1 = ideal(fm^(L1#0));     
