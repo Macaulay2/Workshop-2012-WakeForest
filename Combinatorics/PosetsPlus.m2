@@ -56,7 +56,7 @@ export {
      
      -- fibers
      posetMapFiber,
-     isFiberContractible
+     isFiberContractible,
      
      --finite atomic lattices
      atomSupport,
