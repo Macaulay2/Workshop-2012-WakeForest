@@ -14,6 +14,8 @@ P = nextPartition P
 *}
 nextPartition = method()
 nextPartition ZZ := n -> new Partition from {n}
+nextPartition (ZZ,ZZ) := (n,k) ->
+  new Partition from select(flatten append( floor(n/k):k , n % k ), i->i!=0)
 nextPartition Nothing := P -> null
 nextPartition Partition := P -> (
   PL := new List from P;
