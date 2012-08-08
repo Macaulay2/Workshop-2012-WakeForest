@@ -59,7 +59,7 @@ export {
      isFiberContractible
      
      --finite atomic lattices
-     atomSupport
+     atomSupport,
      indexedAtomSupport
     }
 
