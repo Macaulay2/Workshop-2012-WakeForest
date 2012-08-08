@@ -264,12 +264,13 @@ xInt = (x1, y1, x2, y2) ->  x1-(y1/((y1-y2)/(x1-x2)))
 ---	f - some HOMOGENEOUS polynomial in two or three variables in a ring of PRIME characteristic
 --- Output:
 ---	returns value of the F-signature of the pair (R, f^{a/p^e})
-     
-fSig = (e, a, f) -> (
-if not isHomogeneous f   
-     then error "expected a homogeneous f";     
-p= char ring f;     
-1-(1/p^(dim(ring f)*e))*degree((ring f)^1/(ideal(apply(first entries vars R, i->i^(p^e)))+ideal(f^a))))     
+--- Based on work of Eric Canton
+fSig = (e1, a1, f1) -> (
+     R1:=ring f1;
+     pp= char ring f1;     
+     1-(1/p^(dim(R1)*e1))*
+          degree( (ideal(apply(first entries vars R1, i->i^(pp^e1)))+ideal(fastExp(f1,a1) ))) 
+)     
 
 --- Estimates the F-pure threshold
 --- Input:
