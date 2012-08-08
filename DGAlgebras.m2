@@ -18,7 +18,7 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
 	isGolod, isGolodHomomorphism, GenDegreeLimit, RelDegreeLimit, TMOLimit,
 	InitializeDegreeZeroHomology, InitializeComplex, isAcyclic, getDegNModule, polydifferential, 
 	semifreeDGModule, DGRing, homologyModule, DGModule, DGModuleMap, dgModuleMap, shift, diffs,
-	shiftMap, inverseShiftMaps
+	shiftMap, inverseShiftMap, composedDGModuleMap
 }
 
 -- Questions:
@@ -1157,6 +1157,14 @@ isWellDefined DGModuleMap := f -> (
    all(apply(numgens U.natural, i -> f.natural*(U.diff*(U.natural_i)) == V.diff*(f.natural*(U.natural_i))), identity)
 )
 
+---------------------------------
+-- Composition of DGModuleMaps --
+---------------------------------
+DGModuleMap * DGModuleMap :=(g,f) -> (
+--build in some sort of error if f.target =!= g.source
+  composedDGModuleMap := dgModuleMap(g.target, f.source, (g.natural*f.natural));
+  composedDGModuleMap
+  )
 
 -------------------------------
 ----   Shift DGModule   -------
@@ -1225,7 +1233,7 @@ if not (isWellDefined(f)) then error "DGModule map is not well defined.";
      W#(symbol Degrees) = degrees (V.natural ++ shiftU.natural);
      W#(symbol DGRing) = U.DGRing;
      W#(symbol ring) = U.ring;
-     W#(symbol diff) = (V.diff | (shiftV.cache.inverseShiftMap.natural)*(shiftedMap.natural)) || (0 | shiftU.diff);
+     W#(symbol diff) = (V.diff | (shiftV.cache.inverseShiftMap*shiftedMap).natural) || (0 | shiftU.diff);
      W#(symbol isHomogeneous) = (U.isHomogeneous and V.isHomogeneous); -- is this right?
      W#(symbol cache) = new CacheTable;
      W.cache#(symbol homology) = new MutableHashTable;
