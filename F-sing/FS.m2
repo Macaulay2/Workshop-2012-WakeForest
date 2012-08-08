@@ -71,6 +71,7 @@ new List from E
 --Computes powers of elements in char p>0 rings using the "Freshman's dream"
 fastExp = (f,N) ->
 (
+     p=char ring f;
      E=basePExp(N,char ring f);
      product(apply(#E, e -> (sum(apply(terms f, g->g^(p^e))))^(E#e) ))
 )
@@ -91,7 +92,8 @@ nuList (Ideal,ZZ) := (I,e) ->
      N=0;
      for d from 1 to e do 
      (	  
-	  J = ideal(apply(first entries gens I, g->fastExp(g, N, char ring I)));
+	  --J = ideal(apply(first entries gens I, g->fastExp(g, N, char ring I)));
+	  J = ideal(apply(first entries gens I, g->fastExp(g, N)));
 	  N=N+1;
 	  while isSubset(I*J, frobeniusPower(m,d))==false do (N = N+1; J = I*J);
      	  L#(d-1) = N-1;
@@ -272,7 +274,7 @@ fSig = (e1, a1, f1) -> (
           degree( (ideal(apply(first entries vars R1, i->i^(pp^e1)))+ideal(fastExp(f1,a1) ))) 
 )     
 
---- Estimates the F-pure threshold
+--- Calculates the x-int of the secant line between two guesses for the fpt
 --- Input:
 ---	t - some positive rational number
 ---	b - the f-signature of (R,f^{t/p^e})
@@ -284,6 +286,6 @@ fSig = (e1, a1, f1) -> (
 ---	fSig applied to (e,t1,f)
 ---	x-intercept of the line passing through (t,b) and (t1,fSig(e,t1,f))
 
-threshEst = (e,t,b,t1,f)-> (
+threshInt = (e,t,b,t1,f)-> (
 {b1=fSig(e,t1,f),xInt(t,b,t1,b1)}
 )
