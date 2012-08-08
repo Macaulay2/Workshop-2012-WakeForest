@@ -153,7 +153,7 @@ ethRoot = (Im,e) -> (
      Sm:=coefficientRing(Rm); --base field
      n:=rank source vars(Rm); --number of variables
      vv:=first entries vars(Rm); --the variables
-     R1:=Sm[vv, Y_1..Y_n, MonomialOrder=>ProductOrder{n,n},MonomialSize=>32]; -- a new ring with new variables
+     R1:=Sm[vv, Y_1..Y_n, MonomialOrder=>ProductOrder{n,n},MonomialSize=>64]; -- a new ring with new variables
      J0:=apply(1..n, i->Y_i-substitute(vv#(i-1)^(pp^e),R1)); -- 
      --print J0;
      M:=toList apply(1..n, i->Y_i=>substitute(vv#(i-1),R1));
@@ -182,7 +182,7 @@ tauAOverPEMinus1Poly = (fm, a1, e1) -> (
      pp := char Rm;
      a2 := a1 % (pp^e1 - 1);
      k2 := a1 // (pp^e1 - 1); --it seems faster to use the fact that tau(f^(1+k)) = f*tau(f^k) 
-     fpow := fm^a2;
+     fpow := fastExp(fm,a2);
      IN := eR(ideal(fpow*fm),e1); -- this is going to be the new value.  The *fm is a test element
      -- the previous commands should use the fast power raising when Emily finishes it
      IP := ideal(0_Rm); -- this is going to be the old value.

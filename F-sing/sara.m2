@@ -10,11 +10,14 @@ xInt = (x1, y1, x2, y2) ->  x1-(y1/((y1-y2)/(x1-x2)))
 ---
 --- Output:
 ---	returns value of the F-signature of the pair (R, f^{a/p^e})
-     
-fSig = (e, a, f) -> (     
-p= char ring f;     
-1-(1/p^(dim(ring f)*e))*degree((ring f)^1/(ideal(apply(first entries vars R, i->i^(p^e)))+ideal(f^a))))     
 
+fSig = (e1, a1, f1) -> (
+     R1:=ring f1;
+     pp= char ring f1;     
+     1-(1/p^(dim(R1)*e1))*
+          degree( (ideal(apply(first entries vars R1, i->i^(pp^e1)))+ideal(fastExp(f1,a1) ))) 
+)     
+     
 --- 
 --- Input:
 ---	t - some positive rational number
@@ -36,21 +39,21 @@ threshInt = (e,t,b,t1,f)-> (
 ---f-pure threshold estimation
 
 threshEst=(f,e)->(
-error "help";
+--error "help";
 p:=char ring f;
 n:=nu(f,e);
-error "help more";
+--error "help more";
 if (isFRegularPoly(f,(n/(p^e-1)))==false) then n/(p^e-1)
 else (
-error "help most";
-a=threshInt(e,(n-1)/p^e,fSig(e,n-1,f),n,f); 
-error "help mostest";
-if (isFRegularPoly(f,a)==false) then a
+--error "help most";
+ak:=threshInt(e,(n-1)/p^e,fSig(e,n-1,f),n,f); 
+--if (DEBUG == true) then error "help mostest";
+if ( (n+1)/p^e == (ak#1) ) then (ak#1)
+else if (isFRegularPoly(f,(ak#1) )==false) then (ak#1)
 else
-{a,(n+1)/p^e}
+{(ak#1),(n+1)/p^e}
 )
 )
-
 
 
 
