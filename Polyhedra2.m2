@@ -40,7 +40,8 @@ newPackage("Polyhedra2",
 
 
 export {
-	"linSpan",
+	"dualCone",
+	"affineHull",
 	"intersection",
 	"linSpace",
 	"vertices",
@@ -289,9 +290,22 @@ ambDim Polyhedron:=C->(
 dim Cone:=C->(if not C#?"Dim" then C#"Dim"=ambDim C-numRows ((hyperplanes C)_0);C#"Dim")
 dim Polyhedron:=C->(if not C#?"Dim" then C#"Dim"=ambDim C-numRows ((hyperplanes C)_0);C#"Dim")
 
+affineHull = method ()
+affineHull Polyhedron := P->(hp:=hyperplanes P;
+     intersection(map(QQ^0,QQ^(1+ambDim P),0),map(QQ^0,QQ^0,0),hp#0,hp#1))
 
-
-
+dualCone = method ()
+dualCone Cone:=C->(
+     C2:=new Cone from hashTable {};
+     if C#?"InputRays" then C2#"Inequalities"=C#"InputRays";
+     if C#?"InputLineality" then C2#"Equations"=C#"InputLineality";
+     if C#?"Rays" then C2#"Facets"=C#"Rays";     
+     if C#?"LinealitySpace" then C2#"LinearSpan"=C#"LinealitySpace";
+     if C#?"Facets" then C2#"Vertices"=C#"Facets";
+     if C#?"LinearSpan" then C2#"LinealitySpace"=C#"LinearSpan";
+     if C#?"Inequalities" then C2#"InputRays"=C#"Inequalities";
+     if C#?"Equations" then C2#"InputLineality"=C#"Equations";
+     C2)
 --Non-exported stuff
 
 --rows are coordinates as in Polymake
