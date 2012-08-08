@@ -120,7 +120,8 @@ newPackage(
 --------------------------------------------------------------------------------
 
 export {
-      thresholdMonomial
+      thresholdMonomial,
+      logCanonicalThreshold
       }
 
 -- exportMutable {}
@@ -146,6 +147,7 @@ setNmzOption("bigint",true);
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
+logCanonicalThreshold = method();
 
 --------------------------------------------------------------------------------
 -- SHARED ROUTINES -------------------------------------------------------------
@@ -204,7 +206,7 @@ multIdeal(Ideal,QQ) :=
   multIdeal(Ideal,ZZ) :=
   (I,t) -> Dmodules$multiplierIdeal(I,t)
 
-lct(Ideal) := (I) -> Dmodules$lct(I)
+logCanonicalThreshold(Ideal) := (I) -> Dmodules$lct(I)
 
 
 --------------------------------------------------------------------------------
@@ -400,7 +402,7 @@ thresholdMonomial (MonomialIdeal , RingElement) := (I , mon) -> (
   return ( threshVal , facetMatrix );
 );
 
-lct (MonomialIdeal) := (I) -> first thresholdMonomial ( I , 1_(ring(I)) )
+logCanonicalThreshold (MonomialIdeal) := (I) -> first thresholdMonomial ( I , 1_(ring(I)) )
 
 --------------------------------------------------------------------------------
 -- MONOMIAL CURVES -------------------------------------------------------------
@@ -686,7 +688,7 @@ multIdeal (Ring, List, QQ) := (R, nn, t) -> (
 
 
 
--- lctMonomialCurve
+-- logCanonicalThreshold of MonomialCurve
 --
 -- Compute log canonical threshold of the defining ideal of a monomial
 -- space curve, ie., a curve in affine 3-space parametrized by
@@ -698,11 +700,11 @@ multIdeal (Ring, List, QQ) := (R, nn, t) -> (
 -- Output:
 --  * a rational number
 
-lct(Ring,List) := (R,nn) -> (
+logCanonicalThreshold(Ring,List) := (R,nn) -> (
   ff := sortedGens(R,nn);
   indexList  := intersectionIndexSet(ff);
   curveIdeal := ideal ff;
-  lctTerm    := lct(termIdeal(curveIdeal));
+  lctTerm    := logCanonicalThreshold(termIdeal(curveIdeal));
   min (2, lctTerm, 
     min(
          apply(indexList, mm -> (exceptionalDivisorDiscrepancy(mm,ff)+1)/ord(mm,ff_1) )
@@ -724,12 +726,11 @@ multIdealHyperplaneArrangement(Number,CentralArrangement) := (s,A) -> (
 multIdealHyperplaneArrangement(Number,CentralArrangement,List) := (s,A,m) -> (
   HyperplaneArrangements$multIdeal(s,A,m)
   );
-
-lctHyperplaneArrangement = method()
-lctHyperplaneArrangement(CentralArrangement) := (A) -> (
-  HyperplaneArrangements$lct(A)
-  );
 *}
+
+
+logCanonicalThreshold(CentralArrangement) := (A) -> HyperplaneArrangements$lct(A)
+
 
 --------------------------------------------------------------------------------
 -- GENERIC DETERMINANTS --------------------------------------------------------
@@ -772,7 +773,7 @@ multIdeal (Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
   return J;
 );
 
-lct(List,ZZ) := (mm,r) -> min( apply(1..<r , i -> (mm_0-i)*(mm_1-i)/(r-i)) )
+logCanonicalThreshold(List,ZZ) := (mm,r) -> min( apply(1..<r , i -> (mm_0-i)*(mm_1-i)/(r-i)) )
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -805,7 +806,7 @@ TEST ///
 --   R := QQ[x,y];
 --   -- use R;
 --   I := ideal(y^2-x^3,R);
---   assert(lct(I) == 5/6);
+--   assert(logCanonicalThreshold(I) == 5/6);
 --   assert(multIdealViaDmodules(I,1/2) == ideal(1_R));
 --   assert(multIdealViaDmodules(I,5/6) == ideal(x,y));
 --   assert(multIdealViaDmodules(I,1) == I);
@@ -849,7 +850,7 @@ TEST ///
           for e from d to 6 do (
             I := monomialIdeal(x_1^a,x_2^b,x_3^c,x_4^d,x_5^e);
             l := 1/a+1/b+1/c+1/d+1/e;
-            assert ( lct I === l );
+            assert ( logCanonicalThreshold I === l );
           );
         );
       );
@@ -1017,9 +1018,9 @@ assert(multIdeal(R,{2,3,4},3/2) == Dmodules$multiplierIdeal(I,3/2))
 TEST ///
 needsPackage "MultiplierIdeals";
 R = QQ[x,y,z];
-assert( (lct(R,{2,3,4})) === 11/6 )
-assert( (lct(R,{3,4,5})) === 13/9 )
-assert( (lct(R,{3,4,11})) === 19/12 )
+assert( (logCanonicalThreshold(R,{2,3,4})) === 11/6 )
+assert( (logCanonicalThreshold(R,{3,4,5})) === 13/9 )
+assert( (logCanonicalThreshold(R,{3,4,11})) === 19/12 )
 ///
 
 
@@ -1035,7 +1036,7 @@ TEST ///
   f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
   A := arrangement f;
   assert(A == arrangement {z, y - z, y + z, x - z, x + z, x - y, x + y});
-  assert(lct(A) == 3/7);
+  assert(logCanonicalThreshold(A) == 3/7);
 ///
 
 TEST ///
@@ -1073,10 +1074,10 @@ document {
   "the unpublished dissertation of Amanda Johnson, U. Michigan, 2003."},
   UL{
     TO (multIdeal,MonomialIdeal,QQ),
-    TO (lct,MonomialIdeal),
+    TO (logCanonicalThreshold,MonomialIdeal),
     TO thresholdMonomial,
     TO (multIdeal,Ring,List,QQ),
-    TO (lct,Ring,List)
+    TO (logCanonicalThreshold,Ring,List)
   }
   
 }
@@ -1108,14 +1109,14 @@ I = monomialIdeal(y^2,x^3);
 multIdeal(I,5/6)
   ///,
   
-  SeeAlso => { (lct,MonomialIdeal) }
+  SeeAlso => { (logCanonicalThreshold,MonomialIdeal) }
 }
 
 
 document {
-  Key => {(lct, MonomialIdeal)},
+  Key => {(logCanonicalThreshold, MonomialIdeal)},
   Headline => "log canonical threshold of a monomial ideal",
-  Usage => "lct I",
+  Usage => "logCanonicalThreshold I",
   Inputs => {
     "I" => MonomialIdeal => {},
   },
@@ -1129,7 +1130,7 @@ document {
   EXAMPLE lines ///
 R = QQ[x,y];
 I = monomialIdeal(y^2,x^3);
-lct(I)
+logCanonicalThreshold(I)
   ///,
   
   SeeAlso => { (multIdeal,MonomialIdeal,QQ) }
@@ -1166,7 +1167,7 @@ I = monomialIdeal(x^13,x^6*y^4,y^9);
 thresholdMonomial(I,x^2*y)
   ///,
   
-  SeeAlso => { (lct,MonomialIdeal) }
+  SeeAlso => { (logCanonicalThreshold,MonomialIdeal) }
 }
 
 
@@ -1212,30 +1213,30 @@ Description
 
 doc ///
 Key
-  (lct, Ring, List)
+  (logCanonicalThreshold, Ring, List)
     
 Headline
   log canonical threshold of monomial space curves
 Usage
-  lct(R,n)
+  logCanonicalThreshold(R,n)
 Inputs
   R:Ring
   n:List 
    three integers
 Outputs
-  lct:QQ 
+  logCanonicalThreshold:QQ 
 
 Description
   Text
   
-    The function {\tt lctMonomialCurve} computes the log
+    The function {\tt logCanonicalThreshold} computes the log
     canonical threshold of a space curve. This curve is defined via
     {\tt n = (a,b,c)} through the embedding {\tt u\to(u^a,u^b,u^c)}.
     
   Example
     R = QQ[x,y,z];
     n = {2,3,4};
-    lct(R,n)
+    logCanonicalThreshold(R,n)
 ///
 
 
