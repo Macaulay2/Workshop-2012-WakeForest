@@ -33,6 +33,7 @@ findQGorGen = (Rk,ek) -> (
      val 
 )
 
+
 --the function is like the 
 --Q-Gorenstien one but assume the index is 1 (or at least divides p-1).
 findGorGen = Rk -> findQGorGen(Rk,1)
@@ -55,47 +56,52 @@ findTestElementAmbient = Rk -> (
      Jk          
 )
 
+--this function finds the smallest phi-stable ideal containing the given ideal Jk
+--in a polynomial ring Sk.
+--Jk is the given ideal, ek is the power of Frobenius to use, hk is the function to multiply 
+--trace by to give phi.  phi(_) = Tr^(ek)(hk._)
+ascendIdeal = (Jk, hk, ek) -> (
+     print ".";
+     Sk := ring Jk;
+     pp := char Sk;
+     IN := Jk;
+     IP := ideal(0_Sk);
+     --we want to make the largest ideal that is phi-stable, following Moty Katzman's idea
+     --we do the following
+     while (isSubset(IN, IP) == false) do(
+     	  IP = IN;
+	  IN = eR(ideal(hk)*IP, ek)+IP
+     );
+
+     --trim the output
+     trim IP
+)
+
 --this outputs the test ideal of a (Q-)Gorenstein ring (with no pair or exponent)
 --ek is the number such that the index divides (p^ek - 1).  
 --It actually spits out the appropriate stable/fixed ideal inside the ambient ring.
 tauQGorAmb = (Rk, ek) -> (
-     Sk := ambient Rk;
-     pp := char Sk;
-     Ik := ideal Rk;
      Jk := findTestElementAmbient(Rk);
      hk := findQGorGen(Rk, ek);
-     IP := ideal(0_Sk); -- this is going to be the old value.
-     IN := Jk; -- the new value
-     --the plan is to make an ascending chain of ideals that eventually stabilizes
-     --our initial value is something contained in the test ideal.  
-     while (IN != IP) do(
-	  IP = IN;
-	  IN = eR(ideal(hk)*IP,ek)+IP
-     );
 
-     --return the final ideal (note, this is an ideal of Sk, not Rk, sub it back to 
-     --Rk to make it in Rk).
-     trim IP
+     ascendIdeal(Jk,hk,ek)
 )
 
 --for Gorenstein rings, or if ek can be taken to be 1.
 tauGorAmb = (Rk) -> tauQGorAmb(Rk, 1)
 
---this computes the test ideal
---tau(Rk, f^(a1/(p^e1 - 1))) but leaves it lifted to the ambient space, if Rk = Sk/I, it
---yields an ideal in Sk.
---here ek is a number such that the index of K_R divides (p^ek - 1).  If R is Gorenstein, 
---you may set this 1.
-tauAOverPEMinus1QGor = (Rk, ek, fk, a1, e1) -> (
-     Sk := ambient Rk;
+--this is an internal function
+--it is used to compute the test ideals of pairs (R, fm^(a1/p^e1-1)) where
+--R = Sk/Ik.
+--Inputs are Jk, a nonzero ideal contained in the test ideal
+--hk, the multiple used to form phi of the ambient ring.  ek is the power associated with hk
+--a1 and e1 and fm are as above
+tauAOverPEMinus1QGorAmb = (Sk, Jk, hk, ek, fm, a1, e1) -> (
      pp := char Sk;
-     Ik := ideal Rk;
-     Jk := findTestElementAmbient(Rk);
      et := lcm(ek, e1);
-     hk := (findQGorGen(Rk, ek))^(numerator ((pp^et - 1)/(pp^ek - 1)));  
+     hk1 := (hk)^(numerator ((pp^et - 1)/(pp^ek - 1)));  
        --hk for higher powers are simply appropriate powers of hk for lower powers, 
        --may as well take advantage of that
-     fm := lift(fk, Sk);
      a3 := numerator (a1*(pp^et - 1)/(pp^e1 - 1)); --we need to use a common e for both the 
                                                --index of R and of our divisor.
      
@@ -104,16 +110,10 @@ tauAOverPEMinus1QGor = (Rk, ek, fk, a1, e1) -> (
                               --that tau(f^(1+k)) = f*tau(f^k) 
      fpow := fm^a2; 
      
+     --TODO:  Experiment with ascending this ideal
+     Iasc := ascendIdeal(Jk*ideal(fm), fpow*hk1, et);
     
-     IP := ideal(0_Sk); -- this is going to be the old value.
-     IN := Jk*ideal(fm); -- the new value, something in the test ideal
-     
-     while (IN != IP) do(
-	  IP = IN;
-	  IN = eR(ideal(fpow*hk)*IP,et)+IP
-     );
-
-     trim IP*ideal(fm^k2)    
+     Iasc*ideal(fm^k2)    
 )
 
 
@@ -124,36 +124,46 @@ tauQGor = (Rk, ek, fk, t1) -> (
      pp := char Sk;
      L1 := divideFraction(t1,pp); --this breaks up t1 into the pieces we need
      hk := findQGorGen(Rk, ek); --this is being called twice sometimes, fix it.
+     Jk := findTestElementAmbient(Rk); --this finds some test elements (lifted on the ambient
+                                       --ring).  Right now it is slow because of a call to 
+				       --singularLocus (ie, computing a Jacobian).
      I1 := ideal(0_Sk); I2 := ideal(0_Sk);
      fm := lift(fk, Sk);
-     --first we compute tau(fk^{a/(p^c-1)})
-     if (L1#2 != 0) then 
-          I1 = tauAOverPEMinus1QGor(Rk,ek,fk,L1#0,L1#2) 
+     a1 := L1#0; e1 := L1#2; pPow := L1#1;
+     d1 := pp^(pPow); if (e1 != 0) then d1 = d1*(pp^e1-1);
+     a2 := a1 % d1;
+     k2 := a1 // d1; --it seems faster to use the fact 
+                              --that tau(f^(k+t)) = f^k*tau(f^t).  We'll toss on the multiple 
+			      --f^k at the end
+     
+     --first we compute tau(fk^{a2/(p^e1-1)})
+     if (e1 != 0) then 
+          I1 = tauAOverPEMinus1QGorAmb(Sk,Jk,hk,ek,fm,a2,e1)
      else (
-	  I1 = ideal(fm^(L1#0))*tauQGorAmb(Rk,ek)
+	  I1 = ideal(fm^(a2))*ascendIdeal(Jk, hk, ek)
       );
- 
-      --we do a check to see if the indexes match well enough...
-      --the problem is we can only take ek'th roots, but my t1 might be something like
-      --1/p.  I fix that by acting as if t1 is p^(ek-1)/p^ek.  
-      --We can take an ekth root of that.  Often, t1 = 1, so that will keep things easy.
-      pPow := L1#1;
-      remain := pPow % ek;
-      dualRemain := ek - remain;
-      if (remain != 0) then (
-           I1 = I1*ideal(fm^(pp^dualRemain) );
-	   pPow = pPow + dualRemain;
-      ); --note in the end here, ek divides pPow.
- 
-     --I also need to adjust hk if it is different from pPow.
-     if (hk != pPow) then hk = hk^(numerator ((pp^pPow - 1)/(pp^ek - 1)));
  
      --now we compute the test ideal using a generalization of the fact that 
      --tau(fm^t)^{[1/p^a]} = tau(fm^(t/p^a))
-     if (L1#1 != 0) then
+     if (pPow != 0) then (
+          --we do a check to see if the indexes match well enough...
+          --the problem is we can only take ek'th roots, but my t1 might be something like
+          --1/p.  I fix that by acting as if t1 is p^(ek-1)/p^ek.  
+          --We can take an ekth root of that.  Often, t1 = 1, so that will keep things easy.
+          remain := pPow % ek;
+          dualRemain := ek - remain;
+          if (remain != 0) then (
+               I1 = I1*ideal(fm^(pp^dualRemain) );
+     	       pPow = pPow + dualRemain;
+          ); --note in the end here, ek divides pPow.
+ 
+          --I also need to adjust hk if it is different from pPow.
+          if (hk != pPow) then hk = hk^(numerator ((pp^pPow - 1)/(pp^ek - 1)));
+ 
           I2 = ethRoot(I1*ideal(hk), pPow) 
-     else 
+     )
+     else --unless we don't have any p's in the denominator
           I2 = I1;
 	  
-     trim sub(I2, Rk)
+     sub(I2, Rk)*ideal(fk^k2)
 )
