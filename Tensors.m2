@@ -18,12 +18,15 @@ newPackage(
 --2) tensor' to make tensors
 --3) equality testing of tensor spaces
 --4) command for dropping 1's in dimension list
+--5) TensorArray afterprint
+--6) Make multiplication faster
 
 exportMutable {TemporaryTensorList, TemporaryIndexList}
 
 export{associativeCartesianProduct,
      nestedListAccess,isRectangular,rectangularNestedList,
-     tryHashApplication,deepSubstitution}
+     tryHashApplication,deepSubstitution,
+     tensorIndexSubstitution}
 export{TensorArray, tensorArray}
 export{einsteinSummation}
 export{Tensor,TensorModule}
@@ -43,7 +46,8 @@ use of nested lists of sequences of indices.
 *}
 
 List**List := (L,M) -> flatten for l in L list for m in M list (l,m)
-Sequence**Sequence := (L,M) -> toSequence flatten for l in L list for m in M list (l,m)
+Sequence**Sequence := (L,M) -> join apply(L,l->apply(M,m->(l,m)))
+
 acp=--INTERNAL ABBREVIATION
 associativeCartesianProduct = method()
 associativeCartesianProduct VisibleList := L -> (
@@ -106,46 +110,90 @@ tha HashTable := h -> (i -> try h#i else i)
 tha List := L -> tha hashTable L
 
 --Turning a hash table into a function
---that modifies expressions
+--that modifies expressions.  The function
+--recurses into everything except types 
+--listed in Stops=>{...}
+exportMutable{Stops}
 dsub=--INTERNAL ABBREVIATION
-deepSubstitution=method()
-dsub HashTable := h -> (
+deepSubstitution=method(Options=>{Stops=>{Thing}})
+dsub HashTable := opts -> h -> (
      f:=method(Dispatch=>Thing);
-     f Thing := x -> (tha h)x;
-     f BasicList := e -> new class e from (toSequence e)/f;
+     for T in opts.Stops do f T := x -> (tha h)x;
+     f BasicList := e -> apply(e,f);
      f
      )
-dsub List := L -> dsub hashTable L
+dsub List := opts -> L -> dsub hashTable L
+dsub Option := opts -> o -> dsub {o}
+dsub (Thing,HashTable) := opts -> (x,subs) -> (dsub subs) x
+dsub (Thing,List) := opts -> (x,subs) -> (dsub subs) x
+dsub (Thing,Option) := opts -> (x,subs) -> (dsub subs) x
 
---Same, but recursing only into expressions
---and sequences; skipping lists to save time
-eass=--INTERNAL METHOD
-expressionAndSequenceSubstitution=method()
-eass HashTable := h -> (
+--Same as above, except this routine
+--tries to evaluate expressions when possible,
+--otherwise leaving them as holders
+dse=--INTERNAL ABBREVIATION
+deepSubstitutionEvaluation=method(Options=>{Stops=>{Thing}})
+dse HashTable := opts -> h -> (
      f:=method(Dispatch=>Thing);
-     f Thing := x -> (tha h)x;
-     f Sequence := s -> s/f;
-     f Expression := e -> new class e from (toSequence e)/f;
+     for T in opts.Stops do f T := x -> (
+	  r:=(tha h)x;
+	  try value r else r
+	  );
+     f BasicList := e -> (
+	  ev:=apply(e,f);
+	  try value ev else ev
+	  );
      f
      )
-eass List := L -> eass hashTable L
+dse List := opts -> L -> dse hashTable L
+dse Option := opts -> o -> dse {o}
+dse (Thing,HashTable) := opts -> (x,subs) -> (dse subs) x
+dse (Thing,List) := opts -> (x,subs) -> (dse subs) x
+dse (Thing,Option) := opts -> (x,subs) -> (dse subs) x
 
---(replace eass by dsub to recurse into other 
---BasicLists)
+--###############
+--I expected dse to be much faster than
+--dsub for tensor arrays, but it turns out
+--to be about 50 times slowed for multiplying
+--9x9 matrices
+--###############
 
+
+tis=--INTERNAL ABBREVIATION
+tensorIndexSubstitution = method()
+tis Thing := x -> dsub(x,Stops=>{TensorArray})
+tis (Thing,HashTable) := (x,subs) -> (tis subs) x
+tis (Thing,List) := (x,subs) -> (tis subs) x
+tis (Thing,Option) := (x,subs) -> (tis subs) x
+
+--Removal from BasicList objects
+--delete'=deleteFromBasicList=method()
+--delete' (Thing,BasicList) := (x,v) -> new class v from delete(x,new List from v)
+
+rea=removeEmptyAdjacencies=method()
+rea Expression := exprn -> (
+     exprn=new class exprn from delete((),new List from exprn);
+     if #exprn==1 then exprn=(exprn#0);
+     exprn
+     )
+rea Thing := x -> x
 
 --Turning an expression including certain symbols
 --into a function that takes those symbols
 --as arguments, recursing only into sequences
 ef=expressionFunction=method()
 ef (Expression,List) := (exprn,args) -> (
+     exprn=rea exprn;
      if not all(args,i->instance(i,Symbol)) then error "expressionFunction expected a list of symbols";
      if #args == 0 then return value(exprn);
      subber:=method(Dispatch=>Thing);
-     subber Sequence := s -> dsub for i in 0..<#s list (args_i => s_i);
-     subber Thing := x -> eass{args_0 => x};
+     subber Sequence := s -> tis for i in 0..<#s list (args_i => s_i);
+     subber Thing := x -> tis{args_0 => x};
      f:=method(Dispatch=>Thing);
-     f Thing := x -> value((subber x) exprn);
+     f Thing := x -> (
+	  ev:=((subber x) exprn);
+	  try value ev else ev
+	  );
      f
      )
 ef (Thing,List) := (const,args) -> (x -> const)
@@ -153,7 +201,7 @@ ef (Thing,List) := (const,args) -> (x -> const)
 ----Test expressions:
 TEST ///
 (0..5)/(i->value((dsub{j=>i}) (hold 2)^j))
-(0..5)/(i->value((eass{j=>i}) (hold 2)^j))
+(0..5)/(i->value((tis{j=>i}) (hold 2)^j))
 f=ef((hold i)^j+k,{i,j,k})
 f(4,5,6)
 ///
@@ -324,18 +372,6 @@ Tensor=new Type of Vector
 TensorModule = new Type of Module
 module TensorModule := M -> new Module from M
 
---
-Tensor _ List := (v,L) -> (
-     M := tensorModule v;
-     dims := M.cache.dimensions;
-     if not #L == #dims then error"dimension mismatch";
-     ind := L#0;
-     for i from 0 to #L-2 do ind = ind*dims#i + L#(i+1);
-     v_ind
-     )
-
-Tensor _ Sequence := (v,L) -> v_(toList L)
-
 --Printing TensorModules:
 TensorModule.synonym="tensor module"
 net TensorModule := M -> (net new Module from M)|
@@ -407,6 +443,15 @@ dimensions Tensor := v -> (
      )
 
 ----------------------------
+--Equality of tensor modules
+----------------------------
+TensorModule == TensorModule := (M,N) -> (
+     module N == module N
+     and M.cache.dimensions == N.cache.dimensions)
+--note this is stornger than "===", which
+--ignores the cache!
+
+----------------------------
 --TensorModule combinations
 ----------------------------
 TensorModule**TensorModule := (M,N) -> (
@@ -436,9 +481,7 @@ TensorModule++TensorModule := (M,N) -> (
 ----------------------------------------------
 --Conversions between Tensors and TensorArrays
 ----------------------------------------------
-tensorArray Tensor := t -> new TensorArray from rnl (dimensions t,entries t);
 ------
-tt=
 tensor' = method()
 tensor' (List,TensorModule) := (L,M) -> (
      t:=tensorArray L;
@@ -458,7 +501,25 @@ tensor' List := L -> tensor' tensorArray L;
 isTensor=method()
 isTensor Thing := x -> instance(class x,TensorModule)
 ------
+tensorArray Tensor := t -> new TensorArray from rnl (dimensions t,entries t);
+------
 
+--
+Tensor**Tensor := (v,w) -> (
+     
+Tensor _ List := (v,L) -> (
+     M := tensorModule v;
+     dims := M.cache.dimensions;
+     if not #L == #dims then error "dimension mismatch";
+     ind := L#0;
+     for i from 0 to #L-2 do ind = ind*dims#i + L#(i+1);
+     v_ind
+     )
+
+Tensor _ Sequence := (v,L) -> v_(toList L)
+
+
+Tensor ^ ZZ := (t,n) -> fold(for i in 0..<n list t,(i,j)->i**j)
 
 --
 beginDocumentation()
@@ -474,6 +535,17 @@ end
 
 restart
 debug loadPackage"Tensors"
+
+--comparison with matrix multiplication:
+n=20
+me=for i in 1..n list for j in 1..n list i^2+j^2;
+m=matrix me;
+t=ta me;
+--3.6 secs with ds, n=9
+--0.09 secs with dsub, n=9
+time tt=tac({{t,i,j},{t,j,k}},{j});
+--0.000043 secs:
+time (m*m);
 
 
 A
