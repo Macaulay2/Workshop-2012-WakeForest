@@ -21,17 +21,17 @@ gbRationalReconstruction (Ideal,List) := (L, paramList) -> (
     while member(a,usedCoords) do a = random kk;
     usedCoords = usedCoords + set {a};
     randMap := map(A,A,{evalVar => a});
-    (G,subLoops) := gbRationalReconstruction(randMap L,paramList);
+    (G,subLoops) = gbRationalReconstruction(randMap L,paramList);
     totalLoops = totalLoops + subLoops;
     if loopG === null then (loopG, loopE) = (G,evalVar-a) else (
        H := for i from 0 to #G-1 list (
-          polyCRA((loopG#i,loopE), (G#i,evalVar-a), evalVar, char kk)
+          polyCRA((loopG#i,loopE), (G#i,evalVar-a), evalVar)
        );
        loopG = H / first;
        loopE = last first H;
     );
     rrLoopG := for i from 0 to #loopG-1 list (
-       retVal := polyRationalReconstruction(loopG#i,evalVar,loopE,char kk);
+       retVal := polyRationalReconstruction(loopG#i,evalVar,loopE);
        if retVal === null then break;
        first retVal
     );
@@ -79,14 +79,16 @@ I = ideal(h*j*l-2*e*g+16001*c*j+16001*a*l,h*j*k-2*e*f+16001*b*j+16001*a*k,h*j^2+
        	  -c*h^2*l^2-8001*d^2*l^3+2*d*g^3-2*c*g^2*h+16000*c*d*g*l+c^2*h*l-8001*c^3,d*f*h*l^2-b*h^2*l^2-8001*d^2*k*l^2+2*d*f*g^2-2*b*g^2*h+16001*c*d*g*k+16001*c*d*f*l+16001*b*d*g*l+b*c*h*l-8001*b*c^2,
        	  d*f*h*k*l-b*h^2*k*l-8001*d^2*k^2*l+2*d*f^2*g-2*b*f*g*h+16001*c*d*f*k+16001*b*d*g*k-16001*b*c*h*k+16001*b*d*f*l-16001*b^2*h*l-8001*b^2*c,d*f*h*k^2-b*h^2*k^2-8001*d^2*k^3+2*d*f^3-2*b*f^2*h+
        	  16000*b*d*f*k+b^2*h*k-8001*b^3)
-independentSet = support first independentSets I
+see I
+independentSet = support first independentSets(I, Limit=>1)
 time gbRationalReconstruction(I,independentSet)
 
 -- cut down on some variables
 S = ZZ/32003[a,b,c,g,h,j,k,l,MonomialOrder=>Lex]
 phi = map(S,R,matrix{{a,b,c,random kk, random kk, random kk, g,h,j,k,l}})
+see phi I
 independentSet = support first independentSets phi I
-time gbRationalReconstruction(phi I, independentSet)
+time first gbRationalReconstruction(phi I, independentSet)
 
 -- see what the gb over fraction field is
 (RU,KR) = makeFiberRings(independentSet)
@@ -104,7 +106,7 @@ time ratGB = gbRationalReconstruction(phi I, independentSet)
 (RU,KR) = makeFiberRings(independentSet)
 IKR = sub(phi I, KR)
 netList flatten entries gens gb IKR
--- works (now with denominators)!
+-- works (note: with denominators)!
 
 -- with many variables in the independent set, the number of evaluations grow exponentially...
 
@@ -120,3 +122,69 @@ IKR = sub(phi I, KR)
 netList flatten entries gens gb IKR
 -- works!
 
+--- another exmaple from PD.m2
+restart
+load "gbRatRecon.m2"
+load "PD.m2"
+debug PD
+  R = ZZ/32003[a,b,c,d,f,g,h,k,l,s,t,u,v,w,x,y,z]
+  I = ideal"
+    -ab-ad+2ah,
+    ad-bd-cf-2ah+2bh+2ck,
+    ab-ad-2bh+2dh-2ck+2fk+2gl,
+    ac-2cs-at+2bt,
+    ac-cs-2at+bt,
+    -d-3s+4u,
+    -f-3t+4v,
+    -g+4w,
+    -a+2x,
+    -b2-c2+2bx+2cy,
+    -d2-f2-g2+2dx+2fy+2gz"
+  (J,psi) = simplifyIdeal I
+independentSet = support first independentSets J
+(RU,KR) = makeFiberRings(independentSet)
+IKR = sub(J, KR)
+-- long time
+netList flatten entries gens gb IKR
+-- try new thing?
+gbRationalReconstruction(J,independentSet)
+
+-- cut down on all but one variables
+S = ZZ/32003[a,b,c,d,f,g,s,t,w,x,y,z,MonomialOrder=>Lex]
+phi = map(S,R,matrix{{a,b,c,d,f,g,random kk,random kk,random kk,s,t,random kk,random kk,w,x,y,z}})
+see phi J
+independentSet = support first independentSets(phi J, Limit=>1)
+gbTrace = 3
+time first gbRationalReconstruction(phi J, independentSet)
+-- check
+(RU,KR) = makeFiberRings(independentSet)
+describe KR
+JKR = sub(phi J, KR)
+see JKR
+gbTrace = 3
+time netList flatten entries gens gb JKR
+
+-- cut down on all but one variable
+S = ZZ/32003[a,b,c,d,f,g,h,s,t,w,x,y,z,MonomialOrder=>Lex]
+phi = map(S,R,matrix{{a,b,c,d,f,g,h,random kk,random kk,s,t,random kk,random kk,w,x,y,z}})
+see phi J
+independentSet = support first independentSets(phi J, Limit=>1)
+gbTrace = 3
+use S
+time first gbRationalReconstruction(phi J, {h,w,y,z})
+-- check
+(RU,KR) = makeFiberRings({h,w,y,z})
+describe KR
+JKR = sub(phi J, KR)
+see JKR
+gbTrace = 3
+time netList flatten entries gens gb JKR
+
+-- cut down on all but two variables
+S = ZZ/32003[a,b,c,d,f,g,s,t,w,x,y,z,MonomialOrder=>Lex]
+phi = map(S,R,matrix{{a,b,c,d,f,g,random kk,random kk,random kk,s,t,random kk,random kk,w,x,y,z}})
+see phi J
+independentSet = support first independentSets(phi J, Limit=>1)
+gbTrace = 3
+time first gbRationalReconstruction(phi J, independentSet)
+-- check
