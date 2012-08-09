@@ -227,37 +227,6 @@ T=tensor' List := L -> (
      tensor'(dims,ents)
      )
 
---BEGIN HOPEFULLY UNNEEDED STUFF
-tensor' (List,TensorModule) := (L,M) -> (
-     a:=tensorArray L;
-     if not rnlDimensions a == tensorDimensions M then error "tensor' (List,TensorModule): dimension mismatch";
-     t:=new M from vector ultimate(flatten,L);
-     TensorArray.cache#t = a;
-     Tensor.cache#a = t;
-     t
-     )
---CONTINUE HOPEFULLY UNNEEDED STUFF
-tensor' (TensorArray,TensorModule) := (L,M) -> (
-     a:=tensorArray L;
-     if not rnlDimensions a == tensorDimensions M then error "tensor' (List,TensorModule): dimension mismatch";
-     t:=new M from vector ultimate(flatten,L);
-     TensorArray.cache#t = a;
-     Tensor.cache#a = t;
-     t
-     )
---CONTINUE HOPEFULLY UNNEEDED STUFF
-tensor' TensorArray := a -> (
-     if Tensor.cache#?a then return Tensor.cache#a;     
-     dims:=rnlDimensions a;
-     f:=ultimate(flatten,a);
-     R:=commonRing f;
-     M:=tensorModule(R,dims);
-     t:=new M from vector f;
-     TensorArray.cache#t = a;
-     Tensor.cache#a = t;
-     t     
-     )
---END HOPEFULLY UNNEEDED STUFF
 
 
 ------
