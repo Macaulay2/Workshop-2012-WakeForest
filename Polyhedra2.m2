@@ -102,13 +102,15 @@ convexHull (Cone,Cone):=(C1,C2)->posHull {C1,C2}
 convexHull List := L->(
    datalist:=apply(L,P->(
        if instance(P,Polyhedron) then (
-	    if not P#?"InputRays" and not P#?"Rays" then computeRays P;
-	    if P#?"Rays" then return(P#"Rays",P#"LinealitySpace");
+	    if not P#?"InputRays" and not P#?"Rays" then (rays P; linSpace P);
+	    if P#?"Rays" and P#?"LinealitySpace" then return(P#"Rays",P#"LinealitySpace");
+	    if not P#?"InputLineality" then P#"InputLineality"=map(QQ^0,numColumns P#"InputRays",0);
 	    return (P#"InputRays",P#"InputLineality")
 	    )
        else if instance(P,Cone) then (
-	    if not P#?"InputRays" and not P#?"Rays" then computeRays P;
+	    if not P#?"InputRays" and not P#?"Rays" then (rays P; linSpace P);
 	    if P#?"Rays" then return(homRays P#"Rays",homRays P#"LinealitySpace");
+    	    if not P#?"InputLineality" then P#"InputLineality"=map(QQ^0,numColumns P#"InputRays",0);
 	    return (homRays P#"InputRays",homRays P#"InputLineality")	   
     	   )
 	else if instance(P,Matrix) then (
@@ -137,13 +139,15 @@ posHull Polyhedron:=C1->(posHull {C1})
 posHull List:=L->(
      datalist:=apply(L,P->(
 	       if instance(P,Polyhedron) then (
-		    if not P#?"Rays" and not P#?"InputRays" then computeRays P;
+		    if not P#?"Rays" and not P#?"InputRays" then (rays P,linSpace P);
 		    if P#?"Rays" then return(dehom P#"Rays",dehom P#"LinealitySpace");
+	    	    if not P#?"InputLineality" then P#"InputLineality"=map(QQ^0,numColumns P#"InputRays",0);
 		    return(dehom P#"InputRays",dehom P#"InputLineality")		    
 		    )
 	       else if instance(P,Cone) then (
-		    if not P#?"Rays" and not P#?"InputRays" then computeRays P;
+		    if not P#?"Rays" and not P#?"InputRays" then (rays P; linSpace P);
 		    if P#?"Rays" then return(P#"Rays",P#"LinealitySpace");
+	    	    if not P#?"InputLineality" then P#"InputLineality"=map(QQ^0,numColumns P#"InputRays",0);
 		    return(P#"InputRays",P#"InputLineality")		    		    
 		    )
 	       else if instance(P,Matrix) then (
@@ -183,13 +187,15 @@ intersection (Polyhedron,Polyhedron):=(P1,P2)->intersection {P1,P2}
 intersection List := L -> (
      datalist:=apply(L,P->(
 	       if instance(P,Polyhedron) then (
-		    if not P#?"Facets" and not P#?"Inequalities" then computeFacets P;
+		    if not P#?"Facets" and not P#?"Inequalities" then (hyperplanes P;halfspaces P);
 		    if P#?"Facets" then return(P#"Facets",P#"LinearSpan");
+		    if not P#?"Equations" then P#"Equations"=map(QQ^0,numColumns P#"Inequalities",0);
 		    return(P#"Inequalities",P#"Equations")		    
 		    )
 	       else if instance(P,Cone) then (
-		    if not P#?"Facets" and not P#?"Inequalities" then computeFacets P;
+		    if not P#?"Facets" and not P#?"Inequalities" then (hyperplanes P;halfspaces P);
 		    if P#?"Facets" then return(homRays P#"Facets",homRays P#"LinearSpan");
+		    if not P#?"Equations" then P#"Equations"=map(QQ^0,numColumns P#"Inequalities",0);		    
 		    return(homRays P#"Inequalities",homRays P#"Equations")		    		    
 		    )
 	       else if instance(P,Sequence) then (
@@ -208,13 +214,13 @@ intersection List := L -> (
 
 hyperplanes = method()
 hyperplanes Cone := P -> (
-	if P#?"Facets" then return P#"LinearSpan";
+	if P#?"LinearSpan" then return P#"LinearSpan";
 	if UsePolymake then runPolymake(P,"LinearSpan")
 	else computeFacets P;
 	P#"LinearSpan")
 
 hyperplanes Polyhedron := P -> (
-	if not P#?"Facets" then 
+	if not P#?"LinearSpan" then 
 	if UsePolymake then runPolymake(P,"LinearSpan")
 	else computeFacets P;
 	M:=P#"LinearSpan";
@@ -257,13 +263,13 @@ vertices Polyhedron := P -> (
 
 linSpace = method()
 linSpace Cone := P -> (
-	if P#?"Rays" then return transpose P#"LinealitySpace";
+	if P#?"LinealitySpace" then return transpose P#"LinealitySpace";
 	computeRays P;
 	transpose P#"LinealitySpace")
    
 
 linSpace Polyhedron := P -> (
-	if P#?"Rays" then return transpose P#"LinealitySpace";
+	if P#?"LinealitySpace" then return transpose P#"LinealitySpace";
 	computeRays P;
 	transpose P#"LinealitySpace")
    
@@ -275,7 +281,8 @@ ambDim Cone:=C->(
      if C#?"Rays" then C#"AmbientDim"=numColumns C#"Rays" 	  
      else if C#?"InputRays" then C#"AmbientDim"=numColumns C#"InputRays" 	  
      else if C#?"Inequalities" then C#"AmbientDim"=numColumns C#"Inequalities" 	  
-     else C#"AmbientDim"=numColumns C#"Facets"); 	  
+     else if C#?"Facets" then C#"AmbientDim"=numColumns C#"Facets"
+     else error ("Your cone is ill-defined")); 	  
       C#"AmbientDim")
  
 ambDim Polyhedron:=C->(
@@ -283,7 +290,8 @@ ambDim Polyhedron:=C->(
      if C#?"Rays" then C#"AmbientDim"=numColumns C#"Rays" -1 	  
      else if C#?"InputRays" then C#"AmbientDim"=numColumns C#"InputRays" -1	  
      else if C#?"Inequalities" then C#"AmbientDim"=numColumns C#"Inequalities"-1 	  
-     else C#"AmbientDim"=numColumns C#"Facets"-1); 	  
+     else if C#"Facets" then C#"AmbientDim"=numColumns C#"Facets"-1
+     else error ("Your cone is ill-defined")); 	  
       C#"AmbientDim")
 
 
