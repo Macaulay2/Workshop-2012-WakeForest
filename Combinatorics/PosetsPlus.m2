@@ -110,7 +110,7 @@ posetMap(Poset, Poset, HashTable) := PosetMap => (P1, P2, H) -> (
 	new PosetMap from hashTable {symbol source => P1, symbol target => P2, symbol GroundMap => H, symbol cache => new CacheTable})
 
 map(Poset,Poset,List) := PosetMap => opts -> (P1,P2,M) -> (posetMap(P1,P2,M))
-
+net PosetMap := f -> f.GroundMap
 
 -- evaluating a posetMap at an element in the source poset
 eval = method()
