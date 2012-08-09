@@ -1178,8 +1178,8 @@ DGModuleMap * DGModuleMap :=(g,f) -> (
 -------------------------------
 ----   Shift DGModule   -------
 -------------------------------
-shift = method ()--(TypicalValue => DGModule)
-shift (DGModule) :=  U -> (
+shift = method ()
+shift DGModule := DGModule => U -> (
  shiftedDegrees := apply (U.Degrees, x -> {first x+1, last x});
  W := semifreeDGModule (U.DGRing, shiftedDegrees);
  setDiff (W,- (matrix entries U.diff));
@@ -1194,8 +1194,7 @@ W.cache#(symbol inverseShiftMap) = dgModuleMap(U, W, id_(W.natural));
 -------------------------
 -- Shift a DGModuleMap --
 -------------------------
---shift = method (TypicalValue => DGModuleMap)
-shift (DGModuleMap) := (f) -> (
+shift DGModuleMap := DGModuleMap => (f) -> (
      shiftV := shift(f.target);
      shiftU := shift(f.source);
      shiftedMap := dgModuleMap(shiftV, shiftU, f.natural);
@@ -2729,9 +2728,9 @@ doc ///
   Usage
     V = shift U
   Inputs
-    U:DGModule
+    U:
   Outputs
-    V:DGModule
+    V:
   Description
     Example
       Q = QQ[x]
@@ -2754,9 +2753,9 @@ doc ///
   Usage
     g = shift f
   Inputs
-    f:DGModuleMap
+    f:
   Outputs
-    g:DGModuleMap
+    g:
   Description
     Text
       Given a DGModuleMap f from U to V, we obtain the induced map from shift U to shift V.
