@@ -331,6 +331,16 @@ h#M=1
 h#N==1--unfortunately
 ///
 
+
+--a.c. SORT THIS UPWARD:
+tensor'(List,Function):=(L,f) -> tensor' rnl(L,f)
+TensorModule _ Sequence := (M,s) -> (
+     if not #tensorDimensions M == #s then error "dimension mismatch";
+     f:=method(Dispatch=>Thing);
+     f Sequence := i -> if i==s then 1 else 0;
+     new M from tensor'(tensorDimensions M,f)
+     )
+
 ---------------------
 --Load part 3
 ---------------------
