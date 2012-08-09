@@ -155,6 +155,7 @@ setKoszulDiff (DGAlgebra,List) := opts -> (A,diffList) -> (
    A
 )
 
+
 checkIsHomogeneous = method()
 checkIsHomogeneous DGAlgebra := A -> (
    gensList := gens A.natural;
@@ -162,6 +163,11 @@ checkIsHomogeneous DGAlgebra := A -> (
    homDegreeShift := {1} | (toList ((#(degree first gensList)-1):0));
    all(apply(#diffList, i -> degree gensList#i - homDegreeShift == degree diffList#i), i -> i)
 )
+
+
+-- change below should make code work for the case when we're setting the differential to 0
+-- all(apply(#diffList, i -> (degree gensList#i - homDegreeShift == degree diffList#i) or (degree diffList#i == -infinity)), i -> i)
+
 
 -- cache the basis of a DGAlgebra?
 getBasis = method(TypicalValue => Matrix, Options => {Limit => -1})
