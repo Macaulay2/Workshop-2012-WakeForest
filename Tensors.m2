@@ -63,6 +63,9 @@ assertClasses (List,Type) := (L,T) -> if not all(L,i->instance(i,T)) then (
 assertClasses (List,Type,String) := (L,T,context) -> if not all(L,i->instance(i,T)) then (
      error (context|" expected list entries of type "|toString(T)|"s"))
 
+--------------------------------------------
+--Load part 1 (minimize dependence on this)
+--------------------------------------------
 load "./tensors/tensorarrays.m2"
 
 ----------------------------------
@@ -180,15 +183,6 @@ tm List := (fctrs) -> (
      )
 
 ----------------------------
---Old: Equality of tensor modules
-----------------------------
---TensorModule == TensorModule := (M,N) -> (
---     module N == module N
---     and M.cache#(gs"dimensions") == N.cache#(gs"dimensions"))
---note this is stornger than "===", which
---ignores the cache!
-
-----------------------------
 --TensorModule combinations
 ----------------------------
 TensorModule^ZZ := (M,n) -> tm toList (n:M)
@@ -204,6 +198,7 @@ TensorModule**TensorModule := (M,N) -> tm{M,N}
 ----------------------------------------------
 --Conversions between Tensors and TensorArrays
 ----------------------------------------------
+------MINIMIZE DEPENDENCE ON TENSOR ARRAYS
 ------
 tensor' = method()
 tensor' (List,TensorModule) := (L,M) -> (
@@ -214,6 +209,16 @@ tensor' (List,TensorModule) := (L,M) -> (
      Tensor.cache#a = t;
      t
      )
+
+tensor' (TensorArray,TensorModule) := (L,M) -> (
+     a:=tensorArray L;
+     if not dimensions a == dimensions M then error "tensor' (List,TensorModule): dimension mismatch";
+     t:=new M from vector ultimate(flatten,L);
+     TensorArray.cache#t = a;
+     Tensor.cache#a = t;
+     t
+     )
+
 tensor' TensorArray := a -> (
      if Tensor.cache#?a then return Tensor.cache#a;     
      dims:=dimensions a;
