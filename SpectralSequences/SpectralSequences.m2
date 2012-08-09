@@ -387,14 +387,12 @@ M = R^1/ideal(vars R)
 S = R/(x^2-y^2)
 N = S^1 /ideal(x^3,x*y^2,y^3)
 F = res M
-lim = 10
-G = res (N, LengthLimit => lim)
-g = max G
-J=ker G.dd_lim
-G#(lim+1) = J
-G.dd#(lim+1) = inducedMap(G_lim,G_(lim+1))
+see(H = filteredComplex(F ** S))
 
-H = filteredComplex(F ** S)
+lim = 10;
+
+G = res (N, LengthLimit => lim)
+
 see (K = H ** G)
 spectralSequence K
 E = oo
@@ -404,8 +402,19 @@ netList apply(lim, k -> prune Tor_k(M,pushForward(map(S,R),N)))
 
 netList support E_0
 netList support E_1 
+netList support Ei = E_infinity
+
+g = max G
+J=ker G.dd_g
+G#(g+1) = J
+G.dd#(g+1) = inducedMap(G_g,G_(g+1))
+
+see (K = H ** G)
+E = spectralSequence K
 Ei = E_infinity
 netList support Ei
+
+
 
 G
 
