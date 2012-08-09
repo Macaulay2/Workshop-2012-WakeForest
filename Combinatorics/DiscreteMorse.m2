@@ -526,14 +526,19 @@ dimensionFetcher(List,MorseMatching):= (E,M) -> (
 
 morseCollapse = method(Options=> {symbol Coefficients => QQ})
 morseCollapse(MorseMatching):= opts -> (M) ->(
-     critCells := criticalCells(M);
-     if not M.cache.?indextoface then indexToFace(M);
-     E:=apply(M.matching, e-> {M.cache.indextoface#(e_0),M.cache.indextoface#(e_1)});
-     while E =!={} do (
-	  collapseCell(first E,M);
-	  E = drop(E,1);
-     );
-     M.cache.collapsedComplex = M.cache.chaincomplex
+     if M.cache.?collapsedComplex then (
+	  M.cache.chaincomplex
+     )
+     else (
+     	  critCells := criticalCells(M);
+     	  if not M.cache.?indextoface then indexToFace(M);
+     	  E:=apply(M.matching, e-> {M.cache.indextoface#(e_0),M.cache.indextoface#(e_1)});
+     	  while E =!={} do (
+	       collapseCell(first E,M);
+	       E = drop(E,1);
+     	       );
+     	  M.cache.collapsedComplex = M.cache.chaincomplex
+     )
 )
 
 
@@ -549,16 +554,20 @@ morseCollapse(MorseMatching):= opts -> (M) ->(
 -- contain contracted cell complex.
 ------------------------------------------------------
 
-collapseCell = method(Options => {symbol Coefficients => QQ})
-collapseCell(List,MorseMatching):= opts -> (e,M) ->(
+collapseCell = method()
+collapseCell(List,MorseMatching):=  (e,M) ->(
      if not M.cache.?chaincomplex then M.cache.chaincomplex = chainComplex M.cache.complex;
      if not M.cache.?cells then cellVariables(M);
      V := M.cache.cells;
      C := M.cache.chaincomplex;
+     if (C.ring =!= QQ) then (
+     	  error "Not implemented."
+     );
      --------------------------------
-     --Initializes the 
+     --Initializes the chain complex
+     --------------------------------
      D := new ChainComplex;
-     kk :=opts.Coefficients;
+     kk := QQ;
      D.ring = kk;
      --------------------------------
      --Puts edges in E into appropriate form.
@@ -570,9 +579,9 @@ collapseCell(List,MorseMatching):= opts -> (e,M) ->(
      numCells := apply(#V, i-> if (i === d) or (i===(d+1)) then (#V_i-1) else #V_i);
      --------------------------------
      --Defines the modules in the chain complex
-     D#-1 = QQ^1;
+     D#-1 = kk^1;
      for i from 0 to #numCells -1 do (
-     	  D#i = QQ^(numCells_i);
+     	  D#i = kk^(numCells_i);
      );
      --------------------------------
      --Construct NEW chain maps D.dd_(i-1), D.dd_i and D.dd_(i+1):
@@ -580,7 +589,7 @@ collapseCell(List,MorseMatching):= opts -> (e,M) ->(
      --------------------------------
      T:=trimComplex(c,C,M);
      D.dd_d = map(D#(d-1),D#d,T_0);
-     if T_1 == map(QQ^1,QQ^0,0) then (
+     if T_1 == map(kk^1,kk^0,0) then (
      	  D.dd_(d+1) = map(D#d,D#(d+1),T_1);
      )
      else (
