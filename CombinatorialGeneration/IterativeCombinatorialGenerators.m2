@@ -9,6 +9,9 @@
 -- Copyright 2012 Zach Teitler
 --
 -- NOT for public distribution at this time.
+-- (okay to distribute among participants of WFU workshop
+--  and M2 developers, for experimental use only; please
+--  do not distribute more widely than that)
 --------------------------------------------------------------------------------
 
 newPackage(
