@@ -221,6 +221,11 @@ Ring**Tensor := (r,t) -> error "not implemented yet"
 ----------------------------------------------
 ------MINIMIZE DEPENDENCE ON TENSOR ARRAYS
 ----------------------------------------------
+T=tensor' List := L -> (
+     dims:=rnlDimensions rnl L;--check rectangularity and get dimensions
+     ents:=ultimate(flatten,L);
+     tensor'(dims,ents)
+     )
 
 --BEGIN HOPEFULLY UNNEEDED STUFF
 tensor' (List,TensorModule) := (L,M) -> (
@@ -253,6 +258,7 @@ tensor' TensorArray := a -> (
      t     
      )
 --END HOPEFULLY UNNEEDED STUFF
+
 
 ------
 tensorArray Tensor := t -> (

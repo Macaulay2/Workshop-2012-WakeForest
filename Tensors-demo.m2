@@ -1,7 +1,6 @@
 restart
 debug loadPackage("Tensors")
 R=QQ[a,b,c]
-
 --making modules of tensors:
 M=tensorModule(R,{3,3,4})
 N=tensorModule(R,{2,4,3})
@@ -51,4 +50,5 @@ tcomp({{T,i,j},{U,j,k}},{})
 --automatically summed over
 esum({{T,i,j},{U,j,k}})
 tcomp({{T',i,j,k,l}},{i})
+
 
