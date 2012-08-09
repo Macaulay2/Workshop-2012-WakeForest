@@ -275,31 +275,23 @@ pageE :=  (r,F,p,q) -> (
 
 tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))
 
-Hom (ChainComplex, ChainComplexMap) := ChainComplexMap => (K,f) -> (
-     F:= source f;
-     G:= target f;
-     S:= Hom(K,F); 
-     T:= Hom(K,G);
-     m:= k -> (
-	  g:= (i,j) -> (if i == j then Hom(K_i,f_(i-k)) else map(Hom(K_j,G_(j-k)),Hom(K_i,F_(i-k)),0));
-	  L:= toList(max (min K,k + min F)..min(max K,k + max F));
-	  tmap (L,L,g)
-	  );
-     maps:= k -> map(T_k,S_k,m (max K - min F - k));
-     map(T,S,maps))
+Hom (ChainComplex, ChainComplexMap) := ChainComplexMap => (C,f) -> (
+     F:= Hom(C,source f); 
+     G:= Hom(C,target f);
+     map(G,F, i -> map(G_i,F_i, matrix table( G_i.cache.indices,F_i.cache.indices, 
+		    (j,k) -> map(G#i.cache.components#(G#i.cache.indexComponents#j), 
+			 F#i.cache.components#(F#i.cache.indexComponents#k),
+			 if j === k then Hom(C_(j#0), f_(j#1)) 
+			 else 0)))))
 
-Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,K) -> (
-     F:= source f;
-     G:= target f;
-     S:= Hom(G, K); 
-     T:= Hom(F, K);
-     m:= k -> (
-	  g:= (i,j) -> (if i == j then Hom(f_i,K_(i-k)) else map(Hom(F_j,K_(j-k)),Hom(G_i,K_(i-k)),0));
-	  L:= toList(max (min F,k + min K)..min(max F,k + max K));
-	  tmap (L,L,g)
-	  );
-     maps:= k -> map(T_k,S_k,m (max F - min K - k));
-     map(T,S,maps))
+Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,C) -> (
+     G:= Hom(source f, C); 
+     F:= Hom(target f, C);
+     map(G,F, i -> map (G_i,F_i, matrix table(G_i.cache.indices,F_i.cache.indices,
+		    (j,k) -> map(G#i.cache.components#(G#i.cache.indexComponents#j), 
+			 F#i.cache.components#(F#i.cache.indexComponents#k),
+			 if j === k then Hom(f_(j#0), C_(j#1)) 
+			 else 0)))))
   
 ChainComplexMap ** ChainComplex := ChainComplexMap => (f,K) -> (
      F:= source f;
@@ -363,8 +355,8 @@ G = res (I^2/I^4);
 H= Hom(F,G);
 prune H
 FF=filteredComplex F;
-Hom(F,FF)
-prune (F**F)
+phi=Hom(inducedMap(FF,1),F);
+prune target phi == prune Hom(F,FF^-infinity)
 
 
 Hom(F,G)
