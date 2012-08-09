@@ -40,6 +40,7 @@ export {
      
      --computations with Morse matchings
      criticalCells,
+     morseCollapse,
      
      --operations on inclusion poset
      reverseEdges,
@@ -66,15 +67,21 @@ export {
      cellConverter,
      currentCellPosition,
      dimensionFetcher,
+     collapseCell,
+     trimComplex,
+     stripCells,
      
      --exported cached symbols
      cells,
+     chaincomplex,
      indextocell,
      celltoindex,
      facetoindex,
      indextoface,
      facetocell,
-     celltoface
+     celltoface,
+     Coefficients,
+     collapsedComplex
     }
 
 ------------------------------------------
@@ -476,6 +483,7 @@ currentCellPosition(IndexedVariable,MorseMatching):= (c,M) -> (
 --cells from M.cache.cells.
 ------------------------------------------------------
 ------------------------------------------------------
+
 stripCells = method()
 stripCells(List,MorseMatching):= (e,M) ->(
      if not M.cache.?cells then cellVariables M;
@@ -507,15 +515,31 @@ dimensionFetcher(List,MorseMatching):= (E,M) -> (
 
 
 ------------------------------------------------------
---METHOD:  simplicialCollapse
+--METHOD:  morseCollapse
 --
 --INPUT:  MorseMatching
 --
 --OUTPUT:  (List,ChainComplex)
 --     List of critical cells and chain complex of
 --     maps after contraction by Morse matching.
--- 
 ------------------------------------------------------
+
+morseCollapse = method(Options=> {symbol Coefficients => QQ})
+morseCollapse(MorseMatching):= opts -> (M) ->(
+     if M.cache.?collapsedComplex then (
+	  M.cache.collapsedComplex
+     )
+     else (
+     	  critCells := criticalCells(M);
+     	  if not M.cache.?indextoface then indexToFace(M);
+	  E:=apply(M.matching, e-> {M.cache.indextoface#(e_0),M.cache.indextoface#(e_1)});
+	  while E =!={} do (
+	       collapseCell(first E,M);
+	       E = drop(E,1);
+	  );
+     M.cache.collapsedComplex = M.cache.chaincomplex
+     )
+)
 
 
 ------------------------------------------------------
@@ -523,16 +547,62 @@ dimensionFetcher(List,MorseMatching):= (E,M) -> (
 --
 --INPUT:  (List,MorseMatching)
 --
---OUTPUT:  
+--OUTPUT: MorseMatching
 -- 
---
+-- Removes an edge in the Morse matching, returns 
+-- original Morse Matching, with cache table
+-- contain contracted cell complex.
 ------------------------------------------------------
 
-collapseCell = method()
-collapseCell(List,MorseMatching):= (E,M) ->(
-     
+collapseCell = method(Options => {symbol Coefficients => QQ})
+collapseCell(List,MorseMatching):= opts -> (e,M) ->(
+     if not M.cache.?chaincomplex then M.cache.chaincomplex = chainComplex M.cache.complex;
+     if not M.cache.?cells then cellVariables(M);
+     V := M.cache.cells;
+     C := M.cache.chaincomplex;
+     --------------------------------
+     --Initializes the 
+     D := new ChainComplex;
+     D.ring = opts.Coefficients;
+     --------------------------------
+     --Puts edges in E into appropriate form.
+     --------------------------------
+     c := cellConverter(e,M);
+     --------------------------------
+     --Counts the number of cells of each dimension left, and removes one from d and d+1.
+     d := dimensionFetcher(e,M);
+     numCells := apply(#V, i-> if (i === d) or (i===d+1) then (#V_i-1) else #V_i);
+     --------------------------------
+     --Defines the modules in the chain complex
+     D#-1 = 1;
+     apply(#numCells, i -> D#i = QQ^(numCells_i));
+     --------------------------------
+     --Construct NEW chain maps D.dd_(i-1), D.dd_i and D.dd_(i+1):
+     --
+     --------------------------------
+     T:=trimComplex(c,C,M);
+     D.dd_d = map(D#(d-1),D#d,T_0);
+     D.dd_(d+1) = map(source D.dd_d,D#(d+1),transpose T_1);
+     apply(toList(0..#numCells-1), i-> if not member(i,{d,d+1}) then D.dd_i = C.dd_i);
+     --------------------------------
+     --Final stage:  Set chaincomplex to new chain complex,
+     --then delete {c_(i,j),c_(i+1,k)} from M.cache.cells.
+     M.cache.chaincomplex = D;
+     stripCells(e,M)
 )
 
+trimComplex = method()
+trimComplex(List,ChainComplex,MorseMatching):= (c,C,M) ->(
+     idx1:= currentCellPosition(c_0,M);
+     idx2:= currentCellPosition(c_1,M);
+     d := idx1_0;
+     A := submatrix'(C.dd_d,,{idx1_1});
+     B := entries submatrix'(transpose C.dd_(d+1),{idx2_1},);
+     deletedCell := first entries submatrix(transpose C.dd_(d+1),{idx2_1},);
+     attachedCells := select(#B, r -> (B_r)_(idx1_1) !=0);
+     newCellMaps := apply(attachedCells, i-> {i, B_i+((B_i)_(idx2_1))*deletedCell});
+     {A,submatrix'(matrix flatten apply(newCellMaps, m-> B = replace(first m,last m,B)),,{idx2_1})}
+)
 
 
 ------------------------------------------------------------------
