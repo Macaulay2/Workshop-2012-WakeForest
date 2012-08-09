@@ -326,13 +326,14 @@ dualCone Cone:=C->(
 
 affineImage = method ()
 affineImage (Matrix,Polyhedron,Matrix) := (A,P,v)->(
-     if not P#?"InputRays" and not P#?"Rays" then vertices P;
+     if not P#?"InputRays" and not P#?"Rays" then (vertices P,linSpace P);
      Q:=new Polyhedron from hashTable {};
      M:=(transpose (map(QQ^1,1+numColumns A,(i,j)->if j==0 then 1 else 0)||(v|A)));
      if P#?"Rays" then (Q#"InputRays"=P#"Rays"*M;     
      	  Q#"InputLineality"=P#"LinealitySpace"*M)
      else  (Q#"InputRays"=P#"InputRays"*M;
-      Q#"InputLineality"=P#"InputLineality"*M);
+	    if not P#?"InputLineality" then P#"InputLineality"=map(QQ^0,numColumns P#"InputRays",0);
+	    Q#"InputLineality"=P#"InputLineality"*M);
      Q)
 
 affineImage (Matrix,Polyhedron) := (A,P)->(affineImage(A,P,map(QQ^(numRows A),QQ^1,0)))
@@ -342,11 +343,12 @@ affineImage (Polyhedron,Matrix) := (P,v)->(affineImage(id_(QQ^(ambDim P)),P,v))
 
 
 affineImage (Matrix,Cone):=(A,P)->(
-     if not P#?"InputRays" and not P#?"Rays" then rays P;
+     if not P#?"InputRays" and not P#?"Rays" then (rays P,linSpace P);
      Q:=new Cone from hashTable {};
      if P#?"Rays" then (Q#"InputRays"=P#"Rays"*(transpose (A));     
      	  Q#"InputLineality"=P#"LinealitySpace"*(transpose (A)))
      else  (Q#"InputRays"=P#"InputRays"*(transpose (A));
+	    if not P#?"InputLineality" then P#"InputLineality"=map(QQ^0,numColumns P#"InputRays",0);	  
       Q#"InputLineality"=P#"InputLineality"*(transpose (A)));
      Q)
 
@@ -495,8 +497,8 @@ QQ * Polyhedron := (k,P) -> (
      if k <= 0 then error("The factor must be strictly positiv");
      Q:=new Polyhedron from hashTable {};
      if P#?"InputRays" then Q#"InputRays"=homCoordinates(k*(dehomCoordinates P#"InputRays")_0,(dehomCoordinates P#"InputRays")_1);
-     if P#"InputLineality" then Q#"InputLineality"=P#"InputLineality";
-     if P#"Rays" then Q#"Rays"=homCoordinates(k*(dehomCoordinates P#"Rays")_0,(dehomCoordinates P#"Rays")_1);
+     if P#?"InputLineality" then Q#"InputLineality"=P#"InputLineality";
+     if P#?"Rays" then Q#"Rays"=homCoordinates(k*(dehomCoordinates P#"Rays")_0,(dehomCoordinates P#"Rays")_1);
      if P#?"LinealitySpace" then Q#"LinealitySpace"=P#"LinealitySpace";
      if P#?"Inequalities" then Q#"Inequalities"=((k*(P#"Inequalities")_{0})|(P#"Inequalities")_(toList(1..numColumns P#"Inequalities")));
      if P#?"Equations" then Q#"Equations"=P#"Equations";
