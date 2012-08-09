@@ -1,4 +1,10 @@
 beginDocumentation()
+
+undocumented { (describe,SpectralSequence),
+     	       (expression,SpectralSequence),
+	       (net, FilteredComplex),
+	       (net, SpectralSequence)}
+
 doc ///
      Key 
      	  SpectralSequences
@@ -92,7 +98,51 @@ doc ///
 -------------------------
 -----Methods
 -------------------------
+  doc ///
+     Key
+     	   (filteredComplex, ChainComplex)
+     Headline
+     	  The filtered complex of the truncated chain complex
+     Usage
+     	  K = filteredComplex(C)
+     Inputs
+     	  C:ChainComplex
+     Outputs
+     	  K:FilteredComplex
+     Description
+     	  Text 
+  ///	 
 
+  doc ///
+     Key
+     	   (filteredComplex, List)
+     Headline
+     	  A constructor for filtered complexes
+     Usage
+     	  K = filteredComplex(L)
+     Inputs
+     	  L:List
+     Outputs
+     	  K:FilteredComplex
+     Description
+     	  Text 
+  ///	 
+
+ doc ///
+     Key
+     	   (filteredComplex, SpectralSequence)
+     Headline
+     	  The underlying filteredComplex of a Spectral Sequence
+     Usage
+     	  K = filteredComplex(E)
+     Inputs
+     	  E:SpectralSequence
+     Outputs
+     	  f:FilteredComplex
+     Description
+     	  Text 
+	       Blah
+    ///
 
  doc ///
      Key
@@ -215,17 +265,107 @@ doc ///
 	       Blah
     ///
      
+ 
+
+
   doc ///
      Key
-     	   (filteredComplex, SpectralSequence)
+  	  (chainComplex, FilteredComplex)
      Headline
-     	  The underlying filteredComplex of a Spectral Sequence
+     	  The biggest complex in a filtered complex
      Usage
-     	  K = filteredComplex(E)
+     	  C = chainComplex K
+     Inputs
+     	  K:FilteredComplex
+     Outputs
+     	  C:ChainComplex
+     Description
+     	  Text 
+	       Blah
+    ///
+    
+      doc ///
+     Key
+     	   (chainComplex, SpectralSequence)
+     Headline
+     	  The underlying chain complex of a Spectral Sequence
+     Usage
+     	  K = chainComplex E
      Inputs
      	  E:SpectralSequence
      Outputs
-     	  f:FilteredComplex
+     	  K:ChainComplex
+     Description
+     	  Text 
+	       Blah
+    ///
+
+  doc ///
+     Key
+     	   (symbol **, ChainComplex, FilteredComplex)
+	   (symbol **, FilteredComplex, ChainComplex)
+     Headline
+     	  filtered Tensor product of complexes
+     Usage
+     	  KK = C ** K
+     Inputs
+     	  C:ChainComplex
+	  K:FilteredComplex
+     Outputs
+     	  KK:FilteredComplex
+     Description
+     	  Text 
+	       Blah
+    ///
+
+  doc ///
+     Key
+     	   (symbol == , FilteredComplex, FilteredComplex)
+     Headline
+     	  Equality of filtered complexes
+     Usage
+     	  a = K == L
+     Inputs
+     	  K:FilteredComplex
+	  L:FilteredComplex
+     Outputs
+     	  a:Boolean
+     Description
+     	  Text 
+	       Blah
+    ///
+
+  doc ///
+     Key
+          (symbol ^, FilteredComplex, ZZ)
+	  (symbol ^, FilteredComplex, InfiniteNumber)
+     Headline
+     	  The filtered pieces
+     Usage
+     	  C = K^j
+     Inputs
+     	  K:FilteredComplex
+	  j:ZZ 
+	       an integer, infinity, or -infinity
+     Outputs
+     	  C:ChainComplex
+     Description
+     	  Text 
+	       Blah
+    ///
+
+  doc ///
+     Key
+     	   (see, FilteredComplex)
+	   (see)
+     Headline
+     	  Displays the components of a filtered complex
+     Usage
+          a = see K     	  
+     Inputs
+     	  K:FilteredComplex
+     Outputs
+     	  a:Net
      Description
      	  Text 
 	       Blah
