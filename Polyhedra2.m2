@@ -16,7 +16,7 @@ newPackage("Polyhedra2",
      	  {Name => "Qingchun Ren"},
 	  {Name => "Josephine Yu"}
      },
-    Configuration => {"UsePolymake"=>false,"PolymakePath"=>"./"},
+    Configuration => {"DefaultUsePolymake"=>false,"PolymakePath"=>"./"},
     DebuggingMode => true
     )
 
@@ -41,11 +41,12 @@ newPackage("Polyhedra2",
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 --
 ---------------------------------------------------------------------------
-UsePolymake = (options Polyhedra2).Configuration#"UsePolymake"
+DefaultUsePolymake := (options Polyhedra2).Configuration#"DefaultUsePolymake"
 PolymakePath = (options Polyhedra2).Configuration#"PolymakePath"
 
+pmopt:={UsePolymake=>DefaultUsePolymake}
 export {
-     	  "latticePoints",
+     	     	  "latticePoints",
      	  "isCompact",
 	  "affinePreimage",
      	  "affineImage",
@@ -71,7 +72,7 @@ export {
 	
 needsPackage "FourierMotzkin"
 needsPackage "PolyhedralObjects"
-if UsePolymake then needsPackage "PolymakeInterface"
+needsPackage("PolymakeInterface")
 
 
 Cone == Cone := (C1,C2)->(
@@ -212,32 +213,32 @@ intersection List := L -> (
  	  "Equations"=>elist}
      )
 
-hyperplanes = method()
-hyperplanes Cone := P -> (
+hyperplanes = method(Options=>pmopt)
+hyperplanes Cone := opts->P -> (
 	if P#?"LinearSpan" then return P#"LinearSpan";
-	if UsePolymake then runPolymake(P,"LinearSpan")
+	if opts#UsePolymake then runPolymake(P,"LinearSpan")
 	else computeFacets P;
 	P#"LinearSpan")
 
-hyperplanes Polyhedron := P -> (
+hyperplanes Polyhedron := opts->P -> (
 	if not P#?"LinearSpan" then 
-	if UsePolymake then runPolymake(P,"LinearSpan")
+	if opts#UsePolymake then runPolymake(P,"LinearSpan")
 	else computeFacets P;
 	M:=P#"LinearSpan";
 	(-M_(toList(1..numColumns M-1)),M_{0})
 	)
 
 
-halfspaces = method()
-halfspaces Cone := P -> (
+halfspaces = method(Options=>pmopt)
+halfspaces Cone := opts->P -> (
 	if P#?"Facets" then return -P#"Facets";
-	if UsePolymake then runPolymake(P,"Facets")
+	if opts#UsePolymake then runPolymake(P,"Facets")
 	else computeFacets P;	
 	-P#"Facets")
    
-halfspaces Polyhedron := P -> (
+halfspaces Polyhedron := opts->P -> (
 	if not P#?"Facets" then 
-	if UsePolymake then runPolymake(P,"Facets")
+	if opts#UsePolymake then runPolymake(P,"Facets")
 	else computeFacets P;
 	computeFacets P;
 	M:=P#"Facets";
@@ -246,31 +247,38 @@ halfspaces Polyhedron := P -> (
 
 
 
-rays = method()
-rays Cone := P -> (
+rays = method(Options=>pmopt)
+rays Cone := opts->P -> (
 	if P#?"Rays" then return transpose P#"Rays";
-	computeRays P;
+	if opts#UsePolymake then runPolymake(P,"Rays")
+	else computeRays P;
 	transpose P#"Rays")
    
-rays Polyhedron := P -> (
-	if not P#?"Rays" then computeRays P;
+rays Polyhedron := opts->P -> (
+	if not P#?"Rays" then 
+	if opts#UsePolymake then runPolymake(P,"Rays")
+	else computeRays P;
 	transpose (dehomCoordinates P#"Rays")_1)   
 
-vertices = method()
-vertices Polyhedron := P -> (
-	if not P#?"Rays" then computeRays P;
+vertices = method(Options=>pmopt)
+vertices Polyhedron := opts->P -> (
+	if not P#?"Rays" then 
+	if opts#UsePolymake then runPolymake(P,"Rays")
+        else computeRays P;
 	transpose (dehomCoordinates P#"Rays")_0)   
 
-linSpace = method()
-linSpace Cone := P -> (
+linSpace = method(Options=>pmopt)
+linSpace Cone := opts->P -> (
 	if P#?"LinealitySpace" then return transpose P#"LinealitySpace";
-	computeRays P;
+	if opts#UsePolymake then runPolymake(P,"LinealitySpace")
+        else computeRays P;
 	transpose P#"LinealitySpace")
    
 
-linSpace Polyhedron := P -> (
+linSpace Polyhedron := opts->P -> (
 	if P#?"LinealitySpace" then return transpose P#"LinealitySpace";
-	computeRays P;
+	if opts#UsePolymake then runPolymake(P,"LinealitySpace")
+	else computeRays P;
 	transpose P#"LinealitySpace")
    
 
