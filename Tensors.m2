@@ -20,10 +20,10 @@ newPackage(
 --ToDo:eventually ditch tensor arrays 
 --except for printing
 --1) tensorContraction for tensors, for now
---by converting to and from arrays 
---for now; do faster and mostly ditch
+--by converting to and from arrays --for now; do faster and mostly ditch
 --arrays except for printing later.
 --2)fix tm R^3
+--fix M++M
 --3) change printing of non-free tensor modules
 --4)Exclude contraction for non-free modules
 --4)make a tensor DIRECTLY from a function 
@@ -203,13 +203,17 @@ Tensor _ Sequence := (v,L) -> (
      v_ind
      )
 
+
+------------------------------------------
+--Making tensors without RNLs (previously TensorArrays)
+------------------------------------------
 tensor' = method()
---a.c. needed:
---make a
-tensor' List := L -> tensor' tensorArray L;
-
-
-tensor' (List,List) := (ents,dims) -> error "not implemented yet"
+tensor'(TensorModule,List):=(M,ents)-> new M from vector ents
+tensor'(List,List):=(dims,ents)->(
+     R:=commonRing ents;
+     M:=tensorModule(R,dims);
+     tensor'(M,ents)
+     )
 Ring**Tensor := (r,t) -> error "not implemented yet"
 
 ----------------------------------------------
@@ -217,6 +221,8 @@ Ring**Tensor := (r,t) -> error "not implemented yet"
 ----------------------------------------------
 ------MINIMIZE DEPENDENCE ON TENSOR ARRAYS
 ----------------------------------------------
+
+--BEGIN HOPEFULLY UNNEEDED STUFF
 tensor' (List,TensorModule) := (L,M) -> (
      a:=tensorArray L;
      if not rnlDimensions a == tensorDimensions M then error "tensor' (List,TensorModule): dimension mismatch";
@@ -225,7 +231,7 @@ tensor' (List,TensorModule) := (L,M) -> (
      Tensor.cache#a = t;
      t
      )
-
+--CONTINUE HOPEFULLY UNNEEDED STUFF
 tensor' (TensorArray,TensorModule) := (L,M) -> (
      a:=tensorArray L;
      if not rnlDimensions a == tensorDimensions M then error "tensor' (List,TensorModule): dimension mismatch";
@@ -234,7 +240,7 @@ tensor' (TensorArray,TensorModule) := (L,M) -> (
      Tensor.cache#a = t;
      t
      )
-
+--CONTINUE HOPEFULLY UNNEEDED STUFF
 tensor' TensorArray := a -> (
      if Tensor.cache#?a then return Tensor.cache#a;     
      dims:=rnlDimensions a;
@@ -246,10 +252,7 @@ tensor' TensorArray := a -> (
      Tensor.cache#a = t;
      t     
      )
-
-
-
-------
+--END HOPEFULLY UNNEEDED STUFF
 
 ------
 tensorArray Tensor := t -> (
@@ -319,7 +322,7 @@ esum(List) := (L) ->
      esum(L/first,L/(i->toSequence remove(i,0)))
 
 TEST ///
-R=QQ[x]
+R=QQ[x 1]
 M=tm(R,{2,2})
 N=tm(R,{4})
 assert(M==R^4)--they are equal as modules
@@ -340,6 +343,9 @@ TensorModule _ Sequence := (M,s) -> (
      f Sequence := i -> if i==s then 1 else 0;
      new M from tensor'(tensorDimensions M,f)
      )
+Tensor/Function := (t,f) -> new class t from tensor' ((entries t)/f)
+diff(Tensor,RingElement) := (t,r) -> t/(i->diff(i,r))
+
 
 ---------------------
 --Load part 3
