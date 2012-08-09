@@ -16,9 +16,13 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
         torMap, homologyAlgebra, torAlgebra, maxDegree, StartDegree, EndDegree, ringMap,
 	isHomologyAlgebraTrivial, findTrivialMasseyOperation, findNaryTrivialMasseyOperation, AssertWellDefined,
 	isGolod, isGolodHomomorphism, GenDegreeLimit, RelDegreeLimit, TMOLimit,
-	InitializeDegreeZeroHomology, InitializeComplex, isAcyclic, getDegNModule, polydifferential, 
-	semifreeDGModule, DGRing, homologyModule, DGModule, DGModuleMap, dgModuleMap, shift, diffs,
-	shiftMap, inverseShiftMap, composedDGModuleMap
+	InitializeDegreeZeroHomology, InitializeComplex, isAcyclic, getDegNModule,
+	semifreeDGModule, DGRing, DGModule, DGModuleMap, dgModuleMap, shift
+	-- polydifferential 
+	-- homologyModule
+	-- diffs
+	-- shiftMap, inverseShiftMap
+	-- composedDGMap
 }
 
 -- Questions:
@@ -62,6 +66,7 @@ protect diffs
 protect basisAlgebra
 protect shiftMap
 protect inverseShiftMap
+protect homologyModule
 
 -- Defining the new type DGAlgebra
 DGAlgebra = new Type of MutableHashTable
@@ -901,6 +906,11 @@ isWellDefined DGAlgebraMap := f -> (
    all(apply(gens A.natural, x -> f.natural(A.diff(x)) == B.diff(f.natural(x))), identity)
 )
 
+-- Composition of dgAlgebra maps --
+DGAlgebraMap * DGAlgebraMap :=(g,f) -> (
+  composedDGMap := dgAlgebraMap(g.target, f.source, (g.natural*f.natural));
+  composedDGMap
+  )
 
 
 toComplexMap = method(TypicalValue=>ChainComplexMap,Options=>{EndDegree=>-1,AssertWellDefined=>true})
@@ -1161,9 +1171,8 @@ isWellDefined DGModuleMap := f -> (
 -- Composition of DGModuleMaps --
 ---------------------------------
 DGModuleMap * DGModuleMap :=(g,f) -> (
---build in some sort of error if f.target =!= g.source
-  composedDGModuleMap := dgModuleMap(g.target, f.source, (g.natural*f.natural));
-  composedDGModuleMap
+  composedDGMap := dgModuleMap(g.target, f.source, (g.natural*f.natural));
+  composedDGMap
   )
 
 -------------------------------
@@ -1442,47 +1451,47 @@ doc ///
       is the exterior algebra on R^r generated in homological degree one.  This algebra structure also respects the boundary map
       of the complex in the sense that it satisfies the Liebniz rule.  That is, $d(ab) = d(a)b + (-1)^{deg a}ad(b)$.  When one
       speaks of 'the' Koszul complex of a ring, one means the Koszul complex on a minimal set of generators of the maximal ideal of R.
-    Example
-      R = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3}
-      KR = koszulComplexDGA R
+--    Example
+--    R = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3}
+--      KR = koszulComplexDGA R
     Text
       One can specify the name of the variable to easily handle multiple Koszul complexes at once.
-    Example
-      S = ZZ/101[x,y,z]/ideal{x^3,y^3,z^3,x^2*y^2,y^2*z^2}
-      KS = koszulComplexDGA(S,Variable=>"U")
+--    Example
+--      S = ZZ/101[x,y,z]/ideal{x^3,y^3,z^3,x^2*y^2,y^2*z^2}
+--      KS = koszulComplexDGA(S,Variable=>"U")
     Text
       To obtain the chain complex associated to the Koszul complex, one may use chainComplex.  One can also obtain this complex
       directly without using the DGAlgebras package by using the command @ TO koszul @.
-    Example
-      cxKR = chainComplex KR
-      prune HH cxKR
+--    Example
+--      cxKR = chainComplex KR
+--      prune HH cxKR
     Text
       Since the Koszul complex is a DG algebra, its homology is itself an algebra.  One can obtain this algebra using the command
       homology, homologyAlgebra, or HH (all commands work).  This algebra structure can detect whether or not the ring is a complete
       intersection or Gorenstein.
-    Example
-      HKR = HH KR
-      ideal HKR
-      R' = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3,a*c,a*d,b*c,b*d,a^2*b^2-c^2*d^2}
-      HKR' = HH koszulComplexDGA R'
-      numgens HKR'
-      ann ideal gens HKR'
+--    Example
+--      HKR = HH KR
+--      ideal HKR
+--      R' = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3,a*c,a*d,b*c,b*d,a^2*b^2-c^2*d^2}
+--     HKR' = HH koszulComplexDGA R'
+--      numgens HKR'
+--      ann ideal gens HKR'
     Text
       Note that since the socle of HKR' is one dimensional, HKR' has Poincare duality, and hence R' is Gorenstein.
     Text
       One can also consider the Koszul complex of an ideal, or a sequence of elements.
-    Example
-      Q = ambient R
-      I = ideal {a^3,b^3,c^3,d^3}
-      KI = koszulComplexDGA I
-      HKI = HH KI
-      describe HKI
-      use Q
-      I' = I + ideal{a^2*b^2*c^2*d^2}
-      KI' = koszulComplexDGA I'
-      HKI' = HH KI'
-      describe HKI'
-      HKI'.cache.cycles
+--    Example
+--      Q = ambient R
+--      I = ideal {a^3,b^3,c^3,d^3}
+--      KI = koszulComplexDGA I
+--      HKI = HH KI
+--      describe HKI
+--      use Q
+--      I' = I + ideal{a^2*b^2*c^2*d^2}
+--      KI' = koszulComplexDGA I'
+--      HKI' = HH KI'
+--      describe HKI'
+--      HKI'.cache.cycles
     Text
       Note that since I is a Q-regular sequence, the Koszul complex is acyclic, and that both homology algebras are algebras over the zeroth homology
       of the Koszul complex.
@@ -1551,7 +1560,7 @@ doc ///
     Example
       Q = QQ[x]
       I = ideal(x^3)
-      K = koszulComplexDGA(I)
+      K = koszulComplexDGA(Q/I)
       U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
       setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
       V = semifreeDGModule(K,{{0,0},{1,1},{2,3}})
@@ -2054,6 +2063,52 @@ doc ///
       Cdd.dd
   Caveat
     Currently, the tensor product function does not create a block order on the variables from A and B.
+///
+
+doc ///
+  Key
+    (symbol *, DGModuleMap, DGModuleMap)
+  Headline
+    The composision of two DGModule maps.
+  Usage
+    h = g * f
+  Inputs
+    f: DGModuleMap
+    g: DGModuleMap
+  Outputs
+    h: DGModuleMap
+  Description
+    Text
+      text
+///
+
+doc ///
+  Key
+    (symbol *, DGAlgebraMap, DGAlgebraMap)
+  Headline
+     The composision of two DGAlgebra maps.
+  Usage
+    h = g * f
+  Inputs
+     f: DGAlgebraMap
+     g: DGAlgebraMap
+  Outputs
+     h: DGAlgebraMap
+
+///
+
+doc ///
+  Key
+    (symbol ++, DGModule, DGModule)
+  Headline
+     The direct sum of two DGModules
+  Usage
+    W = U ++ V
+  Inputs
+       U: DGModule
+       V: DGModule
+  Outputs
+     W: DGModule
 ///
 
 doc ///
@@ -2658,6 +2713,48 @@ doc ///
       f = dgAlgebraMap(K2,K1,matrix{{0,T_1,T_2}})
       isWellDefined f
 ///
+
+doc ///
+  Key
+    shift
+  Headline
+    Construct a degree 1 shift of a DGModule
+  Usage
+    V = shift U
+  Inputs
+    U:DGModule
+  Outputs
+    V:DGModule
+///
+
+doc ///
+  Key
+    (cone,DGModuleMap)
+  Headline
+    Compute the mapping cone of a DGModuleMap
+  Usage
+    C = cone f
+  Inputs
+    f: DGModuleMap
+  Outputs
+    C: DGModule
+  Description
+    Example
+      Q = QQ[x]
+      I = ideal(x^3)
+      K = koszulComplexDGA(Q/I)
+      U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
+      setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
+--      V = semifreeDGModule(K,{{0,0},{1,1},{2,3}})
+--      setDiff(V,sub(matrix{{0,x,-T_1},{0,0,x^2},{0,0,0}}, K.natural))
+      f = dgModuleMap(U, U, id_(U.natural))
+      C = cone f
+      complexC = chainComplex C
+      complexC.dd
+      prune (HH complexC)
+///      
+
+
 
 doc ///
   Key
