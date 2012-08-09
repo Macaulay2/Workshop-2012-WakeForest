@@ -526,19 +526,14 @@ dimensionFetcher(List,MorseMatching):= (E,M) -> (
 
 morseCollapse = method(Options=> {symbol Coefficients => QQ})
 morseCollapse(MorseMatching):= opts -> (M) ->(
-     if M.cache.?collapsedComplex then (
-	  M.cache.collapsedComplex
-     )
-     else (
-     	  critCells := criticalCells(M);
-     	  if not M.cache.?indextoface then indexToFace(M);
-	  E:=apply(M.matching, e-> {M.cache.indextoface#(e_0),M.cache.indextoface#(e_1)});
-	  while E =!={} do (
-	       collapseCell(first E,M);
-	       E = drop(E,1);
-	  );
+     critCells := criticalCells(M);
+     if not M.cache.?indextoface then indexToFace(M);
+     E:=apply(M.matching, e-> {M.cache.indextoface#(e_0),M.cache.indextoface#(e_1)});
+     while E =!={} do (
+	  collapseCell(first E,M);
+	  E = drop(E,1);
+     );
      M.cache.collapsedComplex = M.cache.chaincomplex
-     )
 )
 
 
@@ -581,7 +576,7 @@ collapseCell(List,MorseMatching):= opts -> (e,M) ->(
      );
      --------------------------------
      --Construct NEW chain maps D.dd_(i-1), D.dd_i and D.dd_(i+1):
-     --
+     --Bring them over from "trimComplex" function
      --------------------------------
      T:=trimComplex(c,C,M);
      D.dd_d = map(D#(d-1),D#d,T_0);
@@ -598,23 +593,66 @@ collapseCell(List,MorseMatching):= opts -> (e,M) ->(
      --------------------------------
      --Final stage:  Set chaincomplex to new chain complex,
      --then delete {c_(i,j),c_(i+1,k)} from M.cache.cells.
+     --------------------------------
      M.cache.chaincomplex = D;
      stripCells(e,M)
 )
 
+------------------------------------------------------
+--METHOD:  trimComplex
+--
+--INPUT:  (List,ChainComplex,MorseMatching)
+--     	  (Edge E, M.cache.chaincomplex,M)
+--
+--OUTPUT: Differential maps {D_d,transpose D_(d+1), D_(d+2)}
+-- 
+-- Inputs an edge, the chain complex, and a morse matching, and outputs
+-- the chain maps for the complex with c_i, c_j from E={c_i,c_j} removed.
+------------------------------------------------------
+
+
 trimComplex = method()
 trimComplex(List,ChainComplex,MorseMatching):= (c,C,M) ->(
+     ------------------------------------------------------
+     --Fetches {dimension,index} pairs for edge E from cell list.
+     ------------------------------------------------------
      idx1 := currentCellPosition(c_0,M);
      idx2 := currentCellPosition(c_1,M);
+     ------------------------------------------------------
+     --Sets dimension to the dimension of the lower dim cell.
+     ------------------------------------------------------
      d := idx1_0;
+     ------------------------------------------------------
+     --Forms map D.dd_d by dropping row corresponding to c_0.
+     ------------------------------------------------------
      A := submatrix'(C.dd_d,,{idx1_1});
+     ------------------------------------------------------
+     --If d+2 is NOT too large, forms map D.dd_(d+2) by dropping
+     --rows corresponding to c_1.
+     ------------------------------------------------------
      if d+2 <= dim M.cache.complex then (
      	  N := submatrix'(C.dd_(d+2),{idx2_1},);
      );
-     B := entries submatrix'(transpose C.dd_(d+1),{idx2_1},);
+     ------------------------------------------------------
+     --Set deletedCell to be column we wish to remove.
+     --We work with transpose for each of "row" operations.
+     ------------------------------------------------------
      deletedCell := first entries submatrix(transpose C.dd_(d+1),{idx2_1},);
-     attachedCells := select(#B, r -> (B_r)_(idx1_1) !=0);
-     newCellMaps := apply(attachedCells, i-> {i, (B_i+((B_i)_(idx1_1))*deletedCell)});
+     a := deletedCell_(idx1_1);
+     ------------------------------------------------------
+     --Set B to be (transposed) submatrix with deletedCell removed,
+     --Then select all rows which have a nonzero entry in column c_1.
+     ------------------------------------------------------
+     B := entries submatrix'(transpose C.dd_(d+1),{idx2_1},);
+     --
+     --first entry is position, second entry is coefficient in idx1_1 position.
+     -- B -> {i,j}
+     attachedCells := apply(select(#B, r -> (B_r)_(idx1_1) !=0), n -> {n,(B_n)_(idx1_1)});
+     ------------------------------------------------------
+     --If d+2 is NOT too large, forms map D.dd_(d+2) by dropping
+     --rows corresponding to c_1.
+     ------------------------------------------------------
+     newCellMaps := apply(attachedCells, i-> {first i, B_(first i)-(((B_(first i))_(idx1_1)/a)*deletedCell)});
      for m in newCellMaps do (
      	  B = replace(first m, last m, B);
      );
