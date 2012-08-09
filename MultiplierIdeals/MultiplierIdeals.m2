@@ -22,57 +22,6 @@
 -- this program.  If not, see <http://www.gnu.org/licenses/>.
 --------------------------------------------------------------------------------
 
-{*
-  multiplierIdeal
-
-   Compute multiplier ideal of an ideal, using various strategies.
-   - For general ideals, use Dmodules package.
-   - For hyperplane arrangement, use HyperplaneArrangements package.
-   - For monomial ideals, use Howald's theorem, implemented in this package.
-   - For ideal of monomial curve, use Howard Thompson's theorem, implemented
-     in this package.
-   - For generic determinantal ideals, use Amanda Johnson's dissertation,
-     implemented in this package
-   - (Future work: plane curve singularities)
-   
-   For now, only try to compute multiplier ideals and lcts.
-   Eventually, add code for jumping numbers.
-   
-   
-  
-   Input:
-   For Dmodules:
-    * ideal I
-    * rational t
-   For Monomial:
-    * MonomialIdeal I
-    * rational t
-   For MonomialCurve:
-    * ring S
-    * list of integers {a1,...,an} (exponents in parametrization of curve)
-    * rational t
-    OR (not implemented yet)
-    * ideal I which happens to be the defining ideal of a monomial curve
-    * rational t
-   For HyperplaneArrangement:
-    * CentralArrangement A
-    * rational t
-    * (optional) list of multiplicities M
-    OR (can we do this?)
-    * ideal I which happens to be the defining ideal of a central arrangement
-      (with multiplicities)
-    * rational t
-   For GenericDeterminantal:
-    * ring R
-    * integers m, n (size of matrix)
-    * integer r (size of minors)
-    * rational t
-  
-   Output:
-    * Ideal or MonomialIdeal
-*}
-
-
 newPackage(
   "MultiplierIdeals",
       Version => "0.1", 
@@ -97,7 +46,7 @@ newPackage(
 --  ideal of monomial curve (implemented in this package)
 --  generic determinantal ideals (implemented in this package)
 --  hyperplane arrangements (implemented in HyperplaneArrangements)
--- For arbitrary ideals, use the Dmodules package
+-- For arbitrary ideals, load and use the Dmodules package (NOT loaded by this package)
 
 
 -- Implementation for monomial ideals is based on Howald's Theorem,
