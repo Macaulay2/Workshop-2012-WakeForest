@@ -43,7 +43,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 
 
-export{"modelRing","abelianTautologicalRing","AbelianVarietyType","polishchukD"}
+export{"modelRing","abelianTautologicalRing","AbelianVarietyType","polishchukD","polishchukDelta","monomialFourierTransform"}
 
 
 
@@ -99,6 +99,15 @@ return R
 )
 
 --print part of Moonen diamond (unformatted):
+
+--L=apply(S#"Dim"+1, j->apply(j+1, i->hilbertFunction({i+S#"Dim"-j,S#"Dim"-j}, S)))
+{*
+ pp := L -> (
+     L1 = apply(L, s -> toString s);
+     m = max apply(L1, s -> length s);
+     for s in apply(L1, s -> concatenate { (m - length s)//2, s }) do print s
+     )
+*}
 --for j from 0 to S#"Dim" do print for i from S#"Dim"-j to S#"Dim" list hilbertFunction({i,S#"Dim"-j}, S) 
 
 polishchukD=method(TypicalValue=>RingElement)  
@@ -123,10 +132,30 @@ return ans
      )  
 
 polishchukD (RingElement,ZZ) := (f,n) -> (       
+if n < 0 then error "The power of Polishchuk D operator must be a non-negative integer";
+if n==0 then return f;
 F:=f;
 for i from 1 to n do F = polishchukD(F);     
 return F
      )
+
+polishchukDelta=method(TypicalValue=>RingElement)  
+polishchukDelta RingElement := (f) -> (     
+     L:={};
+     L=polynomialToList(f);
+     L=listDelta(L);
+     return listToPolynomial(L)     
+     )
+
+polishchukDelta (RingElement,ZZ) := (f,n) -> (       
+if n < 0 then error "The power of Polishchuk Delta operator must be a non-negative integer";
+if n==0 then return f;
+F:=f;
+for i from 1 to n do F = polishchukDelta(F);     
+return F
+     )
+     
+     
 
   
 ----------------------------------------------------------------------------------
@@ -220,7 +249,9 @@ return ans
 --Input: List representing a monomial, as described in listToMonomial
 --Output: list of lists, each of which consists of a list representing a monomial and an integer 
 --representing the coefficient in front of that monomial: {list representing a monomial, coefficient} 
-monomialListDelta = (L) -> (
+monomialListDelta = method(TypicalValue=>List)
+monomialListDelta List := L -> (
+if L=={} then return {{{0},0}};
 n:=L_0;
 L=drop(L,{0,0});
 k:=#L;
@@ -240,6 +271,17 @@ ans=append(ans, {Lhat,binomial(ni+nj,ni)})
 return ans
 )
 
+--Computes n^{th} power of Polishchuk's operator Delta for monomials in list form, [P05, p.883]
+--Input: List representing a monomial, as described in listToMonomial and a non-negative integer
+--Output: list of lists, each of which consists of a list representing a monomial and an integer 
+--representing the coefficient in front of that monomial: {list representing a monomial, coefficient} 
+monomialListDelta(List,ZZ) := (L,n) -> (     
+if n < 0 then error "The power of Polishchuk Delta operator must be a non-negative integer";
+if n==0 then return {{L,1}};
+for i from 1 to n do L=monomialListDelta(L);     
+return L
+)       
+
 --Computes Polishchuk's operator Delta for polynomials in list form, [P05, p.883]
 --Input: list of lists: {list representing a monomial, coefficient} 
 --Output: list of lists: {list representing a monomial, coefficient} 
@@ -254,7 +296,38 @@ ans=append(ans, {Deltami_t_0, (M_i_1)*(Deltami_t_1)})
 return ans     
      )
 
+--input: monomial with no w_1 term, where w_1 stands for the first
+--variable in the modelRing
+monomialFourierTransformNoFirstVariable = (m) -> (
+     S:=ring m;
+     if S#?"Dim" then g:=S#"Dim" else error "The ring of the monomial is expected to have Dim attirbute.";
+     L:=monomialToList(m);
+     n:=L_0;
+     if n != 0 then error "Input monomial should have no first variable of the ring.";
+     k:=#L-1;
+     sumni:= sum(L);
+     ans:=0;
+     jterm:={};
+     for j from 0 to k-1 do (
+	  if j+g-k-sumni >= 0 then (
+	       jterm = monomialListDelta(L,j);
+	       for t from 0 to #jterm-1 do (     
+		    ans=ans + (jterm_t_1)*(S_0^(j+g-k-sumni))*(1/(j+g-k-sumni)!)*(1/j!)*(listToMonomial(jterm_t_0,S)) 
+		    )
+	       )
+	  );
+     return ans    
+     )
 
+monomialFourierTransform = (m) -> (
+     S:=ring m;
+     if S#?"Dim" then g:=S#"Dim" else error "The ring of the monomial is expected to have Dim attirbute.";
+     E:=flatten exponents(m);
+     n:=E_0;
+     if n==0 then return monomialFourierTransformNoFirstVariable(m);
+     if n>0 then m=lift(m/(S_0^n),S);
+     return polishchukD(monomialFourierTransformNoFirstVariable(m),n)     
+     )
 
 ----------------------------------------------------------------------------------
 -- Documentation
