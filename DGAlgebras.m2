@@ -1697,6 +1697,7 @@ doc ///
 
 doc ///
   Key
+    semifreeDGModule 
     (semifreeDGModule,DGAlgebra,List)
   Headline
     Constructs a DG Module
@@ -1717,7 +1718,7 @@ doc ///
       U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
     Text
       However, this process does not define the differential, 
-      which may be done using @ TO setDiff@.
+      which may be done using @ TO (setDiff,DGModule,Matrix)@.
 ///
 
 doc ///
@@ -1880,7 +1881,8 @@ doc ///
       K = koszulComplexDGA(Q/I)
       U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
     Text
-      We note that the DG module has no differential, and manually set it using setDiff.
+      We note that the DG module has no differential, and manually 
+      set it using @TO (setDiff,DGModule,Matrix)@.
     Example
       U.diff
       setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
