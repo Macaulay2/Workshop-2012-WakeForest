@@ -43,7 +43,7 @@ fracPart = (x) -> (x - floor(x)) --finds the fractional part of a number
 
 aPower = (x,p) -> --find the largest power of p dividing x
 (
-a=1; while fracPart(denom(x)/p^a)==0 do a = a+1;
+a:=1; while fracPart(denom(x)/p^a)==0 do a = a+1;
 a-1
 )
 
@@ -108,8 +108,8 @@ new List from E
 --Computes powers of elements in char p>0 rings using the "Freshman's dream"
 fastExp = (f,N) ->
 (
-     p=char ring f;
-     E=basePExp(N,char ring f);
+     p:=char ring f;
+     E:=basePExp(N,char ring f);
      product(apply(#E, e -> (sum(apply(terms f, g->g^(p^e))))^(E#e) ))
 )
 
@@ -124,13 +124,14 @@ fastExp = (f,N) ->
 nuList = method();
 nuList (Ideal,ZZ) := (I,e) ->
 (
-     m = ideal(first entries vars ring I); 
-     L = new MutableList;
-     N=0;
+     p := char ring I;
+     m := ideal(first entries vars ring I); 
+     L := new MutableList;
+     N:=0;
      for d from 1 to e do 
      (	  
 	  --J = ideal(apply(first entries gens I, g->fastExp(g, N, char ring I)));
-	  J = ideal(apply(first entries gens I, g->fastExp(g, N)));
+	  J := ideal(apply(first entries gens I, g->fastExp(g, N)));
 	  N=N+1;
 	  while isSubset(I*J, frobeniusPower(m,d))==false do (N = N+1; J = I*J);
      	  L#(d-1) = N-1;
@@ -147,7 +148,7 @@ nu (RingElement, ZZ) := (f,e) -> nu(ideal(f),e)
 
 --Gives a list of \nu_I(p^d)/p^d for d=1,...,e
 FPTApproxList = method();
-FPTApproxList (Ideal,ZZ) := (I,e) -> apply(#nuList(I,e), i->((nuList(I,e))#i)/p^(i+1)) 
+FPTApproxList (Ideal,ZZ) := (I,e) -> apply(#nuList(I,e), i->((nuList(I,e))#i)/(char ring I)^(i+1)) 
 FPTApproxList (RingElement,ZZ) := (f,e) -> FPTApproxList(ideal(f),e)
 
 
@@ -335,15 +336,15 @@ fSig = (f1,a1,e1) -> (
 ---	x-intercept of the line passing through (t,b) and (t1,fSig(f,t1,e))
 
 threshInt = (f,e,t,b,t1)-> (
-{b1=fSig(f,t1,e),xInt(t,b,t1/p^e,b1)}
+{b1:=fSig(f,t1,e),xInt(t,b,t1/(char ring f)^e,b1)}
 )
 
 
-
+--possibly use Verify here instead of finalCheck?
 ---f-pure threshold estimation
 ---e is the max depth to search in
----finalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
-threshEst={finalCheck=> true} >> o -> (f,e)->(
+---Verify is a boolean to determine whether the last isFRegularPoly is run (it is possibly very slow) 
+threshEst={Verify=> true} >> o -> (f,e)->(
      --error "help";
      p:=char ring f;
      n:=nu(f,e);
@@ -354,7 +355,7 @@ threshEst={finalCheck=> true} >> o -> (f,e)->(
 	  ak:=threshInt(f,e,(n-1)/p^e,fSig(f,n-1,e),n); 
 	--  if (DEBUG == true) then error "help mostest";
 	  if ( (n+1)/p^e == (ak#1) ) then (ak#1)
-	  else if (o.finalCheck == true) then ( 
+	  else if (o.Verify == true) then ( 
 	       if ((isFRegularPoly(f,(ak#1) )) ==false ) then ( error "HELP!"; (ak#1))
 	       else {(ak#1),(n+1)/p^e} 
 	  )
