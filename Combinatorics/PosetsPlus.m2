@@ -460,7 +460,7 @@ doc ///
 	  VariableName=>Symbol
 	  CoefficientRing=>Ring
      Outputs
-          C:simplicialComplex
+          C:SimplicialComplex
      Description
           Text
 	       This method returns the crosscut complex of the crosscut L in the poset P
