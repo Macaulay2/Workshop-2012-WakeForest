@@ -71,7 +71,7 @@ unfactor = (L, F, v) -> (
      G1 := map(uberRing, Fring);  --- G1, G2 map to the big ring and
      G2 := map(uberRing, Hring); 
      H = applyTable(H, i-> {G1 i#0, G2 value i#1});
-     tmp := G1 F; print("the number of terms we're about to work with", t#terms(tmp));
+     tmp := G1 F; print("the number of terms we're about to work with", #terms(tmp));
      for h in H do tmp = sum for u in h list ((value u#1)*contract(u#0,tmp));
      mapList := join(apply(#gens Fring, i -> 0), gens Hring);
      G3 := map(Hring, uberRing, mapList);
@@ -167,6 +167,8 @@ betti mingens I
 -- lower degree invariants...
 g = tableauToPoly(myT);
 betti ideal g
+#(terms g)
+
 
 ---- this is not going to finish without more RAM
 myT=(standardTableaux({2,2,2},{1,1,1,1,1,1}))
