@@ -300,7 +300,7 @@ ethRoot = (Im,e) -> (
      Sm:=coefficientRing(Rm); --base field
      n:=rank source vars(Rm); --number of variables
      vv:=first entries vars(Rm); --the variables
-     YY:=getSymbol("Y"); -- this is an attempt to avoid the ring overwriting
+     YY:=local YY; -- this is an attempt to avoid the ring overwriting
                          -- the ring in the users terminal
      myMon := monoid[ (vv | toList(YY_1..YY_n)), MonomialOrder=>ProductOrder{n,n},MonomialSize=>64];
      R1:=Sm myMon; -- a new ring with new variables
@@ -424,7 +424,7 @@ xInt = (x1, y1, x2, y2) ->  x1-(y1/((y1-y2)/(x1-x2)))
 --- Output:
 ---	returns value of the F-signature of the pair (R, f^{a/p^e})
 --- Based on work of Eric Canton
-fSig = (e1, a1, f1) -> (
+fSig = (f1, a1, e1) -> (
      R1:=ring f1;
      pp:= char ring f1;     
      1-(1/pp^(dim(R1)*e1))*
@@ -437,14 +437,14 @@ fSig = (e1, a1, f1) -> (
 ---	b - the f-signature of (R,f^{t/p^e})
 ---     e - some positive integer
 ---     t1- another rational number > t
----	f - some HOMOGENEOUS polynomial in two or three variables in a ring of PRIME characteristic
+---	f - some polynomial in two or three variables in a ring of PRIME characteristic
 ---
 --- Output:
----	fSig applied to (e,t1,f)
----	x-intercept of the line passing through (t,b) and (t1,fSig(e,t1,f))
+---	fSig applied to (f,t1,e)
+---	x-intercept of the line passing through (t,b) and (t1,fSig(f,t1,e))
 
-threshInt = (e,t,b,t1,f)-> (
-{b1=fSig(e,t1,f),xInt(t,b,t1/p^e,b1)}
+threshInt = (f,e,t,b,t1)-> (
+{b1=fSig(f,t1,e),xInt(t,b,t1/(char ring f)^e,b1)}
 )
 
 
@@ -466,7 +466,7 @@ threshEst={finalCheck=> true} >> o -> (ff,ee)->(
      	  else 
 	  (
 	       --error "help most";
-	       ak:=threshInt(ee,(nn-1)/pp^ee,fSig(ee,nn-1,ff),nn,ff); 
+	       ak:=threshInt(ff,ee,(nn-1)/pp^ee,fSig(ff,nn-1,ee),nn); 
 	       --  if (DEBUG == true) then error "help mostest";
 	       if ( (nn+1)/pp^ee == (ak#1) ) then (ak#1)
 	       else if (o.finalCheck == true) then 
