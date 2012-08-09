@@ -20,10 +20,8 @@ newPackage(
   "SpectralSequences",
   Version => "0.2'",
   Date => "8 August 2012",
-  Authors => {{
-      Name => "Nathan Grieve", 
-      Email => "nathangrieve@mast.queensu.ca"},     
-      {
+  Authors => {
+       {
       Name => "David Berlekamp", 
       Email => "daffyd@math.berkeley.edu", 
       HomePage => "http://www.math.berkeley.edu/~daffyd"},
@@ -31,14 +29,17 @@ newPackage(
       Name => "Adam Boocher", 
       Email => "aboocher@math.berkeley.edu", 
       HomePage => "http://www.math.berkeley.edu/~aboocher"},
-{
-      Name => "Thanh Vu", 
-      Email => "vqthanh@math.berkeley.edu",
-      HomePage => "http://math.berkeley.edu/~thanh"},
+       {
+      Name => "Nathan Grieve", 
+      Email => "nathangrieve@mast.queensu.ca"},             
     {
       Name => "Gregory G. Smith", 
       Email => "ggsmith@mast.queensu.ca", 
-      HomePage => "http://www.mast.queensu.ca/~ggsmith"}},
+      HomePage => "http://www.mast.queensu.ca/~ggsmith"},
+ {
+      Name => "Thanh Vu", 
+      Email => "vqthanh@math.berkeley.edu",
+      HomePage => "http://math.berkeley.edu/~thanh"}},
   Headline => "spectral sequences",
   DebuggingMode => true
   )
@@ -48,8 +49,7 @@ export {
   "filteredComplex",
   "SpectralSequence",
   "spectralSequence",
-  "SpectralSequenceSheet",
-  "spots"
+  "SpectralSequenceSheet"
   "see"
   }
 
@@ -345,12 +345,14 @@ SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
 SpectralSequenceSheet ^ List := Module => (Er,L) -> (if Er#?L then source Er#L else Er.zero) 
      
 
+load "Doc/SpectralSequencesDoc.m2"
 end
 
 --------------------------------------------------------------------------------
-
 restart
 needsPackage "SpectralSequences";
+installPackage("SpectralSequences",RemakeAllDocumentation=>true)
+viewHelp SpectralSequences
 debug SpectralSequences;
 S = QQ[x,y,z];
 I = ideal vars S;
