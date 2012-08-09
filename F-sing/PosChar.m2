@@ -22,7 +22,7 @@ export{"basePExp",
      "tauPoly",
      "isFRegularPoly",
      "fSig",
-     "threshEst",
+     "FPTEst",
      "isSharplyFPurePoly"
      }
 --This file has "finished" functions from the Macaulay2 workshop at Wake Forest
@@ -344,7 +344,7 @@ threshInt = (f,e,t,b,t1)-> (
 ---f-pure threshold estimation
 ---e is the max depth to search in
 ---Verify is a boolean to determine whether the last isFRegularPoly is run (it is possibly very slow) 
-threshEst={Verify=> true} >> o -> (ff,ee)->(
+FPTEst={Verify=> true} >> o -> (ff,ee)->(
      --error "help";
      pp:=char ring ff;
      n:=nu(ff,ee);
@@ -381,14 +381,184 @@ doc ///
      Key
      	basePExp 
      Headline
-        Base P Expansion
+        Base p Expansion of an integer N
      Usage
      	  basePExp(N,p) 
      Inputs
          N:ZZ
 	 p:ZZ
      Outputs
-        E:List
+        :List
 ///
 
+doc ///
+     Key
+     	fastExp 
+     Headline
+        Computes powers of elements in rings of characteristic p>0 using the Freshman's dream
+     Usage
+     	  fastExp(f,N) 
+     Inputs
+     	 f:RingElement
+         N:ZZ
+     Outputs
+        :RingElement
+///
+
+doc ///
+     Key
+     	 frobeniusPower
+     Headline
+        The following raises an ideal to the $p^e$th power
+     Usage
+     	  frobeniusPower(I,e) 
+     Inputs
+     	 I:Ideal
+         e:ZZ
+     Outputs
+        :Ideal
+///
+
+doc ///
+     Key
+     	 nu
+	 (nu,Ideal,ZZ)
+	 (nu,RingElement,ZZ)
+     Headline
+        Gives$ \nu_I(p^e)$
+     Usage
+     	  nu(I,e)
+	  nu(f,e) 
+     Inputs
+     	 I:Ideal
+	 f:RingElement
+         e:ZZ
+     Outputs
+        :List
+///
+
+doc ///
+     Key
+     	 nuList
+	 (nuList,Ideal,ZZ)
+	 (nuList,RingElement,ZZ)
+     Headline
+        Lists $/nu_I(p^d)$ for d = 1,...,e
+     Usage
+     	  nuList(I,e)
+	  nuList(f,e) 
+     Inputs
+     	 I:Ideal
+	 f:RingElement
+         e:ZZ
+     Outputs
+        :QQ
+///
+
+doc ///
+     Key
+     	 FPTApproxList
+	 (FPTApproxList,Ideal,ZZ)
+	 (FPTApproxList,RingElement,ZZ)
+     Headline
+        Gives a list of $\nu_I(p^d)/p^d$ for d=1,...,e
+     Usage
+     	  FPTApproxList(I,e)
+	  FPTApproxList(f,e) 
+     Inputs
+     	 I:Ideal
+	 f:RingElement
+         e:ZZ
+     Outputs
+         :List
+///
+
+doc ///
+     Key
+     	 ethRoot
+     Headline
+        Computes $I^{[1/p^e]}$ in a polynomial ring over a perfect field
+     Usage
+     	  ethRoot(I,e) 
+     Inputs
+     	 I:Ideal
+         e:ZZ
+     Outputs
+        :Ideal
+///
+
+doc ///
+     Key
+     	 tauPoly
+     Headline
+        Computes the test ideal of $(R, f^t)$ when f is in a polynomial ring over a perfect field.
+     Usage
+     	  tauPoly(f,t) 
+     Inputs
+     	 f:RingElement
+         t:QQ
+     Outputs
+        :Ideal
+///
+
+doc ///
+     Key
+     	 isFRegularPoly
+     Headline
+        Determines if a pair $(R, f^t)$ is F-regular when R is a polynomial ring. 
+     Usage
+     	  isFRegularPoly
+     Inputs
+     	 f:RingElement
+         t:QQ
+     Outputs
+        :Ideal
+///
+doc ///
+     Key
+     	 fSig
+     Headline
+        Computes the F-signature for a specific value $a/p^e$
+     Usage
+     	  fSig(f,a,e)
+     Inputs
+     	 f:RingElement
+	 a:ZZ
+         e:ZZ
+     Outputs
+        :Ideal
+///
+doc ///
+     Key
+     	 [FPTEst,Verify]
+     Headline
+         Atempts to compute the F-pure threshold, where e is the max depth to search in
+     Usage
+     	  FPTEst(f,e,Verify=>V)
+     Inputs
+     	 f:RingElement
+         e:ZZ
+	 V:Boolean
+     Outputs
+        L:List
+	Q:QQ
+     Description
+     	  Text 
+	      Verify is a Boolean with default value True that determines whether the last isFRegularPoly is run (it is possibly very slow)
+///
+doc ///
+     Key
+     	 isSharplyFPurePoly
+     Headline
+        Checks whether (R, f^a) is F-pure at the prime ideal m
+     Usage
+     	 isSharplyFPurePoly(f,a,e,m)
+     Inputs
+     	 f:RingElement
+	 a:ZZ
+         e:ZZ
+	 m:Ideal
+     Outputs
+         :Boolean
+///
 end
