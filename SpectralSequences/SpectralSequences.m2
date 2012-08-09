@@ -268,9 +268,9 @@ net SpectralSequence := E -> (
   if hasAttribute(E, ReverseDictionary) 
   then toString getAttribute(E, ReverseDictionary) 
   else net expression E)
-expression SpectralSequence := E -> new FunctionApplication from {
-  spectralSequence, filteredComplex E}
-
+expression SpectralSequence := E -> stack(
+  "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ", "  \\   \\  ",
+  "   `~~~` ")
 
 filteredComplex SpectralSequence := FilteredComplex => E -> (
   E.filteredComplex)
@@ -370,6 +370,7 @@ VerticalList apply(sort spots K, i -> prune K^i)
 phi=F**inducedMap(FF,1);
 target phi == F**(FF^-infinity)
 
+spectralSequence FF
 
 Hom(F,G)
 Hom(G,F)
