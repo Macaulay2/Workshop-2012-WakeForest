@@ -210,9 +210,13 @@ net FilteredComplex := K -> (
 see = method();
 see FilteredComplex := K -> (
      -- Eliminate the duplication of the homological indexes
-     for i from max K^-infinity to min K^-infinity list(
-       	  for p from min K+1 to max K list(" <-- " | net prune K^p_i)) | i)
---          VerticalList apply(sort spots K, i -> prune K^i)     )
+  (minK, maxK) := (min K, max K);
+  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
+       toList(minK .. maxK), (p,i) ->
+       if i === minK then p | " : " | net prune K^p_i else
+       " <-- " | net prune K^p_i);
+  T = T | {toList(minK .. maxK)};
+  netList T)
 
 filteredComplex = method(TypicalValue => FilteredComplex)
 
@@ -275,11 +279,10 @@ net SpectralSequence := E -> (
   then toString getAttribute(E, ReverseDictionary) 
   else net expression E)
 expression SpectralSequence := E -> stack(
-  "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ..ooOOOooooOO", "  \\   \\  ",
-  "   `~~~` ")
+  "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ..ooOOOooooOO", 
+  "  \\   \\  ", "   `~~~` ")
 
-filteredComplex SpectralSequence := FilteredComplex => E -> (
-  E.filteredComplex)
+filteredComplex SpectralSequence := FilteredComplex => E -> (E.filteredComplex)
 
 chainComplex SpectralSequence := ChainComplex => E -> (
   chainComplex filteredComplex E)
@@ -380,15 +383,31 @@ restart
 needsPackage "SpectralSequences";
 debug SpectralSequences;
 R = QQ[x,y,z]
-M = R^1/ideal(x^2,y^2,z^2)
-S = R/(x-y)
+M = R^1/ideal(vars R)
+S = R/(x^2-y^2)
 N = S^1 /ideal(x^3,x*y^2,y^3)
 F = res M
-G = F ** S
-H = res N
-E = spectralSequence ((filteredComplex G) ** H)
+lim = 10
+G = res (N, LengthLimit => lim)
+g = max G
+J=ker G.dd_lim
+G#(lim+1) = J
+G.dd#(lim+1) = inducedMap(G_lim,G_(lim+1))
+
+H = filteredComplex(F ** S)
+see (K = H ** G)
+spectralSequence K
+E = oo
+
+k = 2
+netList apply(lim, k -> prune Tor_k(M,pushForward(map(S,R),N)))
+
+netList support E_0
+netList support E_1 
 Ei = E_infinity
-support Ei
+netList support Ei
+
+G
 
 
 
