@@ -5,8 +5,8 @@ Version => "1.0", Date => "August 5, 2012", Authors => {
      HomePage => ""
      },
      {Name=> "Emily Witt",
-     Email=> "",
-     HomePage => ""
+     Email=> "ewitt@umn.edu",
+     HomePage => "http://math.umn.edu/~ewitt/"
      },
      {Name => "Sara Malec",
      Email=> "smalec@gsu.edu"
@@ -25,7 +25,20 @@ export{"basePExp",
      "FPTEst",
      "isSharplyFPurePoly",
      "finalCheck",
-     "aPower"
+     "aPower",
+     "firstCarry",
+     "carryTest",
+     "truncationBaseP",
+     "truncation",
+     "digit",
+     "denom",
+     "binomialFPT",
+     "diagonalFPT",
+     "isBinomial",
+     "isDiagonal",
+     "multiDegree",
+     "dCalculation",
+     "calculateEpsilon"
      }
 --This file has "finished" functions from the Macaulay2 workshop at Wake Forest
 --August 2012.  Sara Malec, Karl Schwede and Emily Witt contributed to it.
@@ -43,6 +56,8 @@ denom ZZ := x -> 1;
 
 fracPart = (x) -> (x - floor(x)) --finds the fractional part of a number
 
+--Given a vector w={x,y}, x and y rational in [0,1], returns a number of digits 
+--such that it suffices to check to see if x and y add without carrying in base p
 aPower = (x,p) -> --find the largest power of p dividing x
 (
 a:=1; while fracPart(denom(x)/p^a)==0 do a = a+1;
@@ -180,12 +195,13 @@ frobeniusPower(Ideal,ZZ) := (I,e) ->(
 );
 
 
------------------------------------------------------------------
---*************************************************************--
---Functions for computing the F-pure threshold of a diagonal   --
---or binomial hypersurface using the algorithms of D. Hernandez--                      
---***********************************************************----
------------------------------------------------------------------
+---------------------------------------------------------------------
+--*****************************************************************--
+--Functions for computing the F-pure threshold of a diagonal       --
+--or binomial hypersurface using the algorithms of Daniel Hernandez--
+--(written by E. Witt)                                             --                      
+--*****************************************************************--
+---------------------------------------------------------------------
 
 --Gives the e-th digit of the non-terminating base p expansion of x in [0,1] 
 digit = (e, x, p) -> 
@@ -197,7 +213,8 @@ digit = (e, x, p) ->
      y
 )
 
---Gives the e-th truncation of the non-terminating base p expansion of x in [0,1] as a fraction
+--Gives the e-th truncation of the non-terminating base p expansion of x in [0,1] 
+--as a fraction
 truncation = (e,x,p) -> 
 (
      y:=0; 
@@ -205,7 +222,8 @@ truncation = (e,x,p) ->
      y
 )
 
---Gives the first e digits of the non-terminating base p expansion of x in [0,1] as a list
+--Gives the first e digits of the non-terminating base p expansion of x in [0,1]
+--as a list
 truncationBaseP = (e,x,p) -> 
 (
      L := new MutableList;
@@ -214,14 +232,16 @@ truncationBaseP = (e,x,p) ->
 )
 
 
---Given a rational number x, if a is the power of p dividing its denomiator, finds an integer b so that p^a(p^b-1)*a is an integer
+--Given a rational number x, if a is the power of p dividing its denomiator, 
+--finds an integer b so that p^a(p^b-1)*a is an integer
 bPower = (n,p) ->
 (
      if aPower(n,p)>0 then n = n*p^(aPower(n,p));
      denom(n)
 )
 
---Given a vector w={x,y}, x and y rational in [0,1], returns a number of digits such that it suffices to check to see if x and y add without carrying in base p
+--Given a vector w={x,y}, x and y rational in [0,1], returns a number of digits 
+--such that it suffices to check to see if x and y add without carrying in base p
 carryTest = (w,p) ->
 (
      c := 0; for i from 0 to #w-1 do c = max(c, aPower(w#i, p));
@@ -229,23 +249,25 @@ carryTest = (w,p) ->
      c+d+1
 )
 
---Given a vector w={x,y} of rational integers in [0,1], returns the first spot e where the x and y carry in base p; i.e., (the e-th digit of x)+(the e-th digit of y) >= p
-firstCarry := (w,p) ->
-(
-     zeroTest := false;
-     carry:=0;
-     i:=0;
-     for j from 0 to #w-1 do if w#j == 0 then zeroTest = true;
-     if zeroTest == true then carry = -1 else
-     d := 0;
+--Given a vector w={x,y} of rational integers in [0,1], returns the first spot 
+--e where the x and y carry in base p; i.e., 
+--(the e-th digit of x)+(the e-th digit of y) >= p
+firstCarry = (w,p) ->
+(     
+    i:=0;
+    d:=0;
+    carry:=0;
+    zeroTest := false;
+    for j from 0 to #w-1 do if w#j == 0 then zeroTest=true;
+    if zeroTest == true then carry = -1 else
      (
-	  i = 0; while d < p and i < carryTest(w,p) do 
-	  (
-	       i = i + 1;
-	       d = 0; for j from 0 to #w-1 do  d = d + digit(i,w#j,p);
-	   );
-      if i == carryTest(w,p) then i = -1;
-      carry = i;
+	       i = 0; while d < p and i < carryTest(w,p) do 
+	       (
+	       	    i = i + 1;
+	       	    d = 0; for j from 0 to #w-1 do  d = d + digit(i,w#j,p);
+	   	);
+      	       if i == carryTest(w,p) then i = -1;
+      	       carry = i;
       );
       carry
 )
@@ -258,51 +280,252 @@ reciprocal = w ->
      v
 )
 
---Computes the F-pure threshold of a diagonal hypersurface x_1^(a_1) + ... +x_n^(a_n) using D. Hernandez' algorithm
+--Computes the F-pure threshold of a diagonal hypersurface 
+--x_1^(a_1) + ... +x_n^(a_n) using Daniel Hernandez' algorithm
 diagonalFPT = f ->
 (
-p := char ring f;
-w := apply(terms f, g->first degree(g));
-y := 0; if firstCarry(reciprocal(w),p)==-1 then for i from 0 to #w-1 do y = y + 1/w#i else
-(
-x := 0; for c from 0 to #w-1 do x = x + truncation(firstCarry(reciprocal(w),p)-1, 1/w#c, p); 
-y = x+1/p^(firstCarry(reciprocal(w),p)-1);
-);
-y
+     p := char ring f;
+     w := apply(terms f, g->first degree(g));
+     y := 0; if firstCarry(reciprocal(w),p)==-1 then for i from 0 to #w-1 do y = y + 1/w#i else
+     (
+	  x := 0; for c from 0 to #w-1 do x = x + truncation(firstCarry(reciprocal(w),p)-1, 1/w#c, p); 
+	  y = x+1/p^(firstCarry(reciprocal(w),p)-1);
+     );
+     y
 )
 
---Given a polynomial f, outputs a list of multi-degrees (under the usual grading) of f as lists
+--Given a polynomial f, outputs a list of multi-degrees (under the usual grading)
+--of f as lists
 multiDegree = f ->
 (
      variables := first entries vars ring f;
      apply(terms f, g -> apply(#variables, i ->degree(variables#i,g)))
 )
 
---Determines whether a polynomial f is diagonal; i.e. of the form x_1^(a_1)+...+x_n^(a_n) (up to renumbering variables)
+--Determines whether a polynomial f is diagonal; i.e. of the form 
+--x_1^(a_1)+...+x_n^(a_n) (up to renumbering variables)
 isDiagonal = f ->
 (
-d := multiDegree(f);
-alert1 := true;
-alert2 := true;
-for i from 0 to #d-1 do
+     d := multiDegree(f);
+     alert1 := true;
+     alert2 := true;
+     for i from 0 to #d-1 do
+     (
+	  for j from 0 to #(d#0)-1 do
+	  (
+	       if (d#i)#j!=0 and alert1==false then alert2=false;
+	       if (d#i)#j!=0 and alert1==true then alert1=false;
+	  );
+     alert1=true;
+     );
+     for j from 0 to #(d#0)-1 do
+     (
+	  for i from 0 to #d-1 do 
+	  (
+     	       if alert1==false and (d#i)#j!=0 then alert2=false;
+     	       if alert1==true and (d#i)#j!=0 then alert1=false;
+	  );
+     alert1=true;
+     );
+     alert2
+)
+
+--Given a binomial x_1^(a_1)*...*x_n^(a_n) + x_1^(b_1)*...*x_n^(b_n), input the 
+--vectors v={a_1,...,a_n} and w={b_1,...,b_n}, gives the corresponding vector of
+--the polynomial that omits all factors where a_i=b_i.
+factorOutMonomial = (v,w) ->
 (
-for j from 0 to #(d#0)-1 do
+     v1 := new MutableList;
+     w1 := new MutableList;
+     c := 0; i := 0; for i from 0 to #v-1 do (if v#i != w#i then (v1#c = v#i; w1#c = w#i; c = c+1; ); );
+     (v1,w1)
+)
+
+
+--Gives the monomial factored out from factorOutMonomial
+monomialFactor = (v,w) ->
 (
-if (d#i)#j!=0 and alert1==false then alert2=false;
-if (d#i)#j!=0 and alert1==true then alert1=false;
-);
-alert1=true;
-);
-for j from 0 to #(d#0)-1 do
+     a := new MutableList;
+     c := 0; i := 0; for i from 0 to #v-1 do (if v#i == w#i then (a#c = v#i; c = c+1; ); );
+     a
+)
+
+--Given two vectors v={v0,v1} and w={w0,w1} in the real plane, finds the intersection of the associated lines v0*x+w0*y=1 and v1*x+w1*y=1
+twoIntersection = (v,w) ->
 (
-for i from 0 to #d-1 do 
+     if v#0*w#1-v#1*w#0 != 0 then 
+     (
+	  x := (w#1-w#0)/(v#0*w#1-v#1*w#0);
+	  y := (v#0 - v#1)/(v#0*w#1-v#1*w#0);
+	  P := {x,y};
+     ) else P = {0,0};
+P
+)
+
+--Given two vectors v={v0,...vn} and w={w0,...,wn}, list the intersections of all lins vi*x+wi*y=1 and vj*x+wj*y=1
+allIntersections = (v,w) ->
 (
-     if alert1==false and (d#i)#j!=0 then alert2=false;
-     if alert1==true and (d#i)#j!=0 then alert1=false;
-);
-alert1=true;
-);
-alert2
+     L := new MutableList;
+     c := 0;
+     for i from 0 to #v-1 do
+     (
+	  for j from i+1 to #v-1 do 
+     	  (
+     	       if twoIntersection({v#i,v#j}, {w#i,w#j}) != {0,0} then 
+     	       (
+	  	    L#c = twoIntersection({v#i,v#j}, {w#i,w#j});
+	  	    c = c+1;
+     	       );
+	  );
+     );
+     for i from 0 to #v-1 do
+     (
+	  if v#i !=0 then  
+	  (
+	       L#c = {1/(v#i), 0};
+	       c = c + 1;
+	  );
+     );
+     for i from 0 to #v-1 do
+     (
+	  if w#i !=0 then  
+	  (
+	       L#c = {0, 1/(w#i)};
+	       c = c + 1;
+	  );
+     ); 
+     K := new MutableList;
+     c = 0; for i from 0 to #L-1 do
+     (
+	  if (L#i)#0 >= 0 and (L#i)#1 >=0 then (K#c = {(L#i)#0, (L#i)#1}; c = c+1);
+     );
+     K
+)
+
+--Given a point a=(x,y) in the real plane and two vectors v={v0,...,vn} and w={w0,...,wn}, checks whether a is in the polytope defined by the equations vi*x+wi*y<=1
+isInPolytope = (a,v,w) ->
+(
+     alert := true;
+     for i from 0 to #v-1 do
+     (
+	  if v#i*a#0 + w#i*a#1 > 1 then alert = false;
+     );
+     alert
+)
+
+
+--Given a point a=(x,y) in the real plane and two vectors v={v0,...,vn} and w={w0,...,wn}, checks whether a is in the polytope defined by the equations vi*x+wi*y<=1
+isInInteriorPolytope = (a,v,w) ->
+(
+     alert := true;
+     for i from 0 to #v-1 do
+     (
+	  if v#i*a#0 + w#i*a#1 >= 1 then alert = false;
+     );
+     alert
+)
+
+--Given two vectors v and w of the same length, outputs a list of the defining vectors of the polytope as in isInPolytope
+polytopeDefiningPoints = (v,w) ->
+(
+     L := allIntersections(v,w);
+     K := new MutableList;
+     c := 0;
+     for j from 0 to #L-1 do
+     (
+	  if isInPolytope(L#j,v,w) == true then (K#c = {(L#j)#0, (L#j)#1}; c = c+1;)
+     );
+     K
+)
+
+--Given a list of coordinates in the real plane, outputs the one with the largest coordinate sum
+maxCoordinateSum = L ->
+(
+     K := new MutableList from {0,0};
+     for i from 0 to #L-1 do if (L#i)#0 + (L#i)#1 > K#0 + K#1 then K = {(L#i)#0, (L#i)#1};
+     K
+)
+
+--Finds the "delta" in the algorithm of D. Hernandez for F-pure thresholds of binomials
+dCalculation = (w,N,p) ->
+(
+     d := 0; for j from 0 to #w-1 do  d = d + digit(N+1,w#j,p);
+     i := N; while d > p-2 do 
+     (
+	  d = 0; for j from 0 to #w-1 do  d = d + digit(i,w#j,p);
+	  i = i - 1;
+     );
+     i + 1
+)
+
+--Given the "truncation" point (P1,P2) and two vectors defining the binomial v and w, outputs the "epsilon" in the algorithm of D. Hernandez for F-thresholds of binomials
+calculateEpsilon = (P1,P2,v,w) ->
+(
+     X := new MutableList;
+     Y := new MutableList;
+     c:=0; d := 0; for i from 0 to #v-1 do 
+     (
+	  if w#i != 0 then 
+     	  (
+	       X#c = (1 - (v#i)*(P2#0) - (w#i)*(P2#1))/(w#i);
+	       c = c+1;
+	  );
+          if v#i != 0 then 
+	  (
+	       Y#d = (1 - (v#i)*(P1#0) - (w#i)*(P1#1))/(v#i);
+	       d = d+1;
+	  );
+     );
+     i:=0;
+     epsilon:=0;
+     if isInInteriorPolytope(P1,v,w)==false and isInInteriorPolytope(P2,v,w)==false then epsilon = -1 else
+     (
+	  if isInInteriorPolytope(P1,v,w)==false then for i from 0 to #v-1 do X#1 = 0;
+	  if isInInteriorPolytope(P2,v,w)==false then for i from 0 to #v-1 do Y#1 = 0;
+	  M := X#0; 
+	  N := Y#0;
+	  for i from 1 to #X-1 do M = min(M, X#i);
+	  for j from 1 to #Y-1 do N = min(N, Y#j);
+	  epsilon = max(M,N); 
+     );
+     epsilon
+)
+
+binomialFPT = g ->
+(
+     p := char ring g;
+     v := (multiDegree(g))#0;
+     w := (multiDegree(g))#1;
+     FPT := 0;
+     f := monomialFactor(v,w);
+     x := factorOutMonomial(v,w);
+     v = x#0;
+     w = x#1;
+     Q := maxCoordinateSum(polytopeDefiningPoints(v,w));
+     if Q#0+Q#1 > 1 then FPT = 1 else
+     (
+	  L :=  firstCarry(Q,p);
+	  if L == -1 then FPT = Q#0+Q#1 else
+     	  (
+     	       d := dCalculation(Q,L-1,p);
+     	       P := (truncation(d,Q#0,p),  truncation(d,Q#1,p));
+     	       P1 := {P#0, P#1+1/p^d};
+     	       P2 := {P#0+1/p^d,P#1};
+     	       FPT = truncation(L-1,Q#0+Q#1,p);
+     	       if calculateEpsilon(P1,P2, v, w) != -1 then FPT = FPT +  calculateEpsilon(P1, P2, v, w);
+     	  );
+     );
+     monFPT := infinity;
+     for i from 0 to #f-1 do (if f#i!=0 then monFPT = min(monFPT, 1/(f#i)););
+     if monFPT != 0 then FPT = min(FPT, monFPT);
+     FPT
+)
+
+isBinomial = f ->
+(
+     alert := true;
+     if #(terms f)>2 then alert = false;
+     alert
 )
 
 
@@ -474,7 +697,7 @@ threshInt = (f,e,t,b,t1)-> (
 {b1,xInt(t,b,t1/(char ring f)^e,b1)}
 )
 
-
+ "/Users/emilyewitt/m2.2012/F-sing/FS/"
 
 ---f-pure threshold estimation
 ---e is the max depth to search in
