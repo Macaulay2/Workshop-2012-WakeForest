@@ -1,5 +1,5 @@
 newPackage(
-	"Polymake",
+	"PolymakeInterface",
     	Version => "0.3", 
     	Date => "Aug 6, 2012",
     	Authors => {{Name => "Josephine Yu", 
@@ -18,7 +18,7 @@ export {
      createPolymakePolytope,
      hasProperty,
      getProperty,
-     getropertyNames,
+     getPropertyNames,
      parseAllAvailableProperties
      }
 
@@ -62,42 +62,47 @@ createPolymakePolytope(String,String) := (script,variableName) -> (
 ------------------------------------------------------------------------------
 
 propertyTypes = {
-     {    "Class" => "PolyhedralObject",
+     {    
 	  "M2PropertyName" => "ConeDim",
 	  "PolymakePropertyName" => "CONE_DIM",
 	  "ValueType" => "Integer"
 	  },
-     {    "Class" => "PolyhedralObject",
+     {   
 	  "M2PropertyName" => "InputLineality",
 	  "PolymakePropertyName" => "INPUT_LINEALITY",
 	  "ValueType" => "Matrix"
 	  },
-     {    "Class" => "Polyhedron",
+     {    
 	  "M2PropertyName" => "FVector",
 	  "PolymakePropertyName" => "F_VECTOR",
 	  "ValueType" => "Vector"
 	  },
-     {    "Class" => "Polyhedron",
+     {   
 	  "M2PropertyName" => "Points",
 	  "PolymakePropertyName" => "POINTS",
 	  "ValueType" => "Matrix"
 	  },
-     {    "Class" => "Polyhedron",
+     {    
+	  "M2PropertyName" => "InputRays",
+	  "PolymakePropertyName" => "INPUT_RAYS",
+	  "ValueType" => "Matrix"
+	  },
+     {    
 	  "M2PropertyName" => "Vertices",
 	  "PolymakePropertyName" => "VERTICES",
 	  "ValueType" => "Matrix"
 	  },
-     {    "Class" => "Polyhedron",
+     {   
 	  "M2PropertyName" => "Facets",
 	  "PolymakePropertyName" => "FACETS",
 	  "ValueType" => "Matrix"
 	  },
-     {    "Class" => "Polyhedron",
+     {    
 	  "M2PropertyName" => "Feasible",
 	  "PolymakePropertyName" => "FEASIBLE",
 	  "ValueType" => "Boolean"
 	  },
-     {    "Class" => "Polyhedron",
+     {    
 	  "M2PropertyName" => "Bounded",
 	  "PolymakePropertyName" => "BOUNDED",
 	  "ValueType" => "Boolean"
@@ -145,12 +150,19 @@ toPolymakeFormat(PolyhedralObject) := (P) -> (
      )
 
 writePolymakeFile = method(TypicalValue => Nothing)
-writePolymakeFile(PolyhedralObject) := (P) ->(
+writePolymakeFile(PolyhedralObject, String) := (P, header) ->(
      fileName := temporaryFileName()|currentTime()|".poly";
      << "using temporary file " << fileName << endl;
-     fileName << toPolymakeFormat(P) << endl << close;
+     fileName << header << endl << endl << toPolymakeFormat(P) << endl << close;
      P#"PolymakeFile" = fileName;
      fileName	  
+     )
+writePolymakeFile(PolyhedralObject) := (P) -> (
+     writePolymakeFile(P, "")
+     )
+writePolymakeFile(Cone) := (C) -> (
+     header := "_type Cone\n";
+     writePolymakeFile(C, header)
      )
 
 ---------------------------------------------------------------------------
@@ -332,7 +344,7 @@ beginDocumentation()
 
 doc ///
   Key
-    Polymake
+    PolymakeInterface
   Headline
     Interface for Polymake
   Description
@@ -341,7 +353,7 @@ doc ///
    Text 
      Warning: this package is not complete, and is mostly undocumented, but it is used in  @TO "gfanInterface::gfanInterface"@. 
    Text
-     We can use the interface to get properties of @TO "Polyhedra::Polyhedron"@
+     We can use the interface to get properties of @TO "PolyhedralObjects"@
    Example
      P = cyclicPolytope(3,5)
      getVectorProperty(P, "F_VECTOR")
@@ -368,7 +380,7 @@ doc ///
   Caveat
      You may need to manually remove the temporary files created in {\tt /tmp}.
   SeeAlso
-     Polyhedra
+     PolyhedralObjects
 ///
 
 ---------------------------------------------------------------------------
@@ -386,8 +398,8 @@ end
 ---------------------------------------------------------------------------
 
 restart
-needsPackage "Polymake"
---needsPackage "Polyhedra2"
+needsPackage "PolymakeInterface"
+needsPackage "Polyhedra2"
 needsPackage "PolyhedralObjects"
 testScript = ///
     use application "polytope";
@@ -395,8 +407,8 @@ testScript = ///
     print $a->F_VECTOR;
     ///
 runPolymake(testScript)
-P = createPolymakePolytope("my $a=cube(2,2);","a")
 P = convexHull matrix{{0,0,1,1},{0,1,0,1}}
+--P#"Points" = P#"InputRays";
 runPolymake(P,"Feasible")
 class oo
 runPolymake(P,"Bounded",ParseAllProperties=>true)
@@ -411,12 +423,15 @@ class oo
 peek P
 parseAllAvailableProperties(P)
 peek P
+C = posHull matrix{{0,0,1,1},{0,1,0,1},{1,1,1,1}}
+runPolymake(C,"Facets")
 runPolymake(P,"dsgjewlksjflkdsjgflksdjlfksd")
 getProperty(P,"sdgjlejgoiwefioew")
 
 ---------------------------------------------------------------------------
 ------------------------- TO DO ---------------------------
 ---------------------------------------------------------------------------
--- Parse IncidenceMatrix objects and other types
+-- Add new properties to the table
+-- Parse IncidenceMatrix,SimplicialComplex objects and other types
 -- Parse all properties in one round to save the overhead
 -- Documentation
