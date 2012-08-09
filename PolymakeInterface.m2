@@ -81,12 +81,22 @@ propertyTypes = {
 	  "M2PropertyName" => "Points",
 	  "PolymakePropertyName" => "POINTS",
 	  "ValueType" => "Matrix"
-	  },
+	  }
      {    
 	  "M2PropertyName" => "InputRays",
 	  "PolymakePropertyName" => "INPUT_RAYS",
 	  "ValueType" => "Matrix"
 	  },
+     {    
+	  "M2PropertyName" => "LatticePoints",
+	  "PolymakePropertyName" => "LATTICE_POINTS",
+	  "ValueType" => "Matrix"
+	  },
+     {    
+	  "M2PropertyName" => "HilbertBasis",
+	  "PolymakePropertyName" => "HILBERT_BASIS",
+	  "ValueType" => "Matrix"
+	  },          
      {    
 	  "M2PropertyName" => "Rays",
 	  "PolymakePropertyName" => "RAYS",
