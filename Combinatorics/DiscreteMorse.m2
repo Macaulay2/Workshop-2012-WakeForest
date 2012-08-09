@@ -563,7 +563,8 @@ collapseCell(List,MorseMatching):= opts -> (e,M) ->(
      --------------------------------
      --Initializes the 
      D := new ChainComplex;
-     D.ring = opts.Coefficients;
+     kk :=opts.Coefficients;
+     D.ring = kk;
      --------------------------------
      --Puts edges in E into appropriate form.
      --------------------------------
@@ -571,19 +572,29 @@ collapseCell(List,MorseMatching):= opts -> (e,M) ->(
      --------------------------------
      --Counts the number of cells of each dimension left, and removes one from d and d+1.
      d := dimensionFetcher(e,M);
-     numCells := apply(#V, i-> if (i === d) or (i===d+1) then (#V_i-1) else #V_i);
+     numCells := apply(#V, i-> if (i === d) or (i===(d+1)) then (#V_i-1) else #V_i);
      --------------------------------
      --Defines the modules in the chain complex
-     D#-1 = 1;
-     apply(#numCells, i -> D#i = QQ^(numCells_i));
+     D#-1 = QQ^1;
+     for i from 0 to #numCells -1 do (
+     	  D#i = QQ^(numCells_i);
+     );
      --------------------------------
      --Construct NEW chain maps D.dd_(i-1), D.dd_i and D.dd_(i+1):
      --
      --------------------------------
      T:=trimComplex(c,C,M);
      D.dd_d = map(D#(d-1),D#d,T_0);
-     D.dd_(d+1) = map(source D.dd_d,D#(d+1),transpose T_1);
-     apply(toList(0..#numCells-1), i-> if not member(i,{d,d+1}) then D.dd_i = C.dd_i);
+     if T_1 == map(QQ^1,QQ^0,0) then (
+     	  D.dd_(d+1) = map(D#d,D#(d+1),T_1);
+     )
+     else (
+	  D.dd_(d+1) = map(D#d,D#(d+1),transpose T_1);
+     );
+     if d+2 <= dim M.cache.complex then (
+     	  D.dd_(d+2) = map(D#(d+1),D#(d+2),T_2);
+     );
+     scan(drop(toList(0..#numCells-1),{d,d+2}), i-> D.dd_i = C.dd_i);
      --------------------------------
      --Final stage:  Set chaincomplex to new chain complex,
      --then delete {c_(i,j),c_(i+1,k)} from M.cache.cells.
@@ -593,15 +604,22 @@ collapseCell(List,MorseMatching):= opts -> (e,M) ->(
 
 trimComplex = method()
 trimComplex(List,ChainComplex,MorseMatching):= (c,C,M) ->(
-     idx1:= currentCellPosition(c_0,M);
-     idx2:= currentCellPosition(c_1,M);
+     idx1 := currentCellPosition(c_0,M);
+     idx2 := currentCellPosition(c_1,M);
      d := idx1_0;
      A := submatrix'(C.dd_d,,{idx1_1});
+     if d+2 <= dim M.cache.complex then (
+     	  N := submatrix'(C.dd_(d+2),{idx2_1},);
+     );
      B := entries submatrix'(transpose C.dd_(d+1),{idx2_1},);
      deletedCell := first entries submatrix(transpose C.dd_(d+1),{idx2_1},);
      attachedCells := select(#B, r -> (B_r)_(idx1_1) !=0);
-     newCellMaps := apply(attachedCells, i-> {i, B_i+((B_i)_(idx2_1))*deletedCell});
-     {A,submatrix'(matrix flatten apply(newCellMaps, m-> B = replace(first m,last m,B)),,{idx2_1})}
+     newCellMaps := apply(attachedCells, i-> {i, (B_i+((B_i)_(idx1_1))*deletedCell)});
+     for m in newCellMaps do (
+     	  B = replace(first m, last m, B);
+     );
+     if B === {} then B = matrix{{0_(C.ring)}};
+     {A,submatrix'(matrix B,,{idx1_1}),N}
 )
 
 
