@@ -1,6 +1,6 @@
 newPackage(
 	"Tensors",
-    	Version => "0.01", 
+    	Version => "0.02", 
     	Date => "August 5, 2012",
     	Authors => {
 	     {Name => "Andrew Critch", Email => "critch@math.berkeley.edu", HomePage => "http://www.acritch.com/"},
@@ -19,8 +19,8 @@ newPackage(
    
 --ToDo:eventually ditch tensor arrays 
 --except for printing
---1)IndexedTensors, made of tensors, 
---NOT arrays... convert to and from arrays 
+--1) tensorContraction for tensors, for now
+--by converting to and from arrays 
 --for now; do faster and mostly ditch
 --arrays except for printing later.
 --2)fix tm R^3
@@ -59,7 +59,8 @@ assertClasses (List,Type,String) := (L,T,context) -> if not all(L,i->instance(i,
 --------------------------------------------
 --Load part 1 (minimize dependence on this)
 --------------------------------------------
-load "./tensors/tensorarrays.m2"
+--load "./tensors/tensorarrays.m2"
+load "./tensors/rectangularnestedlists.m2"
 
 ----------------------------------
 --Part 2 of 3:
@@ -141,11 +142,6 @@ tm (Module,List) := (M,dims) -> (
 	        symbol module => M});
      )
 
---Get the ambient tensor module of a tensor:
-tm Tensor := t -> class t;
-module Tensor := t -> module class t;
-
-
 --perhaps this should instead be
 --t-> (classes := ancestors class t;
 --     return classes#(position(classes,i->class i===TensorModule))
@@ -183,15 +179,47 @@ TensorModule++TensorModule := (M,N) -> (
 
 TensorModule**TensorModule := (M,N) -> tm{M,N}
 
+
+-----------------------------
+--Basic tensor methods
+-----------------------------
+--Get the ambient tensor module of a tensor:
+tensorModule Tensor := t -> class t;
+
+--Get the ambient module of a tensor
+module Tensor := t -> module class t;
+
+--Convert a tensor back into a vector
+vector Tensor := t -> new (module t) from t
+
+--Extract an entry of a tensor
+--by a multi-index
+Tensor _ Sequence := (v,L) -> (
+     M := tensorModule v;
+     dims := M#(gs"dimensions");
+     if not #L == #dims then error "dimension mismatch";
+     ind := L#0;
+     for i from 0 to #L-2 do ind = ind*dims#i + L#(i+1);
+     v_ind
+     )
+
+tensor' = method()
+--a.c. needed:
+--make a
+tensor' List := L -> tensor' tensorArray L;
+
+
+tensor' (List,List) := (ents,dims) -> error "not implemented yet"
+Ring**Tensor := (r,t) -> error "not implemented yet"
+
 ----------------------------------------------
 --Conversions between Tensors and TensorArrays
 ----------------------------------------------
 ------MINIMIZE DEPENDENCE ON TENSOR ARRAYS
 ----------------------------------------------
-tensor' = method()
 tensor' (List,TensorModule) := (L,M) -> (
      a:=tensorArray L;
-     if not tensorDimensions a == tensorDimensions M then error "tensor' (List,TensorModule): dimension mismatch";
+     if not rnlDimensions a == tensorDimensions M then error "tensor' (List,TensorModule): dimension mismatch";
      t:=new M from vector ultimate(flatten,L);
      TensorArray.cache#t = a;
      Tensor.cache#a = t;
@@ -200,7 +228,7 @@ tensor' (List,TensorModule) := (L,M) -> (
 
 tensor' (TensorArray,TensorModule) := (L,M) -> (
      a:=tensorArray L;
-     if not tensorDimensions a == tensorDimensions M then error "tensor' (List,TensorModule): dimension mismatch";
+     if not rnlDimensions a == tensorDimensions M then error "tensor' (List,TensorModule): dimension mismatch";
      t:=new M from vector ultimate(flatten,L);
      TensorArray.cache#t = a;
      Tensor.cache#a = t;
@@ -209,7 +237,7 @@ tensor' (TensorArray,TensorModule) := (L,M) -> (
 
 tensor' TensorArray := a -> (
      if Tensor.cache#?a then return Tensor.cache#a;     
-     dims:=tensorDimensions a;
+     dims:=rnlDimensions a;
      f:=ultimate(flatten,a);
      R:=commonRing f;
      M:=tensorModule(R,dims);
@@ -219,7 +247,6 @@ tensor' TensorArray := a -> (
      t     
      )
 
-tensor' List := L -> tensor' tensorArray L;
 
 
 ------
@@ -235,8 +262,9 @@ tensorArray Tensor := t -> (
 net Tensor := t -> net tensorArray t;
 ------
 
-------FIXED:
-vector Tensor := t -> new (module t) from t
+---------------------------
+--Tensor combinations
+---------------------------
 Tensor+Tensor := (v,w) -> (
      if not tm v == tm w then error "Tensor+Tensor not from the same TensorModule";
      new (tm v) from (vector v)+(vector w)
@@ -254,20 +282,41 @@ Tensor**Tensor := (v,w) -> (
      M:=(tm v)**(tm w);
      new M from (vector v)**(vector w)
      )
-
-     
-Tensor _ Sequence := (v,L) -> (
-     M := tensorModule v;
-     dims := M#(gs"dimensions");
-     if not #L == #dims then error "dimension mismatch";
-     ind := L#0;
-     for i from 0 to #L-2 do ind = ind*dims#i + L#(i+1);
-     v_ind
-     )
-
-
 Tensor ^ ZZ := (t,n) -> fold(for i in 0..<n list t,(i,j)->i**j)
 
+-------------------------
+--Tensor Compositions
+-------------------------
+--REWRITE THESE FROM SCRATCH!!
+
+tcomp=
+tensorComposition=method()
+tcomp (List,List,List) := 
+  (tensors,indicesByTensor,summationIndices) -> 
+  tensor' rnlComposition(tensors/rnl,indicesByTensor,summationIndices)
+
+tcomp (List,List) := (L,summationIndices) -> (
+    tensorComposition(L/first,L/(i->toSequence remove(i,0)),summationIndices)
+     )
+
+tcomp (List) := L -> tcomp(L,{})
+
+esum=
+einsteinSummation=method()
+esum (List,List) := 
+  (tensors,indicesByTensor) -> (
+     numberOfTensors:=#tensors;
+     indicesByTensor=indicesByTensor/toSequence;
+     allIndices:=toList set splice indicesByTensor;
+     ZZindices:=(select(allIndices,i->class i === ZZ));
+     indexLocations:= i -> indicesByTensor/(j->positions(j,k->k===i));
+     repeatedIndices:=select(allIndices,i->1<#flatten indexLocations i);
+     summationIndices:=repeatedIndices-set(ZZindices);
+     tcomp(tensors,indicesByTensor,summationIndices)
+     )
+
+esum(List) := (L) ->
+     esum(L/first,L/(i->toSequence remove(i,0)))
 
 TEST ///
 R=QQ[x]
@@ -357,5 +406,9 @@ restart
 uninstallPackage"Tensors"
 installPackage"Tensors"
 viewHelp"Tensors"
+
 restart
 debug loadPackage"Tensors"
+
+restart
+debug loadPackage("Tensors",DebuggingMode=>true)

@@ -71,11 +71,19 @@ rnl(List,List):=(dims,L) -> (
 --Tensor Arrays
 ----------------------------
 TensorArray  = new Type of List
-TensorArray**TensorArray := (a,b) -> error "not implemented yet"
-net TensorArray  := T -> netList new List from T
+TensorArray**TensorArray := (a,b) -> (
+     error "not implemented; probably shouldn't be")
+TensorArray+TensorArray := (a,b) -> (
+     error "not implemented; probably shouldn't be")
+TensorArray-TensorArray := (a,b) -> (
+     error "not implemented; probably shouldn't be")
+
+net TensorArray  := T -> netList T
 TensorArray.cache = new CacheTable
 TensorArray_ZZ := (N,n) -> N_(1:n)
 -----
+
+-----No longer necessary:
 TensorArray_Sequence:=(N,s) -> (
      if not all(s,i->instance(i,ZZ) or instance(i,Symbol) or instance(i,Nothing)) then error "TensorArray_Sequence: expected a list of integers or symbols";
      if not all(s,i->instance(i,ZZ) or instance(i,Nothing)) then return (hold N)_(hold s);
