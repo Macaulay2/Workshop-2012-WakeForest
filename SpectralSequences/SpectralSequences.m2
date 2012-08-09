@@ -299,10 +299,8 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
     symbol cache => CacheTable})
 
 --get the inverse image of C under the map d
-invSubmodule := (d,C) -> (
-  g := inducedMap ((target d)/C,target d);
-  f := g * d;
-  ker f)
+invSubmodule := (d,C) -> ker (inducedMap ((target d)/C,target d) * d)
+
 
 pageZ := (r, F,p,q) -> (
      C:= chainComplex F;
@@ -367,7 +365,7 @@ changeofRing (Module,Module,RingMap):= SpectralSequence => (M,N,f) -> (
      T:= target f;
      F:= res M;
      G:= filteredComplex (F ** T);
-     spectralSequence (G ** res N))
+     (spectralSequence (G ** res N))_infinity)
      
 
 load "Doc/SpectralSequencesDoc.m2"
@@ -394,69 +392,14 @@ lim = 10;
 G = res (N, LengthLimit => lim)
 
 see (K = H ** G)
-spectralSequence K
-E = oo
+E = spectralSequence K
 
-k = 2
 netList apply(lim, k -> prune Tor_k(M,pushForward(map(S,R),N)))
-
 netList support E_0
 netList support E_1 
-netList support Ei = E_infinity
-
-g = max G
-J=ker G.dd_g
-G#(g+1) = J
-G.dd#(g+1) = inducedMap(G_g,G_(g+1))
-
-see (K = H ** G)
-E = spectralSequence K
-Ei = E_infinity
-netList support Ei
-
-
-
-G
-
-
-
-spots K
-VerticalList apply(sort spots K, i -> prune K^i)
-phi=F**inducedMap(FF,1);
-target phi == F**(FF^-infinity)
-
-spectralSequence FF
-
-Hom(F,G)
-Hom(G,F)
-fHom(F,F)
-G^0 == F
-
+netList support E_infinity
 T = G ** F
 E = spectralSequence T
-E0 = E_0
-keys E_0
-E1 = E_1
-keys E1
-prune E1^{0,-2}
-prune E1^{0,-1}
-prune E1^{0,-3}
-E2 = E_2
-supportSpectralSequenceSheet E2
-prune E2^{2,-3}
-prune E2^{1,-3}
-prune E2^{0,-3}
-
-E3 = E_3
-supportSpectralSequenceSheet E3
-prune E3^{3,-4}
-prune E3^{2,-4}
-prune E3^{1,-4}
-prune E3^{0,-4}
-
-T = totalTensor(F,F)
-T.dd
-G = filteredTensor(F,F)
 
 -- Nathan's first example
 id_(QQ^1) || 0*id_(QQ
@@ -471,8 +414,10 @@ D2 = simplicialComplex {x*y}
 K = filteredComplex{D0,D1,D2}
 
 
-code(net,Variety)
+code(Hom,Matrix,Module)
+code(Hom,Module,Matrix)
 
+     
 
 -- filtration by successive skeleta of the real projective plane
 S = QQ[a..f];
@@ -492,9 +437,6 @@ E_0
 
 code(chainComplex, SimplicialComplex)
 ring faces(2,D)
-
-break
-
 
 chainComplex SimplicialComplex := (D) -> (
   d := dim D;
