@@ -152,33 +152,39 @@ frobeniusPower(Ideal,ZZ) := (I,e) ->(
 ----------------------------------------------------------------
 
 --Computes I^{[1/p^e]}, we must be over a perfect field. and working with a polynomial ring
---This is a slightly stripped down function due to Moty Katzman.
+--This is a slightly stripped down function due to Moty Katzman, with some changes to avoid the
+--use(Rm) which is commented out in a ring
 ethRoot = (Im,e) -> (
      if (isIdeal(Im) != true) then (
-     	  print "ethRoot: You need to pass in an ideal"; print Im; assert false
+     	  error "ethRoot: Expted a nonnegative integer."; 
      );
-     if (not (e >= 0)) then (print "ethRoot: You must pass a nonnegative integer"; assert false);
+     if (not (e >= 0)) then (error "ethRoot: Expected a nonnegative integer.");
      Rm:=ring(Im); --Ambient ring
+     if (not (class Rm === PolynomialRing)) then (error "ethRoot: Expected an ideal in a PolynomialRing.");
      pp:=char(Rm); --characteristic
      Sm:=coefficientRing(Rm); --base field
      n:=rank source vars(Rm); --number of variables
      vv:=first entries vars(Rm); --the variables
-     R1:=Sm[vv, Y_1..Y_n, MonomialOrder=>ProductOrder{n,n},MonomialSize=>64]; -- a new ring with new variables
-     J0:=apply(1..n, i->Y_i-substitute(vv#(i-1)^(pp^e),R1)); -- 
+     YY:=getSymbol("Y"); -- this is an attempt to avoid the ring overwriting
+                         -- the ring in the users terminal
+     myMon := monoid[ (vv | toList(YY_1..YY_n)), MonomialOrder=>ProductOrder{n,n},MonomialSize=>64];
+     R1:=Sm myMon; -- a new ring with new variables
+     vv2 := first entries vars R1;
+     J0:=apply(1..n, i->vv2#(n+i-1)-vv2#(i-1)^(pp^e)); -- 
      --print J0;
-     M:=toList apply(1..n, i->Y_i=>substitute(vv#(i-1),R1));
+     M:=toList apply(1..n, i->vv2#(n+i-1)=>substitute(vv#(i-1),R1));
 
      G:=first entries compress( (gens substitute(Im,R1))%gens(ideal(J0)) );
 
      L:=ideal 0_R1;
-     apply(G, t->
+     apply(G, t-> --this appears to just be a for loop
 	  {
     	       L=L+ideal((coefficients(t,Variables=>vv))#1);
 	  });
      L2:=mingens L;
      L3:=first entries L2;
      L4:=apply(L3, t->substitute(t,M));
-     use(Rm);
+     --use(Rm);
      substitute(ideal L4,Rm)
 )
 
@@ -311,21 +317,21 @@ threshInt = (e,t,b,t1,f)-> (
 ---f-pure threshold estimation
 ---e is the max depth to search in
 ---finalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
-threshEst={finalCheck=> true} >> o -> (f,e)->(
+threshEst={finalCheck=> true} >> o -> (ff,ee)->(
      --error "help";
-     p:=char ring f;
-     n:=nu(f,e);
+     pp:=char ring ff;
+     n:=nu(ff,ee);
      --error "help more";
-     if (isFRegularPoly(f,(n/(p^e-1)))==false) then n/(p^e-1)
+     if (isFRegularPoly(ff,(n/(p^ee-1)))==false) then n/(p^ee-1)
      else (
 	  --error "help most";
-	  ak:=threshInt(e,(n-1)/p^e,fSig(e,n-1,f),n,f); 
+	  ak:=threshInt(ee,(n-1)/pp^ee,fSig(ee,n-1,ff),n,ff); 
 	--  if (DEBUG == true) then error "help mostest";
-	  if ( (n+1)/p^e == (ak#1) ) then (ak#1)
+	  if ( (n+1)/pp^ee == (ak#1) ) then (ak#1)
 	  else if (o.finalCheck == true) then ( 
-	       if ((isFRegularPoly(f,(ak#1) )) ==false ) then ( error "HELP!"; (ak#1))
-	       else {(ak#1),(n+1)/p^e} 
+	       if ((isFRegularPoly(ff,(ak#1) )) ==false ) then ( (ak#1) )
+	       else {(ak#1),(n+1)/pp^ee} 
 	  )
-	  else {(ak#1),(n+1)/p^e}
+	  else {(ak#1),(n+1)/pp^ee}
      )
 )
