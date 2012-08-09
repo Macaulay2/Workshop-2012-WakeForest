@@ -150,10 +150,38 @@ prevSubset (ZZ,List) := o -> (n,P) -> (
 --   http://www.perlmonks.org/?node_id=621859
 -- retrieved August 7, 2012
 -- and adapted for Macaulay2 by Zach Teitler.
+--
+-- nextPartition(n,k): partition of n with blocks of size at most k
+-- 
+-- Desired behavior:
+--   partitions(<0) = partitions(<0,k) = {}
+--   partitions(0) = partitions(0,k) = {Partition{}}
+--   partitions(>0,<0) = error "recursion limit of 300 exceeded"
+--   partitions(>0,0) = {}
+--   partitions(>0) = partitions(>0,>0) = usual list of partitions
 nextPartition = method()
-nextPartition ZZ := n -> new Partition from {n}
-nextPartition (ZZ,ZZ) := (n,k) ->
-  new Partition from select(flatten append( floor(n/k):k , n % k ), i->i!=0)
+nextPartition ZZ := n -> (
+  if n < 0 then (
+    return null;
+  ) else if n == 0 then (
+    return new Partition from {};
+  ) else (
+    return new Partition from {n};
+  );
+)
+nextPartition (ZZ,ZZ) := (n,k) -> (
+  if n < 0 then (
+    return null;
+  ) else if n == 0 then (
+    return new Partition from {};
+  ) else if k < 0 then (
+    error "cannot partition a positive integer into parts with negative size";
+  ) else if k == 0 then (
+    return null;
+  ) else (
+    return new Partition from select(flatten append( floor(n/k):k , n % k ), i->i!=0);
+  );
+)
 nextPartition Nothing := P -> null
 nextPartition Partition := P -> (
   PL := new List from P;
@@ -178,7 +206,15 @@ nextPartition Partition := P -> (
 -- opposite of nextPartition
 -- given an integer partition of n, return the previous one
 prevPartition = method()
-prevPartition ZZ := n -> new Partition from n:1
+prevPartition ZZ := n -> (
+  if n < 0 then (
+    return null;
+  ) else if n == 0 then (
+    return new Partition from {};
+  ) else (
+    return new Partition from n:1;
+  );
+)
 prevPartition (Nothing) := P -> null
 prevPartition Partition := P -> (
   C := nextPartition conjugate P;
@@ -628,7 +664,7 @@ TEST ///
 ///
 
 TEST ///
-  for n from -1 to 12 do (
+  for n from 0 to 12 do (
     S = nextPartition(n);
     partitionList = {};
     while ( S =!= null ) do (
@@ -640,13 +676,13 @@ TEST ///
 ///
 
 TEST ///  
-  for n from -1 to 12 do (
-    for k from -1 to n+1 do (
+  for n from 0 to 12 do (
+    for k from 1 to n+2 do (
       S = nextPartition(n,k);
       partitionList = {};
       while ( S =!= null ) do (
         partitionList = append(partitionList,S);
-        S = nextPartition(n,S);
+        S = nextPartition(S);
       );
       assert( partitionList === partitions(n,k) );
     );
