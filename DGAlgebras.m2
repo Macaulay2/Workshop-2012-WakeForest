@@ -165,13 +165,14 @@ checkIsHomogeneous DGAlgebra := A -> (
 )
 
 
--- change below should make code work for the case when we're setting the differential to 0
+-- change below should make checkIsHomogeneous work for the case when we're setting the differential to 0
 -- all(apply(#diffList, i -> (degree gensList#i - homDegreeShift == degree diffList#i) or (degree diffList#i == -infinity)), i -> i)
 
 
 -- cache the basis of a DGAlgebra?
 getBasis = method(TypicalValue => Matrix, Options => {Limit => -1})
 getBasis (ZZ,DGAlgebra) := opts -> (homDegree,A) -> getBasis(homDegree,A.natural, Limit => opts.Limit)
+getBasis (ZZ,DGModule) := opts -> (homDegree,U) -> getBasis(homDegree,U.natural, Limit => opts.Limit)
 
 getBasis (ZZ,Ring) := opts -> (homDegree,R) -> (
    local retVal;
@@ -1184,8 +1185,8 @@ DGModuleMap * DGModuleMap :=(g,f) -> (
 -------------------------------
 ----   Shift DGModule   -------
 -------------------------------
-shift = method ()
-shift DGModule := DGModule => U -> (
+shift = method ()--(TypicalValue => DGModule)
+shift (DGModule) :=  U -> (
  shiftedDegrees := apply (U.Degrees, x -> {first x+1, last x});
  W := semifreeDGModule (U.DGRing, shiftedDegrees);
  setDiff (W,- (matrix entries U.diff));
@@ -1200,7 +1201,8 @@ W.cache#(symbol inverseShiftMap) = dgModuleMap(U, W, id_(W.natural));
 -------------------------
 -- Shift a DGModuleMap --
 -------------------------
-shift DGModuleMap := DGModuleMap => (f) -> (
+--shift = method (TypicalValue => DGModuleMap)
+shift (DGModuleMap) := (f) -> (
      shiftV := shift(f.target);
      shiftU := shift(f.source);
      shiftedMap := dgModuleMap(shiftV, shiftU, f.natural);
@@ -1269,6 +1271,32 @@ semifreeResolution (Module,DGAlgebra) := opts -> (M,A) -> (
    -- present M over Q, not R
    MoverQ := pushForward(phi,M);
    presMoverQ := presentation MoverQ;
+   gensU := flatten entries presMoverQ;
+   degreesU := apply( apply( gensU, degree), i -> prepend( 1, i) );
+   U := freeDGAlgebra(A, degreesU);
+   U := setDiff (U, sub( presMoverQ, A.natural));
+
+restart
+debug loadPackage "DGAlgebras"
+ Q = QQ[x]
+ I = ideal(x^3)
+ A = koszulComplexDGA(I)
+chainComplex A
+R = Q/I
+M = R^1/ ideal(x^2)
+ Q = A.ring
+ R =  ring M
+ phi = map(R,Q)
+ MoverQ = pushForward(phi,M)
+degreesUsofar = apply( apply( flatten entries gens MoverQ, degree), i -> prepend( 0, i) )
+numgensU = #degreesUsofar
+diffUsofar = map( A.natural^numgensU, A.natural^numgensU, 0)
+ presMoverQ = presentation MoverQ
+degreesUsofar = degreesUsofar | apply( apply( flatten entries presMoverQ, degree), i -> prepend( 1, i) )
+U = semifreeDGModule(A, degreesU)
+U = setDiff ( U,   0 | sub (  presMoverQ, A.natural ))
+   
+
 )
 *}
 
@@ -2841,9 +2869,9 @@ doc ///
   Usage
     V = shift U
   Inputs
-    U:
+    U:DGModule
   Outputs
-    V:
+    V:DGModule
   Description
     Example
       Q = QQ[x]
@@ -2871,9 +2899,9 @@ doc ///
   Usage
     g = shift f
   Inputs
-    f:
+    f:DGModuleMap
   Outputs
-    g:
+    g:DGModuleMap
   Description
     Text
       Given a DG Module map f from U to V, we obtain the induced map from shift U to shift V.
