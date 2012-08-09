@@ -269,6 +269,8 @@ partitionFromTally = (T) -> (
 --   http://www.perlmonks.org/?node_id=29374
 -- retrieved August 7, 2012
 -- and adapted for Macaulay2 by Zach Teitler.
+-- also helpful:
+-- http://stackoverflow.com/questions/11483060/stdnext-permutation-implementation-explanation
 nextPermutation = method()
 nextPermutation ZZ := n -> new List from (0..n-1)
 nextPermutation Nothing := P -> null
@@ -794,7 +796,7 @@ TEST ///
 ///
 
 TEST ///
-  for n from 0 to 5 do (
+  for n from 0 to 7 do (
     P = nextPermutation(n);
     permutationList = {};
     while ( P =!= null ) do (
@@ -818,7 +820,7 @@ TEST ///
 ///
 
 TEST ///
-  for n from 0 to 5 do (
+  for n from 0 to 7 do (
     S = prevPermutation(n);
     permutationList = {};
     while ( S =!= null ) do (
