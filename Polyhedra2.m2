@@ -45,6 +45,10 @@ UsePolymake = (options Polyhedra2).Configuration#"UsePolymake"
 PolymakePath = (options Polyhedra2).Configuration#"PolymakePath"
 
 export {
+     	  "latticePoints",
+     	  "isCompact",
+	  "affinePreimage",
+     	  "affineImage",
         "hilbertBasis",
      	"coneToPolyhedron",
 	"directProduct",
@@ -297,6 +301,130 @@ dualCone Cone:=C->(
      C2)
 
 
+affineImage = method ()
+affineImage (Matrix,Polyhedron,Matrix) := (A,P,v)->(
+     if not P#?"InputRays" and not P#?"Rays" then vertices P;
+     Q:=new Polyhedron from hashTable {};
+     M:=(transpose (map(QQ^1,1+numColumns A,(i,j)->if j==0 then 1 else 0)||(v|A)));
+     if P#?"Rays" then (Q#"InputRays"=P#"Rays"*M;     
+     	  Q#"InputLineality"=P#"LinealitySpace"*M)
+     else  (Q#"InputRays"=P#"InputRays"*M;
+      Q#"InputLineality"=P#"InputLineality"*M);
+     Q)
+
+affineImage (Matrix,Polyhedron) := (A,P)->(affineImage(A,P,map(QQ^(numRows A),QQ^1,0)))
+     
+affineImage (Polyhedron,Matrix) := (P,v)->(affineImage(id_(QQ^(ambDim P)),P,v))     
+
+
+
+affineImage (Matrix,Cone):=(A,P)->(
+     if not P#?"InputRays" and not P#?"Rays" then rays P;
+     Q:=new Cone from hashTable {};
+     if P#?"Rays" then (Q#"InputRays"=P#"Rays"*(transpose (A));     
+     	  Q#"InputLineality"=P#"LinealitySpace"*(transpose (A)))
+     else  (Q#"InputRays"=P#"InputRays"*(transpose (A));
+      Q#"InputLineality"=P#"InputLineality"*(transpose (A)));
+     Q)
+
+affineImage (Matrix,Cone,Matrix) := (A,P,v)->(
+     if v==0 then return affineImage(A,P);
+     affineImage(A,coneToPolyhedron P,v))
+
+affineImage (Cone,Matrix) :=(P,v)->(
+     if v==0 then return P;
+     affineImage(coneToPolyhedron,v))
+
+affinePreimage = method ()
+affinePreimage(Matrix,Polyhedron,Matrix) := (A,P,b) -> (
+     --note: could set up to use eq/ineq if facets don't exist
+     -- Checking for input errors
+     if P#"ambient dimension" =!= numRows A then error("Matrix source must be ambient space");
+     if numRows A =!= numRows b then error("Vector must lie in target space of matrix");
+     if numColumns b =!= 1 then error("Second argument must be a vector");
+     -- Constructing the new half-spaces and hyperplanes
+     (M,v) := halfspaces P;
+     (N,w) := hyperplanes P;
+     v = v - (M * b);
+     w = w - (N * b);
+     M = M * A;
+     N = N * A;
+     intersection(M,v,N,w))
+
+
+affinePreimage(Matrix,Polyhedron) := (A,P) -> (
+     affinePreimage(A,P,map(target A,QQ^1,0)))
+
+affinePreimage(Polyhedron,Matrix) := (P,b) -> affinePreimage(map(QQ^(ambDim P),QQ^(ambDim P),1),P,b)
+
+affinePreimage(Matrix,Cone,Matrix) := (A,C,b) -> if b == 0 then affinePreimage(A,C) else affinePreimage(A,coneToPolyhedron C,b)
+
+affinePreimage(Matrix,Cone) := (A,C) -> posHull affinePreimage(A,coneToPolyhedron C)
+
+affinePreimage(Cone,Matrix) := (C,b) -> affinePreimage(coneToPolyhedron C,b)
+
+latticePoints = method(TypicalValue => List)
+latticePoints Polyhedron := P -> (
+     if not P#?"LatticePoints" then (
+	  -- Checking for input errors
+	  if  not isCompact P then error("The polyhedron must be compact");
+	  -- Recursive function that intersects the polyhedron with parallel hyperplanes in the axis direction
+	  -- in which P has its minimum extension
+	  latticePointsRec := P -> (
+	       -- Finding the direction with minimum extension of P
+	       V := entries vertices P;
+	       n := ambDim P;
+	       print n;
+	       minv := apply(V,min);
+	       maxv := apply(V,max);
+	       minmaxv := maxv-minv;
+	       pos := min minmaxv;
+	       pos = position(minmaxv,v -> v == pos);
+	       -- Determining the lattice heights in this direction
+	       L := toList({{ceiling minv_pos}}..{{floor maxv_pos}});
+	       -- If the dimension is one, then it is just a line and we take the lattice points
+	       if n == 1 then apply(L,matrix)
+	       -- Otherwise intersect with the hyperplanes and project into the hyperplane
+	       else flatten apply(L,p -> (
+			 NP := intersection {P,{map(QQ^1,QQ^n,(i,j) -> if j == pos then 1 else 0),matrix p}};
+			 if numColumns vertices P == 1 then (
+			      v := vertices NP;
+			      if promote(substitute(v,ZZ),QQ) == v then substitute(v,ZZ) else {})
+			 else (
+			      A := matrix drop((entries id_(QQ^n)),{pos,pos});
+			      apply(latticePointsRec affineImage(A,NP),v -> v^{0..(pos-1)} || matrix p || v^{pos..(n-2)})))));
+	  -- Checking if the polytope is just a point
+	  if dim P == 0 then P#"LatticePoints" = if liftable(vertices P,ZZ) then transpose lift(vertices P,ZZ) else map(ZZ^0,ZZ^(ambDim P,0))
+	  -- Checking if the polytope is full dimensional
+	  else if (dim P == ambDim P) then P#"LatticePoints" = transpose matrix {latticePointsRec P}
+	  -- If not checking first if the affine hull of P contains lattice points at all and if so projecting the polytope down
+	  -- so that it becomes full dimensional with a map that keeps the lattice
+	  else (
+	       (M,v) := hyperplanes P;
+	       -- Finding a lattice point in the affine hull of P
+	       b := if all(entries M, e -> gcd e == 1) then (
+		    -- Computing the Smith Normal Form to solve the equation over ZZ
+		    (M1,Lmatrix,Rmatrix) := smithNormalForm substitute(M,ZZ);
+		    v1 := flatten entries (Lmatrix*v);
+		    w := apply(numRows M1, i -> M1_(i,i));
+		    -- Checking if the system is at least solvable over QQ
+		    if all(#w, i -> w#i != 0 or v1#i == 0) then (
+			 -- If it is, then solve over QQ
+			 w = apply(#w, i -> (v1#i/w#i,v1#i%w#i));
+			 if all(w, e -> e#1 == 0) then (
+			      -- If the solution is in fact in ZZ then return it
+			      w = transpose matrix{apply(w,first) | toList(numColumns M1 - numRows M1:0)};
+			      Rmatrix * w)));
+	       -- If there is no lattice point in the affine hull then P has none
+	       if b === null then P#"LatticePoints" = map(ZZ^0,ZZ^(ambDim P),0)
+	       else (
+		    A := gens ker substitute(M,ZZ);
+		    -- Project the translated polytope, compute the lattice points and map them back
+		    P#"LatticePoints" = transpose matrix apply(latticePoints affinePreimage(A,P,b),e -> substitute(A*e + b,ZZ)))));
+     apply(numColumns P#"LatticePoints",i->(P#"LatticePoints")_i)
+     )
+
+
 
 emptyPolyhedron=method ()
 emptyPolyhedron ZZ:=n->(
@@ -309,6 +437,10 @@ emptyPolyhedron ZZ:=n->(
 
 isEmpty=method()
 isEmpty Polyhedron:=P->(dim P==-1)
+
+isCompact = method(TypicalValue => Boolean)
+isCompact Polyhedron := P -> (linSpace P == 0 and rays P == 0)
+
 
 minkowskiSum = method()
 
