@@ -88,6 +88,11 @@ propertyTypes = {
 	  "ValueType" => "Matrix"
 	  },
      {    
+	  "M2PropertyName" => "Rays",
+	  "PolymakePropertyName" => "RAYS",
+	  "ValueType" => "Matrix"
+	  },     
+     {    
 	  "M2PropertyName" => "Vertices",
 	  "PolymakePropertyName" => "VERTICES",
 	  "ValueType" => "Matrix"
