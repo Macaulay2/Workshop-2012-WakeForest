@@ -209,11 +209,14 @@ intersection List := L -> (
 hyperplanes = method()
 hyperplanes Cone := P -> (
 	if P#?"Facets" then return P#"LinearSpan";
-	computeFacets P;
+	if UsePolymake then runPolymake(P,"LinearSpan")
+	else computeFacets P;
 	P#"LinearSpan")
 
 hyperplanes Polyhedron := P -> (
-	if not P#?"Facets" then computeFacets P;
+	if not P#?"Facets" then 
+	if UsePolymake then runPolymake(P,"LinearSpan")
+	else computeFacets P;
 	M:=P#"LinearSpan";
 	(-M_(toList(1..numColumns M-1)),M_{0})
 	)
@@ -222,11 +225,15 @@ hyperplanes Polyhedron := P -> (
 halfspaces = method()
 halfspaces Cone := P -> (
 	if P#?"Facets" then return -P#"Facets";
-	computeFacets P;
+	if UsePolymake then runPolymake(P,"Facets")
+	else computeFacets P;	
 	-P#"Facets")
    
 halfspaces Polyhedron := P -> (
-	if not P#?"Facets" then computeFacets P;
+	if not P#?"Facets" then 
+	if UsePolymake then runPolymake(P,"Facets")
+	else computeFacets P;
+	computeFacets P;
 	M:=P#"Facets";
 	(-M_(toList(1..numColumns M-1)),M_{0})
 	)
