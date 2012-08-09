@@ -3,67 +3,55 @@ newPackage(
     	Version => "0.01", 
     	Date => "August 5, 2012",
     	Authors => {
-	     {Name => "Andrew Critch"},
+	     {Name => "Andrew Critch", Email => "critch@math.berkeley.edu", HomePage => "http://www.acritch.com/"},
 	     {Name => "Claudiu Raicu", Email => "claudiu@math.berkeley.edu", HomePage => "http://math.berkeley.edu/~claudiu/"}
 	     },
-    	Headline => "tensors"
+    	Headline => "tensors",
+	AuxiliaryFiles => true
     	)
  --Macaulay2-1.4/share/Macaulay2/Core/matrix1.m2 
  --needs to replaced for this package to work 
 
 --searchable tag for problems:
 --a.c. problem!
-
    
 --protect Symbol makes something a symbol
 --within the scope of the package
    
---ToDo:
---stop all new Module from M
---fix vector Tensor :=...
---fix tm R^3
---luke wants to identify deg 1 part of the 
+--ToDo:(plan to mostly ditch tensor arrays);
+--1)IndexedTensorArrays, made of tensors, 
+--NOT arrays... convert to and from arrays 
+--for now; do faster and mostly ditch
+--arrays except for printing later.
+--2)fix tm R^3
+--3) change printing of non-free tensor modules
+--4)make a tensor DIRECTLY from a function 
+--5)make a tensor DIRECTLY from a list
+--6) command for dropping 1's in dimension list
+
+--Luke wants:
+--to identify deg 1 part of the 
 --coordinate ring of a tensor space with the
 --dual to the space, and
 --wants pieces of a resolution to be R-TensorModules
---1) IndexedTensorArrays
---3) change printing of non-free tensor modules
---5) TensorArray afterprint
---6) Make multiplication faster:
---  6a) tensorFunction{{A,1,i},{B,i,j},{C,i,l}}
---  6b) New "TensorSubscript" type for A_(3,i)
---4) command for dropping 1's in dimension list
 
-exportMutable {TemporaryTensorList, TemporaryIndexList}
 
-export{associativeCartesianProduct,
-     nestedListAccess,isRectangular,rectangularNestedList,
-     tryHashApplication,deepSubstitution,
-     tensorIndexSubstitution,dimensions}
-export{TensorArray, tensorArray}
-export{einsteinSummation}
-export{Tensor,TensorModule}
-export{tensor',isTensor}
-export{sumOut}
+--consider eliminating TensorArrays?
+
+export{TensorArray, tensorArray, dimensions,
+     tensorArrayContraction,einsteinSummation,
+     Tensor,TensorModule,
+     tensor',tensorModule}
 
 --factors = getSymbol "factors"
 gs = getSymbol --causing a problem!!!!!
---turning module inso a symbol!!
---also means I can't set the value of the symbol in the package...
+--do not apply to existing non-symbols, e.g. module
 
-
---smus "factors"
---protect factors
-
---Using exportMutable{factors} will result in an error from
---:restart
---:factors=7
---:loadPackage"Tensors"
---smus{factors}
---exportMutable{factors}
---exportMutable{factors}
---protect factors
-
+--these are currently used for einstein summation,
+--which needs to be rewritten
+protect TemporaryTensorList
+protect TemporaryIndexList
+protect Stops
 
 -----------------------
 --Error methods
@@ -565,9 +553,6 @@ tensor' List := L -> tensor' tensorArray L;
 ------
 
 ------
-isTensor=method()
-isTensor Thing := x -> instance(class x,TensorModule)
-------
 tensorArray Tensor := t -> (
      if TensorArray.cache#?t then return TensorArray.cache#t;
      a := new TensorArray from rnl (dimensions t,entries t);
@@ -578,7 +563,7 @@ tensorArray Tensor := t -> (
 net Tensor := t -> net tensorArray t;
 ------
 
-------NEEDS FIXING:
+------FIXED:
 vector Tensor := t -> new (module t) from t
 Tensor+Tensor := (v,w) -> (
      if not tm v == tm w then error "Tensor+Tensor not from the same TensorModule";
@@ -662,6 +647,7 @@ Description
    2*3
     
 ///
+
 
 doc///
 Key
