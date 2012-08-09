@@ -16,21 +16,44 @@ export {LieWeights,setLieWeights,getLieWeights,propagate,ToTarget}
 
 --set weights of a ring or module
 setLieWeights = method()
---creates a key "LieWeights" within the ring with value a matrix whose rows are weights of the ring variables
---a matrix is created here because it makes computing weights of ring elements easier
+--creates a key "LieWeights" within the ring with value a matrix whose rows are
+--weights of the ring variables
+--a matrix is created here because it makes computing weights of ring elements
+--easier
 setLieWeights (PolynomialRing, List) := Matrix => (R,L) -> (
-     if not isTable(L) then error "expected all weights to have the same length";
-     for w in L do (for i in w do (if not instance(i,ZZ) then error "expected weights to be integers";););
-     if numgens(R)!=#L then error ("expected as many weights as generators of ",toString(R));
+     if not isTable(L) then (
+	  error "expected all weights to have the same length";
+	  );
+     for w in L do (
+	  for i in w do (
+	       if not instance(i,ZZ) then (
+		    error "expected weights to be integers";
+		    );
+	       );
+	  );
+     if numgens(R)!=#L then (
+	  error ("expected as many weights as generators of ",toString(R));
+	  );
      R#LieWeights = matrix L
      )
 
---creates a key "LieWeights" in the module cache with value a list of weights for the free module generators
+--creates a key "LieWeights" in the module cache with value a list of weights
+--for the free module generators
 setLieWeights (Module, List) := List => (M,L) -> (
-     if not isTable(L) then error "expected all weights to have the same length";
-     for w in L do (for i in w do (if not instance(i,ZZ) then error "expected weights to be integers";););
-     if numgens(M)!=#L then error ("expected as many weights as generators of ",toString(M));
      if not isFreeModule(M) then error "expected a free module";
+     if not isTable(L) then (
+	  error "expected all weights to have the same length";
+	  );
+     for w in L do (
+	  for i in w do (
+	       if not instance(i,ZZ) then (
+		    error "expected weights to be integers";
+		    );
+	       );
+	  );
+     if numgens(M)!=#L then (
+	  error ("expected as many weights as generators of ",toString(M));
+	  );
      M.cache#LieWeights = L
      )
 
@@ -38,13 +61,21 @@ setLieWeights (Module, List) := List => (M,L) -> (
 getLieWeights = method(TypicalValue => List)
 --weight of ring element (really of its leading monomial)
 getLieWeights (RingElement) := List => r -> (
+     R := ring r;
+     if not R#?LieWeights then (
+	  error "weights of the variables not assigned";
+	  );
      if r==0 then error "the weight of the zero element is undefined";
      m := matrix exponents leadMonomial r;
-     w := m*((ring r).LieWeights);
+     w := m*(R.LieWeights);
      return flatten entries w;
      )
 
+--weights of a module
 getLieWeights (Module) := List => M -> (
+     if not M.cache#?LieWeights then (
+	  error "weights of the module not assigned";
+	  );
      return M.cache.LieWeights;
      )
 
@@ -54,15 +85,24 @@ propagate = method(Options => {ToTarget => false})
 --the default option ToTarget=>false propagates weights from codomain to domain
 --turn it to true to go in the other direction
 propagate (Matrix) := List => o -> M -> (
+     if not isHomogeneous(M) then error "expected a homogeneous map";
+     --the following checks if M is minimal (no constant non zero entries)
+     --it compares degrees of generators of source and target
+     --if it finds generators in the same degree it assumes the map is not minimal
+     if #(set(degrees source M)*set(degrees target M))!=0 then (
+	  error "expected a minimal map";
+	  );
      if o.ToTarget == false then (
 	  W := getLieWeights(target M);
 	  p := for j to numColumns(M)-1 list position(flatten entries M_j, z -> z != 0);
-	  return setLieWeights(source M,for j to #p-1 list (W_(p_j) + getLieWeights(M_(p_j,j))))
+	  q := for j to #p-1 list (W_(p_j) + getLieWeights(M_(p_j,j)));
+	  return setLieWeights(source M,q);
 	  )
      else (
 	  W = getLieWeights(source M);
 	  p = for j to numRows(M)-1 list position(flatten entries M^{j}, z -> z != 0);
-	  return setLieWeights(target M,for j to #p-1 list (W_(p_j) - getLieWeights(M_(j,p_j))))
+	  q = for j to #p-1 list (W_(p_j) - getLieWeights(M_(j,p_j)));
+	  return setLieWeights(target M,q)
 	  );
      )
 
@@ -87,9 +127,6 @@ TEST ///
      assert(W === propagate(RI,3))
 ///
      
-end
-
---old documentation
 beginDocumentation()
 doc ///
      Key
@@ -106,11 +143,23 @@ doc ///
 doc ///
      Key
      	  setLieWeights
+     Headline
+     	  attach (Lie theoretic) weights to a ring or module
+     Description
+     	  Text
+	       Use this method to assign weights to the variables of a polynomial
+	       ring or to a free module.
+     SeeAlso
+     	  getLieWeights
+///
+
+doc ///
+     Key
 	  (setLieWeights,PolynomialRing,List)
      Headline
      	  attach (Lie theoretic) weights to the variables of a ring
      Usage
-     	  setLieWeights(R,L)
+     	  M = setLieWeights(R,L)
      Inputs
      	  R:PolynomialRing
 	  L:List
@@ -120,20 +169,103 @@ doc ///
 	       whose rows are the weights of the variables of @TT "R"@
      Consequences
      	  Item
-	       A key is created in the hashTable of @TT "R"@ whose value is the matrix @TT "M"@.
+	       The key @TT "LieWeights"@ is created in the hashTable of @TT "R"@
+	       with value the matrix @TT "M"@.
      Description
      	  Text
-	       Assume @TT "R"@ is the symmetric algebra of a representation $V$ of a semisimple Lie group.
-	       Assume, in addition, that each variable of @TT "R"@ is a weight vector in $V$.
-	       This function lets the user assign a (Lie theoretic) weight to each variable of @TT "R"@,
-	       allowing Macaulay2 to return the weight of monomials of @TT "R"@ upon request.
-	  --Code
-	  --Pre
-	  --Example
-     --Subnodes
-     --Caveat
-     --SeeAlso
+	       Assume @TT "R"@ is the symmetric algebra of a representation $V$ of a
+	       semisimple Lie group. Assume, in addition, that each variable of
+	       @TT "R"@ is a weight vector in $V$. This function lets the user assign
+	       a weight to each variable of @TT "R"@, allowing Macaulay2
+	       to return the weight of monomials of @TT "R"@ upon request.
      
+///
+
+doc ///
+     Key
+	  (setLieWeights,Module,List)
+     Headline
+     	  attach (Lie theoretic) weights to a free module
+     Usage
+     	  W = setLieWeights(M,L)
+     Inputs
+     	  M:Module
+	  L:List
+	       a table of weights given as lists of integers
+     Outputs
+     	  W:List
+	       containing the weights of @TT "M"@
+     Consequences
+     	  Item
+	       The key @TT "LieWeights"@ is created in the hashTable @TT "M.cache"@
+	       with value the list @TT "W"@.
+     Description
+     	  Text
+	       Assume @TT "M"@ is a free module over a polynomial ring $A$, which is
+	       the symmetric algebra of a representation of a semisimple Lie group $G$.
+	       Assume, in addition, that @TT "M"@ is of the form $U\otimes A(-d)$,
+	       where $U$ is also a representation of $G$. Then @TT "M"@ has an
+	       $A$-basis of weight vectors for the $G$-action. This function lets the
+	       user assign a weight to each generator of @TT "M"@.
+     
+///
+
+doc ///
+     Key
+     	  getLieWeights
+     Headline
+     	  retrieve the (Lie theoretic) weights of a ring element or module
+     Description
+     	  Text
+	       Use this method to obtain the weight of a monomial or the list of
+	       weights previously assigned to a module.
+     SeeAlso
+     	  setLieWeights
+	  propagate
+     
+///
+
+doc ///
+     Key
+     	  (getLieWeights,RingElement)
+     Headline
+     	  retrieve the (Lie theoretic) weight of a monomial
+     Usage
+     	  w = getLieWeights(r)
+     Inputs
+     	  r:RingElement
+     Outputs
+     	  w:List
+     Description
+     	  Text
+	       Obtains the weight of a monomial @TT "r"@ from the weights of the
+	       variables in the ring of @TT "r"@. If @TT "r"@ is a polynomial,
+	       then the weight of the leading monomial is returned (which may differ
+	       from the weight of the other monomials).
+     Caveat
+     	  The weight of 0 is undefined so an error is returned if @TT "r"@ is 0.
+     SeeAlso
+     	  setLieWeights
+     
+///
+
+doc ///
+     Key
+     	  (getLieWeights,Module)
+     Headline
+     	  retrieve the (Lie theoretic) weights of a module
+     Usage
+     	  w = getLieWeights(r)
+     Inputs
+     	  M:Module
+     Outputs
+     	  W:List
+     Description
+     	  Text
+	       Simply returns the list of weights previously stored in @TT "M.cache"@.
+     SeeAlso
+     	  setLieWeights
+	  propagate
 ///
 
 doc ///
@@ -143,7 +275,8 @@ doc ///
      	  optional argument for propagate
      Description
      	  Text
-	       Use this argument to specify whether weights should be propagated from the codomain to the domain of a free module map or viceversa.
+	       Use this argument to specify whether weights should be propagated
+	       from the codomain to the domain of a free module map or viceversa.
      SeeAlso
      	  propagate
 ///
@@ -155,7 +288,8 @@ doc ///
      	  optional argument for propagate
      Description
      	  Text
-     	       Use this argument to specify whether weights should be propagated from the codomain to the domain of a free module map or viceversa.
+     	       Use this argument to specify whether weights should be propagated
+	       from the codomain to the domain of a free module map or viceversa.
      SeeAlso
      	  propagate
 ///
@@ -167,37 +301,38 @@ doc ///
      	  propagate (Lie theoretic) weights along equivariant maps and resolutions
      Description
      	  Text
-	       This method can be used to propagate (Lie theoretic) weights along maps of free modules or free resolutions
-	       over polynomial rings, which are symmetric algebras over representations of semisimple Lie groups.
-	       The weights of the variables in the ring must be set a priori (see @TO "setLieWeights"@).
+	       This method can be used to propagate (Lie theoretic) weights along maps
+	       of free modules or free resolutions over polynomial rings, which are
+	       symmetric algebras over representations of semisimple Lie groups.
+	       The weights of the variables in the ring must be set a priori.
      SeeAlso
      	  setLieWeights
-     
 ///
 
 doc ///
      Key
-     	  (propagate,Matrix,List)
+     	  (propagate,Matrix)
      Headline
      	  propagate (Lie theoretic) weights along an equivariant map of free modules
      Usage
-     	  W = propagate(M,L)
+     	  W = propagate(M)
      Inputs
      	  M:Matrix
 	       of an equivariant map
-	  L:List
-	       a table of weights for the codomain (resp. domain) of @TT "M"@ given as lists of integers
+	  ToTarget=>Boolean
+	       propagate weights to domain (when false) or codomain (when true)
      Outputs
      	  W:List
-	       a table of weights for the domain (resp. codomain) of @TT "M"@ given as lists of integers
+	       a table of weights for the domain (resp. codomain) of @TT "M"@
      Description
      	  Text
-	       In its default behavior, this function will use the weights of the variables in the ring of @TT "M"@
-	       together with the weights of the codomain of @TT "M"@ to obtain the weights of the domain of @TT "M"@.
-	       To obtain the weights of the codomain from the weights of the domain, use the optional argument
-	       @TT "ToTarget=>false"@.
+	       In its default behavior, this function will use the weights of the
+	       variables in the ring of @TT "M"@ together with the weights of the
+	       codomain of @TT "M"@ to obtain the weights of the domain of @TT "M"@.
+	       To obtain the weights of the codomain from the weights of the domain,
+	       use the optional argument @TT "ToTarget=>true"@.
      SeeAlso
-     	  setLieWeights
+     	  getLieWeights
      
 ///
 
