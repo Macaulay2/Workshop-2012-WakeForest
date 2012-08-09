@@ -30,18 +30,18 @@ newPackage(
 --	AuxiliaryFiles => true
     	)
 
-export {schurRing, SchurRing, symmRing,
-     symmetricRingOf, schurRingOf,
-     toS, toE, toP, toH,
-     jacobiTrudi, plethysm,
-     centralizerSize, classFunction, symmetricFunction, 
-     scalarProduct, internalProduct,
-     SchurRingIndexedVariableTable, EHPVariables, SVariable,
-     ClassFunction, schurLevel,
-     schurResolution,
-     
-     Memoize, Schur, EorH, GroupActing,
-     eVariable, pVariable, hVariable
+"export" {"schurRing", "SchurRing", "symmRing",
+     "symmetricRingOf", "schurRingOf",
+     "toS", "toE", "toP", "toH",
+     "jacobiTrudi", "plethysm",
+     "centralizerSize", "classFunction", "symmetricFunction", 
+     "scalarProduct", "internalProduct",
+     "SchurRingIndexedVariableTable", "EHPVariables", "SVariable",
+     "ClassFunction", "schurLevel",
+     "schurResolution",
+     "SchurRingElement",     
+     "Memoize", "Schur", "EorH", "GroupActing",
+     "eVariable", "pVariable", "hVariable"
      }
 
 debug Core
@@ -147,10 +147,18 @@ schurLevel (Ring) := R -> if R.?schurLevel then R.schurLevel else 0
 newSchur2 = method()
 newSchur2(Ring,Symbol) := (A,p) -> newSchur2(A,p,-1)
        
+SchurRingElement = new Type of RingElement
+newSchurEngineRing = R -> (
+     S := new SchurRing of SchurRingElement;
+     S.RawRing = R;
+     S#1 = 1_S;
+     S#0 = 0_S;
+     S)
+
 newSchur2(Ring,Symbol,ZZ) := (A,p,n) -> (
      if not (A.?Engine and A.Engine) 
      then error "expected coefficient ring handled by the engine";
-     SR := new SchurRing from rawSchurRing1(raw A,n);
+     SR := newSchurEngineRing rawSchurRing1(raw A,n);
      SR.Symbol = p;
      SR.baseRings = append(A.baseRings,A);
      SR.generators = {};
@@ -201,7 +209,7 @@ schurRing(Ring,Symbol,ZZ) := SchurRing => opts -> (R,p,n) -> (
      S.GroupActing = opts.GroupActing;
      dim S := s -> dimSchur(s);
      dim(Thing,S) := (n,s) -> dimSchur(n, s);
-     S @ RingElement := RingElement @ S := (f1,f2) -> plethysm(f1,f2);
+     S @ SchurRingElement := SchurRingElement @ S := (f1,f2) -> plethysm(f1,f2);
      S^ZZ := (f,n) -> product apply(n,i->f);
      symmetricPower(ZZ,S) := (n,s) -> plethysm({n},s);
      exteriorPower(ZZ,S) := opts -> (n,s) -> plethysm(splice{n:1},s);
@@ -212,8 +220,8 @@ schurRing(Ring,Symbol,ZZ) := SchurRing => opts -> (R,p,n) -> (
      (
 	  oldmult := method();
 	  oldmult(S,S) := (f1,f2) -> new S from raw f1 * raw f2;
-	  oldmult(RingElement, S) := (f1,f2) -> if member(ring f1,S.baseRings | {S}) then oldmult(promote(f1,S),f2);
-	  oldmult(S, RingElement) := (f1,f2) -> if member(ring f2,S.baseRings | {S}) then oldmult(f1,promote(f2,S));
+	  oldmult(SchurRingElement, S) := (f1,f2) -> if member(ring f1,S.baseRings | {S}) then oldmult(promote(f1,S),f2);
+	  oldmult(S, SchurRingElement) := (f1,f2) -> if member(ring f2,S.baseRings | {S}) then oldmult(f1,promote(f2,S));
 	  oldmult(Number, S) := (f1,f2) -> if member(ring f1,S.baseRings | {S}) then oldmult(promote(f1,S),f2);
 	  oldmult(S, Number) := (f1,f2) -> if member(ring f2,S.baseRings | {S}) then oldmult(f1,promote(f2,S));
 
@@ -235,9 +243,9 @@ schurRing(Ring,Symbol,ZZ) := SchurRing => opts -> (R,p,n) -> (
      else if opts.GroupActing == "Sn" then
      (
      	  S ** S := (f1,f2) -> new S from raw f1 * raw f2;
---	  RingElement ** S := (f,g) -> if member(ring f,S.baseRings | {S}) then promote(f,S) ** g;
---	  S ** RingElement := (f,g) -> if member(ring g,S.baseRings | {S}) then f ** promote(g,S);
-	  RingElement ** S := (f,g) -> if member(ring f,S.baseRings | {S}) then promote(f,S) ** g
+--	  SchurRingElement ** S := (f,g) -> if member(ring f,S.baseRings | {S}) then promote(f,S) ** g;
+--	  S ** SchurRingElement := (f,g) -> if member(ring g,S.baseRings | {S}) then f ** promote(g,S);
+	  SchurRingElement ** S := (f,g) -> if member(ring f,S.baseRings | {S}) then promote(f,S) ** g
 	       	    	      	   	else if member(S,(ring f).baseRings | {ring f}) then f ** promote(g,S);
 	  Number ** S := (f,g) -> if member(ring f,S.baseRings | {S}) then promote(f,S) ** g;
 	  S ** Number := (f,g) -> if member(ring g,S.baseRings | {S}) then f ** promote(g,S);
@@ -294,7 +302,7 @@ symmRing (Ring,ZZ) := opts -> (A,n) -> (
      	  R.GroupActing = opts.GroupActing;
      	  R.dim = n;
 	  R ** R := (f1,f2) -> internalProduct(f1,f2); --internal product of symmetric functions
-     	  R @ RingElement := RingElement @ R := (f1,f2) -> plethysm(f1,f2);
+     	  R @ SchurRingElement := SchurRingElement @ R := (f1,f2) -> plethysm(f1,f2);
      	  symmetricPower(ZZ,R) := (n,r) -> plethysm({n},r);
      	  exteriorPower(ZZ,R) := opts -> (n,r) -> plethysm(splice{n:1},r);
 --the degrees of e_i,p_i,h_i are equal to i 
@@ -460,7 +468,7 @@ plethysmMap = (d,maxg,R) -> (
 -- g is a polynomial in symmRing / SchurRing SB
 -- result is in symmRing / SchurRing SB
 plethysmGL = method()
-plethysmGL(RingElement,RingElement) := (f,g) -> (
+plethysmGL(SchurRingElement,SchurRingElement) := (f,g) -> (
      Rg := ring g;
      Rf := ring f;
      if schurLevel Rf > 1 then error"Undefined plethysm operation";
@@ -500,7 +508,7 @@ plethysmGL(RingElement,RingElement) := (f,g) -> (
 -- g is a polynomial in symmRing n / SchurRing SB
 -- result is in symmRing n / SchurRing SB
 plethysmSn = method()
-plethysmSn(RingElement,RingElement) := (f,g) ->
+plethysmSn(SchurRingElement,SchurRingElement) := (f,g) ->
 (
      symmetricFunction(plethysm(f,classFunction g), ring g)
      )
@@ -512,7 +520,7 @@ plethysm = method()
 -- it is used to compute the plethysm of f and g
 -- when f is a power-sum symmetric polynomial
 auxplet = method()
-auxplet(RingElement,RingElement) := (f,g) ->
+auxplet(SchurRingElement,SchurRingElement) := (f,g) ->
 (
      Rg := ring g;
      pl := local pl;
@@ -530,7 +538,7 @@ auxplet(RingElement,RingElement) := (f,g) ->
 -- the most general form of plethysm
 -- f is an arbitrary symmetric functions
 -- g is an element of a representation ring of a product of general linear and/or symmetric groups
-plethysm(RingElement,RingElement) := (f,g) ->
+plethysm(SchurRingElement,SchurRingElement) := (f,g) ->
 (
      pf := toP f;
      Rf := ring pf;
@@ -552,7 +560,7 @@ plethysm(RingElement,RingElement) := (f,g) ->
      )
 
 -- plethysm of s_lambda and g
-plethysm(BasicList,RingElement) := (lambda,g) -> (
+plethysm(BasicList,SchurRingElement) := (lambda,g) -> (
      d := sum toList lambda;
      Rf := symmRing(QQ,d);
      f := jacobiTrudi(lambda,Rf);
@@ -560,7 +568,7 @@ plethysm(BasicList,RingElement) := (lambda,g) -> (
      )
 
 -- (inner) plethysm of symmetric function f with the class function cF (the character of a certain S_n-representation)
-plethysm(RingElement,ClassFunction) := (f,cF) ->
+plethysm(SchurRingElement,ClassFunction) := (f,cF) ->
 (
      R := ring(cF#(first keys cF));
      pf := toP f;
@@ -592,7 +600,7 @@ plethysm(BasicList,ClassFunction) := (lambda,cF) -> (
 -- degree of a polynomial in a SchurRing
 -- this is no longer used
 degSchurPol = method()
-degSchurPol(RingElement) := ps -> (
+degSchurPol(SchurRingElement) := ps -> (
      tms := listForm ps;
      tms/first/sum//max
      )
@@ -612,7 +620,7 @@ toSymm = method()
 -- if ps is an element of a schurRing R
 -- toSymm returns the symmetric function corresponding to ps, as an element of a symmRing, the symmetricRingOf R;
 -- otherwise ps is returned;
-toSymm(RingElement) := (ps) ->
+toSymm(SchurRingElement) := (ps) ->
 (
      S := ring ps;
      if instance(S, SchurRing) then
@@ -629,27 +637,27 @@ toSymm(RingElement) := (ps) ->
 
 -- this is the base case of the recursive operation in the general case
 -- needed when ps is an element of ZZ or QQ, because ZZ, QQ don't have
--- RingElement as an ancestor
+-- SchurRingElement as an ancestor
 toSymm(Number) := (ps) -> ps
 
 mapSymToE = method()
 -- writes the symmetric functions of maximal schurLevel in f (i.e. those
 -- not contained in the coefficient ring of R) in terms of the e-polynomials
-mapSymToE (RingElement) := (f) -> (
+mapSymToE (SchurRingElement) := (f) -> (
      R:=ring f; 
      if R.?mapSymToE then R.mapSymToE f else f
 )
 mapSymToH = method()
 -- writes the symmetric functions of maximal schurLevel in f (i.e. those
 -- not contained in the coefficient ring of R) in terms of the h-polynomials
-mapSymToH (RingElement) := (f) -> (
+mapSymToH (SchurRingElement) := (f) -> (
      R:=ring f; 
      if R.?mapSymToH then R.mapSymToH f else f
 )
 mapSymToP = method()
 -- writes the symmetric functions of maximal schurLevel in f (i.e. those
 -- not contained in the coefficient ring of R) in terms of the p-polynomials
-mapSymToP (RingElement) := (f) -> (
+mapSymToP (SchurRingElement) := (f) -> (
      R:=ring f; 
      if R.?mapSymToP then R.mapSymToP f else f
 )
@@ -658,7 +666,7 @@ toE = method()
 -- writes a symmetric function (possibly in a ring
 -- with schurLevel larger than one) in terms of
 -- elementary symmetric polynomials
-toE (RingElement) := (f) -> (
+toE (SchurRingElement) := (f) -> (
      R := ring f;
      if class R === SchurRing then toE toSymm f
      else 
@@ -673,7 +681,7 @@ toP = method()
 -- writes a symmetric function (possibly in a ring
 -- with schurLevel larger than one) in terms of
 -- power sums
-toP (RingElement) := (f) -> (
+toP (SchurRingElement) := (f) -> (
      R := ring f;
      if class R === SchurRing then toP toSymm f
      else 
@@ -688,7 +696,7 @@ toH = method()
 -- writes a symmetric function (possibly in a ring
 -- with schurLevel larger than one) in terms of
 -- complete symmetric polynomials
-toH (RingElement) := (f) -> (
+toH (SchurRingElement) := (f) -> (
      R := ring f;
      if class R === SchurRing then toH toSymm f
      else 
@@ -707,7 +715,7 @@ mappingFcn := local mappingFcn;
 
 toS = method()
 
-toS(RingElement) := (f) -> (
+toS(SchurRingElement) := (f) -> (
      R := ring f;
      if (schurLevel R == 0 or class R === SchurRing) then f else
      (
@@ -739,7 +747,7 @@ undocumented(toS,Thing)
 toS(Thing,Ring) := (f,T) -> try(lift(f,T)) else f
 undocumented(toS,Thing,Ring)
 
-toS(RingElement,SchurRing) := (f, T) ->
+toS(SchurRingElement,SchurRing) := (f, T) ->
 (
      R := ring f;
      if schurLevel R == 0 then 
@@ -759,7 +767,7 @@ toS(RingElement,SchurRing) := (f, T) ->
 --recTrans is a recursive routine that transforms an h-polynomial (in a symmRing of positive schurLevel)
 --into an s-polynomial, by proceeding one level at a time
 recTrans = method()
-recTrans (RingElement) := (pl) ->
+recTrans (SchurRingElement) := (pl) ->
 (
 --lead = leading variable = h_i with i maximal
      lead := leadTermFcn pl;
@@ -885,14 +893,14 @@ EtoH = (m,R) -> (
 --of syzygy modules in an equivariant resolution
 recsyz = method()
 recsyz (Thing) := (el) -> min(el,0)
-recsyz (RingElement) := (el) ->
+recsyz (SchurRingElement) := (el) ->
 (
      T := ring el;
      listForm el/((u,v)->T_u*recsyz(v))//sum
      )
 
 schurResolution = method(Options => {DegreeLimit => 0, SyzygyLimit => 0})
-schurResolution(RingElement,List) := opts -> (rep,M) ->
+schurResolution(SchurRingElement,List) := opts -> (rep,M) ->
 (
      d := opts.DegreeLimit;
      if d == 0 then d = #M-1;
@@ -908,7 +916,7 @@ schurResolution(RingElement,List) := opts -> (rep,M) ->
      schurRes(rep,M,new List from plets,DegreeLimit => d,SyzygyLimit => c)
      )
 
-schurResolution(RingElement,List,List) := opts -> (rep,M,plets) ->
+schurResolution(SchurRingElement,List,List) := opts -> (rep,M,plets) ->
 (
      d := opts.DegreeLimit;
      if d == 0 then d = #M-1;
@@ -918,7 +926,7 @@ schurResolution(RingElement,List,List) := opts -> (rep,M,plets) ->
      )
 
 schurRes = method(Options => options schurResolution)
-schurRes(RingElement,List,List) := opts -> (rep,M,plets) ->
+schurRes(SchurRingElement,List,List) := opts -> (rep,M,plets) ->
 (
      T := ring rep;
      d := opts.DegreeLimit;
@@ -1021,7 +1029,7 @@ degree(ClassFunction) := ch ->
 
 --go from symmetric functions to class functions
 classFunction = method()
-classFunction(RingElement) := (f)->
+classFunction(SchurRingElement) := (f)->
 (
      Rf := ring f;
 
@@ -1066,14 +1074,14 @@ ClassFunction + ClassFunction := (ch1,ch2)->
      new ClassFunction from clSum
      )
 
-RingElement * ClassFunction := Number * ClassFunction := (n,ch) ->
+SchurRingElement * ClassFunction := Number * ClassFunction := (n,ch) ->
 (
      clProd := new MutableHashTable;
      for i in keysCF ch do clProd#i = n*ch#i;
      new ClassFunction from clProd     
      )
 
-ClassFunction * RingElement := ClassFunction * Number := (ch,n) -> n*ch;
+ClassFunction * SchurRingElement := ClassFunction * Number := (ch,n) -> n*ch;
 
 
 ClassFunction - ClassFunction := (ch1,ch2)-> ch1 + (-1)*ch2;
@@ -1112,7 +1120,7 @@ scalarProduct(ClassFunction,ClassFunction) := (ch1,ch2)->
      scProd
      )
 
-scalarProduct(RingElement,RingElement) := (f1,f2)->
+scalarProduct(SchurRingElement,SchurRingElement) := (f1,f2)->
 (
      ch1 := classFunction f1;
      ch2 := classFunction f2;
@@ -1134,7 +1142,7 @@ internalProduct(ClassFunction,ClassFunction) := (ch1,ch2)->
      new ClassFunction from iProd
      )
 
-internalProduct(RingElement,RingElement) := (f1,f2)->
+internalProduct(SchurRingElement,SchurRingElement) := (f1,f2)->
 (
      R2 := ring f2;
      R := local R;
@@ -1202,14 +1210,14 @@ dimSchur(Thing,Partition) := opts -> (n, lambda) -> (
 --     if instance(answer,QQ) then lift(answer,ZZ) else answer
      answer
      )
-dimSchur(Thing,RingElement) := opts -> (n, F) -> (
+dimSchur(Thing,SchurRingElement) := opts -> (n, F) -> (
      -- assumption: F is an element in a SchurRing
      L := listForm F;
      sum apply(L, p -> (
 	       lambda := new Partition from p#0;
 	       if p#1 == 1 then dimSchur(n,lambda,opts) else p#1 * dimSchur(n,lambda,opts)))
      )
-dimSchur(List,List,RingElement) := opts -> (ns, ng, F) -> (
+dimSchur(List,List,SchurRingElement) := opts -> (ns, ng, F) -> (
      -- assumption: F is an element in a SchurRing
      L := listForm F;
      n := ns#0;
@@ -1226,7 +1234,7 @@ dimSchur(List,List,RingElement) := opts -> (ns, ng, F) -> (
 	       if gr == "GL" then (if p#1 === 1 then dimSchur(n,lambda,GroupActing=>gr) else p#1 * dimSchur(n,lambda,GroupActing=>gr))
      	       else (if p#1 === 1 then dimSchur(sum toList lambda,lambda,GroupActing=>gr) else p#1 * dimSchur(sum toList lambda,lambda,GroupActing=>gr))))
      )
-dimSchur(RingElement) := opts -> (F) -> (
+dimSchur(SchurRingElement) := opts -> (F) -> (
      schurdims := (S) -> (
 	  if schurLevel S === 0 then {}
 	  else prepend(numgens S, schurdims coefficientRing S));
@@ -1922,8 +1930,8 @@ doc ///
 doc ///
    Key
      toS
-     (toS,RingElement)
-     (toS,RingElement,SchurRing)
+     (toS,SchurRingElement)
+     (toS,SchurRingElement,SchurRing)
    Headline
      Schur (s-) basis representation
    Usage
@@ -1967,16 +1975,16 @@ doc ///
 doc ///
   Key
     toE
-    (toE,RingElement)
+    (toE,SchurRingElement)
   Headline
      Elementary symmetric (e-) basis representation
   Usage
      fe = toE f
   Inputs
-     f:RingElement
+     f:SchurRingElement
        element of a Symmetric or Schur ring
   Outputs
-     fe:RingElement
+     fe:SchurRingElement
         element of a Symmetric ring
   Description
       Text
@@ -2015,16 +2023,16 @@ doc ///
 doc ///
   Key
     toH
-    (toH,RingElement)
+    (toH,SchurRingElement)
   Headline
      Complete symmetric (h-) basis representation
   Usage
      fh = toH f
   Inputs
-     f:RingElement
+     f:SchurRingElement
        element of a Symmetric or Schur ring
   Outputs
-     fh:RingElement
+     fh:SchurRingElement
         element of a Symmetric ring
   Description
       Text
@@ -2063,16 +2071,16 @@ doc ///
 doc ///
   Key
     toP
-    (toP,RingElement)
+    (toP,SchurRingElement)
   Headline
      Power-sum (p-) basis representation
   Usage
      fp = toP f
   Inputs
-     f:RingElement
+     f:SchurRingElement
        element of a Symmetric or Schur ring
   Outputs
-     fp:RingElement
+     fp:SchurRingElement
         element of a Symmetric ring
   Description
       Text
@@ -2122,7 +2130,7 @@ Inputs
   R:Ring
     a Symmetric ring
 Outputs
-  f:RingElement
+  f:SchurRingElement
     an element of a Symmetric ring
 Description
   Text
@@ -2183,19 +2191,19 @@ doc///
 doc ///
 Key
   plethysm
-  (plethysm,RingElement,RingElement)
+  (plethysm,SchurRingElement,SchurRingElement)
 Headline
   Plethystic operations on representations
 Usage
   pl = plethysm(f,g)
   pl = f @ g
 Inputs
-  f:RingElement
+  f:SchurRingElement
     element of Symmetric ring or Schur ring
-  g:RingElement
+  g:SchurRingElement
     element of Symmetric ring or Schur ring
 Outputs
-  pl:RingElement
+  pl:SchurRingElement
      element of the ring of {\tt g}
 Description
   Text
@@ -2218,7 +2226,7 @@ Description
 
 doc ///
 Key
-  (plethysm,BasicList,RingElement)
+  (plethysm,BasicList,SchurRingElement)
 Headline
   Plethystic operations on representations
 Usage
@@ -2226,10 +2234,10 @@ Usage
 Inputs
   lambda:BasicList
          nonincreasing sequence of positive integers, or partition
-  g:RingElement
+  g:SchurRingElement
     element of Symmetric ring or Schur ring
 Outputs
-  pl:RingElement
+  pl:SchurRingElement
      element of the ring of {\tt g}
 Description
   Text
@@ -2249,7 +2257,7 @@ Description
 
 doc ///
 Key
-  (plethysm,RingElement,ClassFunction)
+  (plethysm,SchurRingElement,ClassFunction)
   (plethysm,BasicList,ClassFunction)
 Headline
   Plethystic operations on class functions
@@ -2277,17 +2285,17 @@ Description
 
 {*doc ///
 Key
-  (exteriorPower,ZZ,RingElement)
+  (exteriorPower,ZZ,SchurRingElement)
 Headline
   Exterior power of a representation
 Usage
   ep = exteriorPower(n,rep)
 Inputs
   n:ZZ
-  rep:RingElement
+  rep:SchurRingElement
       an element of a SchurRing
 Outputs
-  ep:RingElement
+  ep:SchurRingElement
 Description
   Text
   
@@ -2303,17 +2311,17 @@ Description
 
 doc ///
 Key
-  (symmetricPower,ZZ,RingElement)
+  (symmetricPower,ZZ,SchurRingElement)
 Headline
   Symmetric power of a representation
 Usage
   ep = symmetricPower(n,rep)
 Inputs
   n:ZZ
-  rep:RingElement
+  rep:SchurRingElement
       an element of a SchurRing
 Outputs
-  ep:RingElement
+  ep:SchurRingElement
 Description
   Text
   
@@ -2331,15 +2339,15 @@ Description
 doc ///
 Key
   schurResolution
-  (schurResolution,RingElement,List,List)
-  (schurResolution,RingElement,List)
+  (schurResolution,SchurRingElement,List,List)
+  (schurResolution,SchurRingElement,List)
 Headline
   Compute an ``approximate'' equivariant resolution of a module.
 Usage
   resol = schurResolution(rep,M,lS)
   resol = schurResolution(rep,M)
 Inputs
-  rep:RingElement
+  rep:SchurRingElement
       element of a SchurRing
   M:List
     list of representations, corresponding to the homogeneous components of a module {\tt M}.
@@ -2596,8 +2604,8 @@ Key
   (symbol +,ClassFunction,ClassFunction)
   (symbol -,ClassFunction,ClassFunction)
   (symbol *,ClassFunction,ClassFunction)
-  (symbol *,ClassFunction,RingElement)
-  (symbol *,RingElement,ClassFunction)
+  (symbol *,ClassFunction,SchurRingElement)
+  (symbol *,SchurRingElement,ClassFunction)
   (symbol *,ClassFunction,Number)
   (symbol *,Number,ClassFunction)
   (symbol ==,ClassFunction,ClassFunction)
@@ -2675,7 +2683,7 @@ Inputs
   S:Ring
     a Symmetric or Schur ring
 Outputs
-  f:RingElement
+  f:SchurRingElement
     element of a Symmetric or Schur ring
 Description
   Text
@@ -2697,13 +2705,13 @@ SeeAlso
 doc ///
 Key
   classFunction
-  (classFunction,RingElement)
+  (classFunction,SchurRingElement)
 Headline
   Converts symmetric function to class function
 Usage
   ch = classFunction(f)
 Inputs
-  f:RingElement
+  f:SchurRingElement
     element of a Symmetric ring
 Outputs
   ch:ClassFunction
@@ -2786,15 +2794,15 @@ SeeAlso
 
 doc ///
 Key
-  (scalarProduct,RingElement,RingElement)
+  (scalarProduct,SchurRingElement,SchurRingElement)
 Headline
   Standard scalar product of symmetric functions
 Usage
   sp = scalarProduct(f1,f2)
 Inputs
-  f1:RingElement
+  f1:SchurRingElement
      element of a Symmetric Ring
-  f2:RingElement
+  f2:SchurRingElement
      element of a Symmetric Ring
 Outputs
   sp:QQ
@@ -2881,15 +2889,15 @@ SeeAlso
 
 doc ///
 Key
-  (internalProduct,RingElement,RingElement)
+  (internalProduct,SchurRingElement,SchurRingElement)
 Headline
   Kronecker product of symmetric functions
 Usage
   ip = internalProduct(f1,f2)
 Inputs
-  f1:RingElement
+  f1:SchurRingElement
      element of a Symmetric ring or a Schur ring
-  f2:RingElement
+  f2:SchurRingElement
      element of a Symmetric ring or a Schur ring
 Outputs
   ip:Ring
