@@ -37,7 +37,7 @@ export {
      "isProjective",
      "isUnimodular",
      "maxMinors",
-     
+          
 -- Main methods for QuillenSuslin algorithm
      "changeVar",
      "computeFreeBasis",
@@ -46,6 +46,7 @@ export {
      "horrocks",
      "patch",
      "qsAlgorithm"
+     
 }
 
 ------------------------------------------------------------
@@ -162,7 +163,8 @@ findAlmostMonicPoly = method(Options => {Verbose => 0})
 findAlmostMonicPoly(Ideal,List) := opts -> (I,varList) -> (
      local amList; local genList; local I'; local genListS; 
      local minAMDegPos; local ringVars; local ringVarsS; local R;
-     local s; local S; local subs; local verbosity;
+     local s; local S; local subs; local verbosity; local subR1;
+     local subS1; local subsMap;
      
      if #varList == 0 then error "List of variables expected as second argument.";
      R = ring I;
@@ -175,13 +177,16 @@ findAlmostMonicPoly(Ideal,List) := opts -> (I,varList) -> (
 	  s;
      );
      ringVars = gens ring I;
-     varList = apply(varList, i -> sub(i,R));
+     subR1 = map(R,ring first ringVars);
+     varList = apply(varList, i -> subR1 i);
      S = ZZ(monoid [ringVars,MonomialOrder => Lex]); -- Force the polynomial ring to use the Lex ordering.
-     ringVarsS = apply(ringVars, i -> sub(i,S));
+     subS1 = map(S,ring first ringVars);
+     ringVarsS = apply(ringVars, i -> subS1 i);
      subs = mutableMatrix(S,1,#ringVars);
      -- The next line creates the change of variables that treats the last entry of varList as the "heaviest" variable in the term order (turns it into x), and so on.
-     scan(varList, i -> subs_(0,position(ringVars,j -> j == i)) = sub((reverse ringVars)#(position(varList,j -> j == i)),S));
-     I' = sub(ideal apply(genList,i -> sub(i,matrix subs)),S); -- Change variables and substitute into S.
+     scan(varList, i -> subs_(0,position(ringVars,j -> j == i)) = subS1((reverse ringVars)#(position(varList,j -> j == i))));
+     subsMap = map(S,S,matrix subs)*map(S,R);
+     I' = sub(ideal apply(genList,i -> subsMap i),S); -- Change variables and substitute into S.
      genListS = flatten entries gens gb I'; -- One can prove that a strong G.B. for I' must contain an almost monic polynomial w.r.t. reverse ringVars.
      amList = delete(,apply(genListS, i -> if isAlmostMonic(i,reverse ringVarsS) then sub(sub(i,matrix{reverse ringVarsS}),R)));
      if amList == {} then error "Check that the ideal has height at least two in the polynomial ring.";
@@ -201,14 +206,17 @@ findAlmostMonicPoly(Ideal,List) := opts -> (I,varList) -> (
 
 isAlmostMonic = method()
 isAlmostMonic(RingElement,List) := (f,varList) -> (
-     local R; local ringVars; local S; local subs;
+     local R; local ringVars; local S; local subs; local subR1;
+     local subS1;
      R = ring f;
      ringVars = gens ring f;
-     varList = apply(varList, i -> sub(i,R));
+     subR1 = map(R,ring first varList);
+     varList = apply(varList, i -> subR1 i);
      S = (coefficientRing R)(monoid [ringVars,MonomialOrder => Lex]); -- Force the polynomial ring to use the Lex ordering.
      subs = mutableMatrix(S,1,#ringVars);
+     subS1 = map(S,ring first varList);
      -- The next line creates the change of variables that treats the last entry of varList as the "heaviest" variable in the term order (turns it into x), and so on.
-     scan(varList, i -> subs_(0,position(ringVars,j -> j == i)) = sub((reverse ringVars)#(position(varList,j -> j == i)),S));
+     scan(varList, i -> subs_(0,position(ringVars,j -> j == i)) = subS1((reverse ringVars)#(position(varList,j -> j == i))));
      return leadCoefficient sub(sub(f,matrix subs),S) == 1; -- Check whether the leading coefficient with respect to this term order is 1.
 )
 
@@ -283,8 +291,8 @@ laurentCoeffList(RingElement,RingElement) := (f,var) -> (
      R = frac((coefficientRing ring f)(monoid [gens ring f]));
      f = sub(f,R);
      var = sub(var,R);
-     num = numerator(f);
-     denom = denominator(f);
+     num = numerator f;
+     denom = denominator f;
      denomDeg = degVar(denom,var);
      coeffDenom = denom*(var^(-denomDeg)); -- Get rid of the variable from the denominator.
      coeff = coefficients(num,Variables => {var});
@@ -468,7 +476,7 @@ applyRowShortcut(Matrix) := opts -> g -> (
      
      -- Fabianska shortcut 2.2.1(1).
      -- Test if any element of f is a unit in R.
-     s = scan(n, i -> if sub(ideal(f_i),R) == ideal(1_R) then break i);
+     s = scan(n, i -> if ideal(f_i) == ideal(1_R) then break i);
      
      if s =!= null then (
 	  if verbosity >=1 then print "applyRowShortcut: An element of the row was a unit.  Using shortcut 2.2.1(1) from Fabianska's thesis.";
@@ -595,6 +603,7 @@ changeVar(Matrix, List) := opts -> (f,varList) -> (
      local mostCommonFactors; local n; local neededFactors;
      local notCommonFactors; local r; local R; local s; local S;
      local subs; local tempCoeff; local transVar; local u; local v; local verbosity;
+     local subMap; local invSubMap;
      
      R = ring f;
      currVar = last varList;
@@ -760,8 +769,10 @@ changeVar(Matrix, List) := opts -> (f,varList) -> (
      	  almostMonic = findAlmostMonicPoly(ideal(g_(0,1),g_(0,2)),varList,Verbose => verbosity);
 	  if verbosity >= 3 then print("changeVar: Output from findAlmostMonicPoly: "|toString almostMonic|".");
 	  (subs,invSubs) = monicPolySubs(almostMonic,varList,Verbose => verbosity);
+	  subMap = map(R,R,subs);
+	  invSubMap = map(R,R,invSubs);
 	  if verbosity >= 3 then print("changeVar: Change of variable and inverse change of variable from monicPolySubs: "|toString(subs,invSubs)|".");
-	  degList = drop(apply(n, i -> {i,degVar(sub(g_(0,i),subs),last varList),#(terms sub(g_(0,i),subs))}),{1,2}); -- Make a list of the degrees of the polynomials other than g2 and g3.
+	  degList = drop(apply(n, i -> {i,degVar(subMap g_(0,i),last varList),#(terms subMap g_(0,i))}),{1,2}); -- Make a list of the degrees of the polynomials other than g2 and g3.
 	  minDeg = min apply(degList, i -> i#1); -- Find the minimal degree.
 	  minDegPolyList = {};
 	  scan(degList, i -> if i#1 == minDeg then minDegPolyList = append(minDegPolyList,{i#0,i#2}));
@@ -770,8 +781,8 @@ changeVar(Matrix, List) := opts -> (f,varList) -> (
 	  r = (minDegPolyList#(position(minDegPolyList, i -> i#1 == minTerms)))#0; -- g_(0,r) is the 'best' polynomial to put at the front.
 	  g = columnSwap(g,0,r); -- Move g_(0,r) to the g_(0,0) position.
 	  M = columnSwap(M,0,r);
-	  degToBeat = degVar(sub(g_(0,0),subs),last varList); -- We need to multiply the monic polynomial in (f2,f3) by a sufficient power of the last variable to beat this power.
-	  currDeg = degVar(sub(almostMonic,subs),last varList);
+	  degToBeat = degVar(subMap g_(0,0),last varList); -- We need to multiply the monic polynomial in (f2,f3) by a sufficient power of the last variable to beat this power.
+	  currDeg = degVar(subMap almostMonic,last varList);
 	  factorMap = matrix{{almostMonic}} // matrix{{g_(0,1),g_(0,2)}};
 	  transVar = (vars R)_(0,position(flatten entries subs, i -> sub(i,R) == sub(last varList,R)));
 	  factorMap = sub(matrix{{(transVar)^(max(0,degToBeat-currDeg+1)),0},{0,(transVar)^(max(0,degToBeat-currDeg+1))}},R)*sub(factorMap,R);
@@ -811,7 +822,7 @@ computeFreeBasis = method(Options => {Verbose => 0,CheckProjective => false})
 computeFreeBasis(Module) := opts -> M -> (
      local A; local B; local F; local ident; local ncol; local nrowB;
      local nrowU; local p; local R; local tA; local U; local V;
-     local verbosity;
+     local verbosity; local numRowsA; local numColsA;
      
      local G; local K; local C; local C1;
      verbosity = opts.Verbose;
@@ -820,15 +831,8 @@ computeFreeBasis(Module) := opts -> M -> (
 	  if verbosity >= 2 then print "computeFreeBasis: Checking whether the given module is projective.";
      	  if not isProjective M then error "Error: The given module is not projective.";
      );
-     {*
-     G = gens M;
-     K = syz G;
-     C = transpose completeMatrix transpose K;
-     C1 = submatrix(C,,{numcols K..(numrows K-1)});
-     return G*C1;
-     *}
-  
-     if syz gens M == 0 then return gens M;
+     
+     --if syz gens M == 0 then return gens M; -- *** May need to put this back in.
      
      -- This method inductively trims the length of the free resolution
      -- of M until it arrives at an isomorphism between M and a free
@@ -838,9 +842,36 @@ computeFreeBasis(Module) := opts -> M -> (
      -- case' section.
      
      R = ring M;
-     F = res coker gens M;
+     F = res M;
      p = length F;
      A = F.dd_p;
+     print A;
+     scan(p-2, i -> (
+     	  tA = transpose A;
+	  ident = map(target tA,target tA,1_R);
+	  B = transpose (ident // tA);
+	  U = qsAlgorithm(B,Verbose => verbosity);
+	  print(B,U);
+	  nrowB = numrows B;
+	  nrowU = numrows U;
+	  ncol = nrowU-nrowB;
+	  V = submatrix(U,0..(nrowU-1),nrowB..(nrowU-1));
+	  A = F.dd_(p-i-1)*V;
+	  print A;
+     ));
+     numRowsA = numrows A;
+     numColsA = numcols A;
+     
+     C = submatrix'(transpose completeMatrix transpose A,,{0..(numcols A - 1)});
+     return C;
+     -- Fix this so it reliably returns mingens.
+     --return mingens((image map(R^(numRowsA),R^(numRowsA - numColsA),C))/(image map(R^numRowsA,R^numColsA,A)));
+     --return C;
+
+     -- This is the old code that sort of works at least for things presented as images/kernels.
+     -- Modify this code to work in general.  Make options for Presentation => Kernel, etc.?
+     -- Other option is to use the inverse of the pruning map if we can
+     -- get it working.
      scan(p-1, i -> (
      	  tA = transpose A;
 	  ident = map(target tA,target tA,1_R);
@@ -853,6 +884,8 @@ computeFreeBasis(Module) := opts -> M -> (
 	  A = F.dd_(p-i-1)*V;
      ));
      return A;
+
+
 )
 
 computeFreeBasis(Ideal) := I -> (
@@ -873,29 +906,31 @@ computeFreeBasis(Ideal) := I -> (
 getLocalSolutions = method(Options => {Verbose => 0})
 getLocalSolutions(Matrix,List,RingElement) := opts -> (f,ringVars,currVar) -> (
      local I; local localSolutions; local maxIdeal; local R; local S;
-     local U; local verbosity;
+     local U; local verbosity; local subR; local subS;
      
      verbosity = opts.Verbose;
      if verbosity >= 1 then print("getLocalSolutions: Computing local solutions for "|toString f|".");
      R = coefficientRing(ring f)(monoid [ringVars]);
      S = ring f;
      I = ideal(0_R);
-     maxIdeal = sub(getMaxIdeal(I,ringVars,Verbose => verbosity),S);
+     subR = map(R,S);
+     subS = map(S,R);
+     maxIdeal = subS getMaxIdeal(I,ringVars,Verbose => verbosity);
      localSolutions = {};
      U = horrocks(f,currVar,maxIdeal,Verbose => verbosity); -- Find the first local solution.
-     I = ideal(sub(commonDenom U,R)); -- Let I be the ideal generated by the common denominator of elements of U.
-     localSolutions = append(localSolutions,sub(U,frac S)); -- Add the local solution to localSolutions.
+     I = ideal(subR commonDenom U); -- Let I be the ideal generated by the common denominator of elements of U.
+     localSolutions = append(localSolutions,U); -- Add the local solution to localSolutions.
      
      -- Repeat the following "local loop" until the ideal of denominators generates the entire ring.
      -- This is guaranteed to terminate after finitely many steps by the
      -- Hilbert Basis Theorem.
      
      while I != ideal(1_R) do (
-	  maxIdeal = sub(getMaxIdeal(I,ringVars,Verbose => verbosity),S);
+	  maxIdeal = subS getMaxIdeal(I,ringVars,Verbose => verbosity);
 	  if verbosity >= 2 then print "getLocalSolutions: Denominators did not generate the unit ideal.  Repeating horrocks.";
 	  U = horrocks(f,currVar,maxIdeal,Verbose => verbosity);
-	  I = I+ideal(sub(commonDenom U,R));
-	  localSolutions = append(localSolutions,sub(U,frac S));
+	  I = I+ideal(subR commonDenom U);
+	  localSolutions = append(localSolutions,U);
      );
 
      return localSolutions;
@@ -1223,7 +1258,6 @@ horrocks(Matrix,RingElement,Ideal) := opts -> (f,currVar,I) -> (
 	       M_(0,1) = -leadCoeffVarFF(f_(0,1),currVar)*currVar^(degVar(f_(0,1),currVar)-degVar(f_(0,0),currVar));
 	       f = f*matrix(M); -- The matrix M will reduce the degree of f_(0,1).
 	       U = U*matrix(M); -- Keep track of this in the matrix U.
-	       print(degVar(f_(0,0),currVar),degVar(f_(0,1),currVar)); -- ******
 	  );
      	  
 	  -- If the leading coefficient of f_(0,1) is a unit in the
@@ -1265,7 +1299,6 @@ horrocks(Matrix,RingElement,Ideal) := opts -> (f,currVar,I) -> (
 	       	    M_(0,2) = -leadCoeffVarFF(f_(0,2),currVar)*currVar^(degVar(f_(0,2),currVar)-degVar(f_(0,0),currVar));
 	       	    f = f*matrix(M); -- The matrix M will reduce the degree of f_(0,2).
 	       	    U = U*matrix(M); -- Keep track of this in the matrix U.
-		    print(degVar(f_(0,0),currVar),degVar(f_(0,1),currVar)); -- *****
 	       );
 	  
 	       -- At this point we can guarantee that f_(0,2) has degree
@@ -1300,8 +1333,8 @@ horrocks(Matrix,RingElement,Ideal) := opts -> (f,currVar,I) -> (
 			 M_(0,2) = N_(0,0);
 			 M_(1,2) = N_(1,0);
 		    ) else (
-	      	         M_(0,2) = (sub(1,R)-leadCoeffVarFF(f_(0,2),currVar))*N_(0,0);
-		    	 M_(1,2) = (sub(1,R)-leadCoeffVarFF(f_(0,2),currVar))*N_(1,0);
+	      	         M_(0,2) = (1_R-leadCoeffVarFF(f_(0,2),currVar))*N_(0,0);
+		    	 M_(1,2) = (1_R-leadCoeffVarFF(f_(0,2),currVar))*N_(1,0);
 		    );
 		    
 		    M2 = mutableIdentity(frac R,n);
@@ -1360,7 +1393,7 @@ monicPolySubs(RingElement,List) := opts -> (f,varList) -> (
      local minSolList; local n; local r; local R; local s; local subs;
      local tempCoeff; local tempCoeffDeg; local tempDeg;
      local tempInvSub; local tempPoly; local tempSub;
-     local usedVarPosition; local usedVars; local verbosity;
+     local usedVarPosition; local usedVars; local verbosity; local subR1;
      
      R = ring f;
      allVars = gens R;
@@ -1374,8 +1407,9 @@ monicPolySubs(RingElement,List) := opts -> (f,varList) -> (
 	  if f == 1_R then return (vars R,vars R) else error "Error: The given polynomial had degree zero and was not 1."
      );
 
+     subR1 = map(R,ring first varList);
      usedVarPosition = apply(usedVars, i -> position(allVars, j -> j == i));
-     lastVarPosition = position(allVars, i -> i == sub(last varList,R));
+     lastVarPosition = position(allVars, i -> i == subR1 last varList);
      
      -- First take care of the case when there is only one variable.
      -- If the polynomial is monic, then return the trivial change of
@@ -1427,12 +1461,12 @@ monicPolySubs(RingElement,List) := opts -> (f,varList) -> (
      ));
      tempSub = mutableMatrix vars R;
      tempInvSub = mutableMatrix vars R;
-     tempSub_(0,usedVarPosition#0) = sub(last varList,R);
-     tempSub_(0,lastVarPosition) = sub(first usedVars,R) + sub((last varList)^(last expList),R);
-     tempInvSub_(0,usedVarPosition#0) = sub(last varList,R) - sub((first usedVars)^(last expList),R);
+     tempSub_(0,usedVarPosition#0) = subR1 last varList;
+     tempSub_(0,lastVarPosition) = sub(first usedVars,R) + subR1 (last varList)^(last expList);
+     tempInvSub_(0,usedVarPosition#0) = subR1 last varList - sub((first usedVars)^(last expList),R);
      tempInvSub_(0,lastVarPosition) = sub(first usedVars,R);
      scan(1..(#usedVars-2), i -> (
-	  tempSub_(0,usedVarPosition#i) = sub(usedVars#i,R) + sub((last varList)^(expList#(i-1)),R);
+	  tempSub_(0,usedVarPosition#i) = sub(usedVars#i,R) + subR1 (last varList)^(expList#(i-1));
      	  tempInvSub_(0,usedVarPosition#i) = sub(usedVars#i,R) - sub((first usedVars)^(expList#(i-1)),R);
      ));
 
@@ -1514,8 +1548,9 @@ patch(List,RingElement) := opts -> (matrixList,currVar) -> (
      local deltaDenom; local deltaList; local g; local inverseList;
      local k; local localVar; local m; local R; local S; local U;
      local verbosity; local flattenData; local phi; local phiInv;
-     
-     R = ring numerator (matrixList#0)_(0,0); -- Easiest way I can think of to get our hands on the underlying ring.
+     local currVarS; local localVarS; local subS; local subR;
+          
+     R = ring numerator (first matrixList)_(0,0); -- Easiest way I can think of to get our hands on the underlying ring.
      flattenData = flattenRing(R[symbol localVar]); -- Adjoin the dummy variable 'localVar' and flatten to a polynomial ring.
      S = frac first flattenData; -- Make the fraction field of the polynomial ring including our dummy variable.
      phi = flattenData#1; -- Name the natural ring homomorphism R[localVar] ---> ZZ[x,y,localVar].
@@ -1529,11 +1564,15 @@ patch(List,RingElement) := opts -> (matrixList,currVar) -> (
      if verbosity >= 1 then print("patch: Patching together local solutions: "|toString matrixList);
      
      matrixList = apply(matrixList, i -> sub(i,frac R));
-     inverseList = apply(matrixList, i -> sub(inverse i,frac R)); -- Compute inverse for each local solution in frac(R).
+     inverseList = apply(matrixList, i -> sub(inverse i,frac R)); -- Compute inverse for each local solution in frac R.
 
-     deltaList = apply(k, i -> sub(matrixList#i,S)*sub(sub(inverseList#i,S),{sub(currVar,S) => sub(currVar,S)+sub(localVar,S)} ) ); -- Make a list of all of the 'shifted' product matrices.
-     deltaDenom = apply(deltaList, i -> sub(commonDenom i,R)); -- Make a list of the common denominators of these matrices and substitute them back into R.
-          
+     currVarS = sub(currVar,S);
+     localVarS = sub(localVar,S);
+     subS = map(S,frac R);
+     deltaList = apply(k, i -> (subS matrixList#i)*sub(subS inverseList#i,{currVarS => currVarS+localVarS})); -- Make a list of all of the 'shifted' product matrices.
+     subR = map(R,S);
+     deltaDenom = apply(deltaList, i -> subR commonDenom i); -- Make a list of the common denominators of these matrices and substitute them back into R.
+     
      g = map(R^1) // matrix{deltaDenom};
      U = matrixList#0*sub(sub(inverseList#0,{currVar => (currVar - currVar*(g_(0,0))*(deltaDenom#0))}),frac R);
      scan(1..(k-1), i -> U = U*sub(matrixList#i,{currVar => (currVar - (sum(0..(i-1), j -> currVar*g_(j,0)*deltaDenom#j)))})*sub(inverseList#i,{currVar => (currVar - (sum(0..i, j -> currVar*g_(j,0)*deltaDenom#j)))}));
