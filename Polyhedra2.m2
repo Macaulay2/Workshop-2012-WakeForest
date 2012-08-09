@@ -400,6 +400,7 @@ latticePoints Polyhedron := P -> (
 	       V := entries vertices P;
 	       n := ambDim P;
 	       print n;
+	       print vertices P;
 	       minv := apply(V,min);
 	       maxv := apply(V,max);
 	       minmaxv := maxv-minv;
@@ -446,7 +447,7 @@ latticePoints Polyhedron := P -> (
 		    A := gens ker substitute(M,ZZ);
 		    -- Project the translated polytope, compute the lattice points and map them back
 		    P#"LatticePoints" = transpose matrix apply(latticePoints affinePreimage(A,P,b),e -> substitute(A*e + b,ZZ)))));
-     apply(numColumns P#"LatticePoints",i->(P#"LatticePoints")_i)
+     apply(numRows P#"LatticePoints",i->(transpose P#"LatticePoints")_{i})
      )
 
 
@@ -552,6 +553,83 @@ directProduct (Cone, Cone):=(P1,P2)->(
 PolyhedralObject * PolyhedralObject := directProduct
 Polyhedron + Polyhedron := minkowskiSum
 Polyhedron + Cone := minkowskiSum
+
+
+
+-- PURPOSE : Computing the Hilbert basis of a Cone 
+--   INPUT : 'C',  a Cone
+--  OUTPUT : 'L',  a list containing the Hilbert basis as one column matrices 
+hilbertBasis = method(TypicalValue => List)
+hilbertBasis Cone := C -> (
+     if C#?"HilbertBasis" then return (apply(numRows C#"HilbertBasis",i->(transpose C#"HilbertBasis")_{i}));
+     -- Computing the row echolon form of the matrix M
+     ref := M -> (
+	  n := numColumns M;
+	  s := numRows M;
+	  BC := map(ZZ^n,ZZ^n,1);
+	  m := min(n,s);
+	  -- Scan through the first square part of 'M'
+	  i := 0;
+	  stopper := 0;
+	  while i < m and stopper < n do (
+		    -- Selecting the first non-zero entry after the i-th row in the i-th column
+		    j := select(1,toList(i..s-1),k -> M_i_k != 0);
+		    -- if there is a non-zero entry, scan the remaining entries and compute the reduced form for this column
+		    if j != {} then (
+			 j = j#0;
+			 scan((j+1)..(s-1), k -> (
+				   if M_i_k != 0 then (
+					a := M_i_j;
+					b := M_i_k;
+					L := gcdCoefficients(a,b);
+					a = substitute(a/(L#0),ZZ);
+					b = substitute(b/(L#0),ZZ);
+					M = M^{0..j-1} || (L#1)*M^{j} + (L#2)*M^{k} || M^{j+1..k-1} || (-b)*M^{j} + a*M^{k} || M^{k+1..s-1})));
+			 if i != j then (
+			      M = M^{0..i-1} || M^{j} || M^{i+1..j-1} || M^{i} || M^{j+1..s-1});
+			 if M_i_i < 0 then M = M^{0..i-1} || -M^{i} || M^{i+1..s-1})
+		    else (
+			 M = M_{0..i-1} | M_{i+1..n-1} | M_{i};
+			 BC = BC_{0..i-1} | BC_{i+1..n-1} | BC_{i};
+			 i = i-1);
+		    i = i+1;
+		    stopper = stopper + 1);
+	  (M,BC));
+     -- Function to compute the/one preimage of h under A
+     preim := (h,A) -> (
+	  -- Take the generators of the kernel of '-h|A' and find an element with 1 as first entry -> the other entrys are a preimage
+	  -- vector
+	  N := gens ker(-h|A);
+	  N = transpose (ref transpose N)#0;
+	  N_{0}^{1..(numRows N)-1});
+     A := -halfspaces C;
+     if hyperplanes C =!= 0 then A = A || hyperplanes C || -hyperplanes C;
+     A = substitute(A,ZZ);
+     -- Use the project and lift algorithm to compute a basis of the space of vectors positive on 'A' whose preimages are the HilbertBasis
+     (B,BC) := ref transpose A; 
+     H := constructHilbertBasis B;
+     BC = inverse transpose BC;
+     C#"HilbertBasis"=transpose matrix {apply(H,h -> preim(BC*h,A))};
+     (apply(numRows C#"HilbertBasis",i->(transpose C#"HilbertBasis")_{i})))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 --Non-exported stuff
 
 --rows are coordinates as in Polymake
@@ -613,61 +691,6 @@ computeRays Polyhedron := C -> (
      C#"LinealitySpace"=-transpose fm_1;
      )
 
--- PURPOSE : Computing the Hilbert basis of a Cone 
---   INPUT : 'C',  a Cone
---  OUTPUT : 'L',  a list containing the Hilbert basis as one column matrices 
-hilbertBasis = method(TypicalValue => List)
-hilbertBasis Cone := C -> (
-     if C#?"HilbertBasis" then return (apply(numRows C#"HilbertBasis",i->(transpose C#"HilbertBasis")_{i}));
-     -- Computing the row echolon form of the matrix M
-     ref := M -> (
-	  n := numColumns M;
-	  s := numRows M;
-	  BC := map(ZZ^n,ZZ^n,1);
-	  m := min(n,s);
-	  -- Scan through the first square part of 'M'
-	  i := 0;
-	  stopper := 0;
-	  while i < m and stopper < n do (
-		    -- Selecting the first non-zero entry after the i-th row in the i-th column
-		    j := select(1,toList(i..s-1),k -> M_i_k != 0);
-		    -- if there is a non-zero entry, scan the remaining entries and compute the reduced form for this column
-		    if j != {} then (
-			 j = j#0;
-			 scan((j+1)..(s-1), k -> (
-				   if M_i_k != 0 then (
-					a := M_i_j;
-					b := M_i_k;
-					L := gcdCoefficients(a,b);
-					a = substitute(a/(L#0),ZZ);
-					b = substitute(b/(L#0),ZZ);
-					M = M^{0..j-1} || (L#1)*M^{j} + (L#2)*M^{k} || M^{j+1..k-1} || (-b)*M^{j} + a*M^{k} || M^{k+1..s-1})));
-			 if i != j then (
-			      M = M^{0..i-1} || M^{j} || M^{i+1..j-1} || M^{i} || M^{j+1..s-1});
-			 if M_i_i < 0 then M = M^{0..i-1} || -M^{i} || M^{i+1..s-1})
-		    else (
-			 M = M_{0..i-1} | M_{i+1..n-1} | M_{i};
-			 BC = BC_{0..i-1} | BC_{i+1..n-1} | BC_{i};
-			 i = i-1);
-		    i = i+1;
-		    stopper = stopper + 1);
-	  (M,BC));
-     -- Function to compute the/one preimage of h under A
-     preim := (h,A) -> (
-	  -- Take the generators of the kernel of '-h|A' and find an element with 1 as first entry -> the other entrys are a preimage
-	  -- vector
-	  N := gens ker(-h|A);
-	  N = transpose (ref transpose N)#0;
-	  N_{0}^{1..(numRows N)-1});
-     A := -halfspaces C;
-     if hyperplanes C =!= 0 then A = A || hyperplanes C || -hyperplanes C;
-     A = substitute(A,ZZ);
-     -- Use the project and lift algorithm to compute a basis of the space of vectors positive on 'A' whose preimages are the HilbertBasis
-     (B,BC) := ref transpose A; 
-     H := constructHilbertBasis B;
-     BC = inverse transpose BC;
-     C#"HilbertBasis"=transpose matrix {apply(H,h -> preim(BC*h,A))};
-     (apply(numRows C#"HilbertBasis",i->(transpose C#"HilbertBasis")_{i})))
      
 
 constructHilbertBasis = A -> (
