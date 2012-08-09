@@ -18,7 +18,7 @@
 needsPackage "SimplicialComplexes"
 newPackage(
   "SpectralSequences",
-  Version => "0.2'",
+  Version => "0.3",
   Date => "8 August 2012",
   Authors => {
        {
@@ -274,9 +274,9 @@ expression SpectralSequence := E -> new FunctionApplication from {
 
 filteredComplex SpectralSequence := FilteredComplex => E -> (
   E.filteredComplex)
+
 chainComplex SpectralSequence := ChainComplex => E -> (
-  K := filteredComplex E;
-  K^0)
+  chainComplex filteredComplex E)
 
 spectralSequence = method(Options => {Degree => 1})
 spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
