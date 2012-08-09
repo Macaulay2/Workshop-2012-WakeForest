@@ -17,12 +17,12 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
 	isHomologyAlgebraTrivial, findTrivialMasseyOperation, findNaryTrivialMasseyOperation, AssertWellDefined,
 	isGolod, isGolodHomomorphism, GenDegreeLimit, RelDegreeLimit, TMOLimit,
 	InitializeDegreeZeroHomology, InitializeComplex, isAcyclic, getDegNModule,
-	semifreeDGModule, DGRing, DGModule, DGModuleMap, dgModuleMap, shift
-	-- polydifferential 
-	-- homologyModule
-	-- diffs
-	-- shiftMap, inverseShiftMap
-	-- composedDGMap
+	semifreeDGModule, DGRing, DGModule, DGModuleMap, dgModuleMap, shift,
+	polydifferential,
+	homologyModule,
+	diffs,
+        shiftMap, inverseShiftMap,
+	composedDGMap
 }
 
 -- Questions:
@@ -64,8 +64,8 @@ export {DGAlgebra, DGAlgebraMap, dgAlgebraMap, freeDGAlgebra, setDiff, natural, 
 -- protected symbols (I don't want to export these symbols, but I use them internally in the code at various places)
 protect diffs
 protect basisAlgebra
-protect shiftMap
-protect inverseShiftMap
+--protect shiftMap
+--protect inverseShiftMap
 protect homologyModule
 
 -- Defining the new type DGAlgebra
@@ -131,8 +131,8 @@ maxDegree DGAlgebra := A -> (
 
 totalOddDegree := A -> sum select(degrees A.natural / first, i -> odd i)
 
-setDiff = method(TypicalValue => DGAlgebra, Options => {InitializeDegreeZeroHomology => true, InitializeComplex => true})
-setDiff (DGAlgebra,List) := opts -> (A,diffList) -> (
+setDiff = method(Options => {InitializeDegreeZeroHomology => true, InitializeComplex => true})
+setDiff (DGAlgebra,List) := (DGAlgebra)=> opts -> (A,diffList) -> (
    A.diff = map(A.natural,A.natural, substitute(matrix {diffList}, A.natural));
    A.isHomogeneous = isHomogeneous A.ring and checkIsHomogeneous(A);
    if opts.InitializeDegreeZeroHomology then (
@@ -1287,7 +1287,7 @@ presMoverQ**
 
 maxDegree DGModule := U -> maxDegree (U.DGRing) + max ((degrees U.natural) / first)
 
-setDiff (DGModule,Matrix) := opts -> (M,diffMatrix) -> (
+setDiff (DGModule,Matrix) := (DGModule) =>opts -> (M,diffMatrix) -> (
    if diffMatrix.ring =!= M.DGRing.natural then error "Ensure that the differential is defined over the DGAlgebra.";
    M.diff = map(M.natural,M.natural, diffMatrix);
    M.isHomogeneous = isHomogeneous (M.DGRing).ring and checkIsHomogeneous(M);
@@ -1457,46 +1457,46 @@ doc ///
       of the complex in the sense that it satisfies the Liebniz rule.  That is, $d(ab) = d(a)b + (-1)^{deg a}ad(b)$.  When one
       speaks of 'the' Koszul complex of a ring, one means the Koszul complex on a minimal set of generators of the maximal ideal of R.
     Example
-      R = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3}
-      KR = koszulComplexDGA R
+--      R = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3}
+--      KR = koszulComplexDGA R
     Text
       One can specify the name of the variable to easily handle multiple Koszul complexes at once.
     Example
-      S = ZZ/101[x,y,z]/ideal{x^3,y^3,z^3,x^2*y^2,y^2*z^2}
-      KS = koszulComplexDGA(S,Variable=>"U")
+--      S = ZZ/101[x,y,z]/ideal{x^3,y^3,z^3,x^2*y^2,y^2*z^2}
+--     KS = koszulComplexDGA(S,Variable=>"U")
     Text
       To obtain the chain complex associated to the Koszul complex, one may use chainComplex.  One can also obtain this complex
       directly without using the DGAlgebras package by using the command @ TO koszul @.
     Example
-      cxKR = chainComplex KR
-      prune HH cxKR
+--      cxKR = chainComplex KR
+--      prune HH cxKR
     Text
       Since the Koszul complex is a DG algebra, its homology is itself an algebra.  One can obtain this algebra using the command
       homology, homologyAlgebra, or HH (all commands work).  This algebra structure can detect whether or not the ring is a complete
       intersection or Gorenstein.
     Example
-     HKR = HH KR
-     ideal HKR
-     R' = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3,a*c,a*d,b*c,b*d,a^2*b^2-c^2*d^2}
-     HKR' = HH koszulComplexDGA R'
-     numgens HKR'
-      ann ideal gens HKR'
+--     HKR = HH KR
+--     ideal HKR
+--     R' = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3,a*c,a*d,b*c,b*d,a^2*b^2-c^2*d^2}
+--     HKR' = HH koszulComplexDGA R'
+--     numgens HKR'
+--     ann ideal gens HKR'
     Text
       Note that since the socle of HKR' is one dimensional, HKR' has Poincare duality, and hence R' is Gorenstein.
     Text
       One can also consider the Koszul complex of an ideal, or a sequence of elements.
     Example
-      Q = ambient R
-      I = ideal {a^3,b^3,c^3,d^3}
-      KI = koszulComplexDGA I
-      HKI = HH KI
-      describe HKI
-      use Q
-      I' = I + ideal{a^2*b^2*c^2*d^2}
-      KI' = koszulComplexDGA I'
-      HKI' = HH KI'
-      describe HKI'
-      HKI'.cache.cycles
+--      Q = ambient R
+--      I = ideal {a^3,b^3,c^3,d^3}
+--      KI = koszulComplexDGA I
+--      HKI = HH KI
+--      describe HKI
+--      use Q
+--      I' = I + ideal{a^2*b^2*c^2*d^2}
+--      KI' = koszulComplexDGA I'
+--      HKI' = HH KI'
+--      describe HKI'
+--      HKI'.cache.cycles
     Text
       Note that since I is a Q-regular sequence, the Koszul complex is acyclic, and that both homology algebras are algebras over the zeroth homology
       of the Koszul complex.
@@ -1596,7 +1596,7 @@ doc ///
   Key
     DGAlgebra
   Headline
-    The class of all DGAlgebras
+    The class of all DG Algebras
   Description
     Text
       A @ TO DGAlgebra @ A is represented as a  MutableHashTable  with three entries: A.ring is the coefficient ring, A.natural is the underlying algebra and A.diff is the differential. 
@@ -1618,7 +1618,7 @@ doc ///
   Key
     DGModule
   Headline
-    The class of all DGModules
+    The class of all DG Modules
   Description
     Text
       A @ TO DGModule @ U is represented as a  MutableHashTable  with three entries: U.ring is the @ TO DGAlgebra @ that U is a module over, U.natural is the underlying @TO Module @  and U.diff is the differential. 
@@ -1693,6 +1693,31 @@ doc ///
   Caveat
     There is currently a bug handling DG algebras that have no monomials in some degree, but some monomials in a later degree;
     for example if one replaces the 3 in the above example with a 5.
+///
+
+doc ///
+  Key
+    (semifreeDGModule,DGAlgebra,List)
+  Headline
+    Constructs a DG Module
+  Usage
+    U = semifreeDGModule(A, degList)  
+  Inputs
+    A:DGAlgebra
+      The DG Algebra over which the DG module will be defined.
+    degList:List
+      A list of the degrees of the generators of new DG module.
+  Outputs
+    U:DGModule
+  Description
+    Example
+      Q = QQ[x]
+      I = ideal(x^3)
+      K = koszulComplexDGA(I)
+      U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
+    Text
+      However, this process does not define the differential, 
+      which may be done using @ TO setDiff@.
 ///
 
 doc ///
@@ -1788,18 +1813,24 @@ doc ///
 doc ///
   Key
     setDiff
-    (setDiff,DGAlgebra,List)
     InitializeComplex
     [setDiff,InitializeComplex]
     InitializeDegreeZeroHomology
     [setDiff,InitializeDegreeZeroHomology]
+  Headline
+    Set the differential of a DG object manually.
+///
+
+doc ///
+  Key
+    (setDiff,DGAlgebra,List)
   Headline
     Sets the differential of a DGAlgebra manually.
   Usage
     d = setDiff(A,diffList)
   Inputs
     A:DGAlgebra
-    A:List 
+    diffList:List 
   Outputs
     A:DGAlgebra
       The DGAlgebra with the differential now set.
@@ -1823,6 +1854,37 @@ doc ///
       computing HH(A) as a DGAlgebra.  This involves computing a Grobner basis of the image of the first differential of A,
       and as such, may want to be avoided if there are a large number of DGAlgebra generators in degree 1.  The default value of
       this options is true.
+///
+
+doc ///
+  Key
+    (setDiff,DGModule,Matrix)
+--    InitializeComplex
+--    [setDiff,InitializeComplex]
+--    InitializeDegreeZeroHomology
+--    [setDiff,InitializeDegreeZeroHomology]
+  Headline
+    Sets the differential of a DG Module manually.
+  Usage
+    V = setDiff(U,M)
+  Inputs
+    U:DGModule
+    M:Matrix 
+  Outputs
+    V:DGModule
+      The DG module with the differential now set.
+  Description
+    Example
+      Q = QQ[x]
+      I = ideal(x^3)
+      K = koszulComplexDGA(Q/I)
+      U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
+    Text
+      We note that the DG module has no differential, and manually set it using setDiff.
+    Example
+      U.diff
+      setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
+      U.diff
 ///
 
 doc ///
@@ -2686,6 +2748,15 @@ doc ///
     Text
       A common way to create a DGAlgebraMap is via @ TO liftToDGMap @.
 ///
+doc ///
+  Key
+    DGModuleMap
+  Headline
+    The class of all DG Module maps
+--  Description
+--    Text
+--      A common way to create a DGAlgebraMap is via @ TO liftToDGMap @.
+///
 
 doc ///
   Key
@@ -2721,16 +2792,46 @@ doc ///
 
 doc ///
   Key
+    dgModuleMap
+    (dgModuleMap,DGModule,DGModule,Matrix)
+  Headline
+    Define a DG module map between DG modules.
+  Usage
+    phi = dgModuleMap(B,A,M)
+  Inputs
+    A:DGModule
+       Source
+    B:DGModule
+       Target
+    M:Matrix
+       A matrix representing where the generators of A should be mapped to (akin to ringMap)
+  Outputs
+    phi:DGModuleMap
+  Description
+    Example
+      Q = QQ[x]
+      I = ideal(x^3)
+      K = koszulComplexDGA(Q/I)
+      U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
+      setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
+      V = semifreeDGModule(K,{{0,0},{1,1},{2,3}})
+      setDiff(V,sub(matrix{{0,x,-T_1},{0,0,x^2},{0,0,0}}, K.natural))
+      f = dgModuleMap(V,U,sub(matrix{{1,0,0},{0,x,0},{0,0,1}},K.natural))
+
+///
+
+doc ///
+  Key
     shift
   Headline
-    Construct shift of a DGModule or DGModuleMap.
+    Construct shift of a DG Module or DG Module map.
 ///
 
 doc ///
   Key
     (shift, DGModule)
   Headline
-    Construct a degree 1 shift of a DGModule.
+    Construct a degree 1 shift of a DG Module.
   Usage
     V = shift U
   Inputs
@@ -2745,17 +2846,22 @@ doc ///
       U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
       setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
     Text
-      Along with the shifted DGModule V, we also obtain the bijection from U to V and its inverse:
+      We compute the shifted module, noting that the differential has been adjusted appropriately. 
     Example
-      shiftMap = V.cache.shiftMap
-      inverseShiftMap = V.cache.inverseShiftMap
+      V = shift U
+      V.diff
+    Text
+      Along with the shifted DG Module V, we also obtain the bijection from U to V and its inverse:
+    Example
+     A  = V.cache.shiftMap
+     B  = V.cache.inverseShiftMap
 ///
 
 doc ///
   Key
     (shift,DGModuleMap)
   Headline
-    Construct a degree 1 shift of a DGModuleMap.
+    Construct a degree 1 shift of a DG Module map.
   Usage
     g = shift f
   Inputs
@@ -2764,14 +2870,14 @@ doc ///
     g:
   Description
     Text
-      Given a DGModuleMap f from U to V, we obtain the induced map from shift U to shift V.
+      Given a DG Module map f from U to V, we obtain the induced map from shift U to shift V.
 ///
       
 doc ///
   Key
     (cone,DGModuleMap)
   Headline
-    Compute the mapping cone of a DGModuleMap.
+    Compute the mapping cone of a DG Module map.
   Usage
     C = cone f
   Inputs
