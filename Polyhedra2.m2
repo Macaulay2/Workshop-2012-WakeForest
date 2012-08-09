@@ -283,23 +283,29 @@ linSpace Polyhedron := opts->P -> (
    
 
 
-ambDim = method ()
-ambDim Cone:=C->(
+ambDim = method (Options=>pmopt)
+ambDim Cone:=opts->C->(
      if not C#?"AmbientDim" then (
+     if opts#UsePolymake then runPolymake(C,"AmbientDim")
+     else
+     (
      if C#?"Rays" then C#"AmbientDim"=numColumns C#"Rays" 	  
      else if C#?"InputRays" then C#"AmbientDim"=numColumns C#"InputRays" 	  
      else if C#?"Inequalities" then C#"AmbientDim"=numColumns C#"Inequalities" 	  
      else if C#?"Facets" then C#"AmbientDim"=numColumns C#"Facets"
-     else error ("Your cone is ill-defined")); 	  
+     else error ("Your cone is ill-defined"))); 	  
       C#"AmbientDim")
  
-ambDim Polyhedron:=C->(
+ambDim Polyhedron:=opts->C->(
      if not C#?"AmbientDim" then (
+     if opts#UsePolymake then runPolymake(C,"AmbientDim")
+     else
+     (	  
      if C#?"Rays" then C#"AmbientDim"=numColumns C#"Rays" -1 	  
      else if C#?"InputRays" then C#"AmbientDim"=numColumns C#"InputRays" -1	  
      else if C#?"Inequalities" then C#"AmbientDim"=numColumns C#"Inequalities"-1 	  
      else if C#"Facets" then C#"AmbientDim"=numColumns C#"Facets"-1
-     else error ("Your cone is ill-defined")); 	  
+     else error ("Your cone is ill-defined"))); 	  
       C#"AmbientDim")
 
 
@@ -388,9 +394,11 @@ affinePreimage(Matrix,Cone) := (A,C) -> posHull affinePreimage(A,coneToPolyhedro
 
 affinePreimage(Cone,Matrix) := (C,b) -> affinePreimage(coneToPolyhedron C,b)
 
-latticePoints = method(TypicalValue => List)
-latticePoints Polyhedron := P -> (
+latticePoints = method(TypicalValue => List,Options=>pmopt)
+latticePoints Polyhedron := opts -> P -> (
      if not P#?"LatticePoints" then (
+	  if opts#UsePolymake then runPolymake(P,"LatticePoints")
+	  else (
 	  -- Checking for input errors
 	  if  not isCompact P then error("The polyhedron must be compact");
 	  -- Recursive function that intersects the polyhedron with parallel hyperplanes in the axis direction
@@ -446,7 +454,7 @@ latticePoints Polyhedron := P -> (
 	       else (
 		    A := gens ker substitute(M,ZZ);
 		    -- Project the translated polytope, compute the lattice points and map them back
-		    P#"LatticePoints" = transpose matrix apply(latticePoints affinePreimage(A,P,b),e -> substitute(A*e + b,ZZ)))));
+		    P#"LatticePoints" = transpose matrix apply(latticePoints affinePreimage(A,P,b),e -> substitute(A*e + b,ZZ))))));
      apply(numRows P#"LatticePoints",i->(transpose P#"LatticePoints")_{i})
      )
 
@@ -559,9 +567,11 @@ Polyhedron + Cone := minkowskiSum
 -- PURPOSE : Computing the Hilbert basis of a Cone 
 --   INPUT : 'C',  a Cone
 --  OUTPUT : 'L',  a list containing the Hilbert basis as one column matrices 
-hilbertBasis = method(TypicalValue => List)
-hilbertBasis Cone := C -> (
+hilbertBasis = method(TypicalValue => List,Options=>pmopt)
+hilbertBasis Cone := opts->C -> (
      if C#?"HilbertBasis" then return (apply(numRows C#"HilbertBasis",i->(transpose C#"HilbertBasis")_{i}));
+     if opts#UsePolymake then runPolymake(C,"HilbertBasis")
+     else (
      -- Computing the row echolon form of the matrix M
      ref := M -> (
 	  n := numColumns M;
@@ -609,7 +619,7 @@ hilbertBasis Cone := C -> (
      (B,BC) := ref transpose A; 
      H := constructHilbertBasis B;
      BC = inverse transpose BC;
-     C#"HilbertBasis"=transpose matrix {apply(H,h -> preim(BC*h,A))};
+     C#"HilbertBasis"=transpose matrix {apply(H,h -> preim(BC*h,A))});
      (apply(numRows C#"HilbertBasis",i->(transpose C#"HilbertBasis")_{i})))
 
 
