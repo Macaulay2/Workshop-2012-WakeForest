@@ -295,8 +295,19 @@ prevPermutation = method()
 prevPermutation ZZ := n -> reverse new List from (0..(n-1))
 prevPermutation Nothing := P -> null
 prevPermutation List := P -> (
-  C := nextPermutation reverse P;
-  if C === null then return null else return reverse C;
+  -- Find last item not in sorted order
+  i := #P-2;
+  while i >= 0 and P#i <= P#(i+1) do i = i-1;
+  -- If complete sort, we are done
+  if i < 0 then return null;
+  -- Find last item greater than P#i
+  j := #P-1;
+  while ( P#i < P#j ) do j = j-1;
+  -- Swap:
+  P = switch(i,j,P);
+  -- Re-sort the tail of the list:
+  P = join(take(P,{0,i}),reverse take(P,{i+1,#P-1}));
+  return P;
 )
 
 
@@ -799,7 +810,7 @@ TEST ///
   P = prevPermutation(5);
   assert( P == {4,3,2,1,0} );
   P = prevPermutation(P);
-  assert( P == {3,4,2,1,0} );
+  assert( P == {4,3,2,0,1} );
   P = prevPermutation({0,1,2,3,4});
   assert( P === null );
   P = prevPermutation(P);
