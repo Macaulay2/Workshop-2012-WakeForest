@@ -48,7 +48,6 @@ export {
 --   http://stackoverflow.com/questions/7794638/to-generate-a-subset-of-size-n-one-by-one-to-reduce-the-complexity
 -- retrieved August 7, 2012
 -- and adapted for Macaulay2 by Zach Teitler.
--- Sample usage:
 nextSubset = method(Options=>{Size=>null})
 nextSubset ZZ := o -> (n) -> (
   if o.Size === null then return {}
@@ -58,18 +57,32 @@ nextSubset ZZ := o -> (n) -> (
 nextSubset (ZZ,Nothing) := o -> (n,P) -> null
 nextSubset (ZZ,List) := o -> (n,P) -> (
   if ((o.Size =!= null) and (o.Size != #P)) then error "current subset not the expected size";
-  -- Last one?
-  lastone := (#P == 0) or (P#0 == n-#P);
-  if lastone and o.Size =!= null then return null;
-  if lastone and o.Size === null then return nextSubset(n,Size=>(#P+1));
   
-  -- Find the position to change.
-  p := 0;
-  while ( p < #P-1 and (P#p)+1 == P#(p+1) ) do p = p+1;
-  P = replace(p,(P#p)+1,P);
-  while ( (p = p-1) >= 0 ) do P = replace(p,p,P);
+  if o.Size =!= null then (
+    -- Last one?
+    lastone := (#P == 0) or (P#0 == n-#P);
+    if lastone then return null;
+    
+    -- Find the position to change.
+    p := 0;
+    while ( p < #P-1 and (P#p)+1 == P#(p+1) ) do p = p+1;
+    P = replace(p,(P#p)+1,P);
+    while ( (p = p-1) >= 0 ) do P = replace(p,p,P);
+    return P;
+    
+  ) else (
   
-  return P;
+    -- o.Size === null means generate subsets of all sizes.
+    -- To conform with Macaulay2's existing 'subsets',
+    -- generate in binary counting order.
+    
+    index := sum(P, i -> 2^i) + 1;
+    if ( index == 2^n ) then (
+      return null;
+    ) else (
+      return (for i from 0 to n-1 list if (2^i & index != 0) then i else continue);
+    );
+  );
 )
 
 -- prevSubset
@@ -83,14 +96,28 @@ prevSubset ZZ := o -> (n) -> (
 )
 prevSubset (ZZ,Nothing) := o -> (n,P) -> null
 prevSubset (ZZ,List) := o -> (n,P) -> (
-  C := toList select(0..<n , i -> not member(i,P));
-  if o.Size === null then
-    C = nextSubset(n, C)
-  else
-    C = nextSubset(n, C, Size=>(n - o.Size));
+  if o.Size =!= null then (
+    -- Find the position to change
+    p := 0;
+    while ( p < #P-1 and P#p == p ) do p = p+1;
+    if ( p == #P ) then return null;
+    P = replace(p,(P#p)-1,P);
+    while ( (p=p-1) >= 0 ) do P = replace(p,(P#(p+1))-1,P);
+    return P;
+    
+  ) else (
   
-  if ( C === null ) then return null
-  else return toList select(0..<n, i -> not member(i,C));
+    -- o.Size === null means generate subsets of all sizes.
+    -- To conform with Macaulay2's existing 'subsets',
+    -- generate in binary counting order.
+    
+    index := sum(P, i -> 2^i) - 1;
+    if ( index < 0 ) then (
+      return null;
+    ) else (
+      return (for i from 0 to n-1 list if (2^i & index != 0) then i else continue);
+    );
+  );
 )
 
 -- nextPartition
@@ -100,7 +127,6 @@ prevSubset (ZZ,List) := o -> (n,P) -> (
 --   http://www.perlmonks.org/?node_id=621859
 -- retrieved August 7, 2012
 -- and adapted for Macaulay2 by Zach Teitler.
--- Sample usage:
 nextPartition = method()
 nextPartition ZZ := n -> new Partition from {n}
 nextPartition (ZZ,ZZ) := (n,k) ->
@@ -147,13 +173,6 @@ prevPartition Partition := P -> (
 --   http://www.perlmonks.org/?node_id=29374
 -- retrieved August 7, 2012
 -- and adapted for Macaulay2 by Zach Teitler.
--- Sample usage:
-{*
-P = nextPermutation(5)
-P = nextPermutation P
-P = nextPermutation P
-P = nextPermutation P
-*}
 nextPermutation = method()
 nextPermutation ZZ := n -> new List from (0..n-1)
 nextPermutation Nothing := P -> null
@@ -231,12 +250,17 @@ document {
     List => "the next subset after S"
   },
   CODE "nextSubset(n,S)", " returns the next subset of ",
-  TEX ///$\{0,\dots,n-1\}$///, " after S. ",
+  TEX ///$\{0,\dots,n-1\}$///, " after S ",
+  "in binary counting order ",
+  "(the same order used by Macaulay2's ", TO "subsets", "). ",
   CODE "nextSubset(n)", " returns the first subset, namely ",
   TEX ///$\{\}$///, ", the empty set.",
 
   EXAMPLE lines ///
     S = nextSubset 5
+    S = nextSubset(5,S)
+    S = nextSubset(5,S)
+    S = nextSubset(5,S)
     S = nextSubset(5,S)
     S = nextSubset(5,S)
     S = {1,3,4};
@@ -482,7 +506,7 @@ TEST ///
   S = nextSubset(5,{0,1,2,3,4});
   assert( S === null );
   
-  for n from 5 to 10 do (
+  for n from 5 to 12 do (
     S = nextSubset(n);
     subsetList = {};
     while ( S =!= null ) do (
@@ -492,7 +516,7 @@ TEST ///
     assert( subsetList === subsets(n) );
   );
   
-  for n from 5 to 10 do (
+  for n from 5 to 12 do (
     for k from 0 to n do (
       S = nextSubset(n,Size=>k);
       subsetList = {};
