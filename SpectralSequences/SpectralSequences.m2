@@ -92,6 +92,8 @@ truncate (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
   else chainComplex apply(drop(spots C,1), k -> if k <= i then C.dd_k else if k===i+1 then 
        map(C_(k-1), 0*C_k, 0) else map(0*C_(k-1),0*C_k,0)))   
     
+-- Computes the graded pieces of the total complex of a Hom double complex 
+-- (just as a graded module, so no maps!)
 Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
   R := C.ring;
   if R =!= D.ring then error "expected graded modules over the same ring";
@@ -110,6 +112,7 @@ Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
 	    E#k = directSum(apply(p, v -> v => Hom(C_(v#0), D_(v#1) )));));
   E)
 
+-- Computes the total complex of the Hom double complex of two chain complexes
 Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
   R := C.ring;
   if R =!= D.ring then error "expected chain complexes over the same ring";
@@ -131,10 +134,13 @@ Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
 FilteredComplex = new Type of HashTable
 FilteredComplex.synonym = "filtered chain complex"
 
+-- Retrieves the indices  of the (possibly nontrivial) pieces of the filtration 
 spots = K -> select(keys K, i -> class i === ZZ)
 max FilteredComplex := K -> max spots K
 min FilteredComplex := K -> min spots K
 
+-- Returns the pth subcomplex in a filtration of a chain complex 
+-- (our filtrations are descending)
 FilteredComplex ^ InfiniteNumber :=
 FilteredComplex ^ ZZ := ChainComplex => (K,p) -> (
      -- We assume that spots form a consecutive sequence of integers
@@ -157,6 +163,8 @@ net FilteredComplex := K -> (
 
 filteredComplex = method(TypicalValue => FilteredComplex)
 
+-- Primitive constructor, takes a descending list of inclusion maps of 
+-- subcomplexes of a chain complex (or simplicial complexes) 
 filteredComplex List := L -> (
   local maps;
   local C;
@@ -344,10 +352,15 @@ end
 restart
 needsPackage "SpectralSequences";
 debug SpectralSequences;
-S = QQ[x,y];
-I = ideal (x,y);
-F = res I;
-FF=filteredComplex F
+S = QQ[x,y,z];
+I = ideal vars S;
+F = res (I/I^3);
+G = res (I^2/I^4);
+H= Hom(F,G);
+prune H
+FF=filteredComplex F;
+
+
 Hom(FF,F)
 prune (F**F)
 
