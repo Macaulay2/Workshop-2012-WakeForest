@@ -1,35 +1,31 @@
 -- -*- coding: utf-8 -*-
 
---needsPackage "Polymake"
-needsPackage "Polyhedra2"
+needsPackage "PolyhedralObjects"
 
 newPackage(
 	"gfanInterface2",
-	Version => "0.3.2", 
-	Date => "July 2011 and Aug 2012 (updated by Josephine Yu and Anders Jensen, incorporating Andrew's changes in summer 2012)",
+	Version => "0.4", 
+	Date => "Aug 2012 (updated by Josephine Yu)",
 	Authors => {
 		{Name => "Mike Stillman", Email => "mike@math.cornell.edu", HomePage => ""},
-		{Name => "Andrew Hoefel", Email => "andrew.hoefel@mathstat.dal.ca", HomePage => "http://www.mathstat.dal.ca/~handrew/"}
-	},
+		{Name => "Andrew Hoefel", Email => "andrew.hoefel@mathstat.dal.ca", HomePage =>"http://www.mast.queensu.ca/~ahhoefel/"}
+		},
 	Headline => "Interface to Anders Jensen's Gfan software",
 	Configuration => {
 		"path" => "", 
 		"fig2devpath" => "", 
 		"keepfiles" => false, 
-		"verbose" => false
+		"verbose" => false,
+		"cachePolyhedralOutput" => false
 	},
 	DebuggingMode => true
 )
 
---needsPackage "Polymake"
-needsPackage "Polyhedra"
+needsPackage "PolyhedralObjects"
 
 export {
 	MarkedPolynomialList,
 	markedPolynomialList,
-	PolymakeObject,
-	PolymakeCone,
-	PolymakeFan,
 	polymakeFanToFan,
 	polymakeConeToCone,
 	gfan, -- done!
@@ -81,7 +77,6 @@ export {
 --	gfanVectorToString, -- to make gfan input
 --	gfanVectorListToString, -- to make gfan input
 --	gfanVectorListListToString, -- to make gfan input
---     	runGfanCommand,
 	gfanVersion
 }
 
@@ -91,89 +86,91 @@ if gfanPath == "" then gfanPath = prefixDirectory | currentLayout#"programs"
 fig2devPath = gfanInterface2#Options#Configuration#"fig2devpath"
 gfanVerbose = gfanInterface2#Options#Configuration#"verbose"
 gfanKeepFiles = gfanInterface2#Options#Configuration#"keepfiles"
+gfanCachePolyhedralOutput = gfanInterface2#Options#Configuration#"cachePolyhedralOutput"
 
-PolymakeTypes = {
-	{	"sym" => "AMBIENTDIM",
+
+GfanTypes = {
+	{	"sym" => "AmbientDim",
 		"str" => "AMBIENT_DIM",
 		"type" => "cardinal"
 	},
-	{	"sym" => "DIM",
+	{	"sym" => "Dim",
 		"str" => "DIM",
 		"type" => "cardinal"
 	},
-	{	"sym" => "LINEALITYDIM",
+	{	"sym" => "LinealityDim",
 		"str" => "LINEALITY_DIM",
 		"type" => "cardinal"
 	},
-	{	"sym" => "RAYS",
+	{	"sym" => "Rays",
 		"str" => "RAYS",
 		"type" => "matrix"
 	},
-	{	"sym" => "NRAYS",
+	{	"sym" => "NRays",
 		"str" => "N_RAYS",
 		"type" => "cardinal"
 	},
-	{	"sym" => "LINEALITYSPACE",
+	{	"sym" => "LinealitySpace",
 		"str" => "LINEALITY_SPACE",
 		"type" => "matrix"
 	},
-	{	"sym" => "ORTHLINEALITYSPACE",
+	{	"sym" => "OrthLinealitySpace",
 		"str" => "ORTH_LINEALITY_SPACE",
 		"type" => "matrix"
 	},
-	{	"sym" => "FVECTOR",
+	{	"sym" => "FVector",
 		"str" => "F_VECTOR",
 		"type" => "vector"
 	},
-	{	"sym" => "CONES",
+	{	"sym" => "Cones",
 		"str" => "CONES",
 		"type" => "incidenceMatrix"
 	},
-	{	"sym" => "MAXIMALCONES",
+	{	"sym" => "MaximalCones",
 		"str" => "MAXIMAL_CONES",
 		"type" => "incidenceMatrix"
 	},
-	{	"sym" => "PURE",
+	{	"sym" => "Pure",
 		"str" => "PURE",
 		"type" => "boolean"
 	},
-	{	"sym" => "MULTIPLICITIES",
+	{	"sym" => "Multiplicities",
 		"str" => "MULTIPLICITIES",
 		"type" => "columnVector"
 	},
-	{	"sym" => "RAYVALUES",
+	{	"sym" => "RayValues",
 		"str" => "RAY_VALUES",
 		"type" => "matrix"
 	},
-	{	"sym" => "LINEALITYVALUES",
+	{	"sym" => "LinealityValues",
 		"str" => "LINEALITY_VALUES",
 		"type" => "matrix"
 	},
-	{	"sym" => "MAXIMALCONESCOMPRESSED",
+	{	"sym" => "MaximalConesCompressed",
 		"str" => "MAXIMAL_CONES_COMPRESSED",
 		"type" => "incidenceMatrix"
 	},
-	{	"sym" => "CONESCOMPRESSED",
+	{	"sym" => "ConesCompressed",
 		"str" => "CONES_COMPRESSED",
 		"type" => "incidenceMatrix"
 	},
-	{	"sym" => "MULTIPLICITIESCOMPRESSED",
+	{	"sym" => "MultiplicitiesCompressed",
 		"str" => "MULTIPLICITIES_COMPRESSED",
 		"type" => "columnVector"
 	},
-	{	"sym" => "DIM",
+	{	"sym" => "Dim",
 		"str" => "DIM",
 		"type" => "cardinal"
 	},
-	{	"sym" => "IMPLIEDEQUATIONS",
+	{	"sym" => "ImpliedEquations",
 		"str" => "IMPLIED_EQUATIONS",
 		"type" => "matrix"
 	},
-	{	"sym" => "FACETS",
+	{	"sym" => "Facets",
 		"str" => "FACETS",
 		"type" => "matrix"
 	},
-	{	"sym" => "RELATIVEINTERIORPOINT",
+	{	"sym" => "RelativeInteriorPoint",
 		"str" => "RELATIVE_INTERIOR_POINT",
 		"type" => "vector"
 	},
@@ -181,11 +178,15 @@ PolymakeTypes = {
 	--	"str" => "MY_EULER",
 	--	"type" => "cardinal"
 	--},
-	{	"sym" => "SIMPLICIAL", -- undocumented by gfan
+	{	"sym" => "Simplicial", -- undocumented by gfan
 		"str" => "SIMPLICIAL",
 		"type" => "boolean"
 	}
 } / hashTable
+
+PolyhedralNameToGfanName := hashTable apply(GfanTypes, T->(T#"sym"=>T#"str"))
+GfanNameToPolyhedralName := hashTable apply(GfanTypes, T->(T#"str"=>T#"sym"))
+
 
 MarkedPolynomialList = new Type of List
 MarkedPolynomialList.synonym = "marked polynomial list";
@@ -195,20 +196,6 @@ MarkedPolynomialList.synonym = "marked polynomial list";
   -- and L and inL have the same length, and the
   -- the monomial inL#i is the marked monomial, which
   -- should occur with the same coefficient in L#i.
-
-PolymakeObject = new Type of MutableHashTable;
-PolymakeObject.synonym = "Polymake Object";
-
-PolymakeFan = new Type of PolymakeObject;
-PolymakeFan.synonym = "Polymake Fan";
-
-PolymakeCone = new Type of PolymakeObject;
-PolymakeCone.synonym = "Polymake Cone";
-
-net PolymakeObject := P -> (
-	goodkeys := select(keys P, k -> not member(k, {"rawstring", "rawblocks", "header"}));
-	stack apply(goodkeys, k -> (net k) | " => " | (net P#k))
-)
 
 markedPolynomialList = method();
 markedPolynomialList List := L -> (
@@ -404,51 +391,53 @@ gfanParseBoolInteger String := (s) -> s == "1\n"
 
 
 ------------------------------------------
--- Polymake Parsing 
+-- Gfan Parsing Polymake-style data 
 ------------------------------------------
 
-gfanParsePolyhedralFan = method()
-gfanParsePolyhedralFan String := (s) -> (
+gfanParsePolyhedralFan = method(TypicalValue => PolyhedralObject, Options => {"GfanFileName" => null})
+gfanParsePolyhedralFan String := o -> s -> (
 	B := select(sublists(lines s, l -> #l =!= 0, toList, l -> null), l -> l =!= null);
 	header := first B; --first list of lines
 	if #B < 2 and #header < 2 then error(concatenate header);
 	-- blocks are lists of the form {typeString, list of lines, parsed value}
-	blocks := apply(drop(B,1), L -> gfanParsePolymakeBlock L);
+	blocks := apply(drop(B,1), L -> gfanParseBlock L);
 	rawBlocks := hashTable apply(blocks, P -> first P => P#1);
-	parsedBlocks := apply(select(blocks, Q -> last Q =!= null), P -> first P => last P);
-	new gfanParsePolymakeHeader(header) from hashTable({ 
-		"header" => stack header, 
-		"rawstring" => s, 
-		"rawblocks" => rawBlocks
-		} | parsedBlocks
-	)
+	parsedBlocks := apply(select(blocks, Q -> last Q =!= null), P -> GfanNameToPolyhedralName#(first P) => last P);
+	P := new gfanParseHeader(header) from hashTable(parsedBlocks);
+   	if gfanCachePolyhedralOutput then ( 
+		P#"GfanFileHeader" = stack header;
+		P#"GfanFileRawString" = s; 
+		P#"GfanFileRawBlocks" = rawBlocks;
+		);
+   	if gfanKeepFiles and o#?"GfanFileName" and o#"GfanFileName" =!= null then P#"GfanFileName" = o#"GfanFileName";
+        P
 )
 
-gfanParsePolymakeHeader = method()
-gfanParsePolymakeHeader List := (L) -> (
+gfanParseHeader = method(TypicalValue => Type)
+gfanParseHeader List := (L) -> (
 	typePosition := position(L, l -> "_type" == first separate(" ", l));
 	typeLine := L#typePosition;
 	typeWords := separate(" ", typeLine);
 	if #typeWords === 2 and typeWords#1 == "PolyhedralCone" then 
-		PolymakeCone
+		Cone
 	else if #typeWords === 2 and (typeWords#1 == "PolyhedralFan" or typeWords#1 == "SymmetricFan") then
-		PolymakeFan
+		Fan
 	else
-		PolymakeObject
+		PolyhedralObject
 )
 
-gfanParsePolymakeBlock = method()
-gfanParsePolymakeBlock List := (L) -> (
+gfanParseBlock = method(TypicalValue => List)
+gfanParseBlock List := (L) -> (
 	typeString := first L;
 	data := drop(L,1);
-	typePosition := position(PolymakeTypes, T -> T#"str" == typeString);
+	typePosition := position(GfanTypes, T -> T#"str" == typeString);
 	if typePosition === null then return typeString => null;  -- Unrecognized type
-	typeTuple := PolymakeTypes#typePosition;
-	return {typeString, L, gfanParsePolymakeType(typeTuple#"type", data)};
+	typeTuple := GfanTypes#typePosition;
+	return {typeString, L, gfanParseGfanType(typeTuple#"type", data)};
 )
 
-gfanParsePolymakeType = method()
-gfanParsePolymakeType (String, List) := (T, L) -> (
+gfanParseGfanType = method()
+gfanParseGfanType (String, List) := (T, L) -> (
 	L = apply(L, str -> replace("[[:space:]]*#.*|[[:space:]]+$","" ,str));
 	if T == "cardinal" then (
 		value first L
@@ -470,6 +459,7 @@ gfanParsePolymakeType (String, List) := (T, L) -> (
 	)
 )
 
+{*
 polymakeFanToFan = method()
 
 polymakeFanToFan PolymakeFan := (F) -> (
@@ -497,6 +487,8 @@ polymakeFan (Matrix,Matrix,List) := (rays, lineality, maxcones) ->  (
 	--rawstr := blah;
 	--Not done yet!
 )
+*}
+
 
 ------------------------------------------
 -- gfan toString functions
@@ -653,6 +645,84 @@ gfanArgumentToString (String, String, Thing) := (cmd, key, value) -> (
 	" " | argStrs#key | (if cmdLineValue then " " | value else "")
 )
 
+------------------------------------------------------------------
+-- Make files to be read by Gfan
+------------------------------------------------------------------
+
+gfanMakeTemporaryFile = (data) -> (
+	tmpName := temporaryFileName();
+	if gfanVerbose then << "using temporary file " << tmpName << endl;
+	tmpFile := openOut tmpName;
+	tmpFile << data << close;
+	tmpName
+)
+
+gfanRemoveTemporaryFile = (fileName) -> 
+	if not gfanKeepFiles then removeFile fileName
+
+------------------------------------------------------------------
+-- Make Polymake-style data strings needed in gfan _fanproduct, etc.
+------------------------------------------------------------------
+
+toPolymakeFormat = method(TypicalValue => String)
+toPolymakeFormat(String, Matrix) := (propertyName, M) -> (
+     if M === null then ""
+     else(
+     	  S := propertyName|"\n";
+     	  if numRows M > 0 then
+	     S = S|replace("\\|", "", toString net M);
+     	  S
+     	  )
+     )
+toPolymakeFormat(String,Vector) := (propertyName,V) -> (
+     if V === null then ""
+     else(
+     	  S := propertyName|"\n";
+     	  if length V > 0 then
+              S = S|replace("\\|", "", toString net matrix{V});     
+     	  S
+     	  )
+     )
+toPolymakeFormat(String,ZZ) := (propertyName,x) -> (
+     if x === null then ""
+     else propertyName|"\n"|x|"\n"
+     )
+toPolymakeFormat(String,Boolean) := (propertyName,x) -> (
+     if x === null then ""
+     else propertyName|"\n"|(if x then "1" else "0")|"\n"
+     )
+toPolymakeFormat(PolyhedralObject) := (P) -> (
+     goodkeys := select(keys P, k -> not match("Gfan", k));
+     concatenate apply(goodkeys, k-> toPolymakeFormat(PolyhedralNameToGfanName#k,P#k)|"\n\n")
+     )
+
+{*
+makeGfanFile = method(TypicalValue => String)
+makeGfanFile(PolyhedralObject,String) := (P, fileName) ->(
+     if P#"GfanFileHeader" then fileName << P#"GfanFileHeader" << endl;
+     if P#"GfanFileRawString" then
+     	 file << P#"GfanFileRawString" << endl << close
+     else
+         fileName << toPolymakeFormat(P) << endl << close;
+     P#"GfanFileName" = fileName;
+     fileName	  
+     )
+
+makePolymakeFormat(PolyhedralObject) := (P) ->(
+     fileName := "";
+     if P#?"GfanFileName" and fileExists P#"GfanFileName" then
+     (	  fileName = P#"GfanFileName";
+	  << "using existing file " << filename << endl;
+     )
+     else (
+	  fileName = temporaryFileName()|currentTime()|."gfan";
+     	  << "using temporary file " << fileName << endl;
+	  writeGfanFile(P,fileName);
+     )
+     fileName	  
+     )
+*}
+
 
 --------------------------------------------------------
 -- runGfanCommand
@@ -677,19 +747,10 @@ runGfanCommand = (cmd, opts, data) -> (
 	gfanRemoveTemporaryFile tmpFile;
 	gfanRemoveTemporaryFile(tmpFile | ".out");
 	gfanRemoveTemporaryFile(tmpFile | ".err");
-	out
+	outputFileName := null;
+	if gfanKeepFiles then outputFileName = tmpFile|".out"; 
+	(out, "GfanFileName" => outputFileName)
 )
-
-gfanMakeTemporaryFile = (data) -> (
-	tmpName := temporaryFileName();
-	if gfanVerbose then << "using temporary file " << tmpName << endl;
-	tmpFile := openOut tmpName;
-	tmpFile << data << close;
-	tmpName
-)
-
-gfanRemoveTemporaryFile = (fileName) -> 
-	if not gfanKeepFiles then removeFile fileName
 
 runGfanCommandCaptureBoth = (cmd, opts, data) -> (
 	tmpFile := gfanMakeTemporaryFile data;
@@ -702,7 +763,9 @@ runGfanCommandCaptureBoth = (cmd, opts, data) -> (
 	gfanRemoveTemporaryFile tmpFile;
 	gfanRemoveTemporaryFile(tmpFile | ".out");
 	gfanRemoveTemporaryFile(tmpFile | ".err");
-	(out,err)
+	outputFileName := null;
+	if gfanKeepFiles then outputFileName = tmpFile|".out"; 
+	(out,err, "GfanFileName"=>outputFileName)
 )
 
 runGfanCommandCaptureError = (cmd, opts, data) -> (
@@ -748,7 +811,7 @@ argFuncs = {
 	"pair" => {gfanGroebnerCone, gfanInitialForms},
 	"polynomialset" => {gfanToLatex},
 	"polynomialsetlist" => {gfanToLatex},
-	"projection" => {gfanResultantFan},
+	"projection" => {gfanResultantFan, gfanTropicalHyperSurfaceReconstruction}, -- v0.6
 	"restrict" => {gfanGroebnerCone,gfanToPolyhedralFan},
 	"shiftVariables" => {gfanRender},
 	"special" => {gfanResultantFan},
@@ -853,14 +916,14 @@ gfan Ideal := opts -> (I) -> (
 	input := gfanRingToString(ring I) 
 		| gfanIdealToString(I) 
 		| gfanVectorListToString(opts#"symmetry");
-	gfanParseLMPL runGfanCommand("gfan", opts, input)
+	gfanParseLMPL first runGfanCommand("gfan _bases", opts, input)
 )
 
 gfan MarkedPolynomialList := opts -> (L) -> (
 	input := gfanMPLToRingToString(L)
 		| gfanMPLToString(L) 
 		| gfanVectorListToString(opts#"symmetry");
-	gfanParseLMPL runGfanCommand("gfan", opts, input)
+	gfanParseLMPL first runGfanCommand("gfan _bases", opts, input)
 )
 
 gfan List := opts -> (L) -> (
@@ -868,7 +931,7 @@ gfan List := opts -> (L) -> (
 	input := gfanRingToString(ring first L)
 		| gfanPolynomialListToString(L) 
 		| gfanVectorListToString(opts#"symmetry");
-	gfanParseLMPL runGfanCommand("gfan", opts, input)
+	gfanParseLMPL first runGfanCommand("gfan _bases", opts, input)
 )
 
 --------------------------------------------------------
@@ -887,7 +950,7 @@ gfanBuchberger List := opts -> (L) -> (
 	input := gfanRingToString(ring first L) 
 		| gfanPolynomialListToString(L) 
 		| gfanIntegerListToString(opts#"w");
-	gfanParseMPL runGfanCommand("gfan _buchberger", opts, input)
+	gfanParseMPL first runGfanCommand("gfan _buchberger", opts, input)
 )
 
 gfanBuchberger Ideal := opts -> (I) -> (
@@ -907,7 +970,7 @@ gfanDoesIdealContain (MarkedPolynomialList, List) := opts -> (I,J) -> (
 	input := gfanMPLToRingToString(I) 
 		| gfanMPLToString(I) 
 		| gfanPolynomialListToString(J);
-	gfanParseBoolInteger runGfanCommand("gfan _doesidealcontain", opts, input)
+	gfanParseBoolInteger first runGfanCommand("gfan _doesidealcontain", opts, input)
 )
 
 --------------------------------------------------------
@@ -920,13 +983,37 @@ gfanFanCommonRefinement = method( Options => {
 	}
 )
 
-gfanFanCommonRefinement (PolymakeObject, PolymakeObject) := opts -> (F,G) -> (
-	fileA := gfanMakeTemporaryFile F#"rawstring";
-	fileB := gfanMakeTemporaryFile G#"rawstring";
-	opts = opts ++ { "i1" => fileA , "i2" => fileB };
+gfanFanCommonRefinement (Fan, Fan) := opts -> (F,G) -> (
+     fileF := "";
+     fileG := "";
+     fileFisTemp := true;
+     fileGisTemp := true;
+
+     if F#?"GfanFileName" and fileExists F#"GfanFileName" then 
+        (fileF = F#"GfanFileName"; fileFisTemp = false;)
+     else if F#?"GfanFileRawString" then
+     	fileF = gfanMakeTemporaryFile F#"GfanFileRawString"
+     else
+     	fileF = gfanMakeTemporaryFile toPolymakeFormat F;
+      
+     if G#?"GfanFileName" and fileExists G#"GfanFileName" then 
+        (fileG = G#"GfanFileName"; fileGisTemp = false;)
+     else if G#?"GfanFileRawString" then
+     	fileG = gfanMakeTemporaryFile G#"GfanFileRawString"
+     else
+     	fileG = gfanMakeTemporaryFile toPolymakeFormat G;
+
+	opts = opts ++ { "i1" => fileF , "i2" => fileG };
 	out := gfanParsePolyhedralFan runGfanCommand("gfan _fancommonrefinement", opts, "");
-	gfanRemoveTemporaryFile fileA;
-	gfanRemoveTemporaryFile fileB;
+
+     if gfanKeepFiles then (
+	  F#"GfanFileName" = fileF;
+	  G#"GfanFileName" = fileG;
+	   )
+     else (
+    	 if fileFisTemp then gfanRemoveTemporaryFile fileF;
+	 if fileGisTemp then gfanRemoveTemporaryFile fileG;
+	 );
 	out
 )
 
@@ -941,13 +1028,24 @@ gfanFanLink = method( Options => {
 	}
 )
 
-gfanFanLink (PolymakeObject, List) := opts -> (F,V) -> (
-	fileName := gfanMakeTemporaryFile F#"rawstring";
-	input := gfanIntegerListToString V;
-	opts = opts ++ { "i" => fileName };
-	out := gfanParsePolyhedralFan runGfanCommand("gfan _fanlink", opts, input);
-	gfanRemoveTemporaryFile fileName;
-	out
+gfanFanLink (Fan, List) := opts -> (F,V) -> (
+     input := gfanIntegerListToString V;
+
+     fileName := "";
+     fileIsTemp := true;
+     if F#?"GfanFileName" and fileExists F#"GfanFileName" then 
+        (fileName = F#"GfanFileName"; fileIsTemp = false;)
+     else if F#?"GfanFileRawString" then
+     	fileName = gfanMakeTemporaryFile F#"GfanFileRawString"
+     else
+     	fileName = gfanMakeTemporaryFile toPolymakeFormat F;
+     
+     opts = opts ++ { "i" => fileName };
+     out := gfanParsePolyhedralFan runGfanCommand("gfan _fanlink", opts, input);
+
+     if gfanKeepFiles then F#"GfanFileName" = fileName
+     else if fileIsTemp then gfanRemoveTemporaryFile fileName;
+     out
 )
 
 --------------------------------------------------------
@@ -961,13 +1059,37 @@ gfanFanProduct = method( Options => {
 )
 
 	-- version 0.4
-gfanFanProduct (PolymakeObject, PolymakeObject) := opts -> (F,G) -> (
-	fileA := gfanMakeTemporaryFile F#"rawstring";
-	fileB := gfanMakeTemporaryFile G#"rawstring";
-	opts = opts ++ { "i1" => fileA , "i2" => fileB };
+gfanFanProduct (Fan, Fan) := opts -> (F,G) -> (
+     fileF := "";
+     fileG := "";
+     fileFisTemp := true;
+     fileGisTemp := true;
+
+     if F#?"GfanFileName" and fileExists F#"GfanFileName" then 
+        (fileF = F#"GfanFileName"; fileFisTemp = false;)
+     else if F#?"GfanFileRawString" then
+     	fileF = gfanMakeTemporaryFile F#"GfanFileRawString"
+     else
+     	fileF = gfanMakeTemporaryFile toPolymakeFormat F;
+      
+     if G#?"GfanFileName" and fileExists G#"GfanFileName" then 
+        (fileG = G#"GfanFileName"; fileGisTemp = false;)
+     else if G#?"GfanFileRawString" then
+     	fileG = gfanMakeTemporaryFile G#"GfanFileRawString"
+     else
+     	fileG = gfanMakeTemporaryFile toPolymakeFormat G;
+
+	opts = opts ++ { "i1" => fileF , "i2" => fileG };
 	out := gfanParsePolyhedralFan runGfanCommand("gfan _fanproduct", opts, "");
-	gfanRemoveTemporaryFile fileA;
-	gfanRemoveTemporaryFile fileB;
+
+     if gfanKeepFiles then (
+	  F#"GfanFileName" = fileF;
+	  G#"GfanFileName" = fileG;
+	   )
+     else (
+    	 if fileFisTemp then gfanRemoveTemporaryFile fileF;
+	 if fileGisTemp then gfanRemoveTemporaryFile fileG;
+	 );
 	out
 )
 
@@ -1041,7 +1163,7 @@ gfanHomogenize (List, Symbol) := opts -> (L,X) -> (
 		| gfanPolynomialListToString(L) 
 		| gfanSymbolToString(X) 
 		| gfanIntegerListToString(opts#"w");
-	out := runGfanCommand("gfan _homogenize", opts, input);
+	out := first runGfanCommand("gfan _homogenize", opts, input);
 	R := ring first L;
 --	S := R[X];
 	S := (coefficientRing R)[gens R | {X}];
@@ -1053,7 +1175,7 @@ gfanHomogenize (MarkedPolynomialList, Symbol) := opts -> (L,X) -> (
 		| gfanMPLToString(L) 
 		| gfanSymbolToString(X) 
 		| gfanIntegerListToString(opts#"w");
-	out := runGfanCommand("gfan _homogenize", opts, input);
+	out := first runGfanCommand("gfan _homogenize", opts, input);
 	R := ring first first L;
 --	S := R[X];
 	S := (coefficientRing R)[gens R | {X}];
@@ -1085,9 +1207,9 @@ gfanInitialForms (List, List) := opts -> (L,W) -> (
 		| gfanPolynomialListToString(L) 
 		| gfanIntegerListToString(W);
 	if opts#"pair" then
-		gfanParseIdealPair runGfanCommand("gfan _initialforms", opts, input)
+		gfanParseIdealPair first runGfanCommand("gfan _initialforms", opts, input)
 	else 
-		gfanParseIdeal runGfanCommand("gfan _initialforms", opts, input)
+		gfanParseIdeal first runGfanCommand("gfan _initialforms", opts, input)
 )
 
 gfanInitialForms (MarkedPolynomialList, List) := opts -> (L,W) -> (
@@ -1095,9 +1217,9 @@ gfanInitialForms (MarkedPolynomialList, List) := opts -> (L,W) -> (
 		| gfanMPLToString(L) 
 		| gfanIntegerListToString(W);
 	if opts#"pair" then
-		gfanParseMPLPair runGfanCommand("gfan _initialforms", opts, input)
+		gfanParseMPLPair first runGfanCommand("gfan _initialforms", opts, input)
 	else 
-		gfanParseMPL runGfanCommand("gfan _initialforms", opts, input)
+		gfanParseMPL first runGfanCommand("gfan _initialforms", opts, input)
 )
 
 --------------------------------------------------------
@@ -1119,7 +1241,7 @@ gfanIsMarkedGroebnerBasis = method( Options => {} )
 gfanIsMarkedGroebnerBasis (MarkedPolynomialList) := opts -> (L) -> (
 	input := gfanMPLToRingToString(L) 
 		| gfanMPLToString(L);
-	gfanParseBool runGfanCommand("gfan _ismarkedgroebnerbasis", opts, input)
+	gfanParseBool first runGfanCommand("gfan _ismarkedgroebnerbasis", opts, input)
 )
 
 
@@ -1132,7 +1254,7 @@ gfanKrullDimension = method( Options => {} )
 gfanKrullDimension (MarkedPolynomialList) := opts -> (L) -> (
 	input := gfanMPLToRingToString(L) 
 		| gfanMPLToString(L);
-	gfanParseInteger runGfanCommand("gfan _krulldimension", opts, input)
+	gfanParseInteger first runGfanCommand("gfan _krulldimension", opts, input)
 )
 
 
@@ -1148,7 +1270,7 @@ gfanLatticeIdeal = method( Options => {
 gfanLatticeIdeal (List) := opts -> (L) -> (
 	input := gfanVectorListToString L;
 	QQ[(getSymbol("x"))_0..(getSymbol("x"))_(#(first L)-1)];
-	gfanParseIdeal replace("x", "x_", runGfanCommand("gfan _latticeideal", opts, input))
+	gfanParseIdeal replace("x", "x_", first runGfanCommand("gfan _latticeideal", opts, input))
 )
 
 
@@ -1166,14 +1288,14 @@ gfanLeadingTerms (MarkedPolynomialList) := opts -> (L) -> (
 		error "gfanLeadingTerms: Expected a list of MarkedPolynomialLists with the -m option.";
 	) else (
 		input := gfanMPLToRingToString(L) | gfanMPLToString(L);
-		return gfanParseIdeal runGfanCommand("gfan _leadingterms", opts, input);
+		return gfanParseIdeal first runGfanCommand("gfan _leadingterms", opts, input);
 	)
 )
 
 gfanLeadingTerms (List) := opts -> (L) -> (
 	if opts#"m" then (
 		input := gfanMPLToRingToString(first L) | gfanLMPLToString(L);
-		return gfanParseIdeals runGfanCommand("gfan _leadingterms", opts, input);
+		return gfanParseIdeals first runGfanCommand("gfan _leadingterms", opts, input);
 	) else (
 		error "gfanLeadingTerms: Expected a MarkedPolynomialList when -m is not used.";
 	)
@@ -1190,7 +1312,7 @@ gfanMarkPolynomialSet (List, List) := opts -> (L,W) -> (
 	input := gfanRingToString(ring first L) 
 		| gfanPolynomialListToString(L) 
 		| gfanIntegerListToString(W);
-	gfanParseMarkedIdeal runGfanCommand("gfan _markpolynomialset", opts, input)
+	gfanParseMarkedIdeal first runGfanCommand("gfan _markpolynomialset", opts, input)
 )
 
 
@@ -1231,14 +1353,14 @@ gfanMinors (ZZ,ZZ,ZZ) := opts -> (r,d,n) -> (
 	opts = opts ++ { "r" => r, "d" => d, "n" => n};
 	out := null;
 	if opts#"dressian" then (
-		out = runGfanCommand("gfan _minors", opts, input);
+		out = first runGfanCommand("gfan _minors", opts, input);
 		QQ[apply(subsets(toList(0..n-1), d), ind -> (getSymbol("p"))_(concatenate(ind/toString)))];
 		out = replace("p(.{"| d | "," | d | "})", "p_\"\\1\"", out);
 		return gfanParseIdeal out;
 	) else if opts#"pluckersymmetries" then (
-		return value replace("\\}\n\\{", ",", runGfanCommand("gfan _minors", opts, input));
+		return value replace("\\}\n\\{", ",", first runGfanCommand("gfan _minors", opts, input));
 	) else (
-		out = runGfanCommand("gfan _minors", opts, input);
+		out = first runGfanCommand("gfan _minors", opts, input);
 		QQ[flatten apply(d, i -> apply(n, j ->  (getSymbol("m"))_(""|i|j)))];
 		out = replace("m(..)", "m_\"\\1\"", out);
 		return gfanParseIdeal out;
@@ -1259,7 +1381,7 @@ gfanPolynomialSetUnion = method( Options => {
 gfanPolynomialSetUnion (MarkedPolynomialList,MarkedPolynomialList) := opts -> (L,K) -> (
 	input := gfanMPLToRingToString(L) 
 		| gfanLMPLToString({L,K});
-	gfanParseMarkedIdeal runGfanCommand("gfan _polynomialsetunion", opts, input)
+	gfanParseMarkedIdeal first runGfanCommand("gfan _polynomialsetunion", opts, input)
 )
 
 
@@ -1280,7 +1402,7 @@ gfanRender (List) := opts -> (L) -> (
 
 gfanRender (String, List) := opts -> (fileName, L) -> (
 	input := gfanMPLToRingToString(first L) | gfanLMPLToString(L);
-	out := runGfanCommand("gfan _render", opts, input);
+	out := first runGfanCommand("gfan _render", opts, input);
 
 	figure := openOut(fileName | ".fig");
 	figure << out << close;
@@ -1312,10 +1434,10 @@ gfanRenderStaircase (List) := opts -> (L) -> (
 
 gfanRenderStaircase (String, List) := opts -> (fileName, L) -> (
 	out := if opts#"m" then
-		runGfanCommand("gfan _renderstaircase", opts,
+		first runGfanCommand("gfan _renderstaircase", opts,
 			gfanMPLToRingToString(first L) | gfanLMPLToString(L) | "\n")
 	else
-		runGfanCommand("gfan _renderstaircase", opts, 
+		first runGfanCommand("gfan _renderstaircase", opts, 
 			gfanMPLToRingToString(L) | gfanMPLToString(L) | "\n");
 
 	figure := openOut(fileName | ".fig");
@@ -1345,11 +1467,8 @@ gfanResultantFan (List) := opts -> (tuple) -> (
           if (not same(tuple/class)) then error "All elements in the list should be of the same class\n";
      	  type= class class(tuple#0);     
    	  );
-     vectorConfiguration := tuple;
-     
-     if(type===PolynomialRing) then vectorConfiguration = tuple/exponents;
-                    
-     inPut := gfanVectorListListToString(vectorConfiguration)|gfanVectorToString(opts#"special");
+     vectorConfiguration := tuple;    
+     if(type===PolynomialRing) then vectorConfiguration = tuple/exponents;          inPut := gfanVectorListListToString(vectorConfiguration)|gfanVectorToString(opts#"special");
      gfanParsePolyhedralFan runGfanCommand("gfan _resultantfan", opts, inPut)
 )
 
@@ -1364,7 +1483,7 @@ gfanSaturation = method( Options => {
 
 gfanSaturation (Ideal) := opts -> (I) -> (
 	input := gfanRingToString(ring I) | gfanIdealToString(I);
-	gfanParseIdeal runGfanCommand("gfan _saturation", opts, input)
+	gfanParseIdeal first runGfanCommand("gfan _saturation", opts, input)
 )
 
 --------------------------------------------------------
@@ -1393,7 +1512,7 @@ gfanStats = method( Options => {} )
 gfanStats (List) := opts -> (L) -> (
 	input := gfanMPLToRingToString(first L) 
 		| gfanLMPLToString(L);
-	runGfanCommand("gfan _stats", opts, input) -- Parse this?
+	first runGfanCommand("gfan _stats", opts, input) -- Parse this?
 )
 
 --------------------------------------------------------
@@ -1405,7 +1524,7 @@ gfanSubstitute = method( Options => {} )
 gfanSubstitute (MarkedPolynomialList, PolynomialRing) := opts -> (L,R) -> (
 	input := gfanMPLToRingToString(L) | gfanMPLToString(L) | gfanRingToString(R);
 	use R;
-	gfanParseMarkedIdeal runGfanCommand("gfan _substitute", opts, input)
+	gfanParseMarkedIdeal first runGfanCommand("gfan _substitute", opts, input)
 )
 
 
@@ -1422,18 +1541,18 @@ gfanToLatex = method( Options => {
 
 gfanToLatex (List) := opts -> (L) -> (
 	if opts#?"polynomialset" and opts#"polynomialset" then (
-		return runGfanCommand("gfan _tolatex", opts, gfanMPLToString(L));
+		return first runGfanCommand("gfan _tolatex", opts, gfanMPLToString(L));
 	) else (
 		if not (opts#?"polynomialsetlist" and opts#"polynomialsetlist") then 
 			opts = opts ++ { "polynomialsetlist" => true };
-		return runGfanCommand("gfan _tolatex", opts,  gfanLMPLToString(L));
+		return first runGfanCommand("gfan _tolatex", opts,  gfanLMPLToString(L));
 	);
 )
 
 gfanToLatex (MarkedPolynomialList) := opts -> (L) -> (
 	if not opts#"polynomialset" then 
 		opts = opts ++ { "polynomialset" => true };
-	return runGfanCommand("gfan _tolatex", opts,  gfanMPLToString(L));
+	return first runGfanCommand("gfan _tolatex", opts,  gfanMPLToString(L));
 )
 
 --------------------------------------------------------
@@ -1465,7 +1584,7 @@ gfanTropicalBasis = method( Options => {
 gfanTropicalBasis (Ideal) := opts -> (I) -> (
 	input := gfanRingToString(ring I) 
 		| gfanIdealToString(I);
-	gfanParseIdeal runGfanCommand("gfan _tropicalbasis", opts, input)-- should this be marked? Probably not.
+	gfanParseIdeal first runGfanCommand("gfan _tropicalbasis", opts, input)-- should this be marked? Probably not.
 )
 
 
@@ -1490,7 +1609,7 @@ gfanTropicalEvaluation = method( Options => {} )
 gfanTropicalEvaluation (RingElement, List) := opts -> (f,L) -> (
 	--v0.4 
 	input := gfanRingToString(ring f) | gfanPolynomialListToString({f}) | gfanVectorListToString(L);
-	value runGfanCommand("gfan _tropicalevaluation", opts, input) 
+	value first runGfanCommand("gfan _tropicalevaluation", opts, input) 
 	-- Make/find a parsing function for the above
 )
 
@@ -1522,20 +1641,32 @@ gfanTropicalHyperSurface RingElement := opts -> (f) -> (
 
 
 --------------------------------------------------------
--- gfan_tropicalhypersurfacereconstruction
+-- gfan_tropicalhypersurfacereconstruction-- v0.6
 --------------------------------------------------------
 
 gfanTropicalHyperSurfaceReconstruction = method( Options => {
 	  "i" => null, -- set inside the method
-	  "projection" => null} )
+	  "projection" => null} ) -- a list of vectors spanning the linear space to be added to the fan
 
-gfanTropicalHyperSurfaceReconstruction PolymakeFan := opts -> (F) -> (
-     	file := gfanMakeTemporaryFile F#"rawstring";	
-	opts = opts ++ { "i" => file};
-	input := gfanVectorListToString opts#"projection";
-	out := gfanParsePolyhedralFan runGfanCommand("gfan _tropicalhypersurfacereconstruction", opts, input) ;
-	gfanRemoveTemporaryFile file;
-	out
+gfanTropicalHyperSurfaceReconstruction Fan := opts -> (F) -> (
+     input := gfanVectorListToString opts#"projection";
+
+     fileName := "";
+     fileIsTemp := true;
+     if F#?"GfanFileName" and fileExists F#"GfanFileName" then 
+        (fileName = F#"GfanFileName"; fileIsTemp = false;)
+     else if F#?"GfanFileRawString" then
+     	fileName = gfanMakeTemporaryFile F#"GfanFileRawString"
+     else
+     	fileName = gfanMakeTemporaryFile toPolymakeFormat F;
+     
+     opts = opts ++ { "i" => fileName };
+
+     out := gfanParsePolyhedralFan runGfanCommand("gfan _tropicalhypersurfacereconstruction", opts, input) ;
+	
+     if gfanKeepFiles then F#"GfanFileName" = fileName
+     else if fileIsTemp then gfanRemoveTemporaryFile fileName;
+     out
 )
 
 
@@ -1585,7 +1716,7 @@ gfanTropicalLinearSpace (List, ZZ, ZZ) := opts -> (L, n, d) -> (
 	opts = opts ++ { "n" => n , "d" => d};
 	input := (gfanIntegerListToString L) | "\n"; -- implicitly this accepts reals. It should be made explicit.
 	R := QQ[getSymbol("t"), apply(n, i -> getSymbol("x"|i))];
-	(out, err) := runGfanCommandCaptureBoth("gfan _tropicallinearspace", opts, input);
+	(out, err, fileName) := runGfanCommandCaptureBoth("gfan _tropicallinearspace", opts, input);
 	(gfanParseIdeal out, err)
 )
 
@@ -1598,7 +1729,7 @@ gfanTropicalMultiplicity = method( Options => {} )
 
 gfanTropicalMultiplicity (List) := opts -> (L) -> (
 	input := gfanMPLToRingToString(L) | gfanMPLToString(L);
-	gfanParseInteger runGfanCommand("gfan _tropicalmultiplicity", opts, input)
+	gfanParseInteger first runGfanCommand("gfan _tropicalmultiplicity", opts, input)
 )
 
 --------------------------------------------------------
@@ -1613,7 +1744,7 @@ gfanTropicalRank = method( Options => {
 gfanTropicalRank (Matrix) := opts -> (M) -> (
 	--v0.4
 	input := gfanMatrixToString M;
-	(out, err) :=runGfanCommandCaptureBoth("gfan _tropicalrank", opts, input);
+	(out, err, fileName) :=runGfanCommandCaptureBoth("gfan _tropicalrank", opts, input);
 	(gfanParseInteger out, err)
 )
 
@@ -1630,7 +1761,7 @@ gfanTropicalStartingCone = method( Options => {
 
 gfanTropicalStartingCone (List) := opts -> (L) -> (
 	input := gfanRingToString(ring first L) | gfanPolynomialListToString(L);
-	gfanParseMarkedIdealPair runGfanCommand("gfan _tropicalstartingcone", opts, input)
+	gfanParseMarkedIdealPair first runGfanCommand("gfan _tropicalstartingcone", opts, input)
 )
 
 
@@ -1666,14 +1797,38 @@ gfanTropicalWeilDivisor = method( Options => {
 	}
 )
 
-gfanTropicalWeilDivisor (PolymakeFan, PolymakeFan) := opts -> (F,G) -> (
+gfanTropicalWeilDivisor (Fan, Fan) := opts -> (F,G) -> (
 	--v0.4
-	fileA := gfanMakeTemporaryFile F#"rawstring";
-	fileB := gfanMakeTemporaryFile G#"rawstring";
-	opts = opts ++ { "i1" => fileA , "i2" => fileB };
-	out := gfanParsePolyhedralFan runGfanCommand("gfan _weildivisor", opts, "");
-	gfanRemoveTemporaryFile fileA;
-	gfanRemoveTemporaryFile fileB;
+     fileF := "";
+     fileG := "";
+     fileFisTemp := true;
+     fileGisTemp := true;
+
+     if F#?"GfanFileName" and fileExists F#"GfanFileName" then 
+        (fileF = F#"GfanFileName"; fileFisTemp = false;)
+     else if F#?"GfanFileRawString" then
+     	fileF = gfanMakeTemporaryFile F#"GfanFileRawString"
+     else
+     	fileF = gfanMakeTemporaryFile toPolymakeFormat F;
+      
+     if G#?"GfanFileName" and fileExists G#"GfanFileName" then 
+        (fileG = G#"GfanFileName"; fileGisTemp = false;)
+     else if G#?"GfanFileRawString" then
+     	fileG = gfanMakeTemporaryFile G#"GfanFileRawString"
+     else
+     	fileG = gfanMakeTemporaryFile toPolymakeFormat G;
+
+     opts = opts ++ { "i1" => fileF , "i2" => fileG };
+     out := gfanParsePolyhedralFan runGfanCommand("gfan _tropicalweildivisor", opts, "");
+
+     if gfanKeepFiles then (
+	  F#"GfanFileName" = fileF;
+	  G#"GfanFileName" = fileG;
+	   )
+     else (
+    	 if fileFisTemp then gfanRemoveTemporaryFile fileF;
+	 if fileGisTemp then gfanRemoveTemporaryFile fileG;
+	 );
 	out
 )
 
@@ -1956,86 +2111,7 @@ doc ///
 		MarkedPolynomialList
 ///
 
-
-doc ///
-	Key
-		"PolymakeObject"
-	Description
-		Text
-			{\tt PolymakeObject} is the superclass of @TO "PolymakeFan"@ and @TO "PolymakeCone"@.
-			It stores the basic information of polyhedral objects output by @EM "gfanInterface2"@.
-
-			{\tt PolymakeObject}s store their own string representation ({\tt "rawstring"}), 
-			along with parsed blocks ({\tt "rawblocks"}) and a separated header ({\tt "header"}).
-
-			The keys on a {\tt PolymakeObject} that are in capital letters point to the actual polyheadral
-			information.
-
-		Example
-			QQ[x,y];
-			F = gfanToPolyhedralFan {markedPolynomialList {{x},{x+y}}}
-			keys F
-			F#"DIM"
-			F#"header"
-			F#"rawstring"
-
-	SeeAlso
-		PolymakeFan
-		PolymakeCone
-///
-
-doc ///
-	Key
-		"PolymakeFan"
-	Description
-		Text
-			A {\tt PolymakeFan} is a type of @TO "PolymakeObject"@ which stores various information
-			about a polyhedral fan. A {\tt PolymakeFan} is structured as @TO "HashTable"@ with strings for
-			keys that point to the stored information.
-
-		Example
-			QQ[x,y];
-			F = gfanToPolyhedralFan {markedPolynomialList {{x},{x+y}}}
-			keys F
-			F#"DIM"
-			F#"header"
-
-		Text
-			The keys in capital letters refer to polyhedral information, while those in lower case letters store
-			parsing information.
-
-	SeeAlso
-		polymakeFanToFan
-		PolymakeObject
-		PolymakeCone
-///
-
-doc ///
-	Key
-		"PolymakeCone"
-	Description
-		Text
-			A {\tt PolymakeFan} is a type of @TO "PolymakeObject"@ which stores various information
-			about a polyhedral cone. A {\tt PolymakeFan} is structured as @TO "Hashtable"@ with strings for
-			keys that point to the stored information.
-
-		Example
-			R = QQ[x,y,z,w]; 
-			C = gfanGroebnerCone markedPolynomialList {{x*y*z}, { x*y*z + z*w^2*x + y^2*w*x}}
-			keys C
-			C#"DIM"
-			C#"header"
-
-		Text
-			The keys in capital letters refer to polyhedral information, while those in lower case letters store
-			parsing information.
-
-	SeeAlso
-		polymakeConeToCone
-		PolymakeObject
-		PolymakeFan
-///
-
+{*
 doc ///
 	Key
 		polymakeConeToCone
@@ -2095,6 +2171,7 @@ doc ///
 		PolymakeFan
 		PolymakeCone
 ///
+*}
 
 doc ///
 	Key
@@ -2228,20 +2305,20 @@ doc ///
 doc ///
 	Key
 		gfanFanCommonRefinement
-		(gfanFanCommonRefinement, PolymakeObject, PolymakeObject)
+		(gfanFanCommonRefinement, Fan, Fan)
 	Headline
 		find the common refinement of two polyheadral fans
 	Usage
 		P = gfanFanCommonRefinement(F,G)
 	Inputs
-		F:PolymakeObject
-		G:PolymakeObject
+		F:Fan
+		G:Fan
 	Outputs
-		P:PolymakeObject
+		P:Fan
 			the common refinement of {\tt F} and {\tt G}
 	Description
 		Text
-			This method takes two PolymakeObjects and finds their common refinement.
+			This method takes two Fans and finds their common refinement.
 
 			In the following, {\tt F} is the fan with two cones partitions the plane along the line
 			@TEX "$y=x$"@ while {\tt G} has two cones that parition the plane along @TEX "$y = x/2$"@.
@@ -2270,18 +2347,18 @@ doc ///
 doc ///
 	Key
 		gfanFanLink
-		(gfanFanLink, PolymakeObject, List)
+		(gfanFanLink, Fan, List)
 	Headline
 		the link of a vertex in a polyhedral fan
 	Usage
 		P = gfanFanLink(F, V)
 	Inputs
-		F:PolymakeObject
+		F:Fan
 			a polyhedral fan
 		V:List
 			a vertex of the fan
 	Outputs
-		P:PolymakeObject
+		P:Fan
 			the link of {\tt F} at {\tt V}
 	Description
 		Text
@@ -2303,18 +2380,18 @@ doc ///
 doc ///
 	Key
 		gfanFanProduct
-	    	(gfanFanProduct, PolymakeObject, PolymakeObject)
+	    	(gfanFanProduct, Fan, Fan)
 	Headline
 		computes the product of polyhedral fans
 	Usage
 		P = gfanFanProduct(F,G)
 	Inputs
-		F:PolymakeObject
+		F:Fan
 			a polyhedral fan
-		G:PolymakeObject
+		G:Fan
 			a polyhedral fan
 	Outputs
-		P:PolymakeObject
+		P:Fan
 			the product of {\tt F} and {\tt G}
 	Description
 		Text
@@ -2693,14 +2770,11 @@ doc ///
 		L:List
 			of polynomials
 	Outputs
-		P:PolymakeObject
-			the Minkowski sum of the newton polytopes of the polynomials in {\tt L}
+		P:Fan
+			the normal fan of the Minkowski sum of the newton polytopes of the polynomials in {\tt L}
 	Description
 		Text
-			The Newton polytope of a polynomial is the convex hull of the exponent vectors
-			of the terms. This method produces a polymake object that describes the Minkowski
-			sum of these polytopes.
-
+			The Newton polytope of a polynomial is the convex hull of the exponent vectors of the terms. This method produces the normal fan of the the Minkowski sum of these polytopes, which is the same as the common refinement of the normal fans.
 		Example
 			QQ[x,y]
 			gfanMinkowskiSum { x + y + x*y }
@@ -2900,7 +2974,7 @@ doc ///
 		L:List
 			of integer vectors
 	Outputs
-		F:PolymakeFan
+		F:Fan
 			the secondary fan of {\tt L}
 	Description
 		Text
@@ -3025,7 +3099,7 @@ doc ///
 		L:List
 			containing @TO2 {"MarkedPolynomialList", "marked reduced Groebner bases"}@
 	Outputs
-		P:PolymakeFan
+		P:Fan
 			the fan of the Groebner bases in {\tt L}
 	Description
 		Text
@@ -3094,7 +3168,7 @@ doc ///
 		L:MarkedPolynomialList
 			a marked reduced Groebner basis for a homogeneous ideal
 	Outputs
-		P:PolymakeFan
+		F:Fan
 			describing the tropical variety of the ideal of {\tt L}
 	Description
 		Text
@@ -3156,7 +3230,7 @@ doc ///
 		f:RingElement
 			a polynomial
 	Outputs
-		F:PolymakeFan
+		F:Fan
 			the tropicalization of {\tt f}
 	Description
 		Text
@@ -3190,7 +3264,7 @@ doc ///
 		f:RingElement
 			a polynomial
 	Outputs
-		F:PolymakeFan
+		F:Fan
 			the tropical hypersurface of the ideal generated by {\tt f}
 	Description
 		Text
@@ -3220,7 +3294,7 @@ doc ///
 		L:List
 			of polynomials
 	Outputs
-		P:PolymakeFan
+		F:Fan
 			the intersection of the tropical hypersurfaces of polynomials in {\tt L}
 	Description
 		Text
@@ -3388,7 +3462,7 @@ doc ///
 		L:List
 			a pair of @TO MarkedPolynomialList@s, homogeneous with respect to a positive weight vector
 	Outputs
-		F:PolymakeFan
+		F:Fan
 			describing the tropical variety of the given ideal
 	Description
 		Text
@@ -3409,18 +3483,18 @@ doc ///
 doc ///
 	Key
 		gfanTropicalWeilDivisor
-		(gfanTropicalWeilDivisor, PolymakeFan, PolymakeFan)
+		(gfanTropicalWeilDivisor, Fan, Fan)
 	Headline
 		the tropical Weil divisor of a piecewise linear function
 	Usage
 		W = gfanTropicalWeilDivisor(C,F)
 	Inputs
-		C:PolymakeFan
+		C:Fan
 			a k-cycle
-		F:PolymakeFan
+		F:Fan
 			a piecewise linear function
 	Outputs
-		W:PolymakeFan
+		W:Fan
 			the Weil divisor
 	Description
 		Text
@@ -3732,20 +3806,39 @@ uninstallPackage "gfanInterface2"
 installPackage("gfanInterface2", UserMode=>true, DebuggingMode=>true)
 installPackage("gfanInterface2", DebuggingMode=>true, RemakeAllDocumentation => true, RerunExamples => true)
 
-loadPackage "gfanInterface2"
+restart
 loadPackage("gfanInterface2", Configuration => { 
---	"path" => "/Applications/Macaulay2-1.3.1/libexec/Macaulay2/x86_64-MacOS-10.6/",
+	"path"=>"/usr/local/bin/",
 	"keepfiles" => true,
-	"verbose" => true
+	"verbose" => true,
+     	"cachePolyhedralOutput" => false
 	}) 
+debug gfanInterface2
 
-viewHelp
-viewHelp gfanInterface2
+F = gfanSecondaryFan {{1,0},{1,1}, {1,2}, {1,2}}
+G = gfanSecondaryFan {{1,1},{1,3}, {2,1}, {1,5}}
+H = gfanFanCommonRefinement(F,G)
+remove(F,"GfanFileName")
+gfanFanCommonRefinement(F,G)
+remove(F,"GfanFileRawString")
+gfanFanCommonRefinement(F,G)
+
+gfanFanProduct(F,G)
+oo#"FVector"
+
+gfanFanLink(H, {-45, -63, -81, 155})
+peek oo
+
+R = QQ[a,b,c,d];
+f = (1+a)*(1+b);
+g = (1+c)*(1+d);
+gfanMinkowskiSum{f,g}
+oo#"FVector"
 
 R = QQ[x,y,z]; 
 I = ideal(x,y+z); 
 L = transpose {{x,x},{z,y+z}};
-gfan(I)
+L = gfan(I)
 gfan(ideal(x^2*y -z, y^2*z - x, z^2*x - y), "symmetry" => {{0,1,2}, {1,2,0}})
 gfan(new MarkedPolynomialList from transpose{{x,x},{z,y+z}})
 gfanBuchberger(I)
@@ -3784,9 +3877,9 @@ gfanTropicalStartingCone({x^2+y*x, x*y+z^2}, "d"=>true)
 gfanTropicalTraverse(gfanTropicalStartingCone({x^2+y*x, x*y+z^2}))
 gfanTropicalMultiplicity(first gfanTropicalStartingCone({x^2+y*x, x*y+z^2}))
 gfanSaturation(ideal(z*y-z*x))
-gfanToPolyhedralFan({transpose{{x*y, x*y+ z}, {z,z}}, transpose{{x*y, x*y},{z,z}}})
-gfanToPolyhedralFan({transpose{{x*y, x*y+ z}, {z,z}}, transpose{{x*y, x*y},{z,z}}}, "restrict"=>true)
-gfanToPolyhedralFan(gfan(ideal(x^2*y -z, y^2*z - x, z^2*x - y), {{0,1,2}, {1,2,0}}, "symmetry"=>true), {{0,1,2}, {1,2,0}}, "symmetry"=>true)
+--gfanToPolyhedralFan({transpose{{x*y, x*y+ z}, {z,z}}, transpose{{x*y, x*y},{z,z}}})
+--gfanToPolyhedralFan({transpose{{x*y, x*y+ z}, {z,z}}, transpose{{x*y, x*y},{z,z}}}, "restrict"=>true)
+--gfanToPolyhedralFan(gfan(ideal(x^2*y -z, y^2*z - x, z^2*x - y), {{0,1,2}, {1,2,0}}, "symmetry"=>true), {{0,1,2}, {1,2,0}}, "symmetry"=>true)
 gfanTropicalBruteForce(transpose{{x*y,x*y + z}, {z,z}})
 
 -------- examples from the gfan manual ----------
@@ -3817,9 +3910,10 @@ loadPackage("gfanInterface2", Configuration => {
 	"path" => "/home/gtmath/Documents/math/software/gfan0.6beta/",	
 	"keepfiles" => true,
 	"verbose" => true
-	}) 
+	})
 A = {{{0,0},{1,0},{0,1}},{{0,0},{1,0},{2,1}},{{0,0},{0,1},{1,2}}}
 gfanResultantFan (A, "special" => {0,1,1,0,1,1,0,1,1})
 QQ[x,y,z]
 A = {x+y+z,x+y+z,x+y+z}
 gfanResultantFan (A, "special" => {0,1,1,0,1,1,0,1,1})
+
