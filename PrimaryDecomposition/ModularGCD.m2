@@ -203,6 +203,31 @@ polyCRA(Sequence, Sequence, RingElement, ZZ) := (F,G,t,p) -> (
      ((mnsF * matrix newcoeffs)_(0,0), fromRt(toRt m* toRt n))
      )
 
+polyCRA(Sequence, Sequence, RingElement) := (F,G,t) -> (
+     -- F should be (f(t), m(t)), G = (g(t), n(t)).
+     -- construct h(t) (mod m(t)*n(t)) s.t. h == f mod m, h == g mod n.
+     -- All variables except t are considered coefficients.
+     (f,m) := F;
+     (g,n) := G;
+     R := ring f;
+     othervars := toList(set gens R - set{t});
+     monF := set flatten entries monomials(f, Variables=>othervars);
+     monG := set flatten entries monomials(g, Variables=>othervars);
+     mons := toList(monF + monG);
+     (mnsF, cfsF) := coefficients(f, Monomials=>mons, Variables=>othervars);
+     (mnsG, cfsG) := coefficients(g, Monomials=>mons, Variables=>othervars);
+     if not R#?"polyCRARing" then (T := local T; R#"polyCRARing" = (coefficientRing R)[T];);
+     Rt := R#"polyCRARing";
+     toRt := map(Rt, R, for f in gens R list if f == t then Rt_0 else 0_Rt);
+     fromRt := map(R,Rt, {t});
+     cfsF = flatten entries toRt cfsF;
+     cfsG = flatten entries toRt cfsG;
+     newcoeffs := for i from 0 to #cfsF - 1 list (
+	  {fromRt first polyCRA(cfsF#i, cfsG#i, toRt m, toRt n)}
+	  );
+     ((mnsF * matrix newcoeffs)_(0,0), fromRt(toRt m* toRt n))
+     )
+
 rationalFunctionReconstruction = method()
 rationalFunctionReconstruction(RingElement, RingElement) := (u,m) -> (
      -- expected: m and u are polynomials in 1 variable, over ZZ/p
@@ -264,6 +289,29 @@ polyRationalReconstruction(RingElement, RingElement, RingElement, ZZ) := (F, t, 
 	  if ans === null then return null;
 	  ans);
      -- now find lcm of the denoms
+     newdenom := newpairs/last//lcm;
+     newnumers := apply(newpairs, (numer, denom) -> {(newdenom//denom) * numer});
+     ((mons * fromRt matrix newnumers)_(0,0), fromRt newdenom)
+     )
+
+polyRationalReconstruction(RingElement, RingElement, RingElement) := (F, t, mt) -> (
+     -- F should be a poly in R = ZZ/p[vars]
+     -- t is one of the vars
+     -- mt is a poly in t, coeffs in ZZ/p, but mt is in R.
+     -- output is (G, denom), G and denom are in ZZ[all vars], but denom only involves t.
+     R := ring F;
+     othervars := toList(set gens R - set{t});
+     (mons, cfs) := coefficients(F, Variables=>othervars);
+     if not R#?"polyCRARing" then (T := local T; R#"polyCRARing" = (coefficientRing R)[T];);
+     Rt := R#"polyCRARing";
+     toRt := map(Rt, R, for f in gens R list if f == t then Rt_0 else 0_Rt);
+     fromRt := map(R,Rt, {t});
+     cfs = flatten entries toRt cfs;
+     newpairs := for i from 0 to #cfs - 1 list (
+	  ans := rationalFunctionReconstruction(cfs#i, toRt mt);
+	  checkRatRecon(cfs#i, toRt mt, ans);
+	  if ans === null then return null;
+	  ans);     -- now find lcm of the denoms
      newdenom := newpairs/last//lcm;
      newnumers := apply(newpairs, (numer, denom) -> {(newdenom//denom) * numer});
      ((mons * fromRt matrix newnumers)_(0,0), fromRt newdenom)
