@@ -71,7 +71,7 @@ export {
 	
 needsPackage "FourierMotzkin"
 needsPackage "PolyhedralObjects"
-if value UsePolymake then needsPackage "PolymakeInterface"
+if UsePolymake then needsPackage "PolymakeInterface"
 
 
 Cone == Cone := (C1,C2)->(
