@@ -245,6 +245,11 @@ filteredComplex ChainComplex := C -> (
   complete C;
   filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))  
 
+
+prune FilteredComplex := FilteredComplex => opts -> F -> 
+     new FilteredComplex from apply(keys F, p -> if class p =!= Symbol then p => prune F#p else p => F#p)
+
+
 Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
      filteredComplex for p from min K to max K list Hom(inducedMap(K,p),C))
     
