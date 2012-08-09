@@ -261,9 +261,10 @@ partitionFromTally = (T) -> (
 -- nextPermutation
 -- Given a permutation of a list, returns another one.
 -- The iterator starts at {0..n-1} and ends at {n-1..0}.
--- It can handle lists with repetition, e.g., {1,1,2,2}
+-- The code can handle lists with repetition, e.g., {1,1,2,2}
 -- and it can handle any entries that can be compared
--- with <, e.g., {a,b,c}.
+-- with <, e.g., {a,b,c}
+-- however this functionality is NOT documented and NOT maintained
 -- Based on code by tye posted on PerlMonks at
 --   http://www.perlmonks.org/?node_id=29374
 -- retrieved August 7, 2012
@@ -590,7 +591,6 @@ document {
 *}
 
 TEST ///
-  needsPackage("IterativeCombinatorialGenerators");
   S = nextSubset(5);
   assert( S == {} );
   S = nextSubset(5,S);
@@ -637,7 +637,6 @@ TEST ///
 
 
 TEST ///
-  needsPackage("IterativeCombinatorialGenerators");
   S = prevSubset(5);
   assert( S == {0,1,2,3,4} );
   S = prevSubset(5,S);
@@ -688,7 +687,6 @@ TEST ///
 *}
 
 TEST ///
-  needsPackage("IterativeCombinatorialGenerators");
   S = nextPartition(5);
   assert( S === new Partition from {5} );
   S = nextPartition(S);
@@ -740,7 +738,6 @@ TEST ///
 
 
 TEST ///
-  needsPackage("IterativeCombinatorialGenerators");
   S = prevPartition(5);
   assert( S === new Partition from 5:1 );
   S = prevPartition(S);
@@ -773,6 +770,53 @@ TEST ///
  nextPermutation,
   prevPermutation,
 *}
+
+TEST ///
+  P = nextPermutation(5);
+  assert( P == {0,1,2,3,4} );
+  P = nextPermutation(P);
+  assert( P == {0,1,2,4,3} );
+  P = nextPermutation({4,3,2,1,0});
+  assert( P === null );
+  P = nextPermutation(P);
+  assert( P === null );
+///
+
+TEST ///
+  for n from 0 to 5 do (
+    P = nextPermutation(n);
+    permutationList = {};
+    while ( P =!= null ) do (
+      permutationList = append(permutationList,P);
+      P = nextPermutation(P);
+    );
+    assert( permutationList === permutations(n) );
+  );
+///
+
+
+TEST ///
+  P = prevPermutation(5);
+  assert( P == {4,3,2,1,0} );
+  P = prevPermutation(P);
+  assert( P == {3,4,2,1,0} );
+  P = prevPermutation({0,1,2,3,4});
+  assert( P === null );
+  P = prevPermutation(P);
+  assert( P === null );
+///
+
+TEST ///
+  for n from 0 to 5 do (
+    S = prevPermutation(n);
+    permutationList = {};
+    while ( S =!= null ) do (
+      permutationList = append(permutationList,S);
+      S = prevPermutation(S);
+    );
+    assert( permutationList === reverse permutations(n) );
+  );
+///
 
 
 end
