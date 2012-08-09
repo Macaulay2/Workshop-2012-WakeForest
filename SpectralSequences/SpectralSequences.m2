@@ -87,11 +87,11 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 -- CODE
 --------------------------------------------------------------------------------
 
---truncate C above ith spot, i.e. set everything above homological degree i to 0
+--truncate C above ith spot, i.e. set everything weakly above homological degree i to 0
 truncate (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
   complete C;
   if i < min C then chainComplex gradedModule (ring C)^0
-  else chainComplex apply(drop(spots C,1), k -> if k <= i then C.dd_k else if k===i+1 then 
+  else chainComplex apply(drop(spots C,1), k -> if k < i then C.dd_k else if k===i then 
        map(C_(k-1), 0*C_k, 0) else map(0*C_(k-1),0*C_k,0)))   
     
 -- Computes the graded pieces of the total complex of a Hom double complex 
@@ -269,7 +269,7 @@ net SpectralSequence := E -> (
   then toString getAttribute(E, ReverseDictionary) 
   else net expression E)
 expression SpectralSequence := E -> stack(
-  "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ", "  \\   \\  ",
+  "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ..ooOOOOOooooOO", "  \\   \\  ",
   "   `~~~` ")
 
 filteredComplex SpectralSequence := FilteredComplex => E -> (
@@ -283,8 +283,8 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
   new SpectralSequence from {
     symbol minF => min K,
     symbol maxF => max K,
-    symbol maxH => - min K^0,
-    symbol minH => - max K^0,
+    symbol maxH => - min K^-infinity,
+    symbol minH => - max K^-infinity,
     symbol filteredComplex => K,
     symbol zero => K.zero,
     symbol cache => CacheTable})
@@ -359,12 +359,15 @@ needsPackage "SpectralSequences";
 debug SpectralSequences;
 S = QQ[x,y,z];
 I = ideal vars S;
-F = res (I/I^3);
+F = res I;
 G = res (I^2/I^4);
-H= Hom(F,G);
-prune H
 FF=filteredComplex F;
 K=F**FF;
+see FF
+see K
+spectralSequence(K)
+keys E_0
+
 spots K
 VerticalList apply(sort spots K, i -> prune K^i)
 phi=F**inducedMap(FF,1);
