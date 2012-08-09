@@ -1178,7 +1178,7 @@ DGModuleMap * DGModuleMap :=(g,f) -> (
 -------------------------------
 ----   Shift DGModule   -------
 -------------------------------
-shift = method (TypicalValue => DGModule)
+shift = method ()--(TypicalValue => DGModule)
 shift (DGModule) :=  U -> (
  shiftedDegrees := apply (U.Degrees, x -> {first x+1, last x});
  W := semifreeDGModule (U.DGRing, shiftedDegrees);
@@ -1451,47 +1451,47 @@ doc ///
       is the exterior algebra on R^r generated in homological degree one.  This algebra structure also respects the boundary map
       of the complex in the sense that it satisfies the Liebniz rule.  That is, $d(ab) = d(a)b + (-1)^{deg a}ad(b)$.  When one
       speaks of 'the' Koszul complex of a ring, one means the Koszul complex on a minimal set of generators of the maximal ideal of R.
---    Example
---    R = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3}
---      KR = koszulComplexDGA R
+    Example
+      R = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3}
+      KR = koszulComplexDGA R
     Text
       One can specify the name of the variable to easily handle multiple Koszul complexes at once.
---    Example
---      S = ZZ/101[x,y,z]/ideal{x^3,y^3,z^3,x^2*y^2,y^2*z^2}
---      KS = koszulComplexDGA(S,Variable=>"U")
+    Example
+      S = ZZ/101[x,y,z]/ideal{x^3,y^3,z^3,x^2*y^2,y^2*z^2}
+      KS = koszulComplexDGA(S,Variable=>"U")
     Text
       To obtain the chain complex associated to the Koszul complex, one may use chainComplex.  One can also obtain this complex
       directly without using the DGAlgebras package by using the command @ TO koszul @.
---    Example
---      cxKR = chainComplex KR
---      prune HH cxKR
+    Example
+      cxKR = chainComplex KR
+      prune HH cxKR
     Text
       Since the Koszul complex is a DG algebra, its homology is itself an algebra.  One can obtain this algebra using the command
       homology, homologyAlgebra, or HH (all commands work).  This algebra structure can detect whether or not the ring is a complete
       intersection or Gorenstein.
---    Example
---      HKR = HH KR
---      ideal HKR
---      R' = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3,a*c,a*d,b*c,b*d,a^2*b^2-c^2*d^2}
---     HKR' = HH koszulComplexDGA R'
---      numgens HKR'
---      ann ideal gens HKR'
+    Example
+     HKR = HH KR
+     ideal HKR
+     R' = ZZ/101[a,b,c,d]/ideal{a^3,b^3,c^3,d^3,a*c,a*d,b*c,b*d,a^2*b^2-c^2*d^2}
+     HKR' = HH koszulComplexDGA R'
+     numgens HKR'
+      ann ideal gens HKR'
     Text
       Note that since the socle of HKR' is one dimensional, HKR' has Poincare duality, and hence R' is Gorenstein.
     Text
       One can also consider the Koszul complex of an ideal, or a sequence of elements.
---    Example
---      Q = ambient R
---      I = ideal {a^3,b^3,c^3,d^3}
---      KI = koszulComplexDGA I
---      HKI = HH KI
---      describe HKI
---      use Q
---      I' = I + ideal{a^2*b^2*c^2*d^2}
---      KI' = koszulComplexDGA I'
---      HKI' = HH KI'
---      describe HKI'
---      HKI'.cache.cycles
+    Example
+      Q = ambient R
+      I = ideal {a^3,b^3,c^3,d^3}
+      KI = koszulComplexDGA I
+      HKI = HH KI
+      describe HKI
+      use Q
+      I' = I + ideal{a^2*b^2*c^2*d^2}
+      KI' = koszulComplexDGA I'
+      HKI' = HH KI'
+      describe HKI'
+      HKI'.cache.cycles
     Text
       Note that since I is a Q-regular sequence, the Koszul complex is acyclic, and that both homology algebras are algebras over the zeroth homology
       of the Koszul complex.
@@ -2073,10 +2073,10 @@ doc ///
   Usage
     h = g * f
   Inputs
-    f: DGModuleMap
-    g: DGModuleMap
+    f:DGModuleMap
+    g:DGModuleMap
   Outputs
-    h: DGModuleMap
+    h:DGModuleMap
   Description
     Text
       text
@@ -2718,20 +2718,55 @@ doc ///
   Key
     shift
   Headline
-    Construct a degree 1 shift of a DGModule
+    Construct shift of a DGModule or DGModuleMap.
+///
+
+doc ///
+  Key
+    (shift, DGModule)
+  Headline
+    Construct a degree 1 shift of a DGModule.
   Usage
     V = shift U
   Inputs
     U:DGModule
   Outputs
     V:DGModule
+  Description
+    Example
+      Q = QQ[x]
+      I = ideal(x^3)
+      K = koszulComplexDGA(Q/I)
+      U = semifreeDGModule(K,{{0,0},{1,2},{2,3}})
+      setDiff(U,sub(matrix{{0,x^2,-T_1},{0,0,x},{0,0,0}}, K.natural))
+    Text
+      Along with the shifted DGModule V, we also obtain the bijection from U to V and its inverse:
+    Example
+      shiftMap = V.cache.shiftMap
+      inverseShiftMap = V.cache.inverseShiftMap
 ///
 
 doc ///
   Key
+    (shift,DGModuleMap)
+  Headline
+    Construct a degree 1 shift of a DGModuleMap.
+  Usage
+    g = shift f
+  Inputs
+    f:DGModuleMap
+  Outputs
+    g:DGModuleMap
+  Description
+    Text
+      Given a DGModuleMap f from U to V, we obtain the induced map from shift U to shift V.
+///
+      
+doc ///
+  Key
     (cone,DGModuleMap)
   Headline
-    Compute the mapping cone of a DGModuleMap
+    Compute the mapping cone of a DGModuleMap.
   Usage
     C = cone f
   Inputs
