@@ -71,7 +71,7 @@ unfactor = (L, F, v) -> (
      G1 := map(uberRing, Fring);  --- G1, G2 map to the big ring and
      G2 := map(uberRing, Hring); 
      H = applyTable(H, i-> {G1 i#0, G2 value i#1});
-     tmp := G1 F; print(#terms(tmp));
+     tmp := G1 F; print("the number of terms we're about to work with", t#terms(tmp));
      for h in H do tmp = sum for u in h list ((value u#1)*contract(u#0,tmp));
      mapList := join(apply(#gens Fring, i -> 0), gens Hring);
      G3 := map(Hring, uberRing, mapList);
@@ -148,24 +148,29 @@ tableauToPoly( L,Variable =>"x");
 
 
 load"./tensors/standardTableaux.m2"
-tabToMat = L->  matrix apply(L,ll -> ll| apply(#L#0 - #ll,i-> 0))
+tabToMat = L-> transpose matrix apply(L,ll -> ll| apply(#L#0 - #ll,i-> 0))
 myT=(standardTableaux({3,3},{1,1,1,1,1,1}))
 apply(myT,ll->tabToMat( ll))
 
-
+-- here is a basis of the degree 6 invariants for SL(2)^4 acting on (C^2)^{\otimes 4}
 f1=tableauToPoly( apply({0,1,2,3}, i-> myT_i));
 R = ring(f1)
 f2=tableauToPoly( apply({0,1,2,4}, i-> myT_i));
 f3=tableauToPoly( apply({0,1,3,4}, i-> myT_i));
 f4=tableauToPoly( apply({0,2,3,4}, i-> myT_i));
 f5=tableauToPoly( apply({1,2,3,4}, i-> myT_i));
-betti ideal ({f1,f2,f3,f4,f5}/(i-> sub(i,R)))
+I =  ideal ({f1,f2,f3,f4,f5}/(i-> sub(i,R)));
+betti mingens I
+{f1,f2,f3,f4,f5}/(i-> #terms(i))
+-- moving to 5 factors the space of invariants in degree 6 is much larger,
+-- but perhaps only this invariant is algebraically independent from 
+-- lower degree invariants...
+g = tableauToPoly(myT);
+betti ideal g
 
-
+---- this is not going to finish without more RAM
 myT=(standardTableaux({2,2,2},{1,1,1,1,1,1}))
 apply(myT,ll->tabToMat( ll))
-
-
 f1=tableauToPoly( apply({0,1,2,3}, i-> myT_i));
 R = ring(f1)
 f2=tableauToPoly( apply({0,1,2,4}, i-> myT_i));
