@@ -105,7 +105,8 @@ nextSubset (ZZ,List) := o -> (n,P) -> (
 prevSubset = method(Options=>{Size=>null})
 prevSubset ZZ := o -> (n) -> (
   if n < 0 then error "size of set must be greater than or equal to zero"
-  else if o.Size === null or o.Size == 0 then return {}
+  else if o.Size === null then return new List from (0..n-1)
+  else if o.Size == 0 then return {}
   else if n == 0 or o.Size > n or o.Size < 0 then return null
   else return new List from ((n-o.Size)..(n-1));
 )
@@ -529,7 +530,7 @@ TEST ///
 ///
 
 TEST ///
-  for n from -1 to 12 do (
+  for n from 0 to 12 do (
     S = nextSubset(n);
     subsetList = {};
     while ( S =!= null ) do (
@@ -541,8 +542,8 @@ TEST ///
 ///
 
 TEST ///  
-  for n from -1 to 12 do (
-    for k from -1 to n+1 do (
+  for n from 0 to 12 do (
+    for k from -2 to n+2 do (
       S = nextSubset(n,Size=>k);
       subsetList = {};
       while ( S =!= null ) do (
@@ -554,6 +555,12 @@ TEST ///
   );
 ///
 
+TEST ///
+  assert( (try nextSubset(-1)) === null );
+  assert( (try nextSubset(-1,Size=>-1)) === null );
+  assert( (try nextSubset(-1,Size=>0)) === null );
+  assert( (try nextSubset(-1,Size=>1)) === null );
+///
 
 
 
@@ -570,7 +577,7 @@ TEST ///
 ///
 
 TEST ///
-  for n from -1 to 12 do (
+  for n from 0 to 12 do (
     S = prevSubset(n);
     subsetList = {};
     while ( S =!= null ) do (
@@ -582,8 +589,8 @@ TEST ///
 ///
 
 TEST ///  
-  for n from -1 to 12 do (
-    for k from -1 to n+1 do (
+  for n from 0 to 12 do (
+    for k from -2 to n+2 do (
       S = prevSubset(n,Size=>k);
       subsetList = {};
       while ( S =!= null ) do (
@@ -594,6 +601,14 @@ TEST ///
     );
   );
 ///
+
+TEST ///
+  assert( (try prevSubset(-1)) === null );
+  assert( (try prevSubset(-1,Size=>-1)) === null );
+  assert( (try prevSubset(-1,Size=>0)) === null );
+  assert( (try prevSubset(-1,Size=>1)) === null );
+///
+
 
 {*
   nextPartition,
