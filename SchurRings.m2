@@ -30,7 +30,7 @@ newPackage(
 --	AuxiliaryFiles => true
     	)
 
-"export" {"schurRing", "SchurRing", "symmRing",
+export {"schurRing", "SchurRing", "symmRing",
      "symmetricRingOf", "schurRingOf",
      "toS", "toE", "toP", "toH",
      "jacobiTrudi", "plethysm",
