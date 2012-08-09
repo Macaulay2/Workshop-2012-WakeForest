@@ -350,9 +350,12 @@ end
 
 --------------------------------------------------------------------------------
 restart
-needsPackage "SpectralSequences";
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
+check "SpectralSequences";
 viewHelp SpectralSequences
+
+restart
+needsPackage "SpectralSequences";
 debug SpectralSequences;
 S = QQ[x,y,z];
 I = ideal vars S;
