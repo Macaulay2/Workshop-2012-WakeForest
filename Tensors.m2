@@ -171,6 +171,7 @@ tm List := (fctrs) -> (
 ----------------------------
 TensorModule^ZZ := (M,n) -> tm toList (n:M)
 
+--a.c. bug for ++ below
 TensorModule++TensorModule := (M,N) -> (
      if not #M#(gs"dimensions") == #N#(gs"dimensions") then error "dimension mismatch in TensorModule++TensorModule";
      P:=(module M)++(module N);
@@ -349,6 +350,27 @@ beginDocumentation()
         SeeAlso
      ///
 *}
+
+doc ///
+Key
+  TensorModule
+  (symbol ^,TensorModule,ZZ)
+  (symbol ++,TensorModule,TensorModule) 
+  (symbol **,TensorModule,TensorModule)
+Headline
+  The class of all tensor modules
+Description
+  Text
+   A tensor module is a module that is a tensor product of smaller modules, which "remembers"
+   that is is a tensor product.  Mathematically, one could define a tensor module as a module M
+   augmented with a list of other modules M_1...M_n with a choice of isomorphism between M_1**...**M_n
+   and M (in Macaulay2, this isomoprhism is implicit in that the modules are ==).
+   
+  Example
+   2*3
+    
+///
+
 
 doc ///
 Key
