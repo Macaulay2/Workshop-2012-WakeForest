@@ -16,7 +16,7 @@
 
 newPackage(
   "IterativeCombinatorialGenerators",
-      Version => "0.1", 
+      Version => "0.1",
       Date => "August 8, 2012",
       Authors => {
        {Name => "Zach Teitler"}
@@ -465,6 +465,46 @@ document {
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
+  nextSubset,
+  prevSubset,
+  nextPartition,
+  prevPartition,
+  nextPermutation,
+  prevPermutation,
+  Size
+
+TEST ///
+  needsPackage("IterativeCombinatorialGenerators");
+  S = nextSubset(5);
+  assert( S == {} );
+  S = nextSubset(5,S);
+  assert( S == {0} );
+  S = nextSubset(5,{0,1,2,3,4});
+  assert( S === null );
+  
+  for n from 5 to 10 do (
+    S = nextSubset(n);
+    subsetList = {};
+    while ( S =!= null ) do (
+      subsetList = append(subsetList,S);
+      S = nextSubset(n,S);
+    );
+    assert( subsetList === subsets(n) );
+  );
+  
+  for n from 5 to 10 do (
+    for k from 0 to n do (
+      S = nextSubset(n,Size=>k);
+      subsetList = {};
+      while ( S =!= null ) do (
+        subsetList = append(subsetList,S);
+        S = nextSubset(n,S,Size=>k);
+      );
+      assert( subsetList === subsets(n,k) );
+    );
+  );
+
+///
 
 end
 
