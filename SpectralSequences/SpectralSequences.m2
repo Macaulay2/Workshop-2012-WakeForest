@@ -296,54 +296,88 @@ invSubmodule := (d,C) -> (
   f := g * d;
   ker f)
 
-pageA := (r, F,p,q) -> (
-     d:=(F^(min F)).dd_(-p-q);
-     M:= (F^p)_(-p-q);
-     N:= (F^(p+r))_(-p-q-1);
-     P:= invSubmodule (d, N);
-     A:= intersect (M,P);
-     dA:= inducedMap (N, A, d);
-     {A, dA})
 
-pageA2 := (r,F,p,q) -> (
-     A:= pageA(r-1,F,p-r+1,q+r-2);
-     image A_1)
 
 pageZ := (r, F,p,q) -> (
-     A:= pageA(r,F,p,q);
-     d:= (F^(min F)).dd_(-p-q);
-     M:= (F^(p+1))_(-p-q);
-     (A_0 + M)/M)
+     C:= chainComplex F;
+     M:= (F^p)_(-p-q);
+     d:= C.dd_(-p-q);
+     N:= invSubmodule (d,(F^(p+r))_(-p-q-1));
+     NQ:= intersect(M, N) + (F^(p+1))_(-p-q);
+     NQ/(F^(p+1))_(-p-q)
+     )
+      
 
-pageB := (r,F,p,q) -> (
-     A:= pageA2(r,F,p,q);
-     d:= (F^(min F)).dd_(-p-q);
-     M:= (F^(p+1))_(-p-q);
-     (A+M)/M)
+pageB := (r, F,p,q) -> (
+     C:= chainComplex F;
+     d:= C.dd_(1 -p-q);
+     M := image inducedMap(target d, (F^(p-r+1))_(1-p-q),d);
+     MQ:= intersect (M,(F^p)_(-p-q)) + (F^(p+1))_(-p-q);
+     MQ/(F^(p+1))_(-p-q)
+     )
 
-pageE :=  (r,F,p,q) -> (
-    Z:= pageZ(r,F,p,q);
-    B:= pageB(r,F,p,q);
-    Z/B) 
+
+pageE := (r, F,p,q) -> (
+     if r < 1 then ((F^p)_(-p-q))/((F^(p+1))_(-p-q)) else 
+     if r == 1 then (
+	       C:= chainComplex F;
+	       M:= (F^p)_(-p-q);
+	       d:= C.dd_(-p-q);
+	       N:= invSubmodule (d,(F^(p+r))_(-p-q-1));
+	       MQ:= intersect(M, N) + (F^(p+1))_(-p-q);
+	       d2:= C.dd_(-p-q+1);
+	       NQ:= image inducedMap(target d2, (F^p)_(-p-q+1),d2) + (F^(p+1))_(-p-q);
+	       MQ/NQ)
+     else pageZ(r,F,p,q)/pageB(r,F,p,q))
+
 
 tmap := (L,M,f) -> matrix apply (M, i-> apply(L,j->f(j,i)))
 
 SpectralSequenceSheet = new Type of MutableHashTable
 SpectralSequenceSheet.synonym = "spectral sequence sheet"
 
+
 SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
   F := filteredComplex E;
   L := for p from E.minF to E.maxF list (
-    M:= for q from E.minH - E.maxF to E.maxH - E.minF list (
-      S := pageE(r,F,p,q);
-      if S != 0 then 
-      {{p,q},inducedMap(pageE(r,F,p+r,q-r+1),S,matrix (F^(p+1)).dd_(-p-q))}
-      else continue
-      );
-    if M != {} then M else continue);
-  new SpectralSequenceSheet from flatten L | {symbol zero => E.zero} )
+       for q from E.minH - E.maxF to E.maxH - E.minF list (
+	    M := pageE(r,F,p,q);
+	    if M!= 0 then {{p,q}, M} else continue	    )
+       );
+  new SpectralSequenceSheet from flatten L | {symbol zero => E.zero} 
+  )
 
-SpectralSequenceSheet ^ List := Module => (Er,L) -> (if Er#?L then source Er#L else Er.zero) 
+
+SpectralSequenceSheet ^ List := Module => (Er,L) -> if Er#?L then Er#L else Er.zero
+
+SpectralSequence _ InfiniteNumber := SpectralSequenceSheet => (E,r) -> (
+     C:= E_0;
+     if r == -infinity then C 
+     else (
+	  maxC := max (select (keys C, i -> class i === List)/last);
+	  minC := min (select (keys C, i -> class i === List)/last);
+	  E_(maxC -minC + 1)))
+
+
+
+
+support SpectralSequenceSheet := List => E -> 
+     apply (select(keys E,i -> class i === List), j -> j => prune E^j)
+
+     
+  
+SpectralSequenceSheet == SpectralSequenceSheet := Boolean => (E,F) -> 
+  all(keys E, i-> F#?i and E#i == F#i)
+     
+changeofRing = method ();
+changeofRing (Module,Module,RingMap):= SpectralSequence => (M,N,f) -> (
+     S:= source f;
+     T:= target f;
+     F:= res M;
+     G:= filteredComplex (F ** T);
+     spectralSequence (G ** res N)
+     )
+
      
 
 load "Doc/SpectralSequencesDoc.m2"
@@ -358,7 +392,7 @@ viewHelp SpectralSequences
 restart
 needsPackage "SpectralSequences";
 debug SpectralSequences;
-S = QQ[x,y,z];
+vS = QQ[x,y,z];
 I = ideal vars S;
 F = res I;
 G = res (I^2/I^4);
@@ -368,7 +402,7 @@ see FF
 see K
 spectralSequence(K)
 keys E_0
-
+v
 spots K
 VerticalList apply(sort spots K, i -> prune K^i)
 phi=F**inducedMap(FF,1);
