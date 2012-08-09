@@ -16,12 +16,15 @@ export {tableauToPoly}
 
 protect a  -- needed to make intermediate rings. 
 
-tableauToPoly = method(TypicalValue => RingElement, Options => {Variable => "w"})
+
+tableauToPoly = method(TypicalValue => RingElement, 
+     Options => {Variable => "w", 
+	  Strategy => null})
 tableauToPoly List := RingElement => o -> L -> (
      -- L is a nested list giving a set of filled tableau.
      -- Return in the corresponding polynomial. 
      F := makeUnsymmetric(L);
-     unfactor(L, F, o.Variable)
+     unfactor(L, F, o.Variable, o.Strategy)
      )
 
 makeDets = (b,mu) -> (
@@ -53,30 +56,56 @@ makeUnsymmetric = L ->(
      product apply(#Dets, i -> maps_i(Dets_i))
      )
 
-unfactor = (L, F, v) -> (
+unfactor = (L, F, v, b) -> (
      -- L is a nested list giving filled tableau corresponding to the
      -- output, F, of makeUnsymmetric.  
      -- Returns the polynomial for the tableau L.  
      Fring := ring F;
      T := prods dims L;
-     H := apply(keys T, i -> apply(T#i, j -> { product apply(#j, k ->
-		    	 Fring_(a_(k,i,j#k))), (getSymbol v)_(toSequence j)}));
+     H := apply(keys T, i -> apply(T#i, j -> 
+	       (if b === "randomEval" then ( { product apply(#j, k -> Fring_(a_(k,i,j#k))), 
+			      random(coefficientRing Fring)})
+		    else ({ product apply(#j, k -> Fring_(a_(k,i,j#k))), 
+			      (getSymbol v)_(toSequence j)}))));
      --- a nested list of pairs, the product of vars from the det
      --- rings with first index the same, and the new corresponding
      --- indexed variable with index corresponding to the second
      --- indices in the product.  
-     Hring := QQ[toList set((flatten H)/last)];
-     uberRing := Fring**Hring;
-     --- Ring of all the vars from the dets and the new vars.  
-     G1 := map(uberRing, Fring);  --- G1, G2 map to the big ring and
-     G2 := map(uberRing, Hring); 
-     H = applyTable(H, i-> {G1 i#0, G2 value i#1});
-     tmp := G1 F; print("the number of terms we're about to work with", #terms(tmp));
-     for h in H do tmp = sum for u in h list ((value u#1)*contract(u#0,tmp));
-     mapList := join(apply(#gens Fring, i -> 0), gens Hring);
-     G3 := map(Hring, uberRing, mapList);
-     G3 tmp
+     if b === "randomEval" then (
+	  tmp := F;
+	  for h in H do tmp = sum for u in h list (u#1*contract(u#0,tmp));
+	  tmp
+	  )
+     else if class b === List then (
+	  Hring := QQ[toList set((flatten H)/last)];
+	  uberRing := Fring**Hring;
+	  G1 := map(uberRing, Fring);  --- G1, G2 map to the big ring and
+	  bRing := ring b#0;
+	  G2 := map(uberRing, bRing);
+	  G3 := map(bRing, Hring, b);
+	  H = applyTable(H, i-> {G1 i#0, G2 (G3 value i#1)});
+	  tmp = G1 F;
+	  for h in H do tmp = sum for u in h list ((value u#1)*contract(u#0,tmp));
+	  mapList := join(apply(#gens Fring, i -> 0), gens Hring);
+	  G4 := map(Hring, uberRing, mapList);
+     	  G4 tmp
+	  )
+     else(
+	  Hring = QQ[toList set((flatten H)/last)];
+     	  uberRing = Fring**Hring;
+     	  --- Ring of all the vars from the dets and the new vars.  
+     	  G1 = map(uberRing, Fring);  --- G1, G2 map to the big ring and
+     	  G2 = map(uberRing, Hring); 
+     	  H = applyTable(H, i-> {G1 i#0, G2 value i#1});
+     	  tmp = G1 F; print("the number of terms we're about to work with", #terms(tmp));
+	  for h in H do tmp = sum for u in h list ((value u#1)*contract(u#0,tmp));
+     	  mapList = join(apply(#gens Fring, i -> 0), gens Hring);
+     	  G3 = map(Hring, uberRing, mapList);
+     	  G3 tmp)
      )
+
+
+
 
 ---- Below is a set of helper functions for building hash tables and
 ---- lists of indices to facilitate the previous functions.  
@@ -153,8 +182,20 @@ myT=(standardTableaux({3,3},{1,1,1,1,1,1}))
 apply(myT,ll->tabToMat( ll))
 
 -- here is a basis of the degree 6 invariants for SL(2)^4 acting on (C^2)^{\otimes 4}
-f1=tableauToPoly( apply({0,1,2,3}, i-> myT_i));
+time f1=tableauToPoly( apply({0,1,2,3}, i-> myT_i));
 R = ring(f1)
+describe 
+RF = map(coefficientRing R, R, apply(16, i -> random(coefficientRing R)))
+F f1
+
+time f1=tableauToPoly( apply({0,1,2,3}, i-> myT_i), Strategy => "randomEval");
+
+time f1=tableauToPoly( apply({0,1,2,3}, i-> myT_i), 
+     Strategy => apply(16, i -> random(coefficientRing R)))
+
+time f1=tableauToPoly( apply({0,1,2,3}, i-> myT_i), 
+     Strategy => apply(16, i -> 0))
+
 f2=tableauToPoly( apply({0,1,2,4}, i-> myT_i));
 f3=tableauToPoly( apply({0,1,3,4}, i-> myT_i));
 f4=tableauToPoly( apply({0,2,3,4}, i-> myT_i));
@@ -169,11 +210,20 @@ g = tableauToPoly(myT);
 betti ideal g
 #(terms g)
 
+time matrix (
+     for i to 4 list (
+	  L = apply(16, i -> random(coefficientRing R));
+{sub(tableauToPoly( apply({0,1,2,3}, i-> myT_i), Strategy => L), QQ),
+sub(tableauToPoly( apply({0,1,2,4}, i-> myT_i), Strategy => L), QQ),
+sub(tableauToPoly( apply({0,1,3,4}, i-> myT_i), Strategy => L), QQ),
+sub(tableauToPoly( apply({0,2,3,4}, i-> myT_i), Strategy => L), QQ),
+sub(tableauToPoly( apply({1,2,3,4}, i-> myT_i), Strategy => L), QQ)}))
 
+f1
 ---- this is not going to finish without more RAM
 myT=(standardTableaux({2,2,2},{1,1,1,1,1,1}))
 apply(myT,ll->tabToMat( ll))
-f1=tableauToPoly( apply({0,1,2,3}, i-> myT_i));
+time f1=tableauToPoly( apply({0,1,2}, i-> myT_i));
 R = ring(f1)
 f2=tableauToPoly( apply({0,1,2,4}, i-> myT_i));
 f3=tableauToPoly( apply({0,1,3,4}, i-> myT_i));
