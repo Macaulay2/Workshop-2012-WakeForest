@@ -4,6 +4,9 @@
 --MINIMIZE dependence on this 
 --section in future versions
 ------------------------------------------------
+--Currently being used for einsteinsummation:
+protect TemporaryTensorList
+protect TemporaryIndexList
 
 {*The following cartesian product lists have sequences
 as their entries, rather than lists.  this is intentional, 
@@ -63,115 +66,6 @@ rnl(List,List):=(dims,L) -> (
 	  L = for i in 0..<round(#L/d) list take(L,{i*d,(i+1)*d-1});
 	  dims = take(dims,{0,-2+#dims}));
      return L)
-
--------------------------------------------
---Summing expresions over symbolic indices
-------------------------------------------
---Turning a hash table into a function
---that acts like the identity on missing keys:
-tha=--INTERNAL ABBREVIATION
-tryHashApplication = method()
-tha HashTable := h -> (i -> try h#i else i)
-tha List := L -> tha hashTable L
-
---Turning a hash table into a function
---that modifies expressions.  The function
---recurses into everything except types 
---listed in Stops=>{...}
-exportMutable{Stops}
-dsub=--INTERNAL ABBREVIATION
-deepSubstitution=method(Options=>{Stops=>{Thing}})
-dsub HashTable := opts -> h -> (
-     f:=method(Dispatch=>Thing);
-     for T in opts.Stops do f T := x -> (tha h)x;
-     f BasicList := e -> apply(e,f);
-     f
-     )
-dsub List := opts -> L -> dsub hashTable L
-dsub Option := opts -> o -> dsub {o}
-dsub (Thing,HashTable) := opts -> (x,subs) -> (dsub subs) x
-dsub (Thing,List) := opts -> (x,subs) -> (dsub subs) x
-dsub (Thing,Option) := opts -> (x,subs) -> (dsub subs) x
-
---Same as above, except this routine
---tries to evaluate expressions when possible,
---otherwise leaving them as holders
-dse=--INTERNAL ABBREVIATION
-deepSubstitutionEvaluation=method(Options=>{Stops=>{Thing}})
-dse HashTable := opts -> h -> (
-     f:=method(Dispatch=>Thing);
-     for T in opts.Stops do f T := x -> (
-	  r:=(tha h)x;
-	  try value r else r
-	  );
-     f BasicList := e -> (
-	  ev:=apply(e,f);
-	  try value ev else ev
-	  );
-     f
-     )
-dse List := opts -> L -> dse hashTable L
-dse Option := opts -> o -> dse {o}
-dse (Thing,HashTable) := opts -> (x,subs) -> (dse subs) x
-dse (Thing,List) := opts -> (x,subs) -> (dse subs) x
-dse (Thing,Option) := opts -> (x,subs) -> (dse subs) x
-
---###############
---I expected dse to be much faster than
---dsub for tensor arrays, but it turns out
---to be about 50 times slowed for multiplying
---9x9 matrices
---###############
-
-
-tis=--INTERNAL ABBREVIATION
-tensorIndexSubstitution = method()
-tis Thing := x -> dsub(x,Stops=>{TensorArray})
-tis (Thing,HashTable) := (x,subs) -> (tis subs) x
-tis (Thing,List) := (x,subs) -> (tis subs) x
-tis (Thing,Option) := (x,subs) -> (tis subs) x
-
---Removal from BasicList objects
---delete'=deleteFromBasicList=method()
---delete' (Thing,BasicList) := (x,v) -> new class v from delete(x,new List from v)
-
-rea=removeEmptyAdjacencies=method()
-rea Expression := exprn -> (
-     exprn=new class exprn from delete((),new List from exprn);
-     if #exprn==1 then exprn=(exprn#0);
-     exprn
-     )
-rea Thing := x -> x
-
---Turning an expression including certain symbols
---into a function that takes those symbols
---as arguments, recursing only into sequences
-ef=expressionFunction=method()
-ef (Expression,List) := (exprn,args) -> (
-     exprn=rea exprn;
-     assertClasses(args,Symbol,"expressionFunction(Expression,List)");
-     if #args == 0 then return value(exprn);
-     subber:=method(Dispatch=>Thing);
-     subber Sequence := s -> tis for i in 0..<#s list (args_i => s_i);
-     subber Thing := x -> tis{args_0 => x};
-     f:=method(Dispatch=>Thing);
-     f Thing := x -> (
-	  ev:=((subber x) exprn);
-	  try value ev else ev
-	  );
-     f
-     )
-ef (Thing,List) := (const,args) -> (x -> const)
-
-----Test expressions:
-TEST ///
-(0..5)/(i->value((dsub{j=>i}) (hold 2)^j))
-(0..5)/(i->value((tis{j=>i}) (hold 2)^j))
-f=ef((hold i)^j+k,{i,j,k})
-f(4,5,6)
-///
-----
-
 
 ----------------------------
 --Tensor Arrays
@@ -241,9 +135,131 @@ D=ta({3,3,3},(i,j,k)->i^2+j^2+k^2)
 e=A_(2,j) * B_(j,k) * C_(k,1)
 ///
 
+------------------------------------
+--Substitution methods,
+--pretty but inefficient;
+--should eventually use sparingly,
+--only to convert an expression input
+-- into a more efficient form
+------------------------------------
+
+
+--Turning a hash table into a function
+--that acts like the identity on missing keys:
+tha=--INTERNAL ABBREVIATION
+tryHashApplication = method()
+tha HashTable := h -> (i -> try h#i else i)
+tha List := L -> tha hashTable L
+
+--Turning a hash table into a function
+--that modifies expressions.  The function
+--recurses into everything except types 
+--listed in Stops=>{...}
+exportMutable{Stops}
+dsub=--INTERNAL ABBREVIATION
+deepSubstitution=method(Options=>{Stops=>{Thing}})
+dsub HashTable := opts -> h -> (
+     f:=method(Dispatch=>Thing);
+     for T in opts.Stops do f T := x -> (tha h)x;
+     f BasicList := e -> apply(e,f);
+     f
+     )
+dsub List := opts -> L -> dsub hashTable L
+dsub Option := opts -> o -> dsub {o}
+dsub (Thing,HashTable) := opts -> (x,subs) -> (dsub subs) x
+dsub (Thing,List) := opts -> (x,subs) -> (dsub subs) x
+dsub (Thing,Option) := opts -> (x,subs) -> (dsub subs) x
+
+--Same as above, except this routine
+--tries to evaluate expressions when possible,
+--otherwise leaving them as holders
+dse=--INTERNAL ABBREVIATION
+deepSubstitutionEvaluation=method(Options=>{Stops=>{Thing}})
+dse HashTable := opts -> h -> (
+     f:=method(Dispatch=>Thing);
+     for T in opts.Stops do f T := x -> (
+	  r:=(tha h)x;
+	  try value r else r
+	  );
+     f BasicList := e -> (
+	  ev:=apply(e,f);
+	  try value ev else ev
+	  );
+     f
+     )
+dse List := opts -> L -> dse hashTable L
+dse Option := opts -> o -> dse {o}
+dse (Thing,HashTable) := opts -> (x,subs) -> (dse subs) x
+dse (Thing,List) := opts -> (x,subs) -> (dse subs) x
+dse (Thing,Option) := opts -> (x,subs) -> (dse subs) x
+
+--###############
+--I expected dse to be much faster than
+--dsub for tensor arrays, but it turns out
+--to be about 50 times slowed for multiplying
+--9x9 matrices
+--###############
+
+ef=expressionFunction=method()
+ef (Expression,List) := (exprn,args) -> (
+     exprn=rea exprn;
+     assertClasses(args,Symbol,"expressionFunction(Expression,List)");
+     if #args == 0 then return value(exprn);
+     subber:=method(Dispatch=>Thing);
+     subber Sequence := s -> tis for i in 0..<#s list (args_i => s_i);
+     subber Thing := x -> tis{args_0 => x};
+     f:=method(Dispatch=>Thing);
+     f Thing := x -> (
+	  ev:=((subber x) exprn);
+	  try value ev else ev
+	  );
+     f
+     )
+ef (Thing,List) := (const,args) -> (x -> const)
+
+
+-------------------------------------------
+--Tensor index substitution
+--(eliminate dependence)
+------------------------------------------
+
+tis=--INTERNAL ABBREVIATION
+tensorIndexSubstitution = method()
+tis Thing := x -> dsub(x,Stops=>{TensorArray})
+tis (Thing,HashTable) := (x,subs) -> (tis subs) x
+tis (Thing,List) := (x,subs) -> (tis subs) x
+tis (Thing,Option) := (x,subs) -> (tis subs) x
+
+--Removal from BasicList objects
+--delete'=deleteFromBasicList=method()
+--delete' (Thing,BasicList) := (x,v) -> new class v from delete(x,new List from v)
+
+rea=removeEmptyAdjacencies=method()
+rea Expression := exprn -> (
+     exprn=new class exprn from delete((),new List from exprn);
+     if #exprn==1 then exprn=(exprn#0);
+     exprn
+     )
+rea Thing := x -> x
+
+--Turning an expression including certain symbols
+--into a function that takes those symbols
+--as arguments, recursing only into sequences
+
+----Test expressions:
+TEST ///
+(0..5)/(i->value((dsub{j=>i}) (hold 2)^j))
+(0..5)/(i->value((tis{j=>i}) (hold 2)^j))
+f=ef((hold i)^j+k,{i,j,k})
+f(4,5,6)
+///
+----
 
 -------------------------------
---Composition of tensor arrays
+--Composition of tensor arrays,
+--inefficient AND unnecessary;
+--rewrite more efficiently 
+--directly for tensors
 -------------------------------
 tac=
 tensorArrayComposition = method()

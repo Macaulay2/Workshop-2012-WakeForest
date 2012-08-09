@@ -12,14 +12,14 @@ newPackage(
  --Macaulay2-1.4/share/Macaulay2/Core/matrix1.m2 
  --needs to replaced for this package to work 
 
---searchable tag for problems:
---a.c. problem!
+----------------------------------------
+--Searchable comment legend:
+--a.c. : andrew critch
+
    
---protect Symbol makes something a symbol
---within the scope of the package
-   
---ToDo:(plan to mostly ditch tensor arrays);
---1)IndexedTensorArrays, made of tensors, 
+--ToDo:eventually ditch tensor arrays 
+--except for printing
+--1)IndexedTensors, made of tensors, 
 --NOT arrays... convert to and from arrays 
 --for now; do faster and mostly ditch
 --arrays except for printing later.
@@ -36,22 +36,15 @@ newPackage(
 --dual to the space, and
 --wants pieces of a resolution to be R-TensorModules
 
-
---consider eliminating TensorArrays?
-
 export{TensorArray, tensorArray, tensorDimensions,
      tensorArrayContraction,einsteinSummation,
      Tensor,TensorModule,
      tensor',tensorModule}
 
---factors = getSymbol "factors"
-gs = getSymbol --causing a problem!!!!!
---do not apply to existing non-symbols, e.g. module
+gs = getSymbol
 
 --these are currently used for einstein summation,
 --which needs to be rewritten
-protect TemporaryTensorList
-protect TemporaryIndexList
 protect Stops
 
 -----------------------
