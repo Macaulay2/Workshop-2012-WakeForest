@@ -705,12 +705,13 @@ threshInt = (f,e,t,b,t1)-> (
 FPTEst={finalCheck=> true} >> o -> (ff,ee)->(
      --error "help";
      if (isDiagonal(ff)==true) then (diagonalFPT(ff))
-    -- else if (isBinomial(ff)==true) then (binomialFPT(ff))
+     else if (isBinomial(ff)==true) then (binomialFPT(ff))
      else
      (
      	  pp:=char ring ff;
      	  nn:=nu(ff,ee);
-	  if nn==0 then "Please pick a bigger integer 'e.'"
+--	  if nn==0 then "Please pick a bigger integer 'e.'"
+       	  if nn==0 then {0,1/pp}
      	  --error "help more";
      	  else if (isFRegularPoly(ff,(nn/(pp^ee-1)))==false) then nn/(pp^ee-1)
      	  else 
