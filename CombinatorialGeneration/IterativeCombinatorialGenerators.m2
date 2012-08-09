@@ -151,6 +151,8 @@ prevSubset (ZZ,List) := o -> (n,P) -> (
 -- retrieved August 7, 2012
 -- and adapted for Macaulay2 by Zach Teitler.
 --
+-- "rev lex" order of http://oeis.org/wiki/Orderings_of_partitions
+--
 -- nextPartition(n,k): partition of n with blocks of size at most k
 -- 
 -- Desired behavior:
@@ -217,6 +219,8 @@ prevPartition ZZ := n -> (
 )
 prevPartition (Nothing) := P -> null
 prevPartition Partition := P -> (
+  -- special case to get around M2 bug: class conjugate new Partition from {}; is not Partition!!
+  if #P == 0 then return null;
   C := nextPartition conjugate P;
   if C === null then return null else return conjugate C;
 )
@@ -687,6 +691,49 @@ TEST ///
       assert( partitionList === partitions(n,k) );
     );
   );
+///
+
+TEST ///
+  assert( nextPartition(-1) === null );
+  assert( nextPartition(-1,-1) === null );
+  assert( nextPartition(-1,0) === null );
+  assert( nextPartition(-1,1) === null );
+  assert( nextPartition(0) === new Partition from {} );
+  assert( nextPartition(0,-1) === new Partition from {} );
+  assert( nextPartition(0,0) === new Partition from {} );
+  assert( nextPartition(0,1) === new Partition from {} );
+  assert( (try nextPartition(1,-1)) === null );
+  assert( nextPartition(1,0) === null );
+///
+
+
+TEST ///
+  needsPackage("IterativeCombinatorialGenerators");
+  S = prevPartition(5);
+  assert( S === new Partition from 5:1 );
+  S = prevPartition(S);
+  assert( S === new Partition from {2,1,1,1} );
+  S = prevPartition(new Partition from {5});
+  assert( S === null );
+  S = prevPartition(S);
+  assert( S === null );
+///
+
+TEST ///
+  for n from 0 to 12 do (
+    S = prevPartition(n);
+    partitionList = {};
+    while ( S =!= null ) do (
+      partitionList = append(partitionList,S);
+      S = prevPartition(S);
+    );
+    assert( partitionList === reverse partitions(n) );
+  );
+///
+
+TEST ///
+  assert( prevPartition(-1) === null );
+  assert( prevPartition(0) === new Partition from {} );
 ///
 
 
