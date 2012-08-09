@@ -57,6 +57,7 @@ protect minF
 protect maxF
 protect minH
 protect maxH
+protect inducedMaps
 
 needsPackage "SimplicialComplexes"
 
@@ -151,6 +152,12 @@ FilteredComplex ^ ZZ := ChainComplex => (K,p) -> (
 
 chainComplex FilteredComplex := ChainComplex => K -> K^-infinity
 
+inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
+  if not K.cache#?inducedMaps then K.cache.inducedMaps = new MutableHashTable;
+  if not K.cache.inducedMaps#?p then K.cache.inducedMaps#p = inducedMap(K^-infinity, K^p);
+  K.cache.inducedMaps#p
+  )
+
 FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
   all(min(min C,min D)..max (max C,max D),i-> C^i == D^i))
 
@@ -187,19 +194,16 @@ filteredComplex List := L -> (
   if (last P)#1 != Z then P = P | {#maps+1 => Z};
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
+-- Gives the homological filtration on a chain complex
 filteredComplex ChainComplex := C -> (
   complete C;
   filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))  
 
 Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,D) -> (
-     C:= chainComplex K;
-     minC:= min C;
-     maxC:= max C;
-     maps := for p from minC to maxC list (Hom(inducedMap(C,truncate(C,p)),D));
-     filteredComplex maps)
+     filteredComplex for p from min K to max K list Hom(inducedMap(K,p),D))
     
 Hom (ChainComplex,FilteredComplex):= FilteredComplex => (C,D) -> (
-     filteredComplex apply(toList(min D..max D),p -> Hom(C,D_p)))
+     filteredComplex for p from min D to max D list Hom(C,inducedMap(D,p)))
 
 --------------------------------------------------------------------------------
 -- spectral sequences
@@ -340,10 +344,10 @@ SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
 SpectralSequenceSheet ^ List := Module => (Er,L) -> (if Er#?L then source Er#L else Er.zero) 
      
 FilteredComplex ** ChainComplex := FilteredComplex => (K,D) -> (
-     filteredComplex apply(toList(min K..max K), p -> inducedMap(chainComplex K,K^p) ** D))
+     filteredComplex apply(toList(min K..max K), p -> inducedMap(K,p) ** D))
 
 ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
-     filteredComplex apply(toList(min K..max K), p -> C ** inducedMap(chainComplex K,K^p)))
+     filteredComplex apply(toList(min K..max K), p -> C ** inducedMap(K,p)))
 
 end
 
@@ -359,9 +363,7 @@ G = res (I^2/I^4);
 H= Hom(F,G);
 prune H
 FF=filteredComplex F;
-
-
-Hom(FF,F)
+Hom(F,FF)
 prune (F**F)
 
 
