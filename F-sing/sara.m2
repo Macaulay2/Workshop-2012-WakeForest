@@ -24,8 +24,7 @@ threshInt = (e,t,b,t1,f)-> (
 ---f-pure threshold estimation
 ---e is the max depth to search in
 ---finalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
-threshEst=(f,e, finalCheck)->(
-     --error "help";
+threshEst = {finalCheck => true} >> o -> (f,e) -> (
      p:=char ring f;
      n:=nu(f,e);
      --error "help more";
@@ -35,19 +34,43 @@ threshEst=(f,e, finalCheck)->(
 	  ak:=threshInt(e,(n-1)/p^e,fSig(e,n-1,f),n,f); 
 	  --if (DEBUG == true) then error "help mostest";
 	  if ( (n+1)/p^e == (ak#1) ) then (ak#1)
-	  else if (finalCheck == true) then ( 
+	  else if (o.finalCheck == true) then ( 
 	       if (isFRegularPoly(f,(ak#1) )==false) then (ak#1)
 	       else {(ak#1),(n+1)/p^e} 
 	  )
 	  else {(ak#1),(n+1)/p^e}
      )
 )
+threshEst={finalCheck=> true} >> o -> (f,e)->(
+     --error "help";
+newthreshEst={finalCheck=> true} >> o -> (f,e)->(
+     --error "help";
+     p:=char ring f;
+     n:=nu(f,e);
+     --error "help more";
+     if (isFRegularPoly(f,(n/(p^e-1)))==false) then n/(p^e-1)
+     else (
+	  --error "help most";
+	  ak:=threshInt(e,(n-1)/p^e,fSig(e,n-1,f),n,f); 
+	--  if (DEBUG == true) then error "help mostest";
+	  if ( (n+1)/p^e == (ak#1) ) then (ak#1)
+	  else if (o.finalCheck == true) then ( 
+	       try (alarm 100;		    
+	       	    if ((isFRegularPoly(f,(ak#1) )) ==false ) then ( error "HELP!"; (ak#1))
+		    else {(ak#1),(n+1)/p^e})
+	       else 
+	            print "Calculation took too long, returning best range";
+		    {(ak#1),(n+1)/p^e} 
+	  )
+	  else {(ak#1),(n+1)/p^e}
+     )
+)
 
 
+Options => {returnCellVars => false, verbose=>true})
 
-
-
-
+f = {a => 1000} >> o -> (x,y) -> 
+x * o.a + y;
 
 
 

@@ -23,7 +23,9 @@ export{"basePExp",
      "isFRegularPoly",
      "fSig",
      "FPTEst",
-     "isSharplyFPurePoly"
+     "isSharplyFPurePoly",
+     "finalCheck",
+     "aPower"
      }
 --This file has "finished" functions from the Macaulay2 workshop at Wake Forest
 --August 2012.  Sara Malec, Karl Schwede and Emily Witt contributed to it.
@@ -128,10 +130,11 @@ nuList (Ideal,ZZ) := (I,e) ->
      m := ideal(first entries vars ring I); 
      L := new MutableList;
      N:=0;
+     J:=I;
      for d from 1 to e do 
      (	  
 	  --J = ideal(apply(first entries gens I, g->fastExp(g, N, char ring I)));
-	  J := ideal(apply(first entries gens I, g->fastExp(g, N)));
+	  J = ideal(apply(first entries gens I, g->fastExp(g, N)));
 	  N=N+1;
 	  while isSubset(I*J, frobeniusPower(m,d))==false do (N = N+1; J = I*J);
      	  L#(d-1) = N-1;
@@ -139,16 +142,20 @@ nuList (Ideal,ZZ) := (I,e) ->
      );
      L
 )
-nuList (RingElement,ZZ) := (f,e) -> nuList(ideal(f),e)
+nuList(RingElement,ZZ) := (f,e) -> nuList(ideal(f),e)
 
 --Gives \nu_I(p^e)
 nu = method();
-nu (Ideal,ZZ) := (I,e) -> (nuList(I,e))#(e-1)
-nu (RingElement, ZZ) := (f,e) -> nu(ideal(f),e)
+nu(Ideal,ZZ) := (I,e) -> (nuList(I,e))#(e-1)
+nu(RingElement, ZZ) := (f,e) -> nu(ideal(f),e)
 
 --Gives a list of \nu_I(p^d)/p^d for d=1,...,e
 FPTApproxList = method();
-FPTApproxList (Ideal,ZZ) := (I,e) -> apply(#nuList(I,e), i->((nuList(I,e))#i)/(char ring I)^(i+1)) 
+FPTApproxList (Ideal,ZZ) := (I,e) ->
+(
+     p := char ring I;
+     apply(#nuList(I,e), i->((nuList(I,e))#i)/p^(i+1)) 
+)
 FPTApproxList (RingElement,ZZ) := (f,e) -> FPTApproxList(ideal(f),e)
 
 
@@ -173,6 +180,132 @@ frobeniusPower(Ideal,ZZ) := (I,e) ->(
 );
 
 
+-----------------------------------------------------------------
+--*************************************************************--
+--Functions for computing the F-pure threshold of a diagonal   --
+--or binomial hypersurface using the algorithms of D. Hernandez--                      
+--***********************************************************----
+-----------------------------------------------------------------
+
+--Gives the e-th digit of the non-terminating base p expansion of x in [0,1] 
+digit = (e, x, p) -> 
+(
+     y := 0;
+     if fracPart(p^e*x) != 0 then y = floor(p^e*x) - p*floor(p^(e-1)*x);
+     if fracPart(p^e*x) == 0 then y = floor(p^e*x) - p*floor(p^(e-1)*x) - 1;
+     if fracPart(p^(e-1)*x) == 0 then y = p-1;
+     y
+)
+
+--Gives the e-th truncation of the non-terminating base p expansion of x in [0,1] as a fraction
+truncation = (e,x,p) -> 
+(
+     y:=0; 
+     for i from 1 to e do y = y + digit(i,x,p)/p^i;
+     y
+)
+
+--Gives the first e digits of the non-terminating base p expansion of x in [0,1] as a list
+truncationBaseP = (e,x,p) -> 
+(
+     L := new MutableList;
+     for i from 0 to e-1 do L#i = digit(i+1,x,p);
+     L
+)
+
+
+--Given a rational number x, if a is the power of p dividing its denomiator, finds an integer b so that p^a(p^b-1)*a is an integer
+bPower = (n,p) ->
+(
+     if aPower(n,p)>0 then n = n*p^(aPower(n,p));
+     denom(n)
+)
+
+--Given a vector w={x,y}, x and y rational in [0,1], returns a number of digits such that it suffices to check to see if x and y add without carrying in base p
+carryTest = (w,p) ->
+(
+     c := 0; for i from 0 to #w-1 do c = max(c, aPower(w#i, p));
+     d := 1; for j from 0 to #w-1 do if bPower(w#j, p)!=0 then d = lcm(d, bPower(w#j, p));
+     c+d+1
+)
+
+--Given a vector w={x,y} of rational integers in [0,1], returns the first spot e where the x and y carry in base p; i.e., (the e-th digit of x)+(the e-th digit of y) >= p
+firstCarry := (w,p) ->
+(
+     zeroTest := false;
+     carry:=0;
+     i:=0;
+     for j from 0 to #w-1 do if w#j == 0 then zeroTest = true;
+     if zeroTest == true then carry = -1 else
+     d := 0;
+     (
+	  i = 0; while d < p and i < carryTest(w,p) do 
+	  (
+	       i = i + 1;
+	       d = 0; for j from 0 to #w-1 do  d = d + digit(i,w#j,p);
+	   );
+      if i == carryTest(w,p) then i = -1;
+      carry = i;
+      );
+      carry
+)
+
+--Given a vector w, returns a vector of the reciprocals of the entries of w
+reciprocal = w ->
+(
+     v := new MutableList from w;
+     for c from 0 to #w-1 do v#c = 1/w#c;
+     v
+)
+
+--Computes the F-pure threshold of a diagonal hypersurface x_1^(a_1) + ... +x_n^(a_n) using D. Hernandez' algorithm
+diagonalFPT = f ->
+(
+p := char ring f;
+w := apply(terms f, g->first degree(g));
+y := 0; if firstCarry(reciprocal(w),p)==-1 then for i from 0 to #w-1 do y = y + 1/w#i else
+(
+x := 0; for c from 0 to #w-1 do x = x + truncation(firstCarry(reciprocal(w),p)-1, 1/w#c, p); 
+y = x+1/p^(firstCarry(reciprocal(w),p)-1);
+);
+y
+)
+
+--Given a polynomial f, outputs a list of multi-degrees (under the usual grading) of f as lists
+multiDegree = f ->
+(
+     variables := first entries vars ring f;
+     apply(terms f, g -> apply(#variables, i ->degree(variables#i,g)))
+)
+
+--Determines whether a polynomial f is diagonal; i.e. of the form x_1^(a_1)+...+x_n^(a_n) (up to renumbering variables)
+isDiagonal = f ->
+(
+d := multiDegree(f);
+alert1 := true;
+alert2 := true;
+for i from 0 to #d-1 do
+(
+for j from 0 to #(d#0)-1 do
+(
+if (d#i)#j!=0 and alert1==false then alert2=false;
+if (d#i)#j!=0 and alert1==true then alert1=false;
+);
+alert1=true;
+);
+for j from 0 to #(d#0)-1 do
+(
+for i from 0 to #d-1 do 
+(
+     if alert1==false and (d#i)#j!=0 then alert2=false;
+     if alert1==true and (d#i)#j!=0 then alert1=false;
+);
+alert1=true;
+);
+alert2
+)
+
+
 ----------------------------------------------------------------
 --************************************************************--
 --Functions for computing test ideals, and related objects.   --
@@ -180,7 +313,8 @@ frobeniusPower(Ideal,ZZ) := (I,e) ->(
 ----------------------------------------------------------------
 
 --Computes I^{[1/p^e]}, we must be over a perfect field. and working with a polynomial ring
---This is a slightly stripped down function due to Moty Katzman.
+--This is a slightly stripped down function due to Moty Katzman, with some changes to avoid the
+--use(Rm) which is commented out in a ring
 ethRoot = (Im,e) -> (
      if (isIdeal(Im) != true) then (
      	  error "ethRoot: Expted a nonnegative integer."; 
@@ -192,7 +326,7 @@ ethRoot = (Im,e) -> (
      Sm:=coefficientRing(Rm); --base field
      n:=rank source vars(Rm); --number of variables
      vv:=first entries vars(Rm); --the variables
-     YY:=getSymbol("Y"); -- this is an attempt to avoid the ring overwriting
+     YY:=local YY; -- this is an attempt to avoid the ring overwriting
                          -- the ring in the users terminal
      myMon := monoid[ (vv | toList(YY_1..YY_n)), MonomialOrder=>ProductOrder{n,n},MonomialSize=>64];
      R1:=Sm myMon; -- a new ring with new variables
@@ -316,7 +450,7 @@ xInt = (x1, y1, x2, y2) ->  x1-(y1/((y1-y2)/(x1-x2)))
 --- Output:
 ---	returns value of the F-signature of the pair (R, f^{a/p^e})
 --- Based on work of Eric Canton
-fSig = (f1,a1,e1) -> (
+fSig = (f1, a1, e1) -> (
      R1:=ring f1;
      pp:= char ring f1;     
      1-(1/pp^(dim(R1)*e1))*
@@ -329,37 +463,46 @@ fSig = (f1,a1,e1) -> (
 ---	b - the f-signature of (R,f^{t/p^e})
 ---     e - some positive integer
 ---     t1- another rational number > t
----	f - some HOMOGENEOUS polynomial in two or three variables in a ring of PRIME characteristic
+---	f - some polynomial in two or three variables in a ring of PRIME characteristic
 ---
 --- Output:
 ---	fSig applied to (f,t1,e)
 ---	x-intercept of the line passing through (t,b) and (t1,fSig(f,t1,e))
 
 threshInt = (f,e,t,b,t1)-> (
-{b1:=fSig(f,t1,e),xInt(t,b,t1/(char ring f)^e,b1)}
+     b1:=fSig(f,t1,e);
+{b1,xInt(t,b,t1/(char ring f)^e,b1)}
 )
 
 
---possibly use Verify here instead of finalCheck?
+
 ---f-pure threshold estimation
 ---e is the max depth to search in
----Verify is a boolean to determine whether the last isFRegularPoly is run (it is possibly very slow) 
-FPTEst={Verify=> true} >> o -> (ff,ee)->(
+---finalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
+FPTEst={finalCheck=> true} >> o -> (ff,ee)->(
      --error "help";
-     pp:=char ring ff;
-     n:=nu(ff,ee);
-     --error "help more";
-     if (isFRegularPoly(ff,(n/(pp^ee-1)))==false) then n/(pp^ee-1)
-     else (
-	  --error "help most";
-	  ak:=threshInt(ff,ee,(n-1)/pp^ee,fSig(ff,n-1,ee),n); 
-	--  if (DEBUG == true) then error "help mostest";
-	  if ( (n+1)/pp^ee == (ak#1) ) then (ak#1)
-	  else if (o.Verify == true) then ( 
-	       if ((isFRegularPoly(ff,(ak#1) )) ==false ) then ( (ak#1))
-	       else {(ak#1),(n+1)/pp^ee} 
-	  )
-	  else {(ak#1),(n+1)/pp^ee}
+     if (isDiagonal(ff)==true) then (diagonalFPT(ff))
+    -- else if (isBinomial(ff)==true) then (binomialFPT(ff))
+     else
+     (
+     	  pp:=char ring ff;
+     	  nn:=nu(ff,ee);
+	  if nn==0 then "Please pick a bigger integer 'e.'"
+     	  --error "help more";
+     	  else if (isFRegularPoly(ff,(nn/(pp^ee-1)))==false) then nn/(pp^ee-1)
+     	  else 
+	  (
+	       --error "help most";
+	       ak:=threshInt(ff,ee,(nn-1)/pp^ee,fSig(ff,nn-1,ee),nn); 
+	       --  if (DEBUG == true) then error "help mostest";
+	       if ( (nn+1)/pp^ee == (ak#1) ) then (ak#1)
+	       else if (o.finalCheck == true) then 
+	       ( 
+	       	    if ((isFRegularPoly(ff,(ak#1) )) ==false ) then ( (ak#1) )
+	       	    else {(ak#1),(nn+1)/pp^ee} 
+	       )
+	  else {(ak#1),(nn+1)/pp^ee}
+     	  )
      )
 )
 
@@ -530,11 +673,11 @@ doc ///
 ///
 doc ///
      Key
-     	 [FPTEst,Verify]
+     	 [FPTEst,finalCheck]
      Headline
          Atempts to compute the F-pure threshold, where e is the max depth to search in
      Usage
-     	  FPTEst(f,e,Verify=>V)
+     	  FPTEst(f,e,finalCheck=>V)
      Inputs
      	 f:RingElement
          e:ZZ
@@ -544,7 +687,7 @@ doc ///
 	Q:QQ
      Description
      	  Text 
-	      Verify is a Boolean with default value True that determines whether the last isFRegularPoly is run (it is possibly very slow)
+	      finalCheck is a Boolean with default value True that determines whether the last isFRegularPoly is run (it is possibly very slow)
 ///
 doc ///
      Key
