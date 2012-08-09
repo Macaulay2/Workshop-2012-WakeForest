@@ -7,6 +7,7 @@ M'=R^3 ** R^3 ** R^4--doesn't remember it's a tensor product
 M=tensorModule(R,{3,3,4})
 (class M',class M)
 M'==M--they are equal as modules, 
+M'===M--but not as
 not M==tensorModule(R,{4,3,4})--as a tensor module, M remembers its factors
 M.factors
 

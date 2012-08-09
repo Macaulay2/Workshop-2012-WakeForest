@@ -329,73 +329,6 @@ diff(Tensor,RingElement) := (t,r) -> t/(i->diff(i,r))
 load "./tensors/indexedtensors.m2"
 
 --
-beginDocumentation()
-{*     doc ///
-        Key
-	  TensorArray
-        Headline
-	  The class of all tensor arrays
-        Usage
-        Inputs
-        Outputs
-        Consequences
-         Item
-        Description
-         Text
-         Code
-         Pre
-         Example
-        Subnodes
-        Caveat
-        SeeAlso
-     ///
-*}
-
-doc ///
-Key
-  TensorModule
-  (symbol ^,TensorModule,ZZ)
-  (symbol ++,TensorModule,TensorModule) 
-  (symbol **,TensorModule,TensorModule)
-Headline
-  The class of all tensor modules
-Description
-  Text
-   A tensor module is a module that is a tensor product of smaller modules, which "remembers"
-   that it is a tensor product.  Mathematically, one could define a tensor module as a module M
-   augmented with a list of other modules M_1...M_n with a choice of isomorphism to M'=M_1**...**M_n
-   and M.  In Macaulay2, this isomoprhism is implicit in that two modules are ==).
-   
-  Example
-   2*3
-    
-///
-
-
-doc ///
-Key
-  TensorArray
-  (symbol _,TensorArray,ZZ)
-Headline
-  The class of all tensor arrays
-Description
-  Text
-   Tensor arrays are cool
-   
-  Example
-   2*3
-    
-///
-
-
-doc///
-Key
-  (symbol **,TensorArray,TensorArray)
-Headline
-  tensor product of arrays
-Caveat
-  not yet implemented
-///
 
 TEST  ///
 T=tm(R,{3,3});
@@ -413,15 +346,17 @@ T=tm(t**t**t)
 T.factors
 
 ///
-end
 
-restart
-uninstallPackage"Tensors"
-installPackage"Tensors"
-viewHelp"Tensors"
+load "./tensors/tensors-documentation.m2"
+end
 
 restart
 debug loadPackage"Tensors"
 
 restart
 debug loadPackage("Tensors",DebuggingMode=>true)
+
+restart
+uninstallPackage"Tensors"
+installPackage"Tensors"
+viewHelp"TensorModule"
