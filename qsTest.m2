@@ -13,13 +13,28 @@ R = ZZ/101[x,y,z]
 f = matrix{{x*y+x*z+y*z-1, x^2+y^2, y^2+z^2, z^2}}
 P = ker f
 g = map(R^4,R^6,gens P)
-C = coker presentation P
+mp = minimalPresentation P
+phi = mp.cache.pruningMap
+isIsomorphism phi
+phi^-1
+B = computeFreeBasis mp
+phi
+source phi
+target phi
+psi = map(mp,R^5,1)
+map(g*phi*(psi*B)
+
+
+peek C
+peek C.cache
+peek P
+peek P.cache
 class C
 class P
 ambient C
 ambient P
-
-
+P.?generators
+C.?generators
 
 phi = map(P,C,1)
 isIsomorphism phi
@@ -27,7 +42,9 @@ inverse phi
 phi2 = map(C,P,1)
 isIsomorphism phi2
 
-B = computeFreeBasis P
+
+
+
 (image B)/(image map(R^6,R^7,presentation P)) == C
 B2 = g*B
 image B2 == image map(R^4,R^6,gens P) -- Wow it works.
