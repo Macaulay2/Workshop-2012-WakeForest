@@ -48,11 +48,21 @@ export {
 --   http://stackoverflow.com/questions/7794638/to-generate-a-subset-of-size-n-one-by-one-to-reduce-the-complexity
 -- retrieved August 7, 2012
 -- and adapted for Macaulay2 by Zach Teitler.
+--
+-- Desired behavior:
+--   subsets(<0,k) = error for all k
+--   subsets(0,<0) = {}
+--   subsets(0,0) = {{}}
+--   subsets(0,>0) = {}
+--   subsets(>0,<0) = {}
+--   subsets(>0,0) = {{}}
+--   subsets(>0,>0) = usual list of subsets ({} if k>n)
 nextSubset = method(Options=>{Size=>null})
 nextSubset ZZ := o -> (n) -> (
-  if o.Size === null or o.Size == 0 then return {}
-  else if o.Size <= n then return new List from (0..(o.Size-1))
-  else return null;
+  if n < 0 then error "size of set must be greater than or equal to zero"
+  else if o.Size === null or o.Size == 0 then return {}
+  else if n == 0 or o.Size > n or o.Size < 0 then return null
+  else return new List from (0..(o.Size-1));
 )
 nextSubset (ZZ,Nothing) := o -> (n,P) -> null
 nextSubset (ZZ,List) := o -> (n,P) -> (
@@ -65,8 +75,7 @@ nextSubset (ZZ,List) := o -> (n,P) -> (
   
   if o.Size =!= null then (
     -- Last one?
-    lastone := (#P == 0) or (P#0 == n-#P);
-    if lastone then return null;
+    if (o.Size <= 0) or (P#0 == n-o.Size) then return null;
     
     -- Find the position to change.
     p := 0;
@@ -95,9 +104,10 @@ nextSubset (ZZ,List) := o -> (n,P) -> (
 -- given a subset of {0..n-1}, return the previous one
 prevSubset = method(Options=>{Size=>null})
 prevSubset ZZ := o -> (n) -> (
-  if o.Size === null or o.Size == 0 then return new List from (0..(n-1))
-  else if o.Size <= n then return new List from ((n-o.Size)..(n-1))
-  else return null;
+  if n < 0 then error "size of set must be greater than or equal to zero"
+  else if o.Size === null or o.Size == 0 then return {}
+  else if n == 0 or o.Size > n or o.Size < 0 then return null
+  else return new List from ((n-o.Size)..(n-1));
 )
 prevSubset (ZZ,Nothing) := o -> (n,P) -> null
 prevSubset (ZZ,List) := o -> (n,P) -> (
