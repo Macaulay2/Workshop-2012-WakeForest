@@ -50,6 +50,7 @@ export {
   "spectralSequence",
   "SpectralSequenceSheet",
   "spots"
+  "see"
   }
 
 -- symbols used as keys
@@ -201,9 +202,16 @@ FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
 net FilteredComplex := K -> (
      -- Don't want to display all filtered pieces
      -- Should we display the quotients rather than the submodules?
-     -- Eliminate the duplication of the homological indexes     
+     -- Plan: display sequence of form "K^(min K) \supset .. \supset K^(max K)"
   v := between("", apply(sort spots K, p -> p | " : " | net K^p));
   if #v === 0 then "0" else stack v)
+
+-- Method for looking at all of the chain subcomplexes pleasantly
+see = method();
+see FilteredComplex := K -> (
+     -- Eliminate the duplication of the homological indexes     
+     VerticalList apply(sort spots K, i -> prune K^i)
+     )
 
 filteredComplex = method(TypicalValue => FilteredComplex)
 
@@ -236,11 +244,18 @@ filteredComplex ChainComplex := C -> (
   complete C;
   filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))  
 
-Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,D) -> (
-     filteredComplex for p from min K to max K list Hom(inducedMap(K,p),D))
+Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
+     filteredComplex for p from min K to max K list Hom(inducedMap(K,p),C))
     
-Hom (ChainComplex,FilteredComplex):= FilteredComplex => (C,D) -> (
-     filteredComplex for p from min D to max D list Hom(C,inducedMap(D,p)))
+Hom (ChainComplex,FilteredComplex):= FilteredComplex => (C,K) -> (
+     filteredComplex for p from min K to max K list Hom(C,inducedMap(K,p)))
+
+FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
+     filteredComplex for p from min K to max K list inducedMap(K,p) ** C)
+
+ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
+     filteredComplex for p from min K to max K list C ** inducedMap(K,p))
+
 
 --------------------------------------------------------------------------------
 -- spectral sequences
@@ -329,11 +344,6 @@ SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
 
 SpectralSequenceSheet ^ List := Module => (Er,L) -> (if Er#?L then source Er#L else Er.zero) 
      
-FilteredComplex ** ChainComplex := FilteredComplex => (K,D) -> (
-     filteredComplex apply(toList(min K..max K), p -> inducedMap(K,p) ** D))
-
-ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
-     filteredComplex apply(toList(min K..max K), p -> C ** inducedMap(K,p)))
 
 end
 
@@ -349,6 +359,9 @@ G = res (I^2/I^4);
 H= Hom(F,G);
 prune H
 FF=filteredComplex F;
+K=F**FF;
+spots K
+VerticalList apply(sort spots K, i -> prune K^i)
 phi=F**inducedMap(FF,1);
 target phi == F**(FF^-infinity)
 
