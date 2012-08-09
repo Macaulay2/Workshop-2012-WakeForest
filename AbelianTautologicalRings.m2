@@ -43,8 +43,8 @@ You should have received a copy of the GNU General Public License along with thi
 
 
 
-export{"modelRing","abelianTautologicalRing","AbelianVarietyType","polishchukD","polishchukDelta","monomialFourierTransform"}
-
+export{"modelRing","abelianTautologicalRing","AbelianVarietyType","polishchukD","polishchukDelta"}
+export{"monomialToList", "listToMonomial","monomialFourierTransform","fourierTransform","listDelta"}
 
 
 if version#"VERSION" < "1.4" then error "This package was written for Macaulay2 Version 1.4 or higher.";
@@ -139,12 +139,12 @@ for i from 1 to n do F = polishchukD(F);
 return F
      )
 
-polishchukDelta=method(TypicalValue=>RingElement)  
+polishchukDelta = method(TypicalValue=>RingElement)  
 polishchukDelta RingElement := (f) -> (     
      L:={};
      L=polynomialToList(f);
      L=listDelta(L);
-     return listToPolynomial(L)     
+     return listToPolynomial(L, ring f)     
      )
 
 polishchukDelta (RingElement,ZZ) := (f,n) -> (       
@@ -249,8 +249,7 @@ return ans
 --Input: List representing a monomial, as described in listToMonomial
 --Output: list of lists, each of which consists of a list representing a monomial and an integer 
 --representing the coefficient in front of that monomial: {list representing a monomial, coefficient} 
-monomialListDelta = method(TypicalValue=>List)
-monomialListDelta List := L -> (
+monomialListDelta = L -> (
 if L=={} then return {{{0},0}};
 n:=L_0;
 L=drop(L,{0,0});
@@ -261,7 +260,7 @@ ni:=0;
 nj:=0;
 for i from 0 to #L-2 do (
 for j from i+1 to #L-1 do (
-ni=L_i;
+ni=L_i; 
 nj=L_j;
 Lhat=drop(drop(L,{j,j}),{i,i});
 Lhat=sort append(Lhat,ni+nj-1);
@@ -271,21 +270,12 @@ ans=append(ans, {Lhat,binomial(ni+nj,ni)})
 return ans
 )
 
---Computes n^{th} power of Polishchuk's operator Delta for monomials in list form, [P05, p.883]
---Input: List representing a monomial, as described in listToMonomial and a non-negative integer
---Output: list of lists, each of which consists of a list representing a monomial and an integer 
---representing the coefficient in front of that monomial: {list representing a monomial, coefficient} 
-monomialListDelta(List,ZZ) := (L,n) -> (     
-if n < 0 then error "The power of Polishchuk Delta operator must be a non-negative integer";
-if n==0 then return {{L,1}};
-for i from 1 to n do L=monomialListDelta(L);     
-return L
-)       
 
 --Computes Polishchuk's operator Delta for polynomials in list form, [P05, p.883]
 --Input: list of lists: {list representing a monomial, coefficient} 
 --Output: list of lists: {list representing a monomial, coefficient} 
-listDelta = (M) -> (
+listDelta = method(TypicalValue=>List)
+listDelta(List) := (M) -> (
 ans:={};
 for i from 0 to #M-1 do (
 mi:=M_i_0;
@@ -295,6 +285,19 @@ ans=append(ans, {Deltami_t_0, (M_i_1)*(Deltami_t_1)})
      ));     
 return ans     
      )
+
+--Computes n^{th} power of Polishchuk's operator Delta in list form, [P05, p.883]
+--Input: list of lists, each of which consists of a list representing a monomial and an integer 
+--representing the coefficient in front of that monomial: {list representing a monomial, coefficient} 
+--Output: list of lists, each of which consists of a list representing a monomial and an integer 
+--representing the coefficient in front of that monomial: {list representing a monomial, coefficient} 
+listDelta(List,ZZ) := (L,n) -> (     
+if n < 0 then error "The power of Polishchuk Delta operator must be a non-negative integer";
+if n==0 then return L;
+for i from 1 to n do L=listDelta(L);     
+return L
+)       
+
 
 --input: monomial with no w_1 term, where w_1 stands for the first
 --variable in the modelRing
@@ -310,7 +313,8 @@ monomialFourierTransformNoFirstVariable = (m) -> (
      jterm:={};
      for j from 0 to k-1 do (
 	  if j+g-k-sumni >= 0 then (
-	       jterm = monomialListDelta(L,j);
+	       jterm = listDelta({{L,1}},j);
+	       print(L,jterm);
 	       for t from 0 to #jterm-1 do (     
 		    ans=ans + (jterm_t_1)*(S_0^(j+g-k-sumni))*(1/(j+g-k-sumni)!)*(1/j!)*(listToMonomial(jterm_t_0,S)) 
 		    )
@@ -329,6 +333,22 @@ monomialFourierTransform = (m) -> (
      return polishchukD(monomialFourierTransformNoFirstVariable(m),n)     
      )
 
+{*
+monomialListFourierTransform = (L,S) -> (
+     m:=listToPolynomial(L,S);
+     return monomialFourierTransform(m)     
+     )
+*}
+
+fourierTransform = (f)-> (
+     S:=ring f;
+     mons:=flatten entries monomials f;
+     ans:=0_S;
+     for k from 0 to #mons-1 do (
+	  ans=ans+coefficient(mons_k,f)*monomialFourierTransform(mons_k)
+	  );
+     return ans
+     )
 ----------------------------------------------------------------------------------
 -- Documentation
 ----------------------------------------------------------------------------------
@@ -477,7 +497,36 @@ doc ///
      S=modelRing(5);
      polishchukD(x_1^2*x_2*x_3);
      polishchukD(x_1^2*x_2*x_3,2);
---  SeeAlso
+  SeeAlso 
+     polishchukDelta
+///
+
+doc ///
+  Key
+    polishchukDelta
+    (polishchukDelta, RingElement)
+    (polishchukDelta, RingElement, ZZ)
+  Headline
+    Polishchuk Delta operator. 
+  Usage
+    polishchukDelta(f)
+    polishchukDelta(f,n)
+  Inputs
+    f:RingElement
+        an element of a ring returned by modelRing or abelianTautologicalRing FIXME hyperlink the functions  
+    n:ZZ
+        an integer to specify the number of iterations of the Polishchuk operator to be applied
+  Outputs
+    :RingElement
+  Description
+   Text
+    Apply the Polishchuk Delta operator, see [P05] FIXME. 
+   Example
+     S=modelRing(5);
+--     polishchukDelta(x_1^2*x_2*x_3);
+--     polishchukDelta(x_1^2*x_2*x_3,2);
+  SeeAlso 
+     polishchukD
 ///
 
 
