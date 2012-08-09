@@ -209,9 +209,10 @@ net FilteredComplex := K -> (
 -- Method for looking at all of the chain subcomplexes pleasantly
 see = method();
 see FilteredComplex := K -> (
-     -- Eliminate the duplication of the homological indexes     
-     VerticalList apply(sort spots K, i -> prune K^i)
-     )
+     -- Eliminate the duplication of the homological indexes
+     for i from max K^-infinity to min K^-infinity list(
+       	  for p from min K+1 to max K list(" <-- " | net prune K^p_i)) | i)
+--          VerticalList apply(sort spots K, i -> prune K^i)     )
 
 filteredComplex = method(TypicalValue => FilteredComplex)
 
@@ -269,7 +270,7 @@ net SpectralSequence := E -> (
   then toString getAttribute(E, ReverseDictionary) 
   else net expression E)
 expression SpectralSequence := E -> stack(
-  "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ..ooOOOOOooooOO", "  \\   \\  ",
+  "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ..ooOOOooooOO", "  \\   \\  ",
   "   `~~~` ")
 
 filteredComplex SpectralSequence := FilteredComplex => E -> (
