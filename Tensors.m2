@@ -112,7 +112,7 @@ tm (Ring,List) := (R,dims) -> (
      d:=product dims;
      new TensorModule of Tensor from (
 	  new HashTable from (pairs R^d)|{
-      	       gs"factors" =>  {R^d},
+      	       gs"factors" =>  apply(dims,i->R^i),
      	       gs"dimensions" =>  dims,
 	       symbol module => R^d}
      	  )
@@ -362,9 +362,9 @@ Headline
 Description
   Text
    A tensor module is a module that is a tensor product of smaller modules, which "remembers"
-   that is is a tensor product.  Mathematically, one could define a tensor module as a module M
-   augmented with a list of other modules M_1...M_n with a choice of isomorphism between M_1**...**M_n
-   and M (in Macaulay2, this isomoprhism is implicit in that the modules are ==).
+   that it is a tensor product.  Mathematically, one could define a tensor module as a module M
+   augmented with a list of other modules M_1...M_n with a choice of isomorphism to M'=M_1**...**M_n
+   and M.  In Macaulay2, this isomoprhism is implicit in that two modules are ==).
    
   Example
    2*3

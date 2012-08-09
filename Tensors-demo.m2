@@ -1,16 +1,22 @@
 restart
 debug loadPackage("Tensors")
 R=QQ[a,b,c]
+
 --making modules of tensors:
+M'=R^3 ** R^3 ** R^4--doesn't remember it's a tensor product
 M=tensorModule(R,{3,3,4})
-N=tensorModule(R,{2,4,3})
-M_7
-M_(0,1,3)
+(class M',class M)
+M'==M--they are equal as modules, 
+not M==tensorModule(R,{4,3,4})--as a tensor module, M remembers its factors
+M.factors
+
+--let's make 
+N=tensorModule(R,{5,3})
 
 --tensor products of tensor modules
 P=M**N
 P_11
-P_(0,0,0,0,3,2)
+P_(0,0,0,3,2)
 --note it's easiest to see slice matrices
 --with the column index and the final index
 
