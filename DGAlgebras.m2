@@ -2069,7 +2069,7 @@ doc ///
   Key
     (symbol *, DGModuleMap, DGModuleMap)
   Headline
-    The composision of two DGModule maps.
+    The composition of two DGModule maps.
   Usage
     h = g * f
   Inputs
@@ -2086,7 +2086,7 @@ doc ///
   Key
     (symbol *, DGAlgebraMap, DGAlgebraMap)
   Headline
-     The composision of two DGAlgebra maps.
+     The composition of two DGAlgebra maps.
   Usage
     h = g * f
   Inputs
