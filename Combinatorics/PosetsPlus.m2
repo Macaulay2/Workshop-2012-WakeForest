@@ -29,9 +29,9 @@ if version#"VERSION" <= "1.4" then (
 needsPackage"SimpleDoc" 
 
 -- Load configurations
-posets'PDFViewer = if instance((options Posets).Configuration#"DefaultPDFViewer", String) then (options Posets).Configuration#"DefaultPDFViewer" else "open";
-posets'Precompute = if instance((options Posets).Configuration#"DefaultPrecompute", Boolean) then (options Posets).Configuration#"DefaultPrecompute" else true;
-posets'SuppressLabels = if instance((options Posets).Configuration#"DefaultSuppressLabels", Boolean) then (options Posets).Configuration#"DefaultSuppressLabels" else true;
+--posets'PDFViewer = if instance((options Posets).Configuration#"DefaultPDFViewer", String) then (options Posets).Configuration#"DefaultPDFViewer" else "open";
+--posets'Precompute = if instance((options Posets).Configuration#"DefaultPrecompute", Boolean) then (options Posets).Configuration#"DefaultPrecompute" else true;
+--posets'SuppressLabels = if instance((options Posets).Configuration#"DefaultSuppressLabels", Boolean) then (options Posets).Configuration#"DefaultSuppressLabels" else true;
 
 export {
      -- types and constructors
@@ -110,9 +110,12 @@ posetMap(Poset, Poset, HashTable) := PosetMap => (P1, P2, H) -> (
 	new PosetMap from hashTable {symbol source => P1, symbol target => P2, symbol GroundMap => H, symbol cache => new CacheTable})
 
 map(Poset,Poset,List) := PosetMap => opts -> (P1,P2,M) -> (posetMap(P1,P2,M))
---net PosetMap := f -> stack apply(keys f.GroundMap, k -> concatenate {toString k, " -> ", toString f.GroundMap#k}) | "" | "Poset map from ", f.source.cache#"name"
 net PosetMap := f -> stack (apply(keys f.GroundMap, k -> concatenate {toString k, " -> ", toString f.GroundMap#k}) | {""} 
      | {"Poset map from " | toString f.source.cache#"name" | " to " | toString f.target.cache#"name"})
+toString PosetMap := f -> "posetMap(" | toString f.source.cache#"name" | ", " | toString f.target.cache"name" | ", " | toString (
+     apply(keys(f.GroundMap), k -> toString "(" | toString k | "," | toString f.GroundMap#k | ")")) | ")"
+toExternalString PosetMap := f -> "posetMap(" | toExternalString f.source | ", " | toExternalString f.target | ", " | toString (
+     apply(keys(f.GroundMap), k -> toString "(" | toString k | "," | toString f.GroundMap#k | ")")) | ")"
 
 -- evaluating a posetMap at an element in the source poset
 eval = method()
@@ -278,8 +281,15 @@ crosscutComplex (Poset, List) := SimplicialComplex => opts -> (P, L) -> (
      )
 
 
-
-
+--------------------------------------------------
+--possum function returns union of list of posets
+--------------------------------------------------
+     
+possum := (L) -> (
+     if #L == 0 then error "expected list of posets" else
+     if #L == 1 then L_0 else fold(union, L)
+     )
+     
 
 --------------------------
 --finite atomic lattices

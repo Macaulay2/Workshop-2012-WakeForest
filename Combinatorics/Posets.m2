@@ -226,7 +226,7 @@ poset (List, List, Matrix) := Poset => opts -> (G, R, M) -> (
         symbol GroundSet => G,
         symbol Relations => toList \ R,
         symbol RelationMatrix => M,
-        symbol cache => new CacheTable from {"name" => "[unnamed Poset]"}
+        symbol cache => new CacheTable from {"name" => "unnamed Poset"}
         })
 poset (List, List) := Poset => opts -> (G, R) -> poset(G, R = toList \ R, transitiveClosure(G, R), opts)
 poset (List, Function) := Poset => opts -> (G, cmp) -> (
@@ -240,8 +240,9 @@ Poset.GlobalAssignHook = (sym, val) -> (
      val.cache#"name" = sym;
      )
      
-net Poset := p -> p.cache#"name"
-toString Poset := p -> p.cache#"name"
+net Poset := p -> (
+     if p.cache#"name" === "unnamed Poset" then "Relation matrix: " | net p.RelationMatrix else toString p.cache#"name")
+toString Poset := p -> toString p.cache#"name"
 
 Poset _ ZZ := Thing => (P, i) -> P.GroundSet#i
 Poset _ List := List => (P, L) -> P.GroundSet_L
