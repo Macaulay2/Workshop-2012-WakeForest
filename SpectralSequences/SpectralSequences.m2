@@ -49,7 +49,7 @@ export {
   "filteredComplex",
   "SpectralSequence",
   "spectralSequence",
-  "SpectralSequenceSheet"
+  "SpectralSequenceSheet",
   "see"
   }
 
