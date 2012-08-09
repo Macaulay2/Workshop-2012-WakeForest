@@ -206,7 +206,9 @@ nextPartition Partition := P -> (
 
 -- prevPartition
 -- opposite of nextPartition
--- given an integer partition of n, return the previous one
+-- given an integer partition of n, return the previous one in revlex order
+-- i.e., next one in lex order
+-- http://www.site.uottawa.ca/~ivan/F49-int-part.pdf
 prevPartition = method()
 prevPartition ZZ := n -> (
   if n < 0 then (
@@ -219,10 +221,40 @@ prevPartition ZZ := n -> (
 )
 prevPartition (Nothing) := P -> null
 prevPartition Partition := P -> (
-  -- special case to get around M2 bug: class conjugate new Partition from {}; is not Partition!!
-  if #P == 0 then return null;
-  C := nextPartition conjugate P;
-  if C === null then return null else return conjugate C;
+  if #P <= 1 then return null;
+  
+  T := tally toList P;
+  U := new MutableHashTable;
+  minpart := min keys T;
+  if T#minpart > 1 then (
+    -- collect & remove T#minpart parts 
+    -- add a part of size minpart+1
+    -- add (T#minpart - 1)*minpart-1 1's
+    for k in keys T do (
+      if k > minpart+1 then U#k = T#k;
+    );
+    
+    if T#?(minpart+1) then U#(minpart+1) = (T#(minpart+1))+1 else U#(minpart+1) = 1;
+    
+    U#1 = (T#minpart - 1)*minpart-1;
+  ) else (
+    -- collect & remove T#minpart part and T#secondminpart parts
+    -- add a part of size secondminpart+1
+    -- add (T#minpart)*minpart+(T#secondminpart-1)*secondminpart-1 1's
+    secondminpart := (sort(keys T))#1;
+    for k in keys T do (
+      if k > secondminpart+1 then U#k = T#k;
+    );
+    
+    if T#?(secondminpart+1) then U#(secondminpart+1) = (T#(secondminpart+1))+1 else U#(secondminpart+1) = 1;
+    
+    U#1 = (T#minpart)*minpart+(T#secondminpart-1)*secondminpart-1;
+  );
+  return partitionFromTally U;
+)
+
+partitionFromTally = (T) -> (
+  new Partition from rsort flatten apply(keys T, k -> toList(T#k:k))
 )
 
 
