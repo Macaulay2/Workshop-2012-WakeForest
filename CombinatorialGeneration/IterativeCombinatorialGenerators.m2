@@ -50,13 +50,18 @@ export {
 -- and adapted for Macaulay2 by Zach Teitler.
 nextSubset = method(Options=>{Size=>null})
 nextSubset ZZ := o -> (n) -> (
-  if o.Size === null then return {}
+  if o.Size === null or o.Size == 0 then return {}
   else if o.Size <= n then return new List from (0..(o.Size-1))
   else return null;
 )
 nextSubset (ZZ,Nothing) := o -> (n,P) -> null
 nextSubset (ZZ,List) := o -> (n,P) -> (
-  if ((o.Size =!= null) and (o.Size != #P)) then error "current subset not the expected size";
+  if (o.Size =!= null) and (o.Size != #P) then
+    if (n >= 0 and o.Size >= 0) then (
+      error "current subset not the expected size";
+    ) else ( -- n < 0 or o.Size < 0
+      return null;
+    );
   
   if o.Size =!= null then (
     -- Last one?
@@ -77,7 +82,7 @@ nextSubset (ZZ,List) := o -> (n,P) -> (
     -- generate in binary counting order.
     
     index := sum(P, i -> 2^i) + 1;
-    if ( index == 2^n ) then (
+    if ( index >= 2^n ) then (
       return null;
     ) else (
       return (for i from 0 to n-1 list if (2^i & index != 0) then i else continue);
@@ -90,16 +95,23 @@ nextSubset (ZZ,List) := o -> (n,P) -> (
 -- given a subset of {0..n-1}, return the previous one
 prevSubset = method(Options=>{Size=>null})
 prevSubset ZZ := o -> (n) -> (
-  if o.Size === null then return new List from (0..(n-1))
+  if o.Size === null or o.Size == 0 then return new List from (0..(n-1))
   else if o.Size <= n then return new List from ((n-o.Size)..(n-1))
   else return null;
 )
 prevSubset (ZZ,Nothing) := o -> (n,P) -> null
 prevSubset (ZZ,List) := o -> (n,P) -> (
+  if (o.Size =!= null) and (o.Size != #P) then
+    if (n >= 0 and o.Size >= 0) then (
+      error "current subset not the expected size";
+    ) else ( -- n < 0 or o.Size < 0
+      return null;
+    );
+  
   if o.Size =!= null then (
     -- Find the position to change
     p := 0;
-    while ( p < #P-1 and P#p == p ) do p = p+1;
+    while ( p <= #P-1 and P#p == p ) do p = p+1;
     if ( p == #P ) then return null;
     P = replace(p,(P#p)-1,P);
     while ( (p=p-1) >= 0 ) do P = replace(p,(P#(p+1))-1,P);
@@ -489,13 +501,10 @@ document {
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
+{*
   nextSubset,
   prevSubset,
-  nextPartition,
-  prevPartition,
-  nextPermutation,
-  prevPermutation,
-  Size
+*}
 
 TEST ///
   needsPackage("IterativeCombinatorialGenerators");
@@ -505,8 +514,12 @@ TEST ///
   assert( S == {0} );
   S = nextSubset(5,{0,1,2,3,4});
   assert( S === null );
-  
-  for n from 5 to 12 do (
+  S = nextSubset(5,S);
+  assert( S === null );
+///
+
+TEST ///
+  for n from -1 to 12 do (
     S = nextSubset(n);
     subsetList = {};
     while ( S =!= null ) do (
@@ -515,9 +528,11 @@ TEST ///
     );
     assert( subsetList === subsets(n) );
   );
-  
-  for n from 5 to 12 do (
-    for k from 0 to n do (
+///
+
+TEST ///  
+  for n from -1 to 12 do (
+    for k from -1 to n+1 do (
       S = nextSubset(n,Size=>k);
       subsetList = {};
       while ( S =!= null ) do (
@@ -527,8 +542,105 @@ TEST ///
       assert( subsetList === subsets(n,k) );
     );
   );
-
 ///
+
+
+
+
+TEST ///
+  needsPackage("IterativeCombinatorialGenerators");
+  S = prevSubset(5);
+  assert( S == {0,1,2,3,4} );
+  S = prevSubset(5,S);
+  assert( S == {1,2,3,4} );
+  S = prevSubset(5,{});
+  assert( S === null );
+  S = prevSubset(5,S);
+  assert( S === null );
+///
+
+TEST ///
+  for n from -1 to 12 do (
+    S = prevSubset(n);
+    subsetList = {};
+    while ( S =!= null ) do (
+      subsetList = append(subsetList,S);
+      S = prevSubset(n,S);
+    );
+    assert( subsetList === reverse subsets(n) );
+  );
+///
+
+TEST ///  
+  for n from -1 to 12 do (
+    for k from -1 to n+1 do (
+      S = prevSubset(n,Size=>k);
+      subsetList = {};
+      while ( S =!= null ) do (
+        subsetList = append(subsetList,S);
+        S = prevSubset(n,S,Size=>k);
+      );
+      assert( subsetList === reverse subsets(n,k) );
+    );
+  );
+///
+
+{*
+  nextPartition,
+  prevPartition,
+*}
+
+TEST ///
+  needsPackage("IterativeCombinatorialGenerators");
+  S = nextPartition(5);
+  assert( S === new Partition from {5} );
+  S = nextPartition(S);
+  assert( S === new Partition from {4,1} );
+  S = nextPartition(new Partition from {1,1,1,1,1});
+  assert( S === null );
+  S = nextPartition(S);
+  assert( S === null );
+///
+
+TEST ///
+  for n from -1 to 12 do (
+    S = nextPartition(n);
+    partitionList = {};
+    while ( S =!= null ) do (
+      partitionList = append(partitionList,S);
+      S = nextPartition(S);
+    );
+    assert( partitionList === partitions(n) );
+  );
+///
+
+TEST ///  
+  for n from -1 to 12 do (
+    for k from -1 to n+1 do (
+      S = nextPartition(n,k);
+      partitionList = {};
+      while ( S =!= null ) do (
+        partitionList = append(partitionList,S);
+        S = nextPartition(n,S);
+      );
+      assert( partitionList === partitions(n,k) );
+    );
+  );
+///
+
+
+{*
+ nextPermutation,
+  prevPermutation,
+*}
+
 
 end
 
+--------------------------------------------------------------------------------
+
+
+restart
+loadPackage "IterativeCombinatorialGenerators"
+check oo
+installPackage oo
