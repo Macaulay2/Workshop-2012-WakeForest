@@ -190,11 +190,11 @@ TensorArray_Sequence:=(N,s) -> (
      l
      )
 -----
-dimensions=method()
+tensorDimensions=method()
 --This method assumes the tensor array is rectangular,
 --which will be tested when the array is built
 --with tensorArray()
-dimensions TensorArray := L -> (d:={};
+tensorDimensions TensorArray := L -> (d:={};
      while instance(L,TensorArray) do (d=d|{#L},L=L_0);
      return d)
 ---
@@ -256,7 +256,7 @@ tensorArrayComposition (List,List,List) := (tensors,indicesByTensor,summationInd
      indexLocations:= i -> indicesByTensor/(j->positions(j,k->k===i));
      outputIndices:=toList(((allIndices - (set summationIndices)))-(set ZZindices));
      tensorsWithIndex:= i -> positions(indexLocations i,j->not j==={});
-     dimTensorAtIndex:=(t,l)->(dimensions(tensors_t))_l;
+     dimTensorAtIndex:=(t,l)->(tensorDimensions(tensors_t))_l;
      variableIndices:=allIndices-set(ZZindices);
      --check dimensions match
      for i in variableIndices do (
@@ -296,7 +296,7 @@ einsteinSummation (List,List) := (tensors,indicesByTensor) -> (
      indexRange:= i -> (
      	  t:= first tensorsWithIndex i;
      	  l:= first (indexLocations i)_t;
-     	  return (dimensions(tensors_t))_l);
+     	  return (tensorDimensions(tensors_t))_l);
      TemporaryTensorList=tensors;
      TemporaryIndexList=indicesByTensor;
      sumCommand:=concatenate for r in repeatedIndices list "sum for i"|toString(r)|" in 0..<"|toString(indexRange r)|" list ";

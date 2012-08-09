@@ -39,7 +39,7 @@ newPackage(
 
 --consider eliminating TensorArrays?
 
-export{TensorArray, tensorArray, dimensions,
+export{TensorArray, tensorArray, tensorDimensions,
      tensorArrayContraction,einsteinSummation,
      Tensor,TensorModule,
      tensor',tensorModule}
@@ -90,8 +90,10 @@ module Module := identity
 ------
 --Using dimensions method previously defined for
 --TensorArrays now for...
-dimensions Module := M -> numgens M
-dimensions TensorModule := M -> M#(gs"dimensions")
+if not class tensorDimensions === MethodFunction then (
+     tensorDimensions = method())
+tensorDimensions Module := M -> {numgens M}
+tensorDimensions TensorModule := M -> M#(gs"dimensions")
 
 --Printing TensorModules:
 TensorModule.synonym="tensor module"
@@ -107,14 +109,8 @@ TensorModule#{Standard,AfterPrint} = M -> (
      << endl;
      )
 -------------------------------------
---Method for building tensor modules:
+--Building tensor modules:
 -------------------------------------
-
---Copy an ImmutableHashTable with a CacheTable:
-cacheCopy = method()
-cacheCopy Thing := M -> hashTable ((pairs M)|{symbol cache => new CacheTable from M.cache})
-symbol module
---Build tensor modules:
 tm=tensorModule = method()
 
 --make a free module into a tensor module:
@@ -127,7 +123,6 @@ tm (Ring,List) := (R,dims) -> (
 	       symbol module => R^d}
      	  )
      )
-
 
 --make a possibly non-free module into an order 1 tensor module, 
 --for tensoring with other such modules to build higher-order
@@ -167,12 +162,12 @@ tensorModuleFactors=method()
 tmf TensorModule := T -> T#(gs"factors")
 tmf Module := M -> {M}
 
-dimensions Tensor := t -> dimensions tm t
+tensorDimensions Tensor := t -> tensorDimensions tm t
 --Tensor module from a list of modules to tensor product,
 --which themselves may be tensor modules
 tm List := (fctrs) -> (
      assertClasses(fctrs,Module,"tensorModule(List)");
-     dims:=flatten(fctrs/dimensions);
+     dims:=flatten(fctrs/tensorDimensions);
      f:=flatten(fctrs/tmf);
      M:=fold(fctrs/module,(i,j)->i**j);
       new TensorModule of Tensor from (
@@ -199,11 +194,11 @@ TensorModule**TensorModule := (M,N) -> tm{M,N}
 --Conversions between Tensors and TensorArrays
 ----------------------------------------------
 ------MINIMIZE DEPENDENCE ON TENSOR ARRAYS
-------
+----------------------------------------------
 tensor' = method()
 tensor' (List,TensorModule) := (L,M) -> (
      a:=tensorArray L;
-     if not dimensions a == dimensions M then error "tensor' (List,TensorModule): dimension mismatch";
+     if not tensorDimensions a == tensorDimensions M then error "tensor' (List,TensorModule): dimension mismatch";
      t:=new M from vector ultimate(flatten,L);
      TensorArray.cache#t = a;
      Tensor.cache#a = t;
@@ -212,7 +207,7 @@ tensor' (List,TensorModule) := (L,M) -> (
 
 tensor' (TensorArray,TensorModule) := (L,M) -> (
      a:=tensorArray L;
-     if not dimensions a == dimensions M then error "tensor' (List,TensorModule): dimension mismatch";
+     if not tensorDimensions a == tensorDimensions M then error "tensor' (List,TensorModule): dimension mismatch";
      t:=new M from vector ultimate(flatten,L);
      TensorArray.cache#t = a;
      Tensor.cache#a = t;
@@ -221,7 +216,7 @@ tensor' (TensorArray,TensorModule) := (L,M) -> (
 
 tensor' TensorArray := a -> (
      if Tensor.cache#?a then return Tensor.cache#a;     
-     dims:=dimensions a;
+     dims:=tensorDimensions a;
      f:=ultimate(flatten,a);
      R:=commonRing f;
      M:=tensorModule(R,dims);
@@ -239,7 +234,7 @@ tensor' List := L -> tensor' tensorArray L;
 ------
 tensorArray Tensor := t -> (
      if TensorArray.cache#?t then return TensorArray.cache#t;
-     a := new TensorArray from rnl (dimensions t,entries t);
+     a := new TensorArray from rnl (tensorDimensions t,entries t);
      TensorArray.cache#t = a;
 --     Tensor.cache#a = t; the array does not retain the base ring!
      a
@@ -293,7 +288,12 @@ h=new MutableHashTable
 h#M=1
 h#N==1--unfortunately
 ///
-M=
+
+---------------------
+--Load part 3
+---------------------
+load "./tensors/indexedtensors.m2"
+
 --
 beginDocumentation()
 {*     doc ///
@@ -343,7 +343,20 @@ Caveat
 ///
 
 TEST  ///
-assert(1 === 1)
+T=tm(R,{3,3});
+T.factors
+t=T_0
+T**T
+module t
+vector t
+t+t
+t**t
+t+t
+a=ta t
+tac({{a,i,j},{a,i,k},{a,i,l}},{i})
+T=tm(t**t**t)
+T.factors
+
 ///
 end
 
@@ -351,3 +364,5 @@ restart
 uninstallPackage"Tensors"
 installPackage"Tensors"
 viewHelp"Tensors"
+restart
+debug loadPackage"Tensors"

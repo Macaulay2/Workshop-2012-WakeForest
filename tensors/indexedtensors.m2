@@ -1,3 +1,8 @@
+----------------------------
+--Part 3: Indexed Tensors
+--should only depend on part 2
+----------------------------
+needsPackage"Tensors"
 IndexedTensor = new Type of HashTable
 subscriptFormat :=method()
 subscriptFormat List := inds -> toString(inds_0)|concatenate(
@@ -21,7 +26,7 @@ IndexedTensor#{Standard,AfterPrint} = T -> (
      t:= T#(gs"tensor");
      << concatenate(interpreterDepth:"o") << lineNumber << " : "
      << ring t
-     << "-IndexedTensor of order "|toString(#dimensions t)|
-     ", dimensions "|toString(dimensions t);
+     << "-IndexedTensor of order "|toString(#tensorDimensions t)|
+     ", dimensions "|toString(tensorDimensions t);
      << endl;
      )
