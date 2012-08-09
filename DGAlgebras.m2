@@ -1873,7 +1873,7 @@ doc ///
     M:Matrix 
   Outputs
     V:DGModule
-      The DG module with the differential now set.
+      the DG module with the differential now set.
   Description
     Example
       Q = QQ[x]
@@ -2796,6 +2796,7 @@ doc ///
   Key
     dgModuleMap
     (dgModuleMap,DGModule,DGModule,Matrix)
+    (isWellDefined,DGModuleMap)
   Headline
     Define a DG module map between DG modules.
   Usage
@@ -2819,7 +2820,10 @@ doc ///
       V = semifreeDGModule(K,{{0,0},{1,1},{2,3}})
       setDiff(V,sub(matrix{{0,x,-T_1},{0,0,x^2},{0,0,0}}, K.natural))
       f = dgModuleMap(V,U,sub(matrix{{1,0,0},{0,x,0},{0,0,1}},K.natural))
-
+    Text
+      We may also check that the DG module map is well defined.
+    Example
+      isWellDefined f
 ///
 
 doc ///
