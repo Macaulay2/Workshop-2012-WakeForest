@@ -377,7 +377,7 @@ end
 restart
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
-viewHelp SpectralSequences
+--viewHelp SpectralSequences
 
 restart
 needsPackage "SpectralSequences";
