@@ -428,9 +428,9 @@ latticePoints Polyhedron := opts -> P -> (
 			      A := matrix drop((entries id_(QQ^n)),{pos,pos});
 			      apply(latticePointsRec affineImage(A,NP),v -> v^{0..(pos-1)} || matrix p || v^{pos..(n-2)})))));
 	  -- Checking if the polytope is just a point
-	  if dim P == 0 then P#"LatticePoints" = if liftable(vertices P,ZZ) then transpose lift(vertices P,ZZ) else map(ZZ^0,ZZ^(ambDim P,0))
+	  if dim P == 0 then P#"LatticePoints" = if liftable(vertices P,ZZ) then homPoints transpose lift(vertices P,ZZ) else map(ZZ^0,ZZ^(ambDim P,0))
 	  -- Checking if the polytope is full dimensional
-	  else if (dim P == ambDim P) then P#"LatticePoints" = transpose matrix {latticePointsRec P}
+	  else if (dim P == ambDim P) then P#"LatticePoints" = homPoints transpose matrix {latticePointsRec P}
 	  -- If not checking first if the affine hull of P contains lattice points at all and if so projecting the polytope down
 	  -- so that it becomes full dimensional with a map that keeps the lattice
 	  else (
@@ -450,12 +450,12 @@ latticePoints Polyhedron := opts -> P -> (
 			      w = transpose matrix{apply(w,first) | toList(numColumns M1 - numRows M1:0)};
 			      Rmatrix * w)));
 	       -- If there is no lattice point in the affine hull then P has none
-	       if b === null then P#"LatticePoints" = map(ZZ^0,ZZ^(ambDim P),0)
+	       if b === null then P#"LatticePoints" = homPoints map(ZZ^0,ZZ^(ambDim P),0)
 	       else (
 		    A := gens ker substitute(M,ZZ);
 		    -- Project the translated polytope, compute the lattice points and map them back
-		    P#"LatticePoints" = transpose matrix apply(latticePoints affinePreimage(A,P,b),e -> substitute(A*e + b,ZZ))))));
-     apply(numRows P#"LatticePoints",i->(transpose P#"LatticePoints")_{i})
+		    P#"LatticePoints" = homPoints transpose matrix apply(latticePoints affinePreimage(A,P,b),e -> substitute(A*e + b,ZZ))))));
+     apply(numRows dehom P#"LatticePoints",i->(transpose dehom P#"LatticePoints")_{i})
      )
 
 
