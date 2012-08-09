@@ -374,17 +374,19 @@ viewHelp SpectralSequences
 restart
 needsPackage "SpectralSequences";
 debug SpectralSequences;
-vS = QQ[x,y,z];
-I = ideal vars S;
-F = res I;
-G = res (I^2/I^4);
-FF=filteredComplex F;
-K=F**FF;
-see FF
-see K
-spectralSequence(K)
-keys E_0
-v
+R = QQ[x,y,z]
+M = R^1/ideal(x^2,y^2,z^2)
+S = R/(x-y)
+N = S^1 /ideal(x^3,x*y^2,y^3)
+F = res M
+G = F ** S
+H = res N
+E = spectralSequence ((filteredComplex G) ** H)
+Ei = E_infinity
+support Ei
+
+
+
 spots K
 VerticalList apply(sort spots K, i -> prune K^i)
 phi=F**inducedMap(FF,1);
