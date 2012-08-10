@@ -56,6 +56,12 @@ makeUnsymmetric = L ->(
      product apply(#Dets, i -> maps_i(Dets_i))
      )
 
+buildOutputRing = (L, v) -> (
+     T := prods dims L;
+     H := apply(keys T, i -> apply(T#i, j -> (getSymbol v)_(toSequence j)));
+     (QQ(monoid[toList set(flatten H)]), H)
+     )
+
 unfactor = (L, F, v, b) -> (
      -- L is a nested list giving filled tableau corresponding to the
      -- output, F, of makeUnsymmetric.  
@@ -73,36 +79,35 @@ unfactor = (L, F, v, b) -> (
      --- indices in the product.  
      if b === "randomEval" then (
 	  tmp := F;
+	  print("the number of terms we're about to work with", #terms(tmp));
 	  for h in H do tmp = sum for u in h list (u#1*contract(u#0,tmp));
 	  tmp
 	  )
-     else if class b === List then (
+     else (
 	  Hring := QQ[toList set((flatten H)/last)];
-	  uberRing := Fring**Hring;
-	  G1 := map(uberRing, Fring);  --- G1, G2 map to the big ring and
-	  bRing := ring b#0;
-	  G2 := map(uberRing, bRing);
-	  G3 := map(bRing, Hring, b);
-	  H = applyTable(H, i-> {G1 i#0, G2 (G3 value i#1)});
-	  tmp = G1 F;
-	  for h in H do tmp = sum for u in h list ((value u#1)*contract(u#0,tmp));
-	  mapList := join(apply(#gens Fring, i -> 0), gens Hring);
-	  G4 := map(Hring, uberRing, mapList);
-     	  G4 tmp
-	  )
-     else(
-	  Hring = QQ[toList set((flatten H)/last)];
-     	  uberRing = Fring**Hring;
-     	  --- Ring of all the vars from the dets and the new vars.  
-     	  G1 = map(uberRing, Fring);  --- G1, G2 map to the big ring and
-     	  G2 = map(uberRing, Hring); 
-     	  H = applyTable(H, i-> {G1 i#0, G2 value i#1});
-     	  tmp = G1 F; print("the number of terms we're about to work with", #terms(tmp));
-	  for h in H do tmp = sum for u in h list ((value u#1)*contract(u#0,tmp));
-     	  mapList = join(apply(#gens Fring, i -> 0), gens Hring);
-     	  G3 = map(Hring, uberRing, mapList);
-     	  G3 tmp)
-     )
+	  uberRing := Fring**Hring;   --- Ring of all the vars from the dets and the new vars.  
+	  G1 := map(uberRing, Fring);  --- G1, G2 map to the big ring and	 	  
+	  if class b === List then (
+	       bRing := ring b#0;
+	        G2 := map(uberRing, bRing);
+	  	G3 := map(bRing, Hring, b);
+	  	H = applyTable(H, i-> {G1 i#0, G2 (G3 value i#1)});
+	  	tmp = G1 F;
+		print("the number of terms we're about to work with", #terms(tmp));
+	  	for h in H do tmp = sum for u in h list ((value u#1)*contract(u#0,tmp));
+		)
+     	   else(
+	  	G2 = map(uberRing, Hring); 
+     	  	H = applyTable(H, i-> {G1 i#0, G2 value i#1});
+     	  	tmp = G1 F; 
+		print("the number of terms we're about to work with", #terms(tmp));
+	  	for h in H do tmp = sum for u in h list ((value u#1)*contract(u#0,tmp));
+     	  	);
+     	   mapList := join(apply(#gens Fring, i -> 0), gens Hring);
+	   G4 := map(Hring, uberRing, mapList);
+	   G4 tmp
+     	   )
+      )
 
 
 
