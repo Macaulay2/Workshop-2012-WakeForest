@@ -568,19 +568,25 @@ document {
     (prevPermutation, ZZ),
   },
   Headline => "Generate the previous permutation",
-  Usage => "prevPermutation(P) or prevPermutation(n)",
-  Inputs => {
-    "P" => List => "a permutation of {0,...,n-1}"
-  },
-  Outputs => {
-    List => {}
-  },
-  "Given a permutation of {0,...,n-1}, ",
-  "returns the previous permutation if there is one, ",
-  "or null otherwise. ",
-  "It starts at the antiordered permutation {n-1,...,0} ",
-  "and ends at the ordered permutation {0,...,n-1}. ",
-  
+  SYNOPSIS (
+       Usage => "prevPermutation P",
+       Inputs => {
+    	    "P" => List => "a permutation of {0,...,n-1}, for some n"
+  	    },
+       Outputs => {
+    	    List => {"the previous permutation of {0,...,n-1}, or ", TO "null", ", if there is none, which is
+		 the case if ", TT "P", " is {0,...,n-1}"}
+  	    }
+       ),
+  SYNOPSIS (
+       Usage => "prevPermutation n",
+       Inputs => {
+    	    "n" => List => {"the last permutation of {0,...,n-1}, which is {n-1,...,0}"}
+  	    },
+       Outputs => {
+    	    List => {}
+  	    }
+       ),
   EXAMPLE lines ///
     P = prevPermutation 5
     P = prevPermutation P
