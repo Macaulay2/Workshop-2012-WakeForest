@@ -305,14 +305,7 @@ pageB := (r, F,p,q) -> (
 
 pageE := (r, F,p,q) -> (
      if r < 1 then F^p_(-p-q)/F^(p+1)_(-p-q) else 
-     if r == 1 then (
-	  C:= chainComplex F;
-	  M:= F^p_(-p-q);
-	  d:= C.dd_(-p-q);
-	  N:= invSubmodule (d,F^(p+r)_(-p-q-1));
-	  MQ:= intersect(M, N) + F^(p+1)_(-p-q);
-	  NQ:= image inducedMap(target C.dd_(-p-q+1), F^p_(-p-q+1),C.dd_(-p-q+1)) + F^(p+1)_(-p-q);
-	  MQ/NQ)
+     if r == 1 then ker F^p.dd_(-p-q) / image F^p.dd_(1-p-q)
      else pageZ(r,F,p,q)/pageB(r,F,p,q))
 
 SpectralSequenceSheet = new Type of MutableHashTable
@@ -343,12 +336,9 @@ SpectralSequenceSheet == SpectralSequenceSheet := Boolean => (E,F) ->
   all(keys E, i-> F#?i and E#i == F#i)
      
 changeofRing = method ();
-changeofRing (Module,Module,RingMap):= SpectralSequence => (M,N,f) -> (
-     S:= source f;
-     T:= target f;
-     F:= res M;
-     G:= filteredComplex (F ** T);
-     (spectralSequence (G ** res N))_infinity)
+changeofRing (Module,Module):= SpectralSequence => (M,N) -> 
+     spectralSequence ((filteredComplex ((res M) ** ring N)) ** (res N))
+
      
 
 load "Doc/SpectralSequencesDoc.m2"
@@ -366,11 +356,13 @@ debug SpectralSequences;
 R = QQ[x,y,z]
 M = R^1/ideal(vars R)
 F = res M
+G = (filteredComplex F) ** F
 E = spectralSequence ((filteredComplex F) ** F)
 netList support E_1 
 netList support E_infinity
 S = R/(x^2-y^2)
 N = S^1 /ideal(x^3,x*y^2,y^3)
+E = changeofRing(M,N)
 F = res M
 see filteredComplex F
 lim = 10
