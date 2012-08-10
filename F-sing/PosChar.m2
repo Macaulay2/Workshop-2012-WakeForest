@@ -39,7 +39,7 @@ export{"basePExp",
      "multiDegree",
      "dCalculation",
      "calculateEpsilon"
-     }
+}
 --This file has "finished" functions from the Macaulay2 workshop at Wake Forest
 --August 2012.  Sara Malec, Karl Schwede and Emily Witt contributed to it.
 --Some functions, are based on code written by Eric Canton and Moty Katzman
@@ -702,30 +702,37 @@ threshInt = (f,e,t,b,t1)-> (
 ---f-pure threshold estimation
 ---e is the max depth to search in
 ---finalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
-FPTEst={finalCheck=> true} >> o -> (ff,ee)->(
+FPTEst={finalCheck=> true, Verbose=> false} >> o -> (ff,ee)->(
      --error "help";
-     if (isDiagonal(ff)==true) then (diagonalFPT(ff))
-     else if (isBinomial(ff)==true) then (binomialFPT(ff))
+     if (isDiagonal(ff)==true) then ( if (o.Verbose==true) then print "Polynomial is diagonal."; diagonalFPT(ff))
+     else if (isBinomial(ff)==true) then ( if  (o.Verbose==true) then print "Polynomial is binomial.";binomialFPT(ff))
      else
      (
      	  pp:=char ring ff;
      	  nn:=nu(ff,ee);
+	  if  (o.Verbose==true) then print "nu's have been computed";
 --	  if nn==0 then "Please pick a bigger integer 'e.'"
        	  if nn==0 then {0,1/pp}
      	  --error "help more";
-     	  else if (isFRegularPoly(ff,(nn/(pp^ee-1)))==false) then nn/(pp^ee-1)
+     	  else if (isFRegularPoly(ff,(nn/(pp^ee-1)))==false) then ( if  (o.Verbose==true) then print "Found answer via nu/(p^e-1)."; nn/(pp^ee-1)) 
      	  else 
 	  (
+	        if  (o.Verbose==true) then print "nu/(p^e - 1) is not the fpt.";
 	       --error "help most";
 	       ak:=threshInt(ff,ee,(nn-1)/pp^ee,fSig(ff,nn-1,ee),nn); 
+	       if  (o.Verbose==true) then print "Computed F-signatures.";
 	       --  if (DEBUG == true) then error "help mostest";
-	       if ( (nn+1)/pp^ee == (ak#1) ) then (ak#1)
+	       if ( (nn+1)/pp^ee == (ak#1) ) then (if  (o.Verbose==true) then print "Slope crosses at max nu."; ak#1)
 	       else if (o.finalCheck == true) then 
 	       ( 
-	       	    if ((isFRegularPoly(ff,(ak#1) )) ==false ) then ( (ak#1) )
-	       	    else {(ak#1),(nn+1)/pp^ee} 
+		    if  (o.Verbose==true) then print "Starting finalCheck.";
+	       	    if ((isFRegularPoly(ff,(ak#1) )) ==false ) then ( if  (o.Verbose==true) then print "finalCheck successful"; (ak#1) )
+	       	    else ( if  (o.Verbose==true) then print "finalCheck didn't find the fpt."; {(ak#1),(nn+1)/pp^ee})
 	       )
-	  else {(ak#1),(nn+1)/pp^ee}
+	       else (
+		    if  (o.Verbose==true) then print "finalCheck not run.";
+		    {(ak#1),(nn+1)/pp^ee}
+	       )
      	  )
      )
 )
@@ -897,15 +904,16 @@ doc ///
 ///
 doc ///
      Key
-     	 [FPTEst,finalCheck]
+     	 [FPTEst,finalCheck,Verbose]
      Headline
-         Atempts to compute the F-pure threshold, where e is the max depth to search in
+         Atempts to compute the F-pure threshold, where e is the max depth to search in.  If finalCheck is false, then a last time consuming check won't be tried.  If it is true, it will be.  Verbose set to true displays verbose output.
      Usage
-     	  FPTEst(f,e,finalCheck=>V)
+     	  FPTEst(f,e,finalCheck=>V,Verbose=>W)
      Inputs
      	 f:RingElement
          e:ZZ
 	 V:Boolean
+	 W:Boolean
      Outputs
         L:List
 	Q:QQ
