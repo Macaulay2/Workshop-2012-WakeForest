@@ -329,8 +329,8 @@ net YoungDiagram := D -> netList({apply(toList D, c->stack apply(c, e->net "."))
   Boxes=>false);
 
 conjugate YoungDiagram := D ->
-  new YoungDiagram from apply(0..<#(D#0), i -> (
-    # select( D , r -> r >= i )
+  new YoungDiagram from apply(0..<(D#0), i -> (
+    # select( D , r -> r > i )
   ))
 
 
@@ -426,12 +426,8 @@ prevStandardTableau(Filling) := T -> (
     );
   );
 )
-prevStandardTableau(YoungDiagram) := D -> (
-  n := sum toList D;
-  perm := prevPermutation n;
-  T := fillingFromPermutation(D,perm);
-  if ( isStandardTableau(T) ) then return T else return prevStandardTableau T;
-)
+prevStandardTableau(YoungDiagram) := D ->
+  conjugate(nextStandardTableau(conjugate D))
 prevStandardTableau(Partition) := 
 prevStandardTableau(List) := L ->
   prevStandardTableau new YoungDiagram from L
