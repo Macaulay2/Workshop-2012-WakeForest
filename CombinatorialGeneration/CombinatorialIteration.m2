@@ -1,7 +1,7 @@
 -- -*- coding: utf-8 -*-
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
--- ITERATIVE COMBINATORIAL GENERATORS ------------------------------------------
+-- COMBINATORIAL ITERATION -----------------------------------------------------
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
@@ -28,11 +28,18 @@ newPackage(
 export {
   nextSubset,
   prevSubset,
+  Size,
   nextPartition,
   prevPartition,
   nextPermutation,
   prevPermutation,
-  Size
+  Filling,
+  shape,
+  isStandardTableau,
+  nextStandardTableau,
+  prevStandardTableau,
+  collectIterations,
+  CollectInitializer
   }
 
 
@@ -64,7 +71,7 @@ nextSubset ZZ := o -> (n) -> (
   else if n == 0 or o.Size > n or o.Size < 0 then return null
   else return new List from (0..(o.Size-1));
 )
-nextSubset (ZZ,Nothing) := o -> (n,P) -> null
+nextSubset (ZZ,Nothing) := o -> (n,P) -> nextSubset(n,Size=>o.Size)
 nextSubset (ZZ,List) := o -> (n,P) -> (
   if (o.Size =!= null) and (o.Size != #P) then
     if (n >= 0 and o.Size >= 0) then (
@@ -110,7 +117,7 @@ prevSubset ZZ := o -> (n) -> (
   else if n == 0 or o.Size > n or o.Size < 0 then return null
   else return new List from ((n-o.Size)..(n-1));
 )
-prevSubset (ZZ,Nothing) := o -> (n,P) -> null
+prevSubset (ZZ,Nothing) := o -> (n,P) -> prevSubset(n,Size=>o.Size)
 prevSubset (ZZ,List) := o -> (n,P) -> (
   if (o.Size =!= null) and (o.Size != #P) then
     if (n >= 0 and o.Size >= 0) then (
@@ -315,6 +322,124 @@ prevPermutation List := P -> (
 
 
 
+
+Filling = new Type of BasicList
+
+net Filling := T -> netList {apply(toList T, c->stack apply(c, e->net e))};
+
+conjugate Filling := (T) -> (
+  a := #T#0;
+  new Filling from apply(0..a-1, i -> (
+    -- the i th element of each list (until length is too big)
+    for j from 0 to #T-1 when #T#j > i list T#j#i
+  ))
+)
+
+Filling _ List := (T,l) -> new Filling from (toList T)_l
+
+Filling ^ List := (T,l) -> new Filling from (toList conjugate T)_l
+
+shape = method();
+shape Filling := T -> new Partition from apply(toList T, i -> #i)
+
+isIncreasing = L -> all(#L-1, i -> (L#i < L#(i+1)))
+
+isNonDecreasing = L -> all(#L-1, i -> (L#i <= L#(i+1)))
+
+isDecreasing = L -> all(#L-1, i -> (L#i > L#(i+1)))
+
+isNonIncreasing = L -> all(#L-1, i -> (L#i >= L#(i+1)))
+
+isStandardTableau = L -> (
+  return (
+    all(L,c -> isIncreasing c) and
+    all(conjugate L, r -> isIncreasing r)
+  )
+)
+
+fillingFromPermutation = (shape,perm) -> (
+  L := {};
+  for c in shape do (
+    L = append(L,take(perm,c));
+    perm = drop(perm,c);
+  );
+  return new Filling from L;
+)
+
+permutationFromFilling = T -> flatten toList T
+
+nextStandardTableau = method()
+nextStandardTableau(Filling) := (T) -> (
+  P := permutationFromFilling(T);
+  s := shape T;
+  while (true) do (
+    P = nextPermutation(P);
+    if ( P === null ) then
+    (
+      return null;
+    )
+    else
+    (
+      T = fillingFromPermutation(s,P);
+      if ( isStandardTableau(T) ) then return T;
+    );
+  );
+)
+nextStandardTableau(Partition) := P -> (
+  n := sum toList P;
+  perm := nextPermutation n;
+  return fillingFromPermutation(P,perm);
+)
+nextStandardTableau(List) := L ->
+  nextStandardTableau new Partition from L
+
+
+prevStandardTableau = method()
+prevStandardTableau(Filling) := T -> (
+  P := permutationFromFilling(T);
+  s := shape T;
+  while (true) do (
+    P = prevPermutation(P);
+    if ( P === null ) then
+    (
+      return null;
+    )
+    else
+    (
+      T = fillingFromPermutation(s,P);
+      if ( isStandardTableau(T) ) then return T;
+    );
+  );
+)
+prevStandardTableau(Partition) := P -> (
+  n := sum toList P;
+  perm := prevPermutation n;
+  return fillingFromPermutation(P,perm);
+)
+prevStandardTableau(List) := L ->
+  prevStandardTableau new Partition from L
+
+
+
+collectIterations = method( Options => {LengthLimit => 10000, CollectInitializer => false} )
+collectIterations(Function,Thing) := o -> (f,initializer) -> (
+  local l;
+  if o.CollectInitializer then l = 1 else l = 0;
+  t := f initializer;
+  L :=
+    while ( t =!= null and l < o.LengthLimit ) list (
+      if t =!= null then t
+    ) do (
+      l = l + 1;
+      t = f t;
+    );
+  if o.CollectInitializer then L = prepend(initializer,L);
+  return L;
+)
+collectIterations(Function) := o -> f ->
+  collectIterations(f, null, LengthLimit=>o.LengthLimit, CollectInitializer=>false)
+  
+
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- DOCUMENTATION ---------------------------------------------------------------
@@ -324,9 +449,9 @@ prevPermutation List := P -> (
 beginDocumentation()
 
 document {
-  Key => { IterativeCombinatorialGenerators },
+  Key => { CombinatorialIteration },
   Headline => "Iterative generators for combinatorial objects",
-  PARA { EM "IterativeCombinatorialGenerators", " is a package for ",
+  PARA { EM "CombinatorialIteration", " is a package for ",
   "generating combinatorial objects including partitions, permutations, ",
   "and subsets. Objects are generated one by one: enter in an object ",
   "to get back the next one." },
@@ -592,6 +717,53 @@ document {
   SeeAlso => { nextPermutation, permutations }
 }
 
+
+document {
+  Key => {
+    Filling,
+    (conjugate, Filling),
+    (symbol ^,Filling,List),
+    (symbol _,Filling,List),
+    shape
+  },
+  Headline => "the class of all fillings of Young diagrams",
+  "A filling is an assignment of a value (typically an integer)
+  to each cell of a Young diagram.",
+  
+  EXAMPLE lines ///
+    T = new Filling from {{10,9,8},{10,8,5},{4,3},{4,1},{0}}
+  ///,
+  
+  "The conjugate of a filling is obtained by transposition.",
+  
+  EXAMPLE lines ///
+    conjugate T
+  ///,
+  
+  "Rows and columns of a filling can be selected with the same
+  syntax as choosing rows and columns of a matrix.
+  Individual entries ",
+  
+  EXAMPLE lines ///
+    T^{0,2} -- select rows
+    T_{0,2,3} -- select columns
+  ///,
+  
+  "The underlying Young diagram can be extracted with ",
+  CODE "shape",
+  ", yielding a partition.",
+  
+  EXAMPLE lines ///
+    shape T
+  ///
+
+}
+
+
+-- XXXXXX
+
+
+
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- TESTS -----------------------------------------------------------------------
@@ -611,31 +783,19 @@ TEST ///
   S = nextSubset(5,{0,1,2,3,4});
   assert( S === null );
   S = nextSubset(5,S);
-  assert( S === null );
+  assert( S === {} );
 ///
 
 TEST ///
   for n from 0 to 12 do (
-    S = nextSubset(n);
-    subsetList = {};
-    while ( S =!= null ) do (
-      subsetList = append(subsetList,S);
-      S = nextSubset(n,S);
-    );
-    assert( subsetList === subsets(n) );
+    assert( collectIterations(s -> nextSubset(n,s)) === subsets(n) );
   );
 ///
 
 TEST ///  
   for n from 0 to 12 do (
     for k from -2 to n+2 do (
-      S = nextSubset(n,Size=>k);
-      subsetList = {};
-      while ( S =!= null ) do (
-        subsetList = append(subsetList,S);
-        S = nextSubset(n,S,Size=>k);
-      );
-      assert( subsetList === subsets(n,k) );
+      assert( collectIterations(s -> nextSubset(n,s,Size=>k)) === subsets(n,k) );
     );
   );
 ///
@@ -657,31 +817,19 @@ TEST ///
   S = prevSubset(5,{});
   assert( S === null );
   S = prevSubset(5,S);
-  assert( S === null );
+  assert( S === {0,1,2,3,4} );
 ///
 
 TEST ///
   for n from 0 to 12 do (
-    S = prevSubset(n);
-    subsetList = {};
-    while ( S =!= null ) do (
-      subsetList = append(subsetList,S);
-      S = prevSubset(n,S);
-    );
-    assert( subsetList === reverse subsets(n) );
+    assert( collectIterations(s -> prevSubset(n,s)) === reverse subsets(n) );
   );
 ///
 
 TEST ///  
   for n from 0 to 12 do (
     for k from -2 to n+2 do (
-      S = prevSubset(n,Size=>k);
-      subsetList = {};
-      while ( S =!= null ) do (
-        subsetList = append(subsetList,S);
-        S = prevSubset(n,S,Size=>k);
-      );
-      assert( subsetList === reverse subsets(n,k) );
+      assert( collectIterations(s -> prevSubset(n,s,Size=>k)) === reverse subsets(n,k) );
     );
   );
 ///
@@ -712,26 +860,15 @@ TEST ///
 
 TEST ///
   for n from 0 to 12 do (
-    S = nextPartition(n);
-    partitionList = {};
-    while ( S =!= null ) do (
-      partitionList = append(partitionList,S);
-      S = nextPartition(S);
-    );
-    assert( partitionList === partitions(n) );
+    assert( collectIterations(nextPartition, n) === partitions(n) );
   );
 ///
 
 TEST ///  
   for n from 0 to 12 do (
     for k from 1 to n+2 do (
-      S = nextPartition(n,k);
-      partitionList = {};
-      while ( S =!= null ) do (
-        partitionList = append(partitionList,S);
-        S = nextPartition(S);
-      );
-      assert( partitionList === partitions(n,k) );
+      assert( collectIterations(nextPartition, nextPartition(n,k),
+        CollectInitializer=>true) === partitions(n,k) );
     );
   );
 ///
@@ -763,13 +900,7 @@ TEST ///
 
 TEST ///
   for n from 0 to 12 do (
-    S = prevPartition(n);
-    partitionList = {};
-    while ( S =!= null ) do (
-      partitionList = append(partitionList,S);
-      S = prevPartition(S);
-    );
-    assert( partitionList === reverse partitions(n) );
+    assert( collectIterations(prevPartition, n) === reverse partitions(n) );
   );
 ///
 
@@ -797,13 +928,7 @@ TEST ///
 
 TEST ///
   for n from 0 to 7 do (
-    P = nextPermutation(n);
-    permutationList = {};
-    while ( P =!= null ) do (
-      permutationList = append(permutationList,P);
-      P = nextPermutation(P);
-    );
-    assert( permutationList === permutations(n) );
+    assert( collectIterations(nextPermutation, n) === permutations(n) );
   );
 ///
 
@@ -821,16 +946,204 @@ TEST ///
 
 TEST ///
   for n from 0 to 7 do (
-    S = prevPermutation(n);
-    permutationList = {};
-    while ( S =!= null ) do (
-      permutationList = append(permutationList,S);
-      S = prevPermutation(S);
-    );
-    assert( permutationList === reverse permutations(n) );
+    assert( collectIterations(prevPermutation, n) === reverse permutations(n) );
   );
 ///
 
+
+
+
+  Filling,
+  shape,
+  isStandardTableau,
+  nextStandardTableau,
+  prevStandardTableau,
+  collectIterations,
+  CollectInitializer
+
+TEST ///
+  scan({ {1,1} , {2,2} , {4,3,2,2} }, l -> (
+    P = new Partition from l;
+    T = nextStandardTableau P;
+    assert( shape T === P );
+    assert( isStandardTableau T );
+  ))
+///
+
+TEST ///
+assert( collectIterations(nextStandardTableau,{1,1}) === {
+  new Filling from {{0},{1}}} );
+
+assert( collectIterations(nextStandardTableau,{2,2}) === {
+  new Filling from {{0,1},{2,3}},
+  new Filling from {{0,2},{1,3}}} );
+
+assert( collectIterations(nextStandardTableau,{3,3}) === {
+  new Filling from {{0,1,2},{3,4,5}},
+  new Filling from {{0,1,3},{2,4,5}},
+  new Filling from {{0,1,4},{2,3,5}},
+  new Filling from {{0,2,3},{1,4,5}},
+  new Filling from {{0,2,4},{1,3,5}}} );
+
+assert( collectIterations(nextStandardTableau,{3,1,1}) === {
+  new Filling from {{0,1,2},{3},{4}},
+  new Filling from {{0,1,3},{2},{4}},
+  new Filling from {{0,1,4},{2},{3}},
+  new Filling from {{0,2,3},{1},{4}},
+  new Filling from {{0,2,4},{1},{3}},
+  new Filling from {{0,3,4},{1},{2}}} );
+
+assert( collectIterations(nextStandardTableau,{3,2}) === {
+  new Filling from {{0,1,2},{3,4}},
+  new Filling from {{0,1,3},{2,4}},
+  new Filling from {{0,1,4},{2,3}},
+  new Filling from {{0,2,3},{1,4}},
+  new Filling from {{0,2,4},{1,3}}} );
+
+assert( collectIterations(nextStandardTableau,{4,3}) === {
+  new Filling from {{0,1,2,3},{4,5,6}},
+  new Filling from {{0,1,2,4},{3,5,6}},
+  new Filling from {{0,1,2,5},{3,4,6}},
+  new Filling from {{0,1,2,6},{3,4,5}},
+  new Filling from {{0,1,3,4},{2,5,6}},
+  new Filling from {{0,1,3,5},{2,4,6}},
+  new Filling from {{0,1,3,6},{2,4,5}},
+  new Filling from {{0,1,4,5},{2,3,6}},
+  new Filling from {{0,1,4,6},{2,3,5}},
+  new Filling from {{0,2,3,4},{1,5,6}},
+  new Filling from {{0,2,3,5},{1,4,6}},
+  new Filling from {{0,2,3,6},{1,4,5}},
+  new Filling from {{0,2,4,5},{1,3,6}},
+  new Filling from {{0,2,4,6},{1,3,5}}} );
+
+assert( collectIterations(nextStandardTableau,{4,2,1}) === {
+  new Filling from {{0,1,2,3},{4,5},{6}},
+  new Filling from {{0,1,2,3},{4,6},{5}},
+  new Filling from {{0,1,2,4},{3,5},{6}},
+  new Filling from {{0,1,2,4},{3,6},{5}},
+  new Filling from {{0,1,2,5},{3,4},{6}},
+  new Filling from {{0,1,2,5},{3,6},{4}},
+  new Filling from {{0,1,2,6},{3,4},{5}},
+  new Filling from {{0,1,2,6},{3,5},{4}},
+  new Filling from {{0,1,3,4},{2,5},{6}},
+  new Filling from {{0,1,3,4},{2,6},{5}},
+  new Filling from {{0,1,3,5},{2,4},{6}},
+  new Filling from {{0,1,3,5},{2,6},{4}},
+  new Filling from {{0,1,3,6},{2,4},{5}},
+  new Filling from {{0,1,3,6},{2,5},{4}},
+  new Filling from {{0,1,4,5},{2,3},{6}},
+  new Filling from {{0,1,4,5},{2,6},{3}},
+  new Filling from {{0,1,4,6},{2,3},{5}},
+  new Filling from {{0,1,4,6},{2,5},{3}},
+  new Filling from {{0,1,5,6},{2,3},{4}},
+  new Filling from {{0,1,5,6},{2,4},{3}},
+  new Filling from {{0,2,3,4},{1,5},{6}},
+  new Filling from {{0,2,3,4},{1,6},{5}},
+  new Filling from {{0,2,3,5},{1,4},{6}},
+  new Filling from {{0,2,3,5},{1,6},{4}},
+  new Filling from {{0,2,3,6},{1,4},{5}},
+  new Filling from {{0,2,3,6},{1,5},{4}},
+  new Filling from {{0,2,4,5},{1,3},{6}},
+  new Filling from {{0,2,4,5},{1,6},{3}},
+  new Filling from {{0,2,4,6},{1,3},{5}},
+  new Filling from {{0,2,4,6},{1,5},{3}},
+  new Filling from {{0,2,5,6},{1,3},{4}},
+  new Filling from {{0,2,5,6},{1,4},{3}},
+  new Filling from {{0,3,4,5},{1,6},{2}},
+  new Filling from {{0,3,4,6},{1,5},{2}},
+  new Filling from {{0,3,5,6},{1,4},{2}}} );
+///
+
+TEST ///
+assert( collectIterations(prevStandardTableau,{1,1}) === {
+  new Filling from {{1},{0}},
+  new Filling from {{0},{1}}} );
+
+assert( collectIterations(prevStandardTableau,{2,2}) === {
+  new Filling from {{3,2},{1,0}},
+  new Filling from {{0,2},{1,3}},
+  new Filling from {{0,1},{2,3}}} );
+
+assert( collectIterations(prevStandardTableau,{3,3}) === {
+  new Filling from {{5,4,3},{2,1,0}},
+  new Filling from {{0,2,4},{1,3,5}},
+  new Filling from {{0,2,3},{1,4,5}},
+  new Filling from {{0,1,4},{2,3,5}},
+  new Filling from {{0,1,3},{2,4,5}},
+  new Filling from {{0,1,2},{3,4,5}}} );
+
+assert( collectIterations(prevStandardTableau,{3,1,1}) === {
+  new Filling from {{4,3,2},{1},{0}},
+  new Filling from {{0,3,4},{1},{2}},
+  new Filling from {{0,2,4},{1},{3}},
+  new Filling from {{0,2,3},{1},{4}},
+  new Filling from {{0,1,4},{2},{3}},
+  new Filling from {{0,1,3},{2},{4}},
+  new Filling from {{0,1,2},{3},{4}}} );
+
+assert( collectIterations(prevStandardTableau,{3,2}) === {
+  new Filling from {{4,3,2},{1,0}},
+  new Filling from {{0,2,4},{1,3}},
+  new Filling from {{0,2,3},{1,4}},
+  new Filling from {{0,1,4},{2,3}},
+  new Filling from {{0,1,3},{2,4}},
+  new Filling from {{0,1,2},{3,4}}} );
+
+assert( collectIterations(prevStandardTableau,{4,3}) === {
+  new Filling from {{6,5,4,3},{2,1,0}},
+  new Filling from {{0,2,4,6},{1,3,5}},
+  new Filling from {{0,2,4,5},{1,3,6}},
+  new Filling from {{0,2,3,6},{1,4,5}},
+  new Filling from {{0,2,3,5},{1,4,6}},
+  new Filling from {{0,2,3,4},{1,5,6}},
+  new Filling from {{0,1,4,6},{2,3,5}},
+  new Filling from {{0,1,4,5},{2,3,6}},
+  new Filling from {{0,1,3,6},{2,4,5}},
+  new Filling from {{0,1,3,5},{2,4,6}},
+  new Filling from {{0,1,3,4},{2,5,6}},
+  new Filling from {{0,1,2,6},{3,4,5}},
+  new Filling from {{0,1,2,5},{3,4,6}},
+  new Filling from {{0,1,2,4},{3,5,6}},
+  new Filling from {{0,1,2,3},{4,5,6}}} );
+
+assert( collectIterations(prevStandardTableau,{4,2,1}) === {
+  new Filling from {{6,5,4,3},{2,1},{0}},
+  new Filling from {{0,3,5,6},{1,4},{2}},
+  new Filling from {{0,3,4,6},{1,5},{2}},
+  new Filling from {{0,3,4,5},{1,6},{2}},
+  new Filling from {{0,2,5,6},{1,4},{3}},
+  new Filling from {{0,2,5,6},{1,3},{4}},
+  new Filling from {{0,2,4,6},{1,5},{3}},
+  new Filling from {{0,2,4,6},{1,3},{5}},
+  new Filling from {{0,2,4,5},{1,6},{3}},
+  new Filling from {{0,2,4,5},{1,3},{6}},
+  new Filling from {{0,2,3,6},{1,5},{4}},
+  new Filling from {{0,2,3,6},{1,4},{5}},
+  new Filling from {{0,2,3,5},{1,6},{4}},
+  new Filling from {{0,2,3,5},{1,4},{6}},
+  new Filling from {{0,2,3,4},{1,6},{5}},
+  new Filling from {{0,2,3,4},{1,5},{6}},
+  new Filling from {{0,1,5,6},{2,4},{3}},
+  new Filling from {{0,1,5,6},{2,3},{4}},
+  new Filling from {{0,1,4,6},{2,5},{3}},
+  new Filling from {{0,1,4,6},{2,3},{5}},
+  new Filling from {{0,1,4,5},{2,6},{3}},
+  new Filling from {{0,1,4,5},{2,3},{6}},
+  new Filling from {{0,1,3,6},{2,5},{4}},
+  new Filling from {{0,1,3,6},{2,4},{5}},
+  new Filling from {{0,1,3,5},{2,6},{4}},
+  new Filling from {{0,1,3,5},{2,4},{6}},
+  new Filling from {{0,1,3,4},{2,6},{5}},
+  new Filling from {{0,1,3,4},{2,5},{6}},
+  new Filling from {{0,1,2,6},{3,5},{4}},
+  new Filling from {{0,1,2,6},{3,4},{5}},
+  new Filling from {{0,1,2,5},{3,6},{4}},
+  new Filling from {{0,1,2,5},{3,4},{6}},
+  new Filling from {{0,1,2,4},{3,6},{5}},
+  new Filling from {{0,1,2,4},{3,5},{6}},
+  new Filling from {{0,1,2,3},{4,6},{5}},
+  new Filling from {{0,1,2,3},{4,5},{6}}} );
+///
 
 end
 
@@ -838,6 +1151,33 @@ end
 
 
 restart
-loadPackage "IterativeCombinatorialGenerators"
-check oo
+loadPackage "CombinatorialIteration"
 installPackage oo
+check oo
+
+
+net Partition := P -> netList({apply(toList P, c->stack apply(c, e->net "."))}, Boxes=>false);
+
+
+gentest = l -> (
+  prefixString = "assert( collectIterations(nextStandardTableau,";
+  listString = toExternalString l;
+  middleString = ") === ";
+  resultString = replace("new","\n  new",toExternalString collectIterations(nextStandardTableau,l));
+  postfixString = " );\n";
+  
+  concatenate(prefixString,listString,middleString,resultString,postfixString)
+)
+
+scan( {
+  {1,1},
+  {2,2},
+  {3,3},
+  {3,1,1},
+  {3,2},
+  {4,3},
+  {4,2,1}
+  },
+  x -> print gentest x
+)
+
