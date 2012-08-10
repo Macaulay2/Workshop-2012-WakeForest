@@ -36,10 +36,9 @@ newPackage(
 --dual to the space, and
 --wants pieces of a resolution to be R-TensorModules
 
-export{TensorArray, tensorArray, tensorDimensions,
-     tensorArrayContraction,einsteinSummation,
-     Tensor,TensorModule,
-     tensor',tensorModule}
+export{Tensor,TensorModule,tensor',tensorModule,
+     tensorDimensions,tensorComposition,
+     einsteinSummation}
 
 gs = getSymbol
 
