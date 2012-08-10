@@ -33,6 +33,7 @@ export {
   prevPartition,
   nextPermutation,
   prevPermutation,
+  YoungDiagram,
   Filling,
   shape,
   isStandardTableau,
@@ -322,6 +323,17 @@ prevPermutation List := P -> (
 
 
 
+YoungDiagram = new Type of BasicList
+
+net YoungDiagram := D -> netList({apply(toList D, c->stack apply(c, e->net "."))},
+  Boxes=>false);
+
+conjugate YoungDiagram := D ->
+  new YoungDiagram from apply(0..<#(D#0), i -> (
+    # select( D , r -> r >= i )
+  ))
+
+
 
 Filling = new Type of BasicList
 
@@ -340,7 +352,9 @@ Filling _ List := (T,l) -> new Filling from (toList T)_l
 Filling ^ List := (T,l) -> new Filling from (toList conjugate T)_l
 
 shape = method();
-shape Filling := T -> new Partition from apply(toList T, i -> #i)
+shape Filling := T -> new YoungDiagram from apply(toList T, i -> #i)
+shape List := L -> new YoungDiagram from L
+shape Partition := P -> new YoungDiagram from toList P
 
 isIncreasing = L -> all(#L-1, i -> (L#i < L#(i+1)))
 
@@ -359,7 +373,7 @@ isStandardTableau = L -> (
 
 fillingFromPermutation = (shape,perm) -> (
   L := {};
-  for c in shape do (
+  for c in toList shape do (
     L = append(L,take(perm,c));
     perm = drop(perm,c);
   );
@@ -385,13 +399,14 @@ nextStandardTableau(Filling) := (T) -> (
     );
   );
 )
-nextStandardTableau(Partition) := P -> (
-  n := sum toList P;
+nextStandardTableau(YoungDiagram) := D -> (
+  n := sum toList D;
   perm := nextPermutation n;
-  return fillingFromPermutation(P,perm);
+  return fillingFromPermutation(D,perm);
 )
+nextStandardTableau(Partition) :=
 nextStandardTableau(List) := L ->
-  nextStandardTableau new Partition from L
+  nextStandardTableau new YoungDiagram from L
 
 
 prevStandardTableau = method()
@@ -411,13 +426,15 @@ prevStandardTableau(Filling) := T -> (
     );
   );
 )
-prevStandardTableau(Partition) := P -> (
-  n := sum toList P;
+prevStandardTableau(YoungDiagram) := D -> (
+  n := sum toList D;
   perm := prevPermutation n;
-  return fillingFromPermutation(P,perm);
+  T := fillingFromPermutation(D,perm);
+  if ( isStandardTableau(T) ) then return T else return prevStandardTableau T;
 )
+prevStandardTableau(Partition) := 
 prevStandardTableau(List) := L ->
-  prevStandardTableau new Partition from L
+  prevStandardTableau new YoungDiagram from L
 
 
 
@@ -952,21 +969,15 @@ TEST ///
 
 
 
-
-  Filling,
-  shape,
-  isStandardTableau,
-  nextStandardTableau,
-  prevStandardTableau,
-  collectIterations,
-  CollectInitializer
-
 TEST ///
   scan({ {1,1} , {2,2} , {4,3,2,2} }, l -> (
-    P = new Partition from l;
-    T = nextStandardTableau P;
-    assert( shape T === P );
+    D = new YoungDiagram from l;
+    T = nextStandardTableau D;
+    assert( shape T === D );
     assert( isStandardTableau T );
+    T' = prevStandardTableau D;
+    assert( shape T' === D );
+    assert( isStandardTableau T' );
   ))
 ///
 
@@ -1056,16 +1067,13 @@ assert( collectIterations(nextStandardTableau,{4,2,1}) === {
 
 TEST ///
 assert( collectIterations(prevStandardTableau,{1,1}) === {
-  new Filling from {{1},{0}},
   new Filling from {{0},{1}}} );
 
 assert( collectIterations(prevStandardTableau,{2,2}) === {
-  new Filling from {{3,2},{1,0}},
   new Filling from {{0,2},{1,3}},
   new Filling from {{0,1},{2,3}}} );
 
 assert( collectIterations(prevStandardTableau,{3,3}) === {
-  new Filling from {{5,4,3},{2,1,0}},
   new Filling from {{0,2,4},{1,3,5}},
   new Filling from {{0,2,3},{1,4,5}},
   new Filling from {{0,1,4},{2,3,5}},
@@ -1073,7 +1081,6 @@ assert( collectIterations(prevStandardTableau,{3,3}) === {
   new Filling from {{0,1,2},{3,4,5}}} );
 
 assert( collectIterations(prevStandardTableau,{3,1,1}) === {
-  new Filling from {{4,3,2},{1},{0}},
   new Filling from {{0,3,4},{1},{2}},
   new Filling from {{0,2,4},{1},{3}},
   new Filling from {{0,2,3},{1},{4}},
@@ -1082,7 +1089,6 @@ assert( collectIterations(prevStandardTableau,{3,1,1}) === {
   new Filling from {{0,1,2},{3},{4}}} );
 
 assert( collectIterations(prevStandardTableau,{3,2}) === {
-  new Filling from {{4,3,2},{1,0}},
   new Filling from {{0,2,4},{1,3}},
   new Filling from {{0,2,3},{1,4}},
   new Filling from {{0,1,4},{2,3}},
@@ -1090,7 +1096,6 @@ assert( collectIterations(prevStandardTableau,{3,2}) === {
   new Filling from {{0,1,2},{3,4}}} );
 
 assert( collectIterations(prevStandardTableau,{4,3}) === {
-  new Filling from {{6,5,4,3},{2,1,0}},
   new Filling from {{0,2,4,6},{1,3,5}},
   new Filling from {{0,2,4,5},{1,3,6}},
   new Filling from {{0,2,3,6},{1,4,5}},
@@ -1107,7 +1112,6 @@ assert( collectIterations(prevStandardTableau,{4,3}) === {
   new Filling from {{0,1,2,3},{4,5,6}}} );
 
 assert( collectIterations(prevStandardTableau,{4,2,1}) === {
-  new Filling from {{6,5,4,3},{2,1},{0}},
   new Filling from {{0,3,5,6},{1,4},{2}},
   new Filling from {{0,3,4,6},{1,5},{2}},
   new Filling from {{0,3,4,5},{1,6},{2}},
@@ -1155,8 +1159,6 @@ loadPackage "CombinatorialIteration"
 installPackage oo
 check oo
 
-
-net Partition := P -> netList({apply(toList P, c->stack apply(c, e->net "."))}, Boxes=>false);
 
 
 gentest = l -> (
