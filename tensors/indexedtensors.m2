@@ -3,13 +3,16 @@
 --should only depend on part 2
 ----------------------------
 needsPackage"Tensors"
+protect noname
+export{IndexedTensor,indexedTensor}
 IndexedTensor = new Type of HashTable
 subscriptFormat :=method()
 subscriptFormat List := inds -> toString(inds_0)|concatenate(
      (take(inds,{1,#inds}))/(i->","|toString(i)))
 net IndexedTensor := A -> net (hold A.cache#(gs"name"))_(subscriptFormat A#(gs"indices"))
 noname="[unnamed IndexedTensor]"
-it=indexedTensor=method()
+it=
+indexedTensor=method()
 it (Tensor,List) := (t,inds) -> (
      c:=new CacheTable from {(gs"name") => noname};
      new IndexedTensor from hashTable{
@@ -30,3 +33,18 @@ IndexedTensor#{Standard,AfterPrint} = T -> (
      ", dimensions "|toString(tensorDimensions t);
      << endl;
      )
+
+
+end
+
+
+restart
+debug loadPackage"Tensors"
+
+restart
+debug loadPackage("Tensors",DebuggingMode=>true)
+
+restart
+uninstallPackage"Tensors"
+installPackage"Tensors"
+viewHelp"Tensors"

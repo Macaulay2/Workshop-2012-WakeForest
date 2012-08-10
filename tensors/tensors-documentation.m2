@@ -51,46 +51,6 @@ Description
 ///
 
 
-doc ///
-Key
-  TensorArray
-  (symbol _,TensorArray,ZZ)
-Headline
-  The class of all tensor arrays
-Description
-  Text
-   Tensor arrays are cool
-   
-  Example
-   2*2
-    
-///
-
-doc ///
-Key
-  TensorArray
-  (symbol _,TensorArray,ZZ)
-Headline
-  The class of all tensor arrays
-Description
-  Text
-   Tensor arrays are cool
-   
-  Example
-   2*2
-    
-///
-
-
-doc///
-Key
-  (symbol **,TensorArray,TensorArray)
-Headline
-  tensor product of arrays
-Caveat
-  not yet implemented
-///
-
 end
 
 1/0
@@ -104,4 +64,4 @@ debug loadPackage("Tensors",DebuggingMode=>true)
 restart
 uninstallPackage"Tensors"
 installPackage"Tensors"
-viewHelp"TensorModule"
+viewHelp"Tensors"

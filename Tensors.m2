@@ -82,7 +82,7 @@ module TensorModule := M -> M.module
 module Module := identity
 ------
 --Using dimensions method previously defined for
---TensorArrays now for...
+--RNLs now for...
 if not class tensorDimensions === MethodFunction then (
      tensorDimensions = method())
 tensorDimensions Module := M -> {numgens M}
@@ -217,7 +217,8 @@ tensor'(List,List):=(dims,ents)->(
 Ring**Tensor := (r,t) -> error "not implemented yet"
 
 ----------------------------------------------
---Conversions between Tensors and TensorArrays
+--Conversions between Tensors
+--and RectangularRestedLists
 ----------------------------------------------
 ------MINIMIZE DEPENDENCE ON TENSOR ARRAYS
 ----------------------------------------------
@@ -227,17 +228,15 @@ T=tensor' List := L -> (
      tensor'(dims,ents)
      )
 
-
-
 ------
-tensorArray Tensor := t -> (
-     if TensorArray.cache#?t then return TensorArray.cache#t;
-     a := new TensorArray from rnl (tensorDimensions t,entries t);
-     TensorArray.cache#t = a;
+rnl Tensor := t -> (
+     if RNL.cache#?t then return RNL.cache#t;
+     a := new RNL from rnl (tensorDimensions t,entries t);
+     RNL.cache#t = a;
 --     Tensor.cache#a = t; the array does not retain the base ring!
      a
      )
-net Tensor := t -> net tensorArray t;
+net Tensor := t -> net rnl t;
 ------
 
 ---------------------------
@@ -303,7 +302,7 @@ N=tm(R,{4})
 assert(M==R^4)--they are equal as modules
 assert(not M===R^4)
 assert(not M==N)
-M===N--unfortunately; can't change this.
+assert(not M===N)
 h=new MutableHashTable
 h#M=1
 h#N==1--unfortunately
@@ -330,23 +329,12 @@ load "./tensors/indexedtensors.m2"
 --
 
 TEST  ///
-T=tm(R,{3,3});
-T.factors
-t=T_0
-T**T
-module t
-vector t
-t+t
-t**t
-t+t
-a=ta t
-tac({{a,i,j},{a,i,k},{a,i,l}},{i})
-T=tm(t**t**t)
-T.factors
+
 
 ///
 
 load "./tensors/tensors-documentation.m2"
+
 end
 
 restart
@@ -355,7 +343,3 @@ debug loadPackage"Tensors"
 restart
 debug loadPackage("Tensors",DebuggingMode=>true)
 
-restart
-uninstallPackage"Tensors"
-installPackage"Tensors"
-viewHelp"TensorModule"

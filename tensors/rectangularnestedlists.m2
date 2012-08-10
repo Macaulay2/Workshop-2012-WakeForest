@@ -8,6 +8,8 @@
 protect TemporaryTensorList
 protect TemporaryIndexList
 
+exportMutable{Stops}
+
 {*The following cartesian product lists have sequences
 as their entries, rather than lists.  this is intentional, 
 both for consistency with Set**Set, and for planned later 
@@ -165,7 +167,6 @@ tha List := L -> tha hashTable L
 --that modifies expressions.  The function
 --recurses into everything except types 
 --listed in Stops=>{...}
-exportMutable{Stops}
 dsub=--INTERNAL ABBREVIATION
 deepSubstitution=method(Options=>{Stops=>{Thing}})
 dsub HashTable := opts -> h -> (
@@ -355,3 +356,16 @@ einsteinSummation (List,List) := (tensors,indicesByTensor) -> (
 einsteinSummation List := L -> einsteinSummation(L/first,L/(i->toSequence remove(i,0)))
 es=einsteinSummation
 *}
+
+end
+
+restart
+debug loadPackage"Tensors"
+
+restart
+debug loadPackage("Tensors",DebuggingMode=>true)
+
+restart
+uninstallPackage"Tensors"
+installPackage"Tensors"
+viewHelp"Tensors"
