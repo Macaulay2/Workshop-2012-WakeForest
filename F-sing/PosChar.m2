@@ -38,7 +38,8 @@ export{"basePExp",
      "isDiagonal",
      "multiDegree",
      "dCalculation",
-     "calculateEpsilon"
+     "calculateEpsilon",
+     "guessFPT"
 }
 --This file has "finished" functions from the Macaulay2 workshop at Wake Forest
 --August 2012.  Sara Malec, Karl Schwede and Emily Witt contributed to it.
@@ -96,6 +97,96 @@ findNearPthPowerAbove = (t1, pp, e1) -> (
 --this finds the a/pp^e1 nearest t1 from below
 findNearPthPowerBelow = (t1, pp, e1) -> (
      floor(t1*pp^e1)/pp^e1
+)
+
+--returns the digits in nn which are nonzero in binary 
+--for example, 5 in binary is 101, so this would return {0,2}
+--the second term tells me where to start the count, so passing
+--5,0 gives {0,2} but 5,1 is sent to {1,3}.  i should be
+--used only for recursive purposes
+getNonzeroBinaryDigits = (nn, i) -> (
+--    error "breakme";
+    halfsies := nn//2;
+    val1 := nn%2;
+    val2 := false; 
+    if (halfsies > 0) then val2 = (getNonzeroBinaryDigits(nn//2,i+1));
+    if ( (val1 != 0) and (not (val2 === false))) then (
+	 flatten {i, val2}
+    )
+    else if (val1 != 0) then (
+	 {i}
+    )
+    else if ( not (val2 === false)) then (
+	 flatten {val2}
+    )
+    else(
+	 false
+    )
+)
+
+--this returns the entries of myList specified by entryList
+--for example, ( {1,2,3}, {0,2}) is sent to {1,3}.
+getSublistOfList = (myList, entryList) -> (
+     --error "help";
+     apply( #entryList, i->myList#(entryList#i) )
+)
+
+--this returns the power set of a given list, except it leaves out
+--the emptyset.  
+--For example {2,3,4} becomes { (2),(3),(4),(2,3),(2,4),(3,4),(2,3,4) }
+nontrivialPowerSet = (myList) ->(
+     apply(2^(#myList)-1, i-> getSublistOfList(myList, getNonzeroBinaryDigits(i+1,0) ) )
+)
+
+--this turns a number into a list of factors with repeats.
+--for example, 12 becomes (2,2,3)
+numberToPrimeFactorList = (nn)->(
+     prod := factor nn;
+     flatten (apply(#prod, i -> toList(((prod#(i))#1):((prod#(i))#0)) ))
+)
+
+
+--this returns a list of all proper factors of nn, for use with sieving...
+getFactorList = (nn) ->(
+     if (nn < 1) then error "getFactorList: expected an integer greater than 1.";
+     powSet := nontrivialPowerSet(numberToPrimeFactorList(nn)); 
+     toList ( set apply(#powSet, i->product(powSet#i)) )
+)
+
+--this function finds rational numbers in the range of the interval
+--with the given denominator
+
+findNumberBetweenWithDenom = (myInterv, myDenom)->(
+     upperBound := floor((myInterv#1)*myDenom)/myDenom; 
+          --finds the number with denominator myDenom less than the upper 
+	  --bound of myInterv
+     lowerBound := ceiling((myInterv#0)*myDenom)/myDenom; 
+          --finds the number with denominator myDenom greater than the lower
+	  -- bound of myInterv
+     if (upperBound >= lowerBound) then (
+	  --first we check whether there is anything to search for
+	  apply( 1+numerator((upperBound-lowerBound)*myDenom), i-> lowerBound+(i/myDenom) )
+     )
+     else(
+	  {}
+     )
+)
+
+--this function finds rational numbers in the range of 
+--the interval.  The max denominator allowed is listed. 
+findNumberBetween = (myInterv, maxDenom)->(
+     divisionChecks :=  new MutableList from maxDenom:true; 
+         -- creates a list with maxDenom elements all set to true.
+     outList := {};
+     i := maxDenom;
+     while (i > 0) do (
+	  if ((divisionChecks#(i-1)) == true) then --if we need to do a computation..
+	      outList = join(outList,findNumberBetweenWithDenom(myInterv, i));
+	  factorList := getFactorList(i);
+     	  apply(#factorList, j-> (divisionChecks#( (factorList#j)-1) = false) );
+	  i = i - 1;
+     );
+     sort(toList set outList)
 )
 
 ---------------------------------------------------------------
@@ -698,6 +789,14 @@ threshInt = (f,e,t,b,t1)-> (
 )
 
  "/Users/emilyewitt/m2.2012/F-sing/FS/"
+ 
+ --this function guesses the FPT of ff.  It returns a list of all numbers in 
+--the range suggested by nu(ff,e1) with maxDenom as the maximum denominator
+guessFPT = (ff, e1, maxDenom) ->(
+     nn := nu(ff, e1);
+     pp := char ring ff;
+     findNumberBetween({nn/(pp^e1-1), (nn+1)/(pp^e1)}, maxDenom)
+)
 
 ---f-pure threshold estimation
 ---e is the max depth to search in
@@ -781,6 +880,21 @@ doc ///
 
 doc ///
      Key
+     	guessFPT 
+     Headline
+        Tries to guess the FPT (F-pure threshold) of f by using nu's, with depth controlled by e, with denominator bounded by d
+     Usage
+     	  guessFPT(f,e,d) 
+     Inputs
+     	 f:RingElement
+         e:ZZ
+	 d:ZZ
+     Outputs
+        :List
+///
+
+doc ///
+     Key
      	 frobeniusPower
      Headline
         The following raises an ideal to the $p^e$th power
@@ -808,7 +922,7 @@ doc ///
 	 f:RingElement
          e:ZZ
      Outputs
-        :List
+        :ZZ
 ///
 
 doc ///
@@ -826,7 +940,7 @@ doc ///
 	 f:RingElement
          e:ZZ
      Outputs
-        :QQ
+        :List
 ///
 
 doc ///
