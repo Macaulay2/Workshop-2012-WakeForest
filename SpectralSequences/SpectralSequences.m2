@@ -291,17 +291,11 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
 --get the inverse image of C under the map d
 invSubmodule := (d,C) -> ker (inducedMap ((target d)/C,target d) * d)
 
-pageZ := (r, F,p,q) -> (
-     C:= chainComplex F;
-     N:= invSubmodule (C.dd_(-p-q),F^(p+r)_(-p-q-1));
-     NQ:= intersect(F^p_(-p-q), N) + F^(p+1)_(-p-q);
-     NQ/(F^(p+1))_(-p-q))
+pageZ := (r, F,p,q) -> 
+     (invSubmodule (F^p.dd_(-p-q),F^(p+r)_(-p-q-1)) + F^(p+1)_(-p-q))/F^(p+1)_(-p-q)
 
-pageB := (r, F,p,q) -> (
-     C:= chainComplex F;
-     d:= C.dd_(1 -p-q);
-     MQ:= intersect (image inducedMap(target d, F^(p-r+1)_(1-p-q),d),F^p_(-p-q)) + F^(p+1)_(-p-q);
-     MQ/F^(p+1)_(-p-q))
+pageB := (r, F,p,q) -> 
+     (intersect (image F^(p-r+1).dd_(1-p-q),F^p_(-p-q)) + F^(p+1)_(-p-q)) / F^(p+1)_(-p-q)
 
 pageE := (r, F,p,q) -> (
      if r < 1 then F^p_(-p-q)/F^(p+1)_(-p-q) else 
@@ -356,14 +350,8 @@ debug SpectralSequences;
 R = QQ[x,y,z]
 M = R^1/ideal(vars R)
 F = res M
-G = (filteredComplex F) ** F
-E = spectralSequence ((filteredComplex F) ** F)
-netList support E_1 
-netList support E_infinity
 S = R/(x^2-y^2)
 N = S^1 /ideal(x^3,x*y^2,y^3)
-E = changeofRing(M,N)
-F = res M
 see filteredComplex F
 lim = 10
 G = res (N, LengthLimit => lim)
@@ -371,7 +359,6 @@ g = max G
 J=ker G.dd_lim
 G#(lim+1) = J
 G.dd#(lim+1) = inducedMap(G_lim,G_(lim+1))
-
 H = filteredComplex(F ** S)
 see (K = H ** G)
 E = spectralSequence K
