@@ -1,8 +1,8 @@
 newPackage( "PosChar",
 Version => "1.0", Date => "August 5, 2012", Authors => {
      {Name => "Karl Schwede",
-     Email => "",
-     HomePage => ""
+     Email => "schwede@math.psu.edu",
+     HomePage => "http://math.psu.edu/schwede"
      },
      {Name=> "Emily Witt",
      Email=> "ewitt@umn.edu",
@@ -756,13 +756,13 @@ isSharplyFPurePoly = (f1, a1, e1,m1) -> (
 xInt = (x1, y1, x2, y2) ->  x1-(y1/((y1-y2)/(x1-x2)))
  
  
---- Computes the F-signature for a specific value a/p^e
+--- Computes the F-signature for a specific value a1/p^e1
 --- Input:
----	e - some positive integer
----	a - some positive integer between 0 and p^e
----	f - some HOMOGENEOUS polynomial in two or three variables in a ring of PRIME characteristic
+---	e1 - some positive integer
+---	a1 - some positive integer between 0 and p^e
+---	f1 - some polynomial in two or three variables in a ring R of PRIME characteristic
 --- Output:
----	returns value of the F-signature of the pair (R, f^{a/p^e})
+---	returns value of the F-signature of the pair (R, f1^{a1/p^e1})
 --- Based on work of Eric Canton
 fSig = (f1, a1, e1) -> (
      R1:=ring f1;
