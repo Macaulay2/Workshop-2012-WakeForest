@@ -24,7 +24,7 @@ export{"basePExp",
      "fSig",
      "FPTEst",
      "isSharplyFPurePoly",
-     "finalCheck",
+     "FinalCheck",
      "aPower",
      "firstCarry",
      "carryTest",
@@ -613,6 +613,7 @@ binomialFPT = g ->
      FPT
 )
 
+--returns true if the polynomial is binomial.
 isBinomial = f ->
 (
      alert := true;
@@ -804,8 +805,9 @@ guessFPT ={OutputRange=>false}>>o -> (ff, e1, maxDenom) ->(
 
 ---f-pure threshold estimation
 ---e is the max depth to search in
----finalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
-FPTEst={finalCheck=> true, Verbose=> false} >> o -> (ff,ee)->(
+---FinalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
+FPTEst={FinalCheck=> true, Verbose=> false} >> o -> (ff,ee)->(
+     --todo: rewrite this in a better way, that's more readable without so much crazy elseif nonsense
      --error "help";
      if (isDiagonal(ff)==true) then ( if (o.Verbose==true) then print "Polynomial is diagonal."; diagonalFPT(ff))
      else if (isBinomial(ff)==true) then ( if  (o.Verbose==true) then print "Polynomial is binomial.";binomialFPT(ff))
@@ -826,21 +828,23 @@ FPTEst={finalCheck=> true, Verbose=> false} >> o -> (ff,ee)->(
 	       if  (o.Verbose==true) then print "Computed F-signatures.";
 	       --  if (DEBUG == true) then error "help mostest";
 	       if ( (nn+1)/pp^ee == (ak#1) ) then (if  (o.Verbose==true) then print "Slope crosses at max nu."; ak#1)
-	       else if (o.finalCheck == true) then 
+	       else if (o.FinalCheck == true) then 
 	       ( 
-		    if  (o.Verbose==true) then print "Starting finalCheck.";
-	       	    if ((isFRegularPoly(ff,(ak#1) )) ==false ) then ( if  (o.Verbose==true) then print "finalCheck successful"; (ak#1) )
-	       	    else ( if  (o.Verbose==true) then print "finalCheck didn't find the fpt."; {(ak#1),(nn+1)/pp^ee})
+		    if  (o.Verbose==true) then print "Starting FinalCheck.";
+	       	    if ((isFRegularPoly(ff,(ak#1) )) ==false ) then ( if  (o.Verbose==true) then print "FinalCheck successful"; (ak#1) )
+	       	    else ( if  (o.Verbose==true) then print "FinalCheck didn't find the fpt."; {(ak#1),(nn+1)/pp^ee})
 	       )
 	       else (
-		    if  (o.Verbose==true) then print "finalCheck not run.";
+		    if  (o.Verbose==true) then print "FinalCheck not run.";
 		    {(ak#1),(nn+1)/pp^ee}
 	       )
      	  )
      )
 )
 
-
+--****************************************************--
+--*****************Documentation**********************--
+--****************************************************--
 
 
 beginDocumentation()
@@ -1022,9 +1026,9 @@ doc ///
 ///
 doc ///
      Key
-     	 [FPTEst,finalCheck,Verbose]
+     	 [FPTEst,FinalCheck,Verbose]
      Headline
-         Atempts to compute the F-pure threshold, where e is the max depth to search in.  If finalCheck is false, then a last time consuming check won't be tried.  If it is true, it will be.  Verbose set to true displays verbose output.
+         Atempts to compute the F-pure threshold, where e is the max depth to search in.  
      Usage
      	  FPTEst(f,e,finalCheck=>V,Verbose=>W)
      Inputs
@@ -1037,7 +1041,7 @@ doc ///
 	Q:QQ
      Description
      	  Text 
-	      finalCheck is a Boolean with default value True that determines whether the last isFRegularPoly is run (it is possibly very slow)
+	      finalCheck is a Boolean with default value True that determines whether the last isFRegularPoly is run (it is possibly very slow).  If FinalCheck is false, then a last time consuming check won't be tried.  If it is true, it will be.  Verbose set to true displays verbose output.
 ///
 doc ///
      Key
