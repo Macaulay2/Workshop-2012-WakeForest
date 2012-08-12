@@ -850,9 +850,32 @@ multiplierIdeal(Number,CentralArrangement) := (s,A) -> (
 multiplierIdeal(Number,CentralArrangement,List) := (s,A,m) -> (
   HyperplaneArrangements$multIdeal(s,A,m)
   );
+multiplierIdeal(CentralArrangement,Number) := (A,s) -> multiplierIdeal(s,A)
+multiplierIdeal(CentralArrangement,List,Number) := (A,m,s) -> multiplierIdeal(s,A,m)
 
+rank (Flat) := ZZ => F -> rank subArrangement F
+weight := (F,m) -> sum((tolist F)/(i->m_i))
 
-logCanonicalThreshold(CentralArrangement) := (A) -> HyperplaneArrangements$lct(A)
+protect irreds
+
+logCanonicalThreshold(CentralArrangement) := A -> HyperplaneArrangements$lct(A)
+logCanonicalThreshold(CentralArrangement,List) := (A,m) -> (
+  if not A.cache.?irreds then
+    A.cache.irreds = select(flatten drop(flats(A),1), F->(0 != euler F));
+  irreds := A.cache.irreds;
+  return min(irreds/(F -> (rank(F)/weight(F,m))));
+)
+
+skodaPeriodicityOnset(CentralArrangement) := A -> 1
+
+jumpingDenominators(CentralArrangement,List) := (A,m) -> (
+  if not A.cache.?irreds then
+    A.cache.irreds = select(flatten drop(flats(A),1), F->(0 != euler F));
+  irreds := A.cache.irreds;
+  return unique sort (irreds/(F -> weight(F,m)));
+)
+jumpingDenominators(CentralArrangement) := A ->
+  jumpingDenominators(A, toList((# flats(1,A)):1) )
 
 
 --------------------------------------------------------------------------------
