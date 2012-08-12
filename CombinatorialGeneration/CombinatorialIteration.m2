@@ -382,22 +382,53 @@ fillingFromPermutation = (shape,perm) -> (
 
 permutationFromFilling = T -> flatten toList T
 
+-- For a filling T and integer j, which column of T contains j
+whichColumn = (T,j) -> (
+  col := 0;
+  while not member(j, T#col) do col = col + 1;
+  return col;
+)
+
+-- For a filling T and integer j, which row of T contains j
+whichRow = (T,j) -> whichColumn(conjugate T, j)
+
 nextStandardTableau = method()
 nextStandardTableau(Filling) := (T) -> (
-  P := permutationFromFilling(T);
-  s := shape T;
-  while (true) do (
-    P = nextPermutation(P);
-    if ( P === null ) then
-    (
-      return null;
-    )
-    else
-    (
-      T = fillingFromPermutation(s,P);
-      if ( isStandardTableau(T) ) then return T;
-    );
+  n := sum toList shape T;
+  -- Find element that needs to be moved: least j such that row(j) < row(j-1)
+  j := 1;
+  rowprev := 0; -- this is whichRow(T,0), or else T is an illegal filling
+  while ( j < n and rowprev <= (rowcurr := whichRow(T,j)) ) do (
+    j = j+1;
+    rowprev = rowcurr;
   );
+  if j >= n then return null;
+  
+  -- determine the shape of subtableau to be changed: subtableau of entries <= j
+  subdiagram := apply(
+    apply(toList T, c -> select(c, x -> (x <= j))),
+    c -> #c);
+  
+  -- find corner square closest to j to j's left:
+  -- rightmost column strictly longer than j's current column
+  whichcol := whichColumn(T,j);
+  currcollen := subdiagram#whichcol;
+  while( subdiagram#whichcol == currcollen ) do whichcol = whichcol - 1;
+  
+  -- remove next corner (bottom) square left of j
+  -- fill in remaining subdiagram with 1..j-1 in lex order
+  subsubdiagram := replace(whichcol, subdiagram#whichcol - 1, subdiagram);
+  newsubtableau := nextStandardTableau(subsubdiagram);
+  
+  -- add j to bottom of column it's moved into
+  newsubtableau = replace(whichcol, append(newsubtableau#whichcol, j), toList newsubtableau);
+  
+  -- now, put back all the rest of the diagram (entries > j)
+  newtableau := apply(# toList T, c -> (
+    flatten join(newsubtableau#c, drop(T#c,subdiagram#c))
+  ));
+  
+  return new Filling from newtableau;
 )
 nextStandardTableau(YoungDiagram) := D -> (
   n := sum toList D;
@@ -407,6 +438,7 @@ nextStandardTableau(YoungDiagram) := D -> (
 nextStandardTableau(Partition) :=
 nextStandardTableau(List) := L ->
   nextStandardTableau new YoungDiagram from L
+nextStandardTableau(Nothing) := n -> null
 
 
 prevStandardTableau = method()
@@ -431,6 +463,7 @@ prevStandardTableau(YoungDiagram) := D ->
 prevStandardTableau(Partition) := 
 prevStandardTableau(List) := L ->
   prevStandardTableau new YoungDiagram from L
+prevStandardTableau(Nothing) := n -> null
 
 
 
@@ -1154,8 +1187,6 @@ restart
 loadPackage "CombinatorialIteration"
 installPackage oo
 check oo
-
-
 
 gentest = l -> (
   prefixString = "assert( collectIterations(nextStandardTableau,";
