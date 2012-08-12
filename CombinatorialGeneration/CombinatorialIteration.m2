@@ -617,7 +617,13 @@ document {
 
 document {
   Key => {
-    Size,
+    Size
+  },
+  Headline => "name for an optional argument"
+}
+
+document {
+  Key => {
     [nextSubset, Size],
     [prevSubset, Size]
   },
@@ -643,14 +649,17 @@ document {
     TO "subsets(n,k)",
     "."
   },
+  PARA {
+    "The default value, null, corresponds to subsets of unrestricted size."
+  },
 
   EXAMPLE lines ///
     T = nextSubset(5,Size=>3)
     T = nextSubset(5,T,Size=>3)
     T = nextSubset(5,T,Size=>3)
     U = prevSubset(5,Size=>3)
-    U = prevSubset(5,T,Size=>3)
-    U = prevSubset(5,T,Size=>3)
+    U = prevSubset(5,U,Size=>3)
+    U = prevSubset(5,U,Size=>3)
   ///
 }
 
@@ -664,12 +673,13 @@ document {
   },
   Headline => "Generate the next partition",
   SYNOPSIS {
+    Heading => "Generate the next partition",
     Usage => "nextPartition(P)",
     Inputs => {
       "P" => Partition => "a partition"
     },
     Outputs => {
-      Partition => {} => "the next partition after P, or null if P is the last partition"
+      Partition => "the next partition after P, or null if P is the last partition"
     },
     PARA {
       "Given a partition of a positive integer,
@@ -684,15 +694,33 @@ document {
     }
   },
   SYNOPSIS {
+    Heading => "the first partition of an integer",
     Usage => "nextPartition(n)",
     Inputs => {
       "n" => ZZ => "an integer"
     },
     Outputs => {
-      Partition => {} => "the first partition of n"
+      Partition => "the first partition of n"
     },
     PARA {
       "The first partition of n (the one-part partition {n})."
+    }
+  },
+  
+  SYNOPSIS {
+    Heading => "the first partition with parts of bounded size",
+    Usage => "nextPartition(n,k)",
+    Inputs => {
+      "n" => ZZ => "an integer",
+      "k" => ZZ => "a bound for the size of parts in a partition"
+    },
+    Outputs => {
+      Partition => "the first partition of n with parts of size at most k"
+    },
+    PARA {
+      "The first partition of n with parts of size at most k.
+      Subsequent iterations of nextPartition generate further partitions
+      of n, still with parts of size at most k."
     }
   },
   
@@ -703,22 +731,6 @@ document {
     Z = new Partition from {1,1,1,1,1}; -- the last partition of 5
     nextPartition Z
   ///,
-  
-  SYNOPSIS {
-    Usage => "nextPartition(n,k)",
-    Inputs => {
-      "n" => ZZ => "an integer",
-      "k" => ZZ => "a bound for the size of parts in a partition"
-    },
-    Outputs => {
-      Partition => {} => "the first partition of n with parts of size at most k"
-    },
-    PARA {
-      "The first partition of n with parts of size at most k.
-      Subsequent iterations of nextPartition generate further partitions
-      of n, still with parts of size at most k."
-    }
-  },
   
   EXAMPLE lines ///
     T = nextPartition(10,3)
@@ -738,26 +750,26 @@ document {
     (prevPartition, ZZ),
   },
   SYNOPSIS {
-    Headline => "Generate the previous partition",
+    Heading => "Generate the previous partition",
     Usage => "prevPartition(P)",
     Inputs => {
       "P" => Partition => "a partition"
     },
     Outputs => {
-      Partition => {} => "the partition before P, or null if P is the first partition"
+      Partition => "the partition before P, or null if P is the first partition"
     },
     "Given a partition of a positive integer, ",
     "returns the previous partition of the integer if there is one, ",
     "or null otherwise. ",
   },
   SYNOPSIS {
-    Headline => "Generate the previous partition",
+    Heading => "the last partition",
     Usage => "prevPartition(n)",
     Inputs => {
       "n" => ZZ => "an integer"
     },
     Outputs => {
-      Partition => {} => "the last partition of n"
+      Partition => "the last partition of n"
     },
     PARA {
       "The last partition of n (the all-ones partition)."
@@ -784,13 +796,13 @@ document {
     (nextPermutation, ZZ),
   },
   SYNOPSIS {
-    Headline => "Generate the next permutation",
+    Heading => "Generate the next permutation",
     Usage => "nextPermutation(P)",
     Inputs => {
       "P" => List => "a permutation of {0,...,n-1}"
     },
     Outputs => {
-      List => {} => "the next permutation after P, or null if P is the last permutation"
+      List => "the next permutation after P, or null if P is the last permutation"
     },
     PARA {
       "Given a permutation of {0,...,n-1}, this function returns
@@ -806,13 +818,13 @@ document {
   },
   
   SYNOPSIS {
-    Headline => "the first permutation",
+    Heading => "the first permutation",
     Usage => "nextPermutation(n)",
     Inputs => {
       "n" => ZZ => "an integer"
     },
     Outputs => {
-      List => {} => "the first permutation of {0,..,n-1}"
+      List => "the first permutation of {0,..,n-1}"
     },
     PARA {
       "Returns the first permutation of {0,..,n-1},
@@ -841,13 +853,13 @@ document {
     (prevPermutation, ZZ),
   },
   SYNOPSIS {
-    Headline => "Generate the previous permutation",
+    Heading => "Generate the previous permutation",
     Usage => "prevPermutation(P)",
     Inputs => {
       "P" => List => "a permutation of {0,...,n-1}"
     },
     Outputs => {
-      List => {} => "the permutation before P, or null if P is the first permutation"
+      List => "the permutation before P, or null if P is the first permutation"
     },
     PARA {
       "Given a permutation of {0,...,n-1}, this function returns
@@ -856,13 +868,13 @@ document {
   },
   
   SYNOPSIS {
-    Headline => "the last permutation",
+    Heading => "the last permutation",
     Usage => "prevPermutation(n)",
     Inputs => {
       "n" => ZZ => "an integer"
     },
     Outputs => {
-      List => {} => "the last permutation of {0,..,n-1}"
+      List => "the last permutation of {0,..,n-1}"
     },
     PARA {
       "Returns the last permutation of {0,..,n-1},
