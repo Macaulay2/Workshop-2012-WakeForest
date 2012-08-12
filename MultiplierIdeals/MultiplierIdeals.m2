@@ -27,7 +27,11 @@ newPackage(
       Version => "0.1", 
       Date => "August 6, 2012",
       Authors => {
-       {Name => "Zach Teitler"},
+        {
+          Name => "Zach Teitler",
+          Email => "zteitler@member.ams.org",
+          HomePage => "http://math.boisestate.edu/~zteitler/"
+        },
        {Name => "Bart Snapp"},
        {Name => "Claudiu Raicu"}
        },
@@ -50,7 +54,7 @@ newPackage(
 
 
 -- Implementation for monomial ideals is based on Howald's Theorem,
--- 	arXiv:math/0003232v1 [math.AG]
+--  arXiv:math/0003232v1 [math.AG]
 --  J.A. Howald, Multiplier ideals of monomial ideals.,
 --  Trans. Amer. Math. Soc. 353 (2001), no. 7, 2665–2671
 
@@ -70,7 +74,9 @@ newPackage(
 
 export {
       multiplierIdeal,
-      logCanonicalThreshold
+      logCanonicalThreshold,
+      jumpingNumbers,
+      Interval
       }
 
 -- exportMutable {}
@@ -96,8 +102,20 @@ setNmzOption("bigint",true);
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
+-- Here are method functions whose implementations depend heavily on the
+-- type of ideal whose multiplier ideal,lct, or jumping numbers are being
+-- computed.
+-- The methods are grouped by type of ideal: monomial, hyperplane, etc.
+
+-- Exported:
 multiplierIdeal = method();
 logCanonicalThreshold = method();
+jumpingNumbers = method(Dispatch => Thing, Options => {Interval => {0,infinity}});
+
+-- Private:
+skodaPeriodicityOnset = method();
+jumpingDenominators = method();
+
 
 --------------------------------------------------------------------------------
 -- SHARED ROUTINES -------------------------------------------------------------
@@ -131,33 +149,140 @@ intmat2monomIdeal ( Matrix, Ring, ZZ, ZZ ) := (M,R,d,c) -> (
 );
 
 
--- keynumber: 'key number' of an ideal,
--- a la Hochster-Huneke:
--- should be keynumber=min(ambient dimension, numgens I, analyticSpread I) = analyticSpread I
--- v0.2b: keynumber = ambient dimension = numColumns vars ring I
--- v0.2c: keynumber = analyticSpread
-keynumber = (I) -> (
+-- skodaPeriodicityOnset
+-- a value sufficiently large that Skoda periodicity has begun:
+-- J(I^t) = I.J(I^(t-1)) for t > skodaPeriodicityOnset
+-- skodaPeriodicityOnset = min(ambient dimension, numgens I, analyticSpread I)
+--   = analyticSpread I
+-- for some of the classes of ideals below, we may use a simpler version
+-- of the bound than analytic spread
+skodaPeriodicityOnset (Ideal) := (I) -> (
 --  return numColumns vars ring I;
 --  return numgens trim I;
   return analyticSpread(I); -- defined in package 'ReesAlgebra'
 );
 
 
+-- Qinterval
+-- give all rational numbers k/denom in the interval [a, b]
+-- for one or a list of denominators
+Qinterval = method();
+Qinterval ( ZZ , Number , Number ) := ( denom, a, b ) ->
+  apply(ceiling(denom*a) .. floor(denom*b) , k -> promote(k/denom,QQ))
+Qinterval ( List , Number , Number ) := ( denoms , a , b ) -> (
+  -- empty interval?
+  if ( a > b ) then (
+    return { };
+  );
+  qSet := set {};
+  for d in denoms do (
+    qSet = qSet + set Qinterval( d , a , b );
+  );
+  return sort toList qSet;
+)
+Qinterval ( ZZ , List ) := (denom, interval) -> Qinterval(denom, interval#0, interval#1)
+Qinterval ( List , List ) := (denoms, interval) -> Qinterval(denoms, interval#0, interval#1)
+
+
+
+jumpingNumbers Sequence := o -> args -> (
+  a := max(o.Interval#0, logCanonicalThreshold(args));
+  local b;
+  if ( o.Interval#1 == infinity ) then (
+    b = skodaPeriodicityOnset(args);
+  ) else (
+    b = o.Interval#1;
+  );
+  
+  -- potential jumping numbers
+  pjn := Qinterval(jumpingDenominators(args),a,b);
+  
+  if ( #pjn == 0 ) then (
+    return { { }, { } }; -- no jumping numbers, no multiplier ideals
+  );
+
+  local prev;
+  local next;
+  local jumpingNumbers;
+  local multiplierIdeals;
+  
+  lct := logCanonicalThreshold(args);
+  
+  -- Figure out whether pjn#0 is a jumping number:
+  -- We know pjn#0 >= lct.
+  -- If pjn#0 == lct, then it's definitely a jumping number
+  -- Otherwise, need to actually check:
+  -- we want to compare J(I^p) and J(I^(p-epsilon)) (where p=pjn#0)
+  -- We don't know how small epsilon needs to be,
+  -- so find the greatest potential jumping number less than p
+  -- and use that for p-epsilon
+  if ( (pjn#0) == lct ) then (
+    jumpingNumbers = { lct };
+    prev = multiplierIdeal(args,lct);
+    next = prev;
+    multiplierIdeals = { prev };
+  ) else (
+    pjn2 := Qinterval(jumpingDenominators(args), logCanonicalThreshold(args), pjn#0 );
+    -- pjn2#-1 = pjn#0
+    -- The greatest potential jumping number less than p is pjn2#-2
+    prev = multiplierIdeal(args,pjn2#-2);
+    next = multiplierIdeal(args,pjn#0);
+    if ( prev != next ) then (
+      -- yes it is a jumping number
+      jumpingNumbers = { pjn#0 };
+      multiplierIdeals = { next };
+    ) else (
+      -- no it is not a jumping number
+      jumpingNumbers = { };
+      multiplierIdeals = { };
+    );
+  );
+  
+  -- Now check whether rest of pjn's are jumping numbers:
+  
+  for i from 1 to (#pjn-1) do (
+    
+    prev = next;
+    next = multiplierIdeal(args,pjn#i);
+    
+    if ( prev != next ) then (
+      jumpingNumbers = append( jumpingNumbers , pjn#i );
+      multiplierIdeals = append( multiplierIdeals , next );
+    );
+  );
+  
+  return {jumpingNumbers, multiplierIdeals};
+)
+jumpingNumbers MonomialIdeal := o -> I -> jumpingNumbers(sequence I, o)
+
+-- XXXXXX
+
 --------------------------------------------------------------------------------
 -- VIA DMODULES ----------------------------------------------------------------
 --------------------------------------------------------------------------------
 
 {*
-  We should provide access for the various strategies
-  and other optional arguments provided in Dmodules
-*}
-
-{*
-multiplierIdeal(Ideal,QQ) :=
-  multiplierIdeal(Ideal,ZZ) :=
-  (I,t) -> Dmodules$multiplierIdeal(I,t)
-
-logCanonicalThreshold(Ideal) := (I) -> Dmodules$lct(I)
+  Unfortunately it is extremely difficult to acheive
+  compatibility with both Dmodules and HyperplaneArrangements,
+  due primarily to conflicts in definitions of the method
+  lct (defined in both Dmodules and HyperplaneArrangements)
+  and the methods multiplierIdeal (Dmodules) and multIdeal
+  (HyperplaneArrangements).
+  
+  At this point we are forced to separate our package from
+  either Dmodules or HyperplaneArrangements. We choose to
+  remain connected to HyperplaneArrangements for the following
+  reasons: Dmodules has a complete treatment of multiplier ideals
+  (including jumping numbers); we have little or nothing to add.
+  HyperplaneArrangements, on the other hand, is missing a
+  treatment of jumping numbers, which our package can supply.
+  In addition, the situation of HyperplaneArrangements is in
+  keeping with the current emphasis of this package,
+  namely, computation of multiplier ideals for various particular
+  classes of ideals, using nongeneral routines.
+  
+  (Note this is the current emphasis, not necessarily the long-term
+  goal of this package.)
 *}
 
 --------------------------------------------------------------------------------
@@ -174,7 +299,7 @@ logCanonicalThreshold(Ideal) := (I) -> Dmodules$lct(I)
 -- (ie Newt(I) is placed at height 1)
 -- Uses Normaliz
 NewtonPolyhedron = method();
-NewtonPolyhedron (MonomialIdeal) := (I) -> (
+NewtonPolyhedron (MonomialIdeal) := I -> (
   
   R := ring I;
   -- use R;
@@ -251,9 +376,9 @@ multiplierIdeal (MonomialIdeal, QQ) := (I,t) -> (
     
     multIdeal = monomialIdeal(1_R) ;
   
-  ) else if ( t >= keynumber I ) then (
+  ) else if ( t >= skodaPeriodicityOnset I ) then (
     
-    s := 1 + floor(t-keynumber(I));
+    s := 1 + floor(t-skodaPeriodicityOnset(I));
     multIdeal = I^s*multiplierIdeal(I,t-s) ;
   
   ) else (
@@ -303,7 +428,8 @@ multiplierIdeal (MonomialIdeal, QQ) := (I,t) -> (
   return multIdeal;
 
 );
-
+multiplierIdeal(Sequence,QQ) := (S,t) -> multiplierIdeal(S#0,t)
+multiplierIdeal(Sequence,ZZ) := (S,t) -> multiplierIdeal(S#0,t)
 
 
 -- logCanonicalThreshold ( MonomialIdeal , RingElement )
@@ -352,7 +478,28 @@ logCanonicalThreshold (MonomialIdeal , RingElement) := (I , mon) -> (
   return ( threshVal , facetMatrix );
 );
 
-logCanonicalThreshold (MonomialIdeal) := (I) -> first logCanonicalThreshold ( I , 1_(ring(I)) )
+logCanonicalThreshold (MonomialIdeal) := I -> first logCanonicalThreshold ( I , 1_(ring(I)) )
+
+-- could use numgens I or analyticSpread;
+-- but, expect in most common usage numgens > ambient usage,
+-- and analytic spread slow
+skodaPeriodicityOnset (MonomialIdeal) := I -> numColumns vars ring I;
+
+jumpingDenominators (MonomialIdeal) := I -> (
+  denomList := {};
+  M := NewtonPolyhedron(I);
+  m := numRows M;
+  n := numColumns M;
+  
+  for i from 0 to m-1 do (
+    s := sum drop(flatten entries M^{i}, -1);
+    if ( M_(i,n-1) != 0 and s != 0 ) then (
+      denomList = append(denomList , -M_(i,n-1));
+    );
+  );
+  return denomList;
+)
+
 
 --------------------------------------------------------------------------------
 -- MONOMIAL CURVES -------------------------------------------------------------
@@ -711,7 +858,7 @@ multiplierIdeal (Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
   J := ideal(1_R);
   
   -- should do:
-  -- use keynumber to reduce coefficient 'c' before computing this
+  -- use skodaPeriodicityOnset to reduce coefficient 'c' before computing this
   
   for i from 1 to r do (
     ai := floor( c * (r+1-i) ) - (n-i+1)*(m-i+1);
@@ -723,6 +870,9 @@ multiplierIdeal (Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
 );
 
 logCanonicalThreshold(List,ZZ) := (mm,r) -> min( apply(1..<r , i -> (mm_0-i)*(mm_1-i)/(r-i)) )
+
+
+
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -1364,5 +1514,16 @@ end
 
 
 
+restart
+loadPackage "MultiplierIdeals"
+check oo
+installPackage oo
 
 
+restart
+loadPackage "MultiplierIdeals"
+debug o1
+R = QQ[x,y];
+I = monomialIdeal(y^2,x^3);
+jumpingDenominators I
+jumpingNumbers I
