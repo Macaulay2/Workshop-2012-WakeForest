@@ -25,6 +25,9 @@ export{"basePExp",
      "FPTEst",
      "isSharplyFPurePoly",
      "FinalCheck",
+     "DiagonalCheck", 
+     "BinomialCheck", 
+     "NuPEMinus1Check",
      "aPower",
      "firstCarry",
      "carryTest",
@@ -806,40 +809,88 @@ guessFPT ={OutputRange=>false}>>o -> (ff, e1, maxDenom) ->(
 ---f-pure threshold estimation
 ---e is the max depth to search in
 ---FinalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
-FPTEst={FinalCheck=> true, Verbose=> false} >> o -> (ff,ee)->(
+FPTEst={FinalCheck=> true, Verbose=> false, DiagonalCheck=>true, BinomialCheck=>true, NuPEMinus1Check=>true} >> o -> (ff,ee)->(
      --todo: rewrite this in a better way, that's more readable without so much crazy elseif nonsense
      --error "help";
-     if (isDiagonal(ff)==true) then ( if (o.Verbose==true) then print "Polynomial is diagonal."; diagonalFPT(ff))
-     else if (isBinomial(ff)==true) then ( if  (o.Verbose==true) then print "Polynomial is binomial.";binomialFPT(ff))
-     else
-     (
+     foundAnswer := false; --this will be set to true as soon as we found the answer.  Setting it to true will stop further tests from being run
+     answer := null; --this stores the answer until it can be returned.
+     
+     --first check if it is diagonal:
+     if ( (o.DiagonalCheck==true) and (foundAnswer == false) ) then (
+	   if (isDiagonal(ff)==true) then ( 
+		if (o.Verbose==true) then print "Polynomial is diagonal."; 
+		answer = diagonalFPT(ff); 
+		foundAnswer = true
+	   )
+     );
+
+     --now check if it is binomial:
+     if ( (o.BinomialCheck==true) and (foundAnswer == false) ) then (
+	  if (isBinomial(ff)==true) then ( 
+	       if  (o.Verbose==true) then print "Polynomial is binomial.";
+	       answer = binomialFPT(ff);
+	       foundAnswer = true
+	  )
+     );
+     
+     --compute nu's
+     if (foundAnswer == false) then (
      	  pp:=char ring ff;
      	  nn:=nu(ff,ee);
 	  if  (o.Verbose==true) then print "nu's have been computed";
---	  if nn==0 then "Please pick a bigger integer 'e.'"
-       	  if nn==0 then {0,1/pp}
-     	  --error "help more";
-     	  else if (isFRegularPoly(ff,(nn/(pp^ee-1)))==false) then ( if  (o.Verbose==true) then print "Found answer via nu/(p^e-1)."; nn/(pp^ee-1)) 
-     	  else 
-	  (
-	        if  (o.Verbose==true) then print "nu/(p^e - 1) is not the fpt.";
-	       --error "help most";
-	       ak:=threshInt(ff,ee,(nn-1)/pp^ee,fSig(ff,nn-1,ee),nn); 
-	       if  (o.Verbose==true) then print "Computed F-signatures.";
-	       --  if (DEBUG == true) then error "help mostest";
-	       if ( (nn+1)/pp^ee == (ak#1) ) then (if  (o.Verbose==true) then print "Slope crosses at max nu."; ak#1)
-	       else if (o.FinalCheck == true) then 
-	       ( 
-		    if  (o.Verbose==true) then print "Starting FinalCheck.";
-	       	    if ((isFRegularPoly(ff,(ak#1) )) ==false ) then ( if  (o.Verbose==true) then print "FinalCheck successful"; (ak#1) )
-	       	    else ( if  (o.Verbose==true) then print "FinalCheck didn't find the fpt."; {(ak#1),(nn+1)/pp^ee})
+
+     	  --if our nu's aren't fine enough, we just spit back some information
+       	  if nn==0 then (
+	       answer = {0,1/pp};
+	       foundAnswer = true
+	   )
+      );
+ 
+      --check to see if nu/(p^e-1) is the fpt
+      if ((o.NuPEMinus1Check==true) and (foundAnswer == false)) then (
+	   if (isFRegularPoly(ff,(nn/(pp^ee-1)))==false) then ( 
+		if  (o.Verbose==true) then print "Found answer via nu/(p^e-1)."; 
+		answer = nn/(pp^ee-1);
+		foundAnswer = true
+	   ) 
+      	   else (
+	   	if  (o.Verbose==true) then print "nu/(p^e - 1) is not the fpt.";
+	   )
+      );
+
+     --do the F-signature computation, and the FinalCheck
+     if (foundAnswer == false) then (
+	   ak:=threshInt(ff,ee,(nn-1)/pp^ee,fSig(ff,nn-1,ee),nn); 
+	   if  (o.Verbose==true) then print "Computed F-signatures.";
+	   --now check to see if we cross at (nu+1)/p^e, if that's the case, then that's the fpt.
+	   if ( (nn+1)/pp^ee == (ak#1) ) then (
+		if  (o.Verbose==true) then print "F-signature line crosses at (nu+1)/p^e."; 
+		answer = ak#1;
+		foundAnswer = true
+	   );	  
+      	   --if we run the final check, do the following
+	   if ( (foundAnswer == false) and (o.FinalCheck == true)) then ( 
+	       if  (o.Verbose==true) then print "Starting FinalCheck.";
+	       if ((isFRegularPoly(ff,(ak#1) )) ==false ) then ( 
+		    if  (o.Verbose==true) then print "FinalCheck successful"; 
+		    answer = (ak#1);
+		    foundAnswer = true 
 	       )
-	       else (
-		    if  (o.Verbose==true) then print "FinalCheck not run.";
-		    {(ak#1),(nn+1)/pp^ee}
+	       else ( 
+		    if  (o.Verbose==true) then print "FinalCheck didn't find the fpt."; 
+		    answer = {(ak#1),(nn+1)/pp^ee};
+		    foundAnswer = true
 	       )
-     	  )
-     )
+	   );
+           --if we don't run the final check, do the following
+	   if ((foundAnswer == false) and (o.FinalCheck == false) ) then (
+	       if  (o.Verbose==true) then print "FinalCheck not run.";
+	       answer = {(ak#1),(nn+1)/pp^ee};
+      	       foundAnswer = true
+	   )
+     );
+     --return the answer
+     answer
 )
 
 --****************************************************--
@@ -876,7 +927,7 @@ doc ///
      Key
      	fastExp 
      Headline
-        Computes powers of elements in rings of characteristic p>0 using the Freshman's dream
+        Computes powers of elements in rings of characteristic p>0 using the Freshman's dream, ie quickly
      Usage
      	  fastExp(f,N) 
      Inputs
@@ -1026,7 +1077,7 @@ doc ///
 ///
 doc ///
      Key
-     	 [FPTEst,FinalCheck,Verbose]
+     	 [FPTEst,FinalCheck,Verbose,DiagonalCheck,BinomialCheck,NuPEMinus1Check]
      Headline
          Atempts to compute the F-pure threshold, where e is the max depth to search in.  
      Usage
