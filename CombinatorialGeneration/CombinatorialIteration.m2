@@ -40,7 +40,6 @@ export {
   YoungDiagram,
   Filling,
   shape,
-  isStandardTableau,
   nextStandardTableau,
   prevStandardTableau,
   collectIterations,
@@ -896,11 +895,33 @@ document {
 
 document {
   Key => {
+    YoungDiagram,
+    (conjugate, YoungDiagram),
+    (net, YoungDiagram)
+  },
+  Headline => "the class of Young diagrams",
+  "A Young diagram (or Ferrers diagram) is a finite collection
+  of boxes arranged in columns.
+  The columns are top-justified and their lengths are non-increasing.",
+  EXAMPLE lines ///
+    D = new YoungDiagram from {4,2,1}
+  ///,
+  "The conjugate of a Young diagram is obtained by transposition.",
+  EXAMPLE lines ///
+    D' = conjugate D
+    peek D'
+  ///
+}
+  
+  
+  
+document {
+  Key => {
     Filling,
     (conjugate, Filling),
-    (symbol ^,Filling,List),
-    (symbol _,Filling,List),
-    shape
+    (symbol ^, Filling, List),
+    (symbol _, Filling, List),
+    (net, Filling)
   },
   Headline => "the class of all fillings of Young diagrams",
   "A filling is an assignment of a value (typically an integer)
@@ -923,21 +944,208 @@ document {
   EXAMPLE lines ///
     T^{0,2} -- select rows
     T_{0,2,3} -- select columns
-  ///,
-  
-  "The underlying Young diagram can be extracted with ",
-  CODE "shape",
-  ", yielding a partition.",
+  ///
+}
+
+document {
+  Key => {
+    shape,
+    (shape,Filling),
+    (shape,List),
+    (shape,Partition)
+  },
+  Headline => "the underlying Young diagram of a filling",
+  Usage => "shape(T)",
+  Inputs => {
+    "T" => Filling => "a filling of a Young diagram"
+  },
+  Outputs => {
+    YoungDiagram => "the underlying Young diagram of T"
+  },
   
   EXAMPLE lines ///
+    T = new Filling from {{10,9,8},{10,8,5},{4,3},{4,1},{0}}
     shape T
   ///
 
 }
 
 
--- XXXXXX
+document {
+  Key => {
+    nextStandardTableau,
+    (nextStandardTableau,Filling),
+    (nextStandardTableau,YoungDiagram),
+    (nextStandardTableau,Partition),
+    (nextStandardTableau,List),
+    (nextStandardTableau,Nothing)
+  },
+  Headline => "next standard tableau",
+  SYNOPSIS {
+    Heading => "next standard tableau",
+    Usage => "nextStandardTableau(T)",
+    Inputs => {
+      "T" => Filling => "a standard tableau"
+    },
+    Outputs => {
+      Filling => "the next standard tableau with the same shape as T, or null if T is the last one"
+    },
+    PARA {
+      "Given a standard tableau T with shape a Young diagram D, this generates
+      the next standard tableau with the same shape, or null if T is the last one.
+      The standard tableaux are ordered lexicographically in the sense of
+      Nijenhuis-Wilf.
+      In particular the first tableau is filled top to bottom, left to right,
+      and the last tableau is filled left to right, top to bottom."
+    },
+    EXAMPLE lines ///
+      D = new YoungDiagram from {3,2,1}
+      T = nextStandardTableau D -- the first tableau on D
+      T = nextStandardTableau T
+      T = nextStandardTableau T
+      Z = prevStandardTableau D -- the last tableau on D
+    ///
+  },
+  Caveat => {
+    "The filling T must be a standard tableau."
+  },
+  SYNOPSIS {
+    Heading => "first standard tableau",
+    Usage => "nextStandardTableau(D)",
+    PARA {
+      "When D is a Young diagram, partition, or list, returns the
+      lexicographically first standard tableau with shape D."
+    }
+  }
+}
 
+document {
+  Key => {
+    prevStandardTableau,
+    (prevStandardTableau,Filling),
+    (prevStandardTableau,YoungDiagram),
+    (prevStandardTableau,Partition),
+    (prevStandardTableau,List),
+    (prevStandardTableau,Nothing)
+  },
+  Headline => "previous standard tableau",
+  SYNOPSIS {
+    Heading => "previous standard tableau",
+    Usage => "prevStandardTableau(T)",
+    Inputs => {
+      "T" => Filling => "a standard tableau"
+    },
+    Outputs => {
+      Filling => "the previous standard tableau with the same shape as T, or null if T is the first one"
+    },
+    PARA {
+      "Given a standard tableau T with shape a Young diagram D, this generates
+      the previous standard tableau with the same shape, or null if T is the first one.
+      The standard tableaux are ordered lexicographically in the sense of
+      Nijenhuis-Wilf.
+      In particular the first tableau is filled top to bottom, left to right,
+      and the last tableau is filled left to right, top to bottom."
+    },
+    EXAMPLE lines ///
+      D = new YoungDiagram from {3,2,1}
+      T = prevStandardTableau D -- the last tableau on D
+      T = prevStandardTableau T
+      T = prevStandardTableau T
+    ///
+  },
+  Caveat => {
+    "The filling T must be a standard tableau."
+  },
+  SYNOPSIS {
+    Heading => "last standard tableau",
+    Usage => "prevStandardTableau(D)",
+    PARA {
+      "When D is a Young diagram, partition, or list, returns the
+      lexicographically last standard tableau with shape D."
+    }
+  }
+}
+
+
+document {
+  Key => {
+    collectIterations,
+    (collectIterations,Function,Thing),
+    (collectIterations,Function),
+    [collectIterations, LengthLimit],
+    CollectInitializer
+  },
+  Headline => "collect list of values of iterations of a function",
+  SYNOPSIS {
+    Heading => "collect values of iterations of a function from a given initial value",
+    Usage => "collectIterations(f,t,LengthLimit=>10000,CollectInitializer=>false)",
+    Inputs => {
+      "f" => Function => "a function which can be iterated (composed with itself)",
+      "t" => Thing => "the initial value to begin iterating"
+    },
+    Outputs => {
+      List => "values of iterations of f applied to t"
+    },
+    PARA {
+      "This returns the list {f t, f^2 t, f^3 t,...}, where f^k t means
+      f(f^(k-1) t).
+      The function f must accept its output as inputs.
+      The list terminates when either the value null is reached (f^k t = null),
+      in which case the iteration ceases and the list is returned,
+      without including the terminating null value;
+      or when the length of the list reaches the value of the
+      optional parameter LengthLimit (default value 1000),
+      in which case the list constructed up to that point is returned."
+    },
+    EXAMPLE lines ///
+      collectIterations(nextPartition, 5) -- partitions of 5
+    ///,
+    PARA {
+      "By default the initializing value t is not itself included
+      in the list.
+      This behavior is controlled by the optional argument CollectInitializer
+      whose default value is false.
+      The initializer t may be included by including CollectInitializer=>true."
+    },
+    EXAMPLE lines ///
+      -- partitions of 8 with parts of size at most 3:
+      collectIterations(nextPartition,nextPartition(8,3),CollectInitializer=>true)
+    ///,
+    PARA {
+      "The generated list has at most LengthLimit elements.
+      By default LengthLimit is 10000.
+      This is intended to mitigate extremely long (or non-terminating).
+      Note that if the function f is slow then a smaller value for LengthLimit
+      may be desirable.
+      On the other hand, the value LengthLimit=infinity is also valid,
+      and will cause the iteration to continue until reaching a terminating null
+      (or reaching the limits of the computer's capacity)."
+    },
+    EXAMPLE lines ///
+      -- standard tableaux on the Young diagram {4,4,4,2}
+      time #(L = collectIterations(nextStandardTableau,{4,4,4,2},LengthLimit=>infinity))
+    ///
+  },
+  SYNOPSIS {
+    Heading => "collect values of iterations of a function from the null initial value",
+    Usage => "collectIterations(f,LengthLimit=>10000,CollectInitializer=>false)",
+    Inputs => {
+      "f" => Function => "a function which can be iterated (composed with itself)"
+    },
+    Outputs => {
+      List => "values of iterations of f applied to null"
+    },
+    PARA {
+      "This returns the list {f null, f^2 null, f^3 null,...},
+      with the same behavior as if t=null were specified in the command."
+    },
+    EXAMPLE lines ///
+      collectIterations(s -> nextSubset(3,s)) -- subsets of {0,1,2}
+      collectIterations(s -> nextSubset(4,s,Size=>2)) -- subsets of {0,1,2,3} of size 2
+    ///
+  }
+}
+      
 
 
 --------------------------------------------------------------------------------
@@ -1133,10 +1341,8 @@ TEST ///
     D = new YoungDiagram from l;
     T = nextStandardTableau D;
     assert( shape T === D );
-    assert( isStandardTableau T );
     T' = prevStandardTableau D;
     assert( shape T' === D );
-    assert( isStandardTableau T' );
   ))
 ///
 
@@ -1354,3 +1560,7 @@ scan( {
   x -> print gentest x
 )
 
+restart
+loadPackage "CombinatorialIteration"
+installPackage oo
+check oo
