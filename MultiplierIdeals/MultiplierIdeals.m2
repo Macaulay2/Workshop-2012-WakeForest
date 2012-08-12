@@ -157,10 +157,13 @@ intmat2monomIdeal ( Matrix, Ring, ZZ, ZZ ) := (M,R,d,c) -> (
 -- for some of the classes of ideals below, we may use a simpler version
 -- of the bound than analytic spread
 skodaPeriodicityOnset (Ideal) := (I) -> (
---  return numColumns vars ring I;
---  return numgens trim I;
-  return analyticSpread(I); -- defined in package 'ReesAlgebra'
-);
+  if ( I.cache#?"skodaPeriodicityOnset" ) then (
+    I.cache#"skodaPeriodicityOnset"
+  ) else (
+    I.cache#"skodaPeriodicityOnset" = analyticSpread(I);
+    I.cache#"skodaPeriodicityOnset"
+  )
+)
 
 
 -- Qinterval
@@ -206,27 +209,27 @@ jumpingNumbers Sequence := o -> args -> (
   local jumpingNumbers;
   local multiplierIdeals;
   
-  lct := logCanonicalThreshold(args);
+  mylct := logCanonicalThreshold(args);
   
   -- Figure out whether pjn#0 is a jumping number:
-  -- We know pjn#0 >= lct.
-  -- If pjn#0 == lct, then it's definitely a jumping number
+  -- We know pjn#0 >= mylct.
+  -- If pjn#0 == mylct, then it's definitely a jumping number
   -- Otherwise, need to actually check:
   -- we want to compare J(I^p) and J(I^(p-epsilon)) (where p=pjn#0)
   -- We don't know how small epsilon needs to be,
   -- so find the greatest potential jumping number less than p
   -- and use that for p-epsilon
-  if ( (pjn#0) == lct ) then (
-    jumpingNumbers = { lct };
-    prev = multiplierIdeal(args,lct);
+  if ( (pjn#0) == mylct ) then (
+    jumpingNumbers = { mylct };
+    prev = trim multiplierIdeal append(args,mylct);
     next = prev;
     multiplierIdeals = { prev };
   ) else (
     pjn2 := Qinterval(jumpingDenominators(args), logCanonicalThreshold(args), pjn#0 );
     -- pjn2#-1 = pjn#0
     -- The greatest potential jumping number less than p is pjn2#-2
-    prev = multiplierIdeal(args,pjn2#-2);
-    next = multiplierIdeal(args,pjn#0);
+    prev = trim multiplierIdeal append(args,pjn2#-2);
+    next = trim multiplierIdeal append(args,pjn#0);
     if ( prev != next ) then (
       -- yes it is a jumping number
       jumpingNumbers = { pjn#0 };
@@ -243,7 +246,7 @@ jumpingNumbers Sequence := o -> args -> (
   for i from 1 to (#pjn-1) do (
     
     prev = next;
-    next = multiplierIdeal(args,pjn#i);
+    next = trim multiplierIdeal append(args,pjn#i);
     
     if ( prev != next ) then (
       jumpingNumbers = append( jumpingNumbers , pjn#i );
@@ -479,10 +482,14 @@ logCanonicalThreshold (MonomialIdeal , RingElement) := (I , mon) -> (
 
 logCanonicalThreshold (MonomialIdeal) := I -> first logCanonicalThreshold ( I , 1_(ring(I)) )
 
--- could use numgens I or analyticSpread;
--- but, expect in most common usage numgens > ambient usage,
--- and analytic spread slow
-skodaPeriodicityOnset (MonomialIdeal) := I -> numColumns vars ring I;
+skodaPeriodicityOnset (MonomialIdeal) := I -> (
+  if I.cache#?"skodaPeriodicityOnset" then (
+    I.cache#"skodaPeriodicityOnset"
+  ) else (
+    I.cache#"skodaPeriodicityOnset" = analyticSpread I;
+    I.cache#"skodaPeriodicityOnset"
+  )
+)
 
 jumpingDenominators (MonomialIdeal) := I -> (
   denomList := {};
@@ -730,25 +737,41 @@ symbolicPowerCurveIdeal = (I,t) -> saturate(I^(max(0,t)))
 -- See H.M. Thompson's paper (cited above).
 --
 -- Input:
---  * sorted list of generators of monomial space curve ideal
+--  * ring
+--  * list of exponents
 -- Output:
 --  * list (of lattice points, each written as a list of integers)
 --
 
-intersectionIndexSet = (ff) -> (
-  uu := {(exponents(ff_0))_0, (exponents(ff_1))_0};
-  vv := {(exponents(ff_0))_1, (exponents(ff_1))_1};
-  
-  cols := #(uu_0);
-  candidateGens1 := (normaliz(matrix{uu_0 - vv_0} || matrix{vv_0 - uu_0} || matrix{uu_1 - vv_1} || id_(ZZ^cols),4))#"gen";
-  candidateGens2 := (normaliz(matrix{uu_0 - vv_0} || matrix{vv_0 - uu_0} || matrix{vv_1 - uu_1} || id_(ZZ^cols),4))#"gen";
-  candidateGens  := candidateGens1 || candidateGens2;
-  rhoEquation    := (transpose matrix {uu_1-uu_0}) | (transpose matrix {vv_1-vv_0});
-  
-  T := candidateGens * rhoEquation;
-  rows := toList select(0..<numRows T, i -> all(0..<numColumns T, j -> T_(i,j) > 0));
-  unique apply(rows, i -> flatten entries candidateGens^{i})
-)
+-- Now, I'm commenting out a big block of code that was written by
+-- Claudiu, Bart, and me in 2011, more or less directly translating
+-- a preprint of H.M. Thompson.
+-- First of all the code below has a bug (can't handle curves coming from
+-- exponents {a,b,c} where c >= a*b ! didn't notice that until now...).
+-- I know I should figure out what went wrong, but...
+-- Second of all, H.M. Thompson has told me that in fact the situation
+-- is much easier, at least for these monomial space curves anyway:
+-- the intersection index set is simply the exponent vector
+-- (the index set is a singleton)!
+-- So, for now anyway, just return that.
+-- Eventually we'll want to generalize beyond monomial curves,
+-- at which point this will all get straightened out.
+--
+-- intersectionIndexSet = (ff) -> (
+--   uu := {(exponents(ff_0))_0, (exponents(ff_1))_0};
+--   vv := {(exponents(ff_0))_1, (exponents(ff_1))_1};
+--   
+--   cols := #(uu_0);
+--   candidateGens1 := (normaliz(matrix{uu_0 - vv_0} || matrix{vv_0 - uu_0} || matrix{uu_1 - vv_1} || id_(ZZ^cols),4))#"gen";
+--   candidateGens2 := (normaliz(matrix{uu_0 - vv_0} || matrix{vv_0 - uu_0} || matrix{vv_1 - uu_1} || id_(ZZ^cols),4))#"gen";
+--   candidateGens  := candidateGens1 || candidateGens2;
+--   rhoEquation    := (transpose matrix {uu_1-uu_0}) | (transpose matrix {vv_1-vv_0});
+--   
+--   T := candidateGens * rhoEquation;
+--   rows := toList select(0..<numRows T, i -> all(0..<numColumns T, j -> T_(i,j) > 0));
+--   unique apply(rows, i -> flatten entries candidateGens^{i})
+-- )
+intersectionIndexSet = (R,exps) -> {exps}
 
 
 -- multiplierIdeal of MonomialCurve
@@ -768,7 +791,7 @@ multiplierIdeal (Ring, List, QQ) := (R, nn, t) -> (
   ff := sortedGens(R,nn);
   curveIdeal := affineMonomialCurveIdeal(R,nn);
   
-  indexList := intersectionIndexSet(ff);
+  indexList := intersectionIndexSet(R,nn);
   
   
   symbpow := symbolicPowerCurveIdeal(curveIdeal , floor(t-1));
@@ -798,7 +821,7 @@ multiplierIdeal (Ring, List, QQ) := (R, nn, t) -> (
 
 logCanonicalThreshold(Ring,List) := (R,nn) -> (
   ff := sortedGens(R,nn);
-  indexList  := intersectionIndexSet(ff);
+  indexList  := intersectionIndexSet(R,nn);
   curveIdeal := ideal ff;
   lctTerm    := logCanonicalThreshold(termIdeal(curveIdeal));
   min (2, lctTerm, 
@@ -806,8 +829,15 @@ logCanonicalThreshold(Ring,List) := (R,nn) -> (
          apply(indexList, mm -> (exceptionalDivisorDiscrepancy(mm,ff)+1)/ord(mm,ff_1) )
     ) )
 )
- 
 
+skodaPeriodicityOnset (Ring,List) := (R,exps) ->
+  analyticSpread affineMonomialCurveIdeal(R,exps)
+
+jumpingDenominators (Ring,List) := (R,exps) -> (
+  ff := sortedGens(R,exps);
+  indexList  := intersectionIndexSet(R,exps);
+  unique({1} | apply(indexList, m -> ord(m,ff_1)))
+)
 
 
 --------------------------------------------------------------------------------
@@ -945,9 +975,41 @@ TEST ///
   );
 ///
 
+TEST ///
+  R := QQ[x,y];
+  I := monomialIdeal(y^2,x^3);
+  JN := jumpingNumbers(I);
+  assert ( JN#0 === {5/6, 7/6, 4/3, 3/2, 5/3, 11/6, 2/1} );
+  assert ( JN#1 == {ideal (x,y),
+                    ideal (x^2,y),
+                    ideal (x^2,x*y,y^2),
+                    ideal (x^3,x*y,y^2),
+                    ideal (x^3,x^2*y,y^2),
+                    ideal (x^4,x^2*y,x*y^2,y^3),
+                    ideal (x^4,x^3*y,x*y^2,y^3)} );
+///
 
-
-
+TEST ///
+  R := QQ[x,y,z];
+  I := monomialIdeal( x*y , x*z , y*z );
+  JN1 := jumpingNumbers(I);
+  assert ( JN1#0 === {3/2, 2/1, 5/2, 3/1} );
+  assert ( JN1#1 == {ideal (x,y,z),
+                     ideal (x*y,x*z,y*z),
+                     ideal (x^2*y,x*y^2,x^2*z,x*y*z,y^2*z,x*z^2,y*z^2),
+                     ideal (x^2*y^2,x^2*y*z,x*y^2*z,x^2*z^2,x*y*z^2,y^2*z^2)} );
+  
+  JN2 := jumpingNumbers(I^2);
+  assert ( JN2#0 === {3/4, 1/1, 5/4, 3/2, 7/4, 2/1, 9/4, 5/2, 11/4, 3/1} );
+  
+  II := I^2 + monomialIdeal(x*y*z);
+  assert ( II === monomialIdeal( x^2*y^2 , x^2*z^2 , y^2*z^2 , x*y*z ) ) ;
+  JN3 := jumpingNumbers(II);
+  assert ( JN3#0 === {1/1, 3/2, 2/1} );
+  assert ( JN3#1 == {ideal (x*y,x*z,y*z),
+                     ideal (x^2*y^2,x*y*z,x^2*z^2,y^2*z^2),
+                     ideal (x^3*y^3,x^2*y^2*z,x^2*y*z^2,x*y^2*z^2,x^3*z^3,y^3*z^3)} );
+///
 
 -- Test 5
 -- Threshold computations
@@ -1098,6 +1160,16 @@ assert(multiplierIdeal(R,{2,3,4},3/2) == Dmodules$multiplierIdeal(I,3/2))
 ///
 
 
+----Test 9 - Qinterval and potentialJumpingNumbers 
+TEST ///
+needsPackage "MultiplierIdeals";
+debug MultiplierIdeals;
+assert ( Qinterval( 3 , 4 , 5 ) === ( 4/1 , 13/3 , 14/3 , 5/1 ) );
+assert ( Qinterval( 3 , 4.5 , 5 ) === ( 14/3 , 5/1 ) );
+R = QQ[x,y,z];
+assert( jumpingDenominators(R,{2,3,6}) === {1,6} )
+assert( jumpingDenominators(R,{4,5,11}) === {1,16} )
+///
 
 
 
@@ -1111,6 +1183,14 @@ assert( (logCanonicalThreshold(R,{3,4,11})) === 19/12 )
 ///
 
 
+----Test 11 - monomialSpaceCurveJumpingNumbers
+TEST ///
+needsPackage "MultiplierIdeals";
+R = QQ[x,y,z];
+assert( (jumpingNumbers(R,{2,3,4})) == {{11/6,2/1},{ideal(z,y,x,x^2-z),ideal(-y^2+x*z,-x^2+z)}} )
+assert( (jumpingNumbers(R,{3,4,5})) == {{13/9,16/9,17/9,2/1,22/9,23/9,25/9,26/9,3/1},{ideal(z,y,x),ideal(z,y,x^2),ideal(z,y^2,x*y,x^2),ideal(-y^2+x*z,-y^2*z+x*z^2,x*y^2-x^2*z,-x^2*y+z^2,-x^3+y*z),ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,-x^2*y+z^2,-y^2*z^2+x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^4+x*y*z),ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,y^2*z^2-x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^3*y+x*z^2,-x^4+x*y*z),ideal(-y^2*z+x*z^2,-y^3+x*y*z,y^2*z^2-x*z^3,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^2*y^2+y*z^2,-x^3*y+x*z^2,-x^2*y*z^2+z^4,-x^3*z^2+y*z^3,-x^5+z^3),ideal(-y^2*z+x*z^2,y^2*z^2-x*z^3,-x^2*y*z+z^3,-x^3*z+y*z^2,-y^4+x^2*z^2,-x*y^3+z^3,-x^2*y^2+y*z^2,-x^2*y*z^2+z^4,x^3*z^2-y*z^3,-x^4*y+x^2*z^2,-x^5+z^3),ideal(-y^4+2*x*y^2*z-x^2*z^2,-y^4*z+2*x*y^2*z^2-x^2*z^3,x*y^4-2*x^2*y^2*z+x^3*z^2,-x^2*y^3+x^3*y*z+y^2*z^2-x*z^3,-x^3*y^2+x^4*z+y^3*z-x*y*z^2,-x^5*z-x*y^3*z+3*x^2*y*z^2-z^4,-x^5*y-x*y^4+3*x^2*y^2*z-y*z^3,-x^6-x^2*y^3+3*x^3*y*z-x*z^3)}} )
+assert( (jumpingNumbers(R,{3,4,5},Interval=>{3/2,5/2})) == {{16/9,17/9,2/1,22/9},{ideal(z,y,x^2),ideal(z,y^2,x*y,x^2),ideal(-y^2+x*z,-y^2*z+x*z^2,x*y^2-x^2*z,-x^2*y+z^2,-x^3+y*z),ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,-x^2*y+z^2,-y^2*z^2+x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^4+x*y*z)}} )
+///
 
 --------------------------------------------------------------------------------
 -- HYPERPLANE ARRANGEMENTS -----------------------------------------------------
@@ -1519,10 +1599,3 @@ check oo
 installPackage oo
 
 
-restart
-loadPackage "MultiplierIdeals"
-debug o1
-R = QQ[x,y];
-I = monomialIdeal(y^2,x^3);
-jumpingDenominators I
-jumpingNumbers I
