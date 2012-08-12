@@ -1073,7 +1073,8 @@ document {
     (collectIterations,Function,Thing),
     (collectIterations,Function),
     [collectIterations, LengthLimit],
-    CollectInitializer
+    CollectInitializer,
+    [collectIterations,CollectInitializer]
   },
   Headline => "collect list of values of iterations of a function",
   SYNOPSIS {
@@ -1108,7 +1109,6 @@ document {
       The initializer t may be included by including CollectInitializer=>true."
     },
     EXAMPLE lines ///
-      -- partitions of 8 with parts of size at most 3:
       collectIterations(nextPartition,nextPartition(8,3),CollectInitializer=>true)
     ///,
     PARA {
@@ -1120,11 +1120,7 @@ document {
       On the other hand, the value LengthLimit=infinity is also valid,
       and will cause the iteration to continue until reaching a terminating null
       (or reaching the limits of the computer's capacity)."
-    },
-    EXAMPLE lines ///
-      -- standard tableaux on the Young diagram {4,4,4,2}
-      time #(L = collectIterations(nextStandardTableau,{4,4,4,2},LengthLimit=>infinity))
-    ///
+    }
   },
   SYNOPSIS {
     Heading => "collect values of iterations of a function from the null initial value",
@@ -1145,7 +1141,7 @@ document {
     ///
   }
 }
-      
+     
 
 
 --------------------------------------------------------------------------------
