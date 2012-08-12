@@ -443,20 +443,8 @@ nextStandardTableau(Nothing) := n -> null
 
 prevStandardTableau = method()
 prevStandardTableau(Filling) := T -> (
-  P := permutationFromFilling(T);
-  s := shape T;
-  while (true) do (
-    P = prevPermutation(P);
-    if ( P === null ) then
-    (
-      return null;
-    )
-    else
-    (
-      T = fillingFromPermutation(s,P);
-      if ( isStandardTableau(T) ) then return T;
-    );
-  );
+  Tnext' := nextStandardTableau(conjugate T);
+  if Tnext' === null then return null else return conjugate Tnext';
 )
 prevStandardTableau(YoungDiagram) := D ->
   conjugate(nextStandardTableau(conjugate D))
@@ -1104,78 +1092,92 @@ assert( collectIterations(prevStandardTableau,{2,2}) === {
 
 assert( collectIterations(prevStandardTableau,{3,3}) === {
   new Filling from {{0,2,4},{1,3,5}},
-  new Filling from {{0,2,3},{1,4,5}},
   new Filling from {{0,1,4},{2,3,5}},
+  new Filling from {{0,2,3},{1,4,5}},
   new Filling from {{0,1,3},{2,4,5}},
   new Filling from {{0,1,2},{3,4,5}}} );
 
 assert( collectIterations(prevStandardTableau,{3,1,1}) === {
   new Filling from {{0,3,4},{1},{2}},
   new Filling from {{0,2,4},{1},{3}},
-  new Filling from {{0,2,3},{1},{4}},
   new Filling from {{0,1,4},{2},{3}},
+  new Filling from {{0,2,3},{1},{4}},
   new Filling from {{0,1,3},{2},{4}},
   new Filling from {{0,1,2},{3},{4}}} );
 
 assert( collectIterations(prevStandardTableau,{3,2}) === {
   new Filling from {{0,2,4},{1,3}},
-  new Filling from {{0,2,3},{1,4}},
   new Filling from {{0,1,4},{2,3}},
+  new Filling from {{0,2,3},{1,4}},
   new Filling from {{0,1,3},{2,4}},
   new Filling from {{0,1,2},{3,4}}} );
 
 assert( collectIterations(prevStandardTableau,{4,3}) === {
   new Filling from {{0,2,4,6},{1,3,5}},
-  new Filling from {{0,2,4,5},{1,3,6}},
-  new Filling from {{0,2,3,6},{1,4,5}},
-  new Filling from {{0,2,3,5},{1,4,6}},
-  new Filling from {{0,2,3,4},{1,5,6}},
   new Filling from {{0,1,4,6},{2,3,5}},
-  new Filling from {{0,1,4,5},{2,3,6}},
+  new Filling from {{0,2,3,6},{1,4,5}},
   new Filling from {{0,1,3,6},{2,4,5}},
-  new Filling from {{0,1,3,5},{2,4,6}},
-  new Filling from {{0,1,3,4},{2,5,6}},
   new Filling from {{0,1,2,6},{3,4,5}},
+  new Filling from {{0,2,4,5},{1,3,6}},
+  new Filling from {{0,1,4,5},{2,3,6}},
+  new Filling from {{0,2,3,5},{1,4,6}},
+  new Filling from {{0,1,3,5},{2,4,6}},
   new Filling from {{0,1,2,5},{3,4,6}},
+  new Filling from {{0,2,3,4},{1,5,6}},
+  new Filling from {{0,1,3,4},{2,5,6}},
   new Filling from {{0,1,2,4},{3,5,6}},
   new Filling from {{0,1,2,3},{4,5,6}}} );
 
 assert( collectIterations(prevStandardTableau,{4,2,1}) === {
   new Filling from {{0,3,5,6},{1,4},{2}},
-  new Filling from {{0,3,4,6},{1,5},{2}},
-  new Filling from {{0,3,4,5},{1,6},{2}},
   new Filling from {{0,2,5,6},{1,4},{3}},
-  new Filling from {{0,2,5,6},{1,3},{4}},
-  new Filling from {{0,2,4,6},{1,5},{3}},
-  new Filling from {{0,2,4,6},{1,3},{5}},
-  new Filling from {{0,2,4,5},{1,6},{3}},
-  new Filling from {{0,2,4,5},{1,3},{6}},
-  new Filling from {{0,2,3,6},{1,5},{4}},
-  new Filling from {{0,2,3,6},{1,4},{5}},
-  new Filling from {{0,2,3,5},{1,6},{4}},
-  new Filling from {{0,2,3,5},{1,4},{6}},
-  new Filling from {{0,2,3,4},{1,6},{5}},
-  new Filling from {{0,2,3,4},{1,5},{6}},
   new Filling from {{0,1,5,6},{2,4},{3}},
+  new Filling from {{0,2,5,6},{1,3},{4}},
   new Filling from {{0,1,5,6},{2,3},{4}},
+  new Filling from {{0,3,4,6},{1,5},{2}},
+  new Filling from {{0,2,4,6},{1,5},{3}},
   new Filling from {{0,1,4,6},{2,5},{3}},
-  new Filling from {{0,1,4,6},{2,3},{5}},
-  new Filling from {{0,1,4,5},{2,6},{3}},
-  new Filling from {{0,1,4,5},{2,3},{6}},
+  new Filling from {{0,2,3,6},{1,5},{4}},
   new Filling from {{0,1,3,6},{2,5},{4}},
-  new Filling from {{0,1,3,6},{2,4},{5}},
-  new Filling from {{0,1,3,5},{2,6},{4}},
-  new Filling from {{0,1,3,5},{2,4},{6}},
-  new Filling from {{0,1,3,4},{2,6},{5}},
-  new Filling from {{0,1,3,4},{2,5},{6}},
   new Filling from {{0,1,2,6},{3,5},{4}},
+  new Filling from {{0,2,4,6},{1,3},{5}},
+  new Filling from {{0,1,4,6},{2,3},{5}},
+  new Filling from {{0,2,3,6},{1,4},{5}},
+  new Filling from {{0,1,3,6},{2,4},{5}},
   new Filling from {{0,1,2,6},{3,4},{5}},
+  new Filling from {{0,3,4,5},{1,6},{2}},
+  new Filling from {{0,2,4,5},{1,6},{3}},
+  new Filling from {{0,1,4,5},{2,6},{3}},
+  new Filling from {{0,2,3,5},{1,6},{4}},
+  new Filling from {{0,1,3,5},{2,6},{4}},
   new Filling from {{0,1,2,5},{3,6},{4}},
-  new Filling from {{0,1,2,5},{3,4},{6}},
+  new Filling from {{0,2,3,4},{1,6},{5}},
+  new Filling from {{0,1,3,4},{2,6},{5}},
   new Filling from {{0,1,2,4},{3,6},{5}},
-  new Filling from {{0,1,2,4},{3,5},{6}},
   new Filling from {{0,1,2,3},{4,6},{5}},
+  new Filling from {{0,2,4,5},{1,3},{6}},
+  new Filling from {{0,1,4,5},{2,3},{6}},
+  new Filling from {{0,2,3,5},{1,4},{6}},
+  new Filling from {{0,1,3,5},{2,4},{6}},
+  new Filling from {{0,1,2,5},{3,4},{6}},
+  new Filling from {{0,2,3,4},{1,5},{6}},
+  new Filling from {{0,1,3,4},{2,5},{6}},
+  new Filling from {{0,1,2,4},{3,5},{6}},
   new Filling from {{0,1,2,3},{4,5},{6}}} );
+///
+
+TEST ///
+  scan( {
+  {1,1},
+  {2,2},
+  {3,3},
+  {3,1,1},
+  {3,2},
+  {4,3},
+  {4,2,1}
+  },
+  x -> assert ( collectIterations(nextStandardTableau,x) === reverse collectIterations(prevStandardTableau,x) )
+)
 ///
 
 end
