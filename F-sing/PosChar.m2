@@ -790,7 +790,7 @@ threshInt = (f,e,t,b,t1)-> (
 {b1,xInt(t,b,t1/(char ring f)^e,b1)}
 )
 
- "/Users/emilyewitt/m2.2012/F-sing/FS/"
+-- "/Users/emilyewitt/m2.2012/F-sing/FS/"
  
  --this function guesses the FPT of ff.  It returns a list of all numbers in 
 --the range suggested by nu(ff,e1) with maxDenom as the maximum denominator
