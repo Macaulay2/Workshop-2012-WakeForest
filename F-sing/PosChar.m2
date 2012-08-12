@@ -2,7 +2,7 @@ newPackage( "PosChar",
 Version => "1.0", Date => "August 5, 2012", Authors => {
      {Name => "Karl Schwede",
      Email => "schwede@math.psu.edu",
-     HomePage => "http://math.psu.edu/schwede"
+     HomePage => "http://math.psu.edu/schwede/"
      },
      {Name=> "Emily Witt",
      Email=> "ewitt@umn.edu",
@@ -1014,7 +1014,7 @@ doc ///
 	 a:ZZ
          e:ZZ
      Outputs
-        :Ideal
+        :QQ
 ///
 doc ///
      Key
