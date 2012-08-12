@@ -255,7 +255,6 @@ jumpingNumbers Sequence := o -> args -> (
 )
 jumpingNumbers MonomialIdeal := o -> I -> jumpingNumbers(sequence I, o)
 
--- XXXXXX
 
 --------------------------------------------------------------------------------
 -- VIA DMODULES ----------------------------------------------------------------
@@ -530,21 +529,21 @@ jumpingDenominators (MonomialIdeal) := I -> (
 -- monomialCurveideal from Macaulay2.
 
 affineMonomialCurveIdeal = (S, a) -> (
-     -- check that S is a polynomial ring over a field
-     n := # a;
-     if not all(a, i -> instance(i,ZZ) and i >= 1)
-     then error "expected positive integers";
-     t := symbol t;
-     k := coefficientRing S;
-     M1 := monoid [t];
-     M2 := monoid [Variables=>n];
-     R1 := k M1;
-     R2 := k M2;
-     t = R1_0;
-     mm := matrix table(1, n, (j,i) -> t^(a#i));
-     j := generators kernel map(R1, R2, mm);
-     ideal substitute(j, submatrix(vars S, {0..n-1}))
-     );
+  -- check that S is a polynomial ring over a field
+  n := # a;
+  if not all(a, i -> instance(i,ZZ) and i >= 1)
+  then error "expected positive integers";
+  t := symbol t;
+  k := coefficientRing S;
+  M1 := monoid [t];
+  M2 := monoid [Variables=>n];
+  R1 := k M1;
+  R2 := k M2;
+  t = R1_0;
+  mm := matrix table(1, n, (j,i) -> t^(a#i));
+  j := generators kernel map(R1, R2, mm);
+  ideal substitute(j, submatrix(vars S, {0..n-1}))
+)
 
 
 -- ord
@@ -568,10 +567,10 @@ affineMonomialCurveIdeal = (S, a) -> (
 -- polynomial. Currently we do not check this.
 
 ord = (mm,p) -> (
-     R := ring p;
-     degs := apply(listForm p, i-> first i);
-     min apply(degs, i -> sum apply(i,mm,times))
-     );
+  R := ring p;
+  degs := apply(listForm p, i-> first i);
+  min apply(degs, i -> sum apply(i,mm,times))
+)
 
 
 -- sortedGens
@@ -592,11 +591,11 @@ ord = (mm,p) -> (
 -- positive. Currently this is not checked.
 
 sortedGens = (R,nn) -> (
-     KK := coefficientRing R;
-     genList := flatten entries gens trim affineMonomialCurveIdeal(R,nn);
-     L := sort apply(genList, i -> {ord(nn,i), i});
-     apply(L, i-> last i)     
-     );
+  KK := coefficientRing R;
+  genList := flatten entries gens trim affineMonomialCurveIdeal(R,nn);
+  L := sort apply(genList, i -> {ord(nn,i), i});
+  apply(L, i-> last i)     
+)
 
 
 -- exceptionalDivisorValuation
@@ -618,12 +617,12 @@ sortedGens = (R,nn) -> (
 -- valuation of p is d*ord(mm,f1) + ord(mm,g).
 
 exceptionalDivisorValuation = (nn,mm,p) -> (
-     R := ring p;
-     ff := sortedGens(R,nn);
-     n := 0;
-     while p % ff_0 == 0 do (p = p//ff_0; n = n+1;);
-     n*ord(mm,ff_1) + ord(mm,p)
-     );
+  R := ring p;
+  ff := sortedGens(R,nn);
+  n := 0;
+  while p % ff_0 == 0 do (p = p//ff_0; n = n+1;);
+  n*ord(mm,ff_1) + ord(mm,p)
+)
 
 
 -- exceptionalDivisorDiscrepancy
@@ -639,8 +638,8 @@ exceptionalDivisorValuation = (nn,mm,p) -> (
 --  * integer
 
 exceptionalDivisorDiscrepancy = (mm,ff) -> (
-     sum(mm) - 1 + ord(mm, ff_1) - ord(mm, ff_0)
-     );
+  sum(mm) - 1 + ord(mm, ff_1) - ord(mm, ff_0)
+)
 
 -- monomialValuationIdeal
 --
@@ -657,11 +656,11 @@ exceptionalDivisorDiscrepancy = (mm,ff) -> (
 -- of variables in R. Currently we do not check these things.
 
 monomialValuationIdeal = (R,mm,val) -> (
-     M := (matrix{mm}|matrix{{-val}}) || id_(ZZ^(#mm+1));
-     normalizOutput := normaliz(M,4);
-     M2 := normalizOutput#"gen";
-     intmat2monomIdeal(M2,R,1)
-     );
+  M := (matrix{mm}|matrix{{-val}}) || id_(ZZ^(#mm+1));
+  normalizOutput := normaliz(M,4);
+  M2 := normalizOutput#"gen";
+  intmat2monomIdeal(M2,R,1)
+)
 
 
 -- exceptionalDivisorValuationIdeal
@@ -678,10 +677,10 @@ monomialValuationIdeal = (R,mm,val) -> (
 --  * ideal
 
 exceptionalDivisorValuationIdeal = (R,ff,mm,val) -> (
-     maxpow := ceiling(val / ord(mm,ff_1));
-     if maxpow < 0 then ideal(1_R) else
-     sum apply(splice{0..maxpow}, i -> ideal(ff_0^i)*monomialValuationIdeal(R,mm,val-i*ord(mm,ff_1)))
-     );
+  maxpow := ceiling(val / ord(mm,ff_1));
+  if maxpow < 0 then ideal(1_R) else
+  sum apply(splice{0..maxpow}, i -> ideal(ff_0^i)*monomialValuationIdeal(R,mm,val-i*ord(mm,ff_1)))
+)
 
 
 -- termIdeal
@@ -694,10 +693,10 @@ exceptionalDivisorValuationIdeal = (R,ff,mm,val) -> (
 --  * monomialIdeal
 
 termIdeal = I -> (
-     R := ring I;
-     if I == ideal 0_R then return monomialIdeal 0_R else
-     return monomialIdeal flatten apply(flatten entries gens I, i -> terms i)
-     );
+  R := ring I;
+  if I == ideal 0_R then return monomialIdeal 0_R else
+  return monomialIdeal flatten apply(flatten entries gens I, i -> terms i)
+)
 
 -- symbolicPowerCurveIdeal
 --
@@ -721,7 +720,7 @@ termIdeal = I -> (
 --
 -- We assume the input ideal is indeed prime, and that its unique singular point is the origin.
 
-symbolicPowerCurveIdeal = (I,t) -> saturate(I^(max(0,t)));
+symbolicPowerCurveIdeal = (I,t) -> saturate(I^(max(0,t)))
 
 
 -- intersectionIndexSet
@@ -737,19 +736,19 @@ symbolicPowerCurveIdeal = (I,t) -> saturate(I^(max(0,t)));
 --
 
 intersectionIndexSet = (ff) -> (
-     uu := {(exponents(ff_0))_0, (exponents(ff_1))_0};
-     vv := {(exponents(ff_0))_1, (exponents(ff_1))_1};
-     
-     cols := #(uu_0);
-     candidateGens1 := (normaliz(matrix{uu_0 - vv_0} || matrix{vv_0 - uu_0} || matrix{uu_1 - vv_1} || id_(ZZ^cols),4))#"gen";
-     candidateGens2 := (normaliz(matrix{uu_0 - vv_0} || matrix{vv_0 - uu_0} || matrix{vv_1 - uu_1} || id_(ZZ^cols),4))#"gen";
-     candidateGens  := candidateGens1 || candidateGens2;
-     rhoEquation    := (transpose matrix {uu_1-uu_0}) | (transpose matrix {vv_1-vv_0});
-     
-     T := candidateGens * rhoEquation;
-     rows := toList select(0..<numRows T, i -> all(0..<numColumns T, j -> T_(i,j) > 0));
-     unique apply(rows, i -> flatten entries candidateGens^{i})
-     );
+  uu := {(exponents(ff_0))_0, (exponents(ff_1))_0};
+  vv := {(exponents(ff_0))_1, (exponents(ff_1))_1};
+  
+  cols := #(uu_0);
+  candidateGens1 := (normaliz(matrix{uu_0 - vv_0} || matrix{vv_0 - uu_0} || matrix{uu_1 - vv_1} || id_(ZZ^cols),4))#"gen";
+  candidateGens2 := (normaliz(matrix{uu_0 - vv_0} || matrix{vv_0 - uu_0} || matrix{vv_1 - uu_1} || id_(ZZ^cols),4))#"gen";
+  candidateGens  := candidateGens1 || candidateGens2;
+  rhoEquation    := (transpose matrix {uu_1-uu_0}) | (transpose matrix {vv_1-vv_0});
+  
+  T := candidateGens * rhoEquation;
+  rows := toList select(0..<numRows T, i -> all(0..<numColumns T, j -> T_(i,j) > 0));
+  unique apply(rows, i -> flatten entries candidateGens^{i})
+)
 
 
 -- multiplierIdeal of MonomialCurve
@@ -766,21 +765,21 @@ intersectionIndexSet = (ff) -> (
 
 multiplierIdeal (Ring, List, ZZ) := (R, nn, t) -> multiplierIdeal(R,nn,promote(t,QQ))
 multiplierIdeal (Ring, List, QQ) := (R, nn, t) -> (
-     ff := sortedGens(R,nn);
-     curveIdeal := affineMonomialCurveIdeal(R,nn);
-     
-     indexList := intersectionIndexSet(ff);
-     
-     
-     symbpow := symbolicPowerCurveIdeal(curveIdeal , floor(t-1));
-     term    := multiplierIdeal(termIdeal(curveIdeal) , t);
-     
-     validl  := intersect apply(indexList ,
-                     mm -> exceptionalDivisorValuationIdeal(R,ff,mm,
-                          floor(t*ord(mm,ff_1)-exceptionalDivisorDiscrepancy(mm,ff)) ));
-     
-     intersect(symbpow,term,validl)
-     );
+  ff := sortedGens(R,nn);
+  curveIdeal := affineMonomialCurveIdeal(R,nn);
+  
+  indexList := intersectionIndexSet(ff);
+  
+  
+  symbpow := symbolicPowerCurveIdeal(curveIdeal , floor(t-1));
+  term    := multiplierIdeal(termIdeal(curveIdeal) , t);
+  
+  validl  := intersect apply(indexList ,
+    mm -> exceptionalDivisorValuationIdeal(R,ff,mm,
+      floor(t*ord(mm,ff_1)-exceptionalDivisorDiscrepancy(mm,ff)) ));
+  
+  intersect(symbpow,term,validl)
+)
 
 
 
@@ -806,7 +805,7 @@ logCanonicalThreshold(Ring,List) := (R,nn) -> (
     min(
          apply(indexList, mm -> (exceptionalDivisorDiscrepancy(mm,ff)+1)/ord(mm,ff_1) )
     ) )
-);
+)
  
 
 
