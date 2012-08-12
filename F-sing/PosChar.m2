@@ -39,7 +39,8 @@ export{"basePExp",
      "multiDegree",
      "dCalculation",
      "calculateEpsilon",
-     "guessFPT"
+     "guessFPT",
+     "OutputRange"
 }
 --This file has "finished" functions from the Macaulay2 workshop at Wake Forest
 --August 2012.  Sara Malec, Karl Schwede and Emily Witt contributed to it.
@@ -792,10 +793,13 @@ threshInt = (f,e,t,b,t1)-> (
  
  --this function guesses the FPT of ff.  It returns a list of all numbers in 
 --the range suggested by nu(ff,e1) with maxDenom as the maximum denominator
-guessFPT = (ff, e1, maxDenom) ->(
+guessFPT ={OutputRange=>false}>>o -> (ff, e1, maxDenom) ->(
      nn := nu(ff, e1);
      pp := char ring ff;
-     findNumberBetween({nn/(pp^e1-1), (nn+1)/(pp^e1)}, maxDenom)
+     if (o.OutputRange == false) then 
+          findNumberBetween({nn/(pp^e1-1), (nn+1)/(pp^e1)}, maxDenom)
+     else
+          {{ nn/(pp^e1-1), (nn+1)/(pp^e1)}, findNumberBetween({nn/(pp^e1-1), (nn+1)/(pp^e1)}, maxDenom)}
 )
 
 ---f-pure threshold estimation
