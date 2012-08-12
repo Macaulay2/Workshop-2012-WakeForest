@@ -83,7 +83,7 @@ nextSubset ZZ := o -> (n) -> (
   else if n == 0 or o.Size > n or o.Size < 0 then return null
   else return new List from (0..(o.Size-1));
 )
-nextSubset (ZZ,Nothing) := o -> (n,P) -> nextSubset(n,Size=>o.Size)
+nextSubset (ZZ,Nothing) := o -> (n,P) -> nextSubset(n,o)
 nextSubset (ZZ,List) := o -> (n,P) -> (
   if (o.Size =!= null) and (o.Size != #P) then
     if (n >= 0 and o.Size >= 0) then (
@@ -106,15 +106,13 @@ nextSubset (ZZ,List) := o -> (n,P) -> (
   ) else (
   
     -- o.Size === null means generate subsets of all sizes.
-    -- To conform with Macaulay2's existing 'subsets',
-    -- generate in binary counting order.
+    -- find first non-member
+    nm := 0;
+    while ( nm < #P and P#nm == nm ) do nm = nm+1;
+    if nm >= n then return null;
+    -- drop {0..nm-1}, add nm
+    return join({nm}, drop(P,nm));
     
-    index := sum(P, i -> 2^i) + 1;
-    if ( index >= 2^n ) then (
-      return null;
-    ) else (
-      return (for i from 0 to n-1 list if (2^i & index != 0) then i else continue);
-    );
   );
 )
 
@@ -129,7 +127,7 @@ prevSubset ZZ := o -> (n) -> (
   else if n == 0 or o.Size > n or o.Size < 0 then return null
   else return new List from ((n-o.Size)..(n-1));
 )
-prevSubset (ZZ,Nothing) := o -> (n,P) -> prevSubset(n,Size=>o.Size)
+prevSubset (ZZ,Nothing) := o -> (n,P) -> prevSubset(n,o)
 prevSubset (ZZ,List) := o -> (n,P) -> (
   if (o.Size =!= null) and (o.Size != #P) then
     if (n >= 0 and o.Size >= 0) then (
@@ -150,15 +148,10 @@ prevSubset (ZZ,List) := o -> (n,P) -> (
   ) else (
   
     -- o.Size === null means generate subsets of all sizes.
-    -- To conform with Macaulay2's existing 'subsets',
-    -- generate in binary counting order.
+    -- replace first member fm with {0..fm-1}
     
-    index := sum(P, i -> 2^i) - 1;
-    if ( index < 0 ) then (
-      return null;
-    ) else (
-      return (for i from 0 to n-1 list if (2^i & index != 0) then i else continue);
-    );
+    if #P == 0 then return null else return join(toList(0..<(P#0)), drop(P,1));
+    
   );
 )
 
