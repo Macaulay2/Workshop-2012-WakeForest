@@ -158,6 +158,11 @@ schurRing(Ring,Thing) := SchurRing => opts -> (A,p) -> (
      else error "schurRing: can't use provided thing as variable"
      );
 
+dim SchurRingElement := s -> dimSchur s;
+dim(List,SchurRingElement) := (lis,s) -> dimSchur(lis, s);
+dim(Thing,SchurRingElement) := (n,s) -> dimSchur(n, s);
+
+
 schurRing(Ring,Symbol) := opts -> (R,p) -> schurRing(R,p,infinity,opts)
 schurRing(Ring,Symbol,InfiniteNumber) := 
 schurRing(Ring,Symbol,ZZ) := SchurRing => opts -> (R,p,n) -> (
@@ -166,8 +171,6 @@ schurRing(Ring,Symbol,ZZ) := SchurRing => opts -> (R,p,n) -> (
      S.EHPVariables = opts.EHPVariables;
      --S.SVariable = opts.SVariable;
      S.GroupActing = opts.GroupActing;
-     dim S := s -> dimSchur(s);
-     dim(Thing,S) := (n,s) -> dimSchur(n, s);
      S @ RingElement := RingElement @ S := (f1,f2) -> plethysm(f1,f2);
      S^ZZ := (f,n) -> product apply(n,i->f);
      symmetricPower(ZZ,S) := (n,s) -> plethysm({n},s);
@@ -1188,11 +1191,9 @@ hooklengths = (lambda) -> (
      )
 
 dimSchur = method(Options => {GroupActing => "GL"})
-dimSchur(Thing,List) := opts -> (n,lambda) -> dimSchur(n, new Partition from lambda)
-dimSchur(Thing,Partition) := opts -> (n, lambda) -> (
+dimSchur(Thing,List) := opts -> (n, lambda) -> (
      -- lambda is a list {a0,a1,...,a(r-1)}, a0 >= a1 >= ... >= a(r-1) > 0
      -- n can be a number or a symbol
---     powers := new MutableList from toList(lambda#0 + #lambda - 1 : 0);
      powers := new MutableList from toList((if lambda#?0 then lambda#0 else 0) + #lambda - 1 : 0);
      base := 1 - #lambda;
      for i from 0 to #lambda-1 do
@@ -1204,48 +1205,39 @@ dimSchur(Thing,Partition) := opts -> (n, lambda) -> (
      if opts.GroupActing == "GL" then
      (
 	  num := product for s from 0 to #powers-1 list (n + (base+s))^(powers#s);
-     	  answer = num/hooklengths lambda;
+     	  answer = num/hooklengths(new Partition from lambda);
 	  )
-     else if opts.GroupActing == "Sn" then answer = n! / hooklengths lambda;
---     if instance(answer,QQ) then lift(answer,ZZ) else answer
+     else if opts.GroupActing == "Sn" then answer = (sum toList lambda)! / hooklengths(new Partition from lambda);
      answer
      )
-dimSchur(Thing,RingElement) := opts -> (n, F) -> (
-     -- assumption: F is an element in a SchurRing
+dimSchur(Thing,SchurRingElement) := opts -> (n, F) -> (
+     -- assumption: F is an element in a SchurRing of level 1
+     if schurLevel(ring F) != 1 then error"Expected a list as input";
      L := listForm F;
      sum apply(L, p -> (
-	       lambda := new Partition from p#0;
-	       if p#1 == 1 then dimSchur(n,lambda,opts) else p#1 * dimSchur(n,lambda,opts)))
+     	       lambda := p#0;
+	       p#1 * dimSchur(n,lambda,opts)))
      )
-dimSchur(List,List,RingElement) := opts -> (ns, ng, F) -> (
+
+dimSchur(List,SchurRingElement) := opts -> (lis, F) -> (
      -- assumption: F is an element in a SchurRing
+     if #lis != schurLevel(ring F) then error"Input list has incorrect size";
+     gr := (ring F).GroupActing;
      L := listForm F;
-     n := ns#0;
-     gr := ng#0;
-     lev := schurLevel ring F;
-     if lev =!= #ns then error ("expected Schur ring of level "|lev);
-     if lev > 1 then (
-	  n1 := drop(ns,1);
-	  ng1 := drop(ng,1);
-	  L = apply(L, p -> (p#0, dimSchur(n1,ng1,p#1)));
-	  );
      sum apply(L, p -> (
-	       lambda := new Partition from p#0;
-	       if gr == "GL" then (if p#1 === 1 then dimSchur(n,lambda,GroupActing=>gr) else p#1 * dimSchur(n,lambda,GroupActing=>gr))
-     	       else (if p#1 === 1 then dimSchur(sum toList lambda,lambda,GroupActing=>gr) else p#1 * dimSchur(sum toList lambda,lambda,GroupActing=>gr))))
+     	       lambda := p#0;
+	       if instance(p#1,SchurRingElement) then dimSchur(drop(lis,1),p#1) * dimSchur(lis#0,lambda,GroupActing => gr)
+                  else p#1 * dimSchur(lis#0,lambda,GroupActing => gr)))
      )
-dimSchur(RingElement) := opts -> (F) -> (
+
+dimSchur(SchurRingElement) := opts -> (F) -> (
      schurdims := (S) -> (
 	  if schurLevel S === 0 then {}
 	  else prepend(numgens S, schurdims coefficientRing S));
-     groupsacting := (S) -> (
-	  if schurLevel S === 0 then {}
-	  else prepend(S.GroupActing, groupsacting coefficientRing S));
      ns := schurdims ring F;
-     ng := groupsacting ring F;
      if any(ns, i -> not instance(i,ZZ))
      then error "expected finitely generated Schur rings";
-     dS := dimSchur(ns,ng,F);
+     dS := dimSchur(ns,F);
      if liftable(dS,ZZ) then lift(dS,ZZ) else dS
      )
 ---------------------------------------------------------------
@@ -2598,6 +2590,86 @@ SeeAlso
 
 doc ///
 Key
+  SchurRingElement
+Headline
+  A type describing elements of a SchurRing
+Description
+  Example
+    S = schurRing(s,5)
+    a = s_{3,2,1}
+    instance(a,SchurRingElement)
+
+    T = schurRing(S,t,3,GroupActing => "Sn")
+    b = t_{2,1}+t_3
+    instance(a*b,SchurRingElement)
+///
+
+doc ///
+   Key
+     (dim,List,SchurRingElement)
+     (dim,Thing,SchurRingElement)
+     (dim,SchurRingElement)
+   Headline
+     dimension of representation
+   Usage
+     d = dim(lis,s)
+     d = dim(n,s)
+     d = dim s
+   Inputs
+     lis: List
+     	  or @TO Thing@
+     s: SchurRingElement
+   Outputs
+     d: ZZ
+        or @TO Expression@
+   Description
+     Text
+     
+       The method returns the dimension of the virtual representation whose character is represented by {\tt s}.
+       
+     Example
+       S = schurRing(s,3)
+       dim s_2
+       T = schurRing(t,4,GroupActing => "Sn")
+       dim t_{2,2}
+       U = schurRing(T,u,3)
+       dim (t_{2,2}*u_2)
+
+     Text
+     
+       If {\tt S} is a @TO SchurRing@ of level 1, the ring of polynomial representations of some {\tt GL(V)}, it
+       may sometimes be convenient to compute dimensions of {\tt GL(V)-}representations symbolically, without 
+       specifying the dimension of {\tt V}. Letting {\tt n} denote the parameter corresponding to {\tt dim(V)} we
+       have for example
+       
+     Example
+       S = schurRing(s,3)
+       dim(n,s_2)
+       dim(n,s_{1,1})
+       dim(n,s_{2,1})
+     
+     Text       
+     
+       Similar calculations make sense over products of general linear groups. The dimensions of the representations 
+       can be computed symbolically as functions of a number of parameters
+       equal to the @TO schurLevel@ of the ring. The parameters corresponding to levels where the group acting 
+       is a symmetric group don't have a good interpretation, so they are disregarded in the dimension calculation.
+       The order of the input parameters is the descending order of the @TO schurLevel@s: in the example below
+       {\tt a} corresponds to {\tt Q}, {\tt b} corresponds to {\tt T} and {\tt c} corresponds to {\tt S}.
+       
+     Example
+       S = schurRing(s,3)
+       T = schurRing(S,t,4)
+       Q = schurRing(T,q,5,GroupActing => "Sn")
+       dExpr = dim({a,b,c},s_{2}*t_{1,1}*q_{4,1})
+       P = QQ[a,b,c]
+       value dExpr
+       dim({1,2,3},s_{2}*t_{1,1}*q_{4,1})
+///
+
+
+doc ///
+Key
   ClassFunction
   (symbol +,ClassFunction,ClassFunction)
   (symbol -,ClassFunction,ClassFunction)
@@ -3503,7 +3575,7 @@ check SchurRings
 viewHelp SchurRings
 
 restart
-loadPackage"SchurRings"
+debug loadPackage"SchurRings"
 
 S = schurRing(QQ,s,3)
 T = schurRing(S,t,4)
