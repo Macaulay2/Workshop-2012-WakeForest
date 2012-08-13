@@ -884,18 +884,18 @@ jumpingDenominators(CentralArrangement) := A ->
 
 genericDeterminantalSymbolicPower := (R,m,n,r,a) -> (
   X := genericMatrix(R,m,n);
-  I := ideal(1_R);
+  I := ideal(0_R);
   for p in partitions(a) do (
     J := ideal(1_R);
     for i from 0 to (#p - 1) do (
-      J = J * minors(X, r - 1 + p#i);
+      J = trim J * minors(r - 1 + p#i, X);
     );
     
     I = I + J;
   );
   
-  return I;
-);
+  return trim I;
+)
 
 
 multiplierIdeal (Ring,List,ZZ,ZZ) := (R,mm,r,c) -> multiplierIdeal(R,mm,r,promote(c,QQ))
@@ -919,11 +919,20 @@ multiplierIdeal (Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
   );
   
   return J;
-);
+)
 
 logCanonicalThreshold(List,ZZ) := (mm,r) -> min( apply(1..<r , i -> (mm_0-i)*(mm_1-i)/(r-i)) )
+logCanonicalThreshold(Ring,List,ZZ) := (R,mm,r) -> min( apply(1..<r , i -> (mm_0-i)*(mm_1-i)/(r-i)) )
 
+skodaPeriodicityOnset(List,ZZ) := (mm,r) -> (
+  ambdim := mm_0 * mm_1;
+  idealgens := binomial(mm_0,r) * binomial(mm_1,r);
+  return min(ambdim, idealgens);
+)
+skodaPeriodicityOnset(Ring,List,ZZ) := (R,mm,r) ->
+  skodaPeriodicityOnset(mm,r)
 
+jumpingDenominators(Ring,List,ZZ) := (R,mm,r) -> toList(1..r-1)
 
 
 --------------------------------------------------------------------------------
@@ -1618,6 +1627,8 @@ end
 
 restart
 loadPackage "MultiplierIdeals"
+R = QQ[x_1..x_100]
+jumpingNumbers(R,{3,4},2)
 check oo
 installPackage oo
 
