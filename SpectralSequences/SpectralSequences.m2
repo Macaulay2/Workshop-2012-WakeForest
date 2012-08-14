@@ -117,7 +117,7 @@ cover ChainComplex := ChainComplex => C -> (
      minC := min spots C;
      maxC := max spots C;
      P:= apply(toList(minC..maxC),i-> cover C#i);
-     chainComplex apply(toList(minC..maxC-1), i-> C.dd_(i+1) * inducedMap(C_(i+1),P_(i+1),1) // inducedMap(C_i,P_i,1)))
+     chainComplex apply(toList(minC..maxC-1), i-> C.dd_(i+1) * map(C_(i+1),P_(i+1),1) // map(C_i,P_i,1)))
 
 {*Hom(ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
      g:= (f * inducedMap(source f,cover source f)) // inducedMap(target f,cover target f);
@@ -378,14 +378,12 @@ G.dd#(lim+1) = inducedMap(G_lim,G_(lim+1))
 H = filteredComplex(F ** S)
 see (K = H ** G)
 E = spectralSequence K
-
 netList apply(lim, k -> prune Tor_k(M,pushForward(map(S,R),N)))
 netList support E_0
 netList support E_1 
 netList support E_infinity
 T = G ** F
 E = spectralSequence T
-
 -- Nathan's first example
 id_(QQ^1) || 0*id_(QQ
 C = chainComplex(matrix(QQ, {{1},{0}}), matrix(QQ,{{0,1}}))
