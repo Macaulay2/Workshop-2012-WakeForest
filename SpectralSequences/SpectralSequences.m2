@@ -119,6 +119,10 @@ cover ChainComplex := ChainComplex => C -> (
      P:= apply(toList(minC..maxC),i-> cover C#i);
      chainComplex apply(toList(minC..maxC-1), i-> C.dd_(i+1) * map(C_(i+1),P_(i+1),1) // map(C_i,P_i,1)))
 
+isWellDefined ChainComplexMap := Boolean => f -> (
+     (F,G):= (source f, target f);
+     all(drop(spots F,1), i -> G.dd_i * f#i == f#(i-1) * F.dd_i))
+
 -- Computes the total complex of the Hom double complex of two chain complexes
 Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
   if C.ring =!= D.ring then error "expected chain complexes over the same ring";
@@ -394,7 +398,7 @@ G#(lim+1) = J
 G.dd#(lim+1) = inducedMap(G_lim,G_(lim+1))
 H = filteredComplex(F ** S)
 see (K = H ** G)
-E = spectralSequence H
+E = spectralSequence K
 netList apply(lim, k -> prune Tor_k(M,pushForward(map(S,R),N)))
 netList support E_0
 netList support E_1
@@ -412,10 +416,7 @@ D2 = simplicialComplex {x*y}
 
 K = filteredComplex{D0,D1,D2}
 
-
-code(Hom,Matrix,Module)
 code(Hom,Module,Matrix)
-
      
 
 -- filtration by successive skeleta of the real projective plane
