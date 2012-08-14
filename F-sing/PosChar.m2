@@ -22,7 +22,7 @@ export{"basePExp",
      "tauPoly",
      "isFRegularPoly",
      "fSig",
-     "FPTEst",
+     "estFPT",
      "isSharplyFPurePoly",
      "FinalCheck",
      "DiagonalCheck", 
@@ -809,7 +809,7 @@ guessFPT ={OutputRange=>false}>>o -> (ff, e1, maxDenom) ->(
 ---f-pure threshold estimation
 ---e is the max depth to search in
 ---FinalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
-FPTEst={FinalCheck=> true, Verbose=> false, DiagonalCheck=>true, BinomialCheck=>true, NuPEMinus1Check=>true} >> o -> (ff,ee)->(
+estFPT={FinalCheck=> true, Verbose=> false, DiagonalCheck=>true, BinomialCheck=>true, NuPEMinus1Check=>true} >> o -> (ff,ee)->(
      --todo: rewrite this in a better way, that's more readable without so much crazy elseif nonsense
      --error "help";
      foundAnswer := false; --this will be set to true as soon as we found the answer.  Setting it to true will stop further tests from being run
@@ -1077,7 +1077,7 @@ doc ///
 ///
 doc ///
      Key
-     	 [FPTEst,FinalCheck,Verbose,DiagonalCheck,BinomialCheck,NuPEMinus1Check]
+     	 [estFPT,FinalCheck,Verbose,DiagonalCheck,BinomialCheck,NuPEMinus1Check]
      Headline
          Atempts to compute the F-pure threshold, where e is the max depth to search in.  
      Usage
