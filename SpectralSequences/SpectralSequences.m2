@@ -193,6 +193,11 @@ inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
   if not K.cache.inducedMaps#?p then K.cache.inducedMaps#p = inducedMap(K^-infinity, K^p);
   K.cache.inducedMaps#p)
 
+project := (K,p) -> (
+     f:= i -> map(K^p_i,K^-infinity_i,1);
+     map(K^p,K^-infinity,f)
+     )
+
 FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
   all(min(min C,min D)..max(max C,max D),i-> C^i == D^i))
 
@@ -251,9 +256,9 @@ prune FilteredComplex := FilteredComplex => opts -> F ->
   apply(keys F, p -> if class p =!= Symbol then p => prune F#p else p => F#p)
 
 Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
-  filteredComplex for p from min K to max K list Hom(inducedMap(K,p),C))
+  filteredComplex for p from min K to max K list Hom(project(K,p),C))
 
-Hom (ChainComplex,FilteredComplex):= FilteredComplex => (C,K) -> (
+Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (
   filteredComplex for p from min K to max K list Hom(C,inducedMap(K,p)))
 
 FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
@@ -360,11 +365,28 @@ debug SpectralSequences;
 R = QQ[x,y,z]
 M = R^1/ideal(vars R)
 F = res M
-Hom(F,F)
+G = res ideal(x*y,y*z,z^3)
+
+-- Example of spectral sequence for Ext
+H = Hom(F,filteredComplex G)
+E = spectralSequence H
+netList support E_0
+netList support E_1
+netList support E_infinity
+lim = 10
+netList apply(lim, k -> prune Ext^k(M,R^1/ideal(x*y,y*z,z^3)))
+
+-- Example of spectral sequence for Tor
+H = F ** (filteredComplex G)
+E = spectralSequence H
+netList support E_0
+netList support E_1
+netList support E_infinity
+netList apply(lim, k -> prune Tor_k(M,R^1/ideal(x*y,y*z,z^3)))
+
+-- Example of change of ring spectral sequence for Tor
 S = R/(x^2-y^2)
 N = S^1 /ideal(x^3,x*y^2,y^3)
-see filteredComplex F
-lim = 10
 G = res (N, LengthLimit => lim)
 g = max G
 J=ker G.dd_lim
@@ -372,13 +394,12 @@ G#(lim+1) = J
 G.dd#(lim+1) = inducedMap(G_lim,G_(lim+1))
 H = filteredComplex(F ** S)
 see (K = H ** G)
-E = spectralSequence K
+E = spectralSequence H
 netList apply(lim, k -> prune Tor_k(M,pushForward(map(S,R),N)))
 netList support E_0
-netList support E_1 
+netList support E_1
 netList support E_infinity
-T = G ** F
-E = spectralSequence T
+
 -- Nathan's first example
 id_(QQ^1) || 0*id_(QQ
 C = chainComplex(matrix(QQ, {{1},{0}}), matrix(QQ,{{0,1}}))
