@@ -119,15 +119,9 @@ cover ChainComplex := ChainComplex => C -> (
      P:= apply(toList(minC..maxC),i-> cover C#i);
      chainComplex apply(toList(minC..maxC-1), i-> C.dd_(i+1) * map(C_(i+1),P_(i+1),1) // map(C_i,P_i,1)))
 
-{*Hom(ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
-     g:= (f * inducedMap(source f,cover source f)) // inducedMap(target f,cover target f);
-     inducedMap(Hom(source f, N),Hom(target f, N), transpose g ** N))
-  *}
-
 -- Computes the total complex of the Hom double complex of two chain complexes
 Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
   if C.ring =!= D.ring then error "expected chain complexes over the same ring";
-  complete C;  complete D;
   E := chainComplex (lookup( Hom, GradedModule, GradedModule))(C,D);
   scan(spots E, i -> if E#?i and E#?(i-1) then E.dd#i = 
     map(E#(i-1), E#i, 
@@ -135,8 +129,8 @@ Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
         E#(i-1).cache.indices, E#i.cache.indices, 
 	(j,k) -> map(E#(i-1).cache.components#(E#(i-1).cache.indexComponents#j), 
 	  (E#i).cache.components#((E#i).cache.indexComponents#k),
-	  if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(j#0),D.dd_(k#1))
-	  else if j#0 === k#0 - 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_(k#0))
+	  if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(k#0),D.dd_(k#1))
+	  else if j#0 === k#0 + 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_(k#1))
 	  else 0))));
   E)	    		    
 
@@ -366,6 +360,7 @@ debug SpectralSequences;
 R = QQ[x,y,z]
 M = R^1/ideal(vars R)
 F = res M
+Hom(F,F)
 S = R/(x^2-y^2)
 N = S^1 /ideal(x^3,x*y^2,y^3)
 see filteredComplex F
