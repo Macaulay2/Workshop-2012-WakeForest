@@ -107,6 +107,23 @@ Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
       E#k = directSum(apply(p, v -> v => Hom(C_(v#0), D_(v#1) )));));
   E)
 
+Hom(Matrix, Module) := Matrix => (f,N) -> (
+     g:= (f * map(source f,cover source f,1)) // map(target f,cover target f,1);
+     inducedMap(Hom(source f, N),Hom(target f, N), transpose g ** N))
+
+Hom(Module, Matrix) := Matrix => (N,f) -> (inducedMap(Hom(N,target f),Hom(N,source f), (dual cover N) ** f))
+     
+cover ChainComplex := ChainComplex => C -> (
+     minC := min spots C;
+     maxC := max spots C;
+     P:= apply(toList(minC..maxC),i-> cover C#i);
+     chainComplex apply(toList(minC..maxC-1), i-> C.dd_(i+1) * inducedMap(C_(i+1),P_(i+1),1) // inducedMap(C_i,P_i,1)))
+
+{*Hom(ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
+     g:= (f * inducedMap(source f,cover source f)) // inducedMap(target f,cover target f);
+     inducedMap(Hom(source f, N),Hom(target f, N), transpose g ** N))
+  *}
+
 -- Computes the total complex of the Hom double complex of two chain complexes
 Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
   if C.ring =!= D.ring then error "expected chain complexes over the same ring";
@@ -296,6 +313,11 @@ pageE := (r, F,p,q) -> (
      if r < 1 then F^p_(-p-q)/F^(p+1)_(-p-q) else 
      if r == 1 then ker F^p.dd_(-p-q) / image F^p.dd_(1-p-q)
      else pageZ(r,F,p,q)/pageB(r,F,p,q))
+
+
+differential = method ();
+differential (ZZ,FilteredComplex,ZZ,ZZ):=Matrix => (r,F,p,q) -> 
+     inducedMap(pageZ(r,F,p+r,q-r+1),pageZ(r,F,p,q),F^p.dd_(-p-q))
 
 SpectralSequenceSheet = new Type of MutableHashTable
 SpectralSequenceSheet.synonym = "spectral sequence sheet"
