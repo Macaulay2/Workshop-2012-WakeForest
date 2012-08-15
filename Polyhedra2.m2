@@ -46,7 +46,12 @@ PolymakePath = (options Polyhedra2).Configuration#"PolymakePath"
 
 pmopt:={UsePolymake=>DefaultUsePolymake}
 export {
-     	     	  "latticePoints",
+     	     	 "posOrthant",
+		 "bipyramid",
+		 "pyramid",
+		  "stdSimplex",
+		  "tailCone",
+		  "latticePoints",
      	  "isCompact",
 	  "affinePreimage",
      	  "affineImage",
@@ -67,6 +72,7 @@ export {
 	"ambDim",
 	"hyperplanes",
 	"halfspaces",
+	"contains",
 	"convexHull", 
 	"posHull"}
 	
@@ -370,7 +376,7 @@ affinePreimage = method ()
 affinePreimage(Matrix,Polyhedron,Matrix) := (A,P,b) -> (
      --note: could set up to use eq/ineq if facets don't exist
      -- Checking for input errors
-     if P#"ambient dimension" =!= numRows A then error("Matrix source must be ambient space");
+     if P#"AmbientDim" =!= numRows A then error("Matrix source must be ambient space");
      if numRows A =!= numRows b then error("Vector must lie in target space of matrix");
      if numColumns b =!= 1 then error("Second argument must be a vector");
      -- Constructing the new half-spaces and hyperplanes
@@ -407,8 +413,6 @@ latticePoints Polyhedron := opts -> P -> (
 	       -- Finding the direction with minimum extension of P
 	       V := entries vertices P;
 	       n := ambDim P;
-	       print n;
-	       print vertices P;
 	       minv := apply(V,min);
 	       maxv := apply(V,max);
 	       minmaxv := maxv-minv;
@@ -454,7 +458,7 @@ latticePoints Polyhedron := opts -> P -> (
 	       else (
 		    A := gens ker substitute(M,ZZ);
 		    -- Project the translated polytope, compute the lattice points and map them back
-		    P#"LatticePoints" = homPoints transpose matrix apply(latticePoints affinePreimage(A,P,b),e -> substitute(A*e + b,ZZ))))));
+		    P#"LatticePoints" = homPoints transpose matrix {apply(latticePoints affinePreimage(A,P,b),e -> substitute(A*e + b,ZZ))}))));
      apply(numRows dehom P#"LatticePoints",i->(transpose dehom P#"LatticePoints")_{i})
      )
 
@@ -628,11 +632,97 @@ hilbertBasis Cone := opts->C -> (
 
 
 
+-- PURPOSE : Check if 'P' contains 'Q'
+contains = method(TypicalValue => Boolean)
+contains(Polyhedron,Polyhedron) := (P,Q) -> (
+      vertices Q;
+      halfspaces P;
+      A:=Q#"Rays";
+      B:=Q#"LinealitySpace";
+      C:=P#"Facets";
+      D:=P#"LinearSpan";
+       ((A||B) * transpose D)==0 and (B*(transpose C)==0) and
+            all(flatten entries ( A* transpose C),i->i>=0))
+
+
+contains(Cone,Cone) := (P,Q) -> (
+      vertices Q;
+      halfspaces P;
+      A:=Q#"Rays";
+      B:=Q#"LinealitySpace";
+      C:=P#"Facets";
+      D:=P#"LinearSpan";
+       ((A||B) * transpose D)==0 and (B*(transpose C)==0) and
+            all(flatten entries ( A* transpose C),i->i>=0))
+
+contains(Polyhedron,Matrix) := (P,p) -> (
+      -- checking for input errors
+      if ambDim P =!= numRows p then error("Polyhedron and point must lie in the same ambient space");
+      if numColumns p =!= 1 then error("The point must be given as a one row matrix");
+      contains(P,convexHull p))
+
+contains(Cone,Matrix) := (C,p) -> (
+      -- checking for input errors
+      if ambDim C =!= numRows p then error("Polyhedron and point must lie in the same ambient space");
+      if numColumns p =!= 1 then error("The point must be given as a one row matrix");
+      contains(C,convexHull p))
 
 
 
 
+contains(Cone,Polyhedron):=(P,Q)->(coneToPolyhedron P,Q)
+contains(Polyhedron,Cone):=(P,Q)->(P,coneToPolyhedron Q)
 
+contains(List,Cone) := (L,C) -> any(L, C1 -> C1 == C)
+contains(List,Polyhedron) := (L,P) -> any(L, Q -> Q == P)
+
+
+tailCone = method(TypicalValue => Cone)
+tailCone Polyhedron := P -> posHull(rays P,linSpace P) --computes more than necessary
+
+stdSimplex = method(TypicalValue => Polyhedron)
+stdSimplex ZZ := d -> (
+     -- Checking for input errors
+     if d < 0 then error("dimension must not be negative");
+     -- Generating the standard basis
+     convexHull map(QQ^(d+1),QQ^(d+1),1))
+
+
+posOrthant = method(TypicalValue => Cone)
+posOrthant ZZ := n -> posHull map(QQ^n,QQ^n,1)
+
+pyramid = method(TypicalValue => Polyhedron)
+pyramid Polyhedron := P -> (
+     vertices P;
+     A:=P#"Rays";
+     B:=P#"LinealitySpace";
+     n:=ambDim P;
+     new Polyhedron from hashTable{
+	  "Rays"=>(A|(map(QQ^(numRows A),QQ^1,0))||map(QQ^1,QQ^(n+2),(j,i)->(if i==0 or i==n+1 then 1 else 0))),
+	  "LinealitySpace"=>B|map(QQ^(numRows B),QQ^1,0)
+     })
+     
+-- PURPOSE : Computing the bipyramid over the polyhedron 'P'
+--   INPUT : 'P',  a polyhedron 
+--  OUTPUT : A polyhedron, the convex hull of 'P', embedded into ambientdim+1 space and the 
+--     	         points (barycenter of 'P',+-1)
+bipyramid = method(TypicalValue => Polyhedron)
+bipyramid Polyhedron := P -> (
+     -- Saving the vertices
+     V := vertices P;
+     A:=P#"Rays";
+     B:=P#"LinealitySpace";
+     n := numColumns V;
+     if n == 0 then error("P must not be empty");
+     -- Computing the barycenter of P
+     v := matrix toList(n:{1_QQ});
+     v = (1/n)*V*v;
+     vplus:=matrix {{1}} | (transpose v) | matrix {{1}};
+     vminus:=matrix {{1}} | (transpose v) | matrix {{-1}};
+     new Polyhedron from hashTable{
+	  "Rays"=>(A|(map(QQ^(numRows A),QQ^1,0))||vplus||vminus),
+	  "LinealitySpace"=>B|map(QQ^(numRows B),QQ^1,0)
+     })
 
 
 
