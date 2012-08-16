@@ -74,6 +74,11 @@ propertyTypes = {
 	  "ValueType" => "Matrix"
 	  },
      {    
+	  "M2PropertyName" => "EhrhartPolynomialCoeff",
+	  "PolymakePropertyName" => "EHRHART_POLYNOMIAL_COEFF",
+	  "ValueType" => "Array"
+	  },
+     {    
 	  "M2PropertyName" => "HilbertBasis",
 	  "PolymakePropertyName" => "HILBERT_BASIS",
 	  "ValueType" => "Matrix"
