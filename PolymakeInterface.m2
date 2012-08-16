@@ -48,6 +48,16 @@ propertyTypes = {
 	  "PolymakePropertyName" => "CONE_DIM",
 	  "ValueType" => "Integer"
 	  },
+     {    
+	  "M2PropertyName" => "ConeAmbientDim",
+	  "PolymakePropertyName" => "CONE_AMBIENT_DIM",
+	  "ValueType" => "Integer"
+	  },     
+     {    
+	  "M2PropertyName" => "LatticeVolume",
+	  "PolymakePropertyName" => "LATTICE_VOLUME",
+	  "ValueType" => "Integer"
+	  },     
      {   
 	  "M2PropertyName" => "InputLineality",
 	  "PolymakePropertyName" => "INPUT_LINEALITY",
