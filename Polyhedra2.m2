@@ -45,17 +45,22 @@ DefaultUsePolymake := (options Polyhedra2).Configuration#"DefaultUsePolymake"
 
 
 pmopt:={UsePolymake=>DefaultUsePolymake}
-export {    "ehrhart",
-     	     	 "newtonPolytope",
-		 "crossPolytope",
-		 "cyclicPolytope",
-		 "hypercube",
-		 "posOrthant",
-		 "bipyramid",
-		 "pyramid",
-		  "stdSimplex",
-		  "tailCone",
-		  "latticePoints",
+export {    
+         "toSublattice",
+	 "sublatticeBasis",
+	 "volume",
+         "triangulate",
+         "ehrhart",
+         "newtonPolytope",
+         "crossPolytope",
+	 "cyclicPolytope",
+	 "hypercube",
+	 "posOrthant",
+	 "bipyramid",
+	 "pyramid",
+	  "stdSimplex",
+	  "tailCone",
+	  "latticePoints",
      	  "isCompact",
 	  "affinePreimage",
      	  "affineImage",
@@ -295,32 +300,32 @@ linSpace Polyhedron := opts->P -> (
 
 ambDim = method (Options=>pmopt)
 ambDim Cone:=opts->C->(
-     if not C#?"AmbientDim" then (
-     if opts#UsePolymake then runPolymake(C,"AmbientDim")
+     if not C#?"ConeAmbientDim" then (
+     if opts#UsePolymake then runPolymake(C,"ConeAmbientDim")
      else
      (
-     if C#?"Rays" then C#"AmbientDim"=numColumns C#"Rays" 	  
-     else if C#?"InputRays" then C#"AmbientDim"=numColumns C#"InputRays" 	  
-     else if C#?"Inequalities" then C#"AmbientDim"=numColumns C#"Inequalities" 	  
-     else if C#?"Facets" then C#"AmbientDim"=numColumns C#"Facets"
+     if C#?"Rays" then C#"ConeAmbientDim"=numColumns C#"Rays" 	  
+     else if C#?"InputRays" then C#"ConeAmbientDim"=numColumns C#"InputRays" 	  
+     else if C#?"Inequalities" then C#"ConeAmbientDim"=numColumns C#"Inequalities" 	  
+     else if C#?"Facets" then C#"ConeAmbientDim"=numColumns C#"Facets"
      else error ("Your cone is ill-defined"))); 	  
-      C#"AmbientDim")
+      C#"ConeAmbientDim")
  
 ambDim Polyhedron:=opts->C->(
-     if not C#?"AmbientDim" then (
-     if opts#UsePolymake then runPolymake(C,"AmbientDim")
+     if not C#?"ConeAmbientDim" then (
+     if opts#UsePolymake then runPolymake(C,"ConeAmbientDim")
      else
      (	  
-     if C#?"Rays" then C#"AmbientDim"=numColumns C#"Rays" -1 	  
-     else if C#?"InputRays" then C#"AmbientDim"=numColumns C#"InputRays" -1	  
-     else if C#?"Inequalities" then C#"AmbientDim"=numColumns C#"Inequalities"-1 	  
-     else if C#"Facets" then C#"AmbientDim"=numColumns C#"Facets"-1
+     if C#?"Rays" then C#"ConeAmbientDim"=numColumns C#"Rays"  	  
+     else if C#?"InputRays" then C#"ConeAmbientDim"=numColumns C#"InputRays" 	  
+     else if C#?"Inequalities" then C#"ConeAmbientDim"=numColumns C#"Inequalities" 	  
+     else if C#"Facets" then C#"ConeAmbientDim"=numColumns C#"Facets"
      else error ("Your cone is ill-defined"))); 	  
-      C#"AmbientDim")
+      C#"ConeAmbientDim"-1)
 
 
-dim Cone:=C->(if not C#?"Dim" then C#"Dim"=ambDim C-numRows ((hyperplanes C));C#"Dim")
-dim Polyhedron:=C->(if not C#?"Dim" then C#"Dim"=ambDim C-numRows ((hyperplanes C)_0);C#"Dim")
+dim Cone:=C->(if not C#?"ConeDim" then C#"ConeDim"=ambDim C-numRows ((hyperplanes C));C#"ConeDim")
+dim Polyhedron:=C->(if not C#?"ConeDim" then C#"ConeDim"=ambDim C-numRows ((hyperplanes C)_0);C#"ConeDim")
 
 affineHull = method ()
 affineHull Polyhedron := P->(hp:=hyperplanes P;
@@ -380,7 +385,7 @@ affinePreimage = method ()
 affinePreimage(Matrix,Polyhedron,Matrix) := (A,P,b) -> (
      --note: could set up to use eq/ineq if facets don't exist
      -- Checking for input errors
-     if P#"AmbientDim" =!= numRows A then error("Matrix source must be ambient space");
+     if ambDim P =!= numRows A then error("Matrix source must be ambient space");
      if numRows A =!= numRows b then error("Vector must lie in target space of matrix");
      if numColumns b =!= 1 then error("Second argument must be a vector");
      -- Constructing the new half-spaces and hyperplanes
@@ -472,8 +477,8 @@ emptyPolyhedron=method ()
 emptyPolyhedron ZZ:=n->(
      if n < 1 then error("The ambient dimension must be positive");
      C:=convexHull map(QQ^n,QQ^0,0);
-     C#"AmbientDim"=n;
-     C#"Dim"=-1;
+     C#"ConeAmbientDim"=n;
+     C#"ConeDim"=-1;
      C)
      
 
@@ -522,7 +527,7 @@ QQ * Polyhedron := (k,P) -> (
      if P#?"Facets" then Q#"Facets"=((k*(P#"Facets")_{0})|(P#"Facets")_(toList(1..numColumns P#"Facets"-1)));
      if P#?"LinearSpan" then Q#"LinearSpan"=P#"LinearSpan";
      if P#?"AmbDim" then Q#"AmbDim"=P#"AmbDim";
-     if P#?"Dim" then Q#"Dim"=P#"Dim";
+     if P#?"ConeDim" then Q#"ConeDim"=P#"ConeDim";
      Q)
       
 coneToPolyhedron=method()
@@ -537,7 +542,7 @@ coneToPolyhedron Cone:=P->(
      if P#?"Facets" then Q#"Facets"=homRays P#"Facets";
      if P#?"LinSpan" then Q#"LinSpan"=homRays P#"LinSpan";
      if P#?"AmbDim" then Q#"AmbDim"=P#"AmbDim";
-     if P#?"Dim" then Q#"Dim"=P#"Dim";      
+     if P#?"ConeDim" then Q#"ConeDim"=P#"ConeDim";      
       Q)
 
 
@@ -821,6 +826,143 @@ ehrhart Polyhedron := opts->P -> (
 	x := R_"x";
 	sum apply(n+1,i -> P#"EhrhartPolynomialCoeff"#i * x^(i)))
 
+-- PURPOSE : Triangulating a compact Polyhedron
+--   INPUT : 'P',  a Polyhedron
+--  OUTPUT : A list of the simplices of the triangulation. Each simplex is given by a list 
+--    	     of its vertices.
+--COMMENTS : The triangulation is build recursively, for each face that is not a simplex it takes 
+--     	     the weighted centre of the face. for each codim 1 face of this face it either takes the 
+--     	     convex hull with the centre if it is a simplex or triangulates this in the same way.
+triangulate = method()
+triangulate Polyhedron := P -> (
+     -- Defining the recursive face triangulation
+     -- This takes a polytope and computes all facets. For each facet that is not a simplex, it calls itself
+     -- again to replace this facet by a triangulation of it. then it has a list of simplices triangulating 
+     -- the facets. Then it computes for each of these simplices the convex hull with the weighted centre of 
+     -- the input polytope. The weighted centre is the sum of the vertices divided by the number of vertices.
+     -- It returns the resulting list of simplices in a list, where each simplex is given by a list of its 
+     -- vertices.
+     -- The function also needs the dimension of the Polyhedron 'd', the list of facets of the original 
+     -- polytope, the list 'L' of triangulations computed so far and the dimension of the original Polytope.
+     -- 'L' contains a hash table for each dimension of faces of the original Polytope (i.e. from 0 to 'n').
+     -- If a face has been triangulated than the list of simplices is saved in the hash table of the 
+     -- corresponding dimension with the weighted centre of the original face as key.
+     recursiveFaceTriangulation := (P,d,originalFacets,L,n) -> (
+	  -- Computing the facets of P, given as lists of their vertices
+	  F := intersectionWithFacets({(set P,set{})},originalFacets);
+	  F = apply(F, f -> toList(f#0));
+	  d = d-1;
+	  -- if the facets are at least 2 dimensional, then check if they are simplices, if not call this 
+	  -- function again
+	  if d > 1 then (
+	       F = flatten apply(F, f -> (
+			 -- Check if the face is a simplex
+			 if #f != d+1 then (
+			      -- Computing the weighted centre
+			      p := (sum f)*(1/#f);
+			      -- Taking the hash table of the corresponding dimension
+			      -- Checking if the triangulation has been computed already
+			      if L#d#?p then L#d#p
+			      else (
+				   -- if not, call this function again for 'f' and then save this in 'L'
+				   (f,L) = recursiveFaceTriangulation(f,d,originalFacets,L,n);
+				   L = merge(L,hashTable {d => hashTable{p => f}},(x,y) -> merge(x,y,));
+				   f))
+			 else {f})));
+	  -- Adding the weighted centre to each face simplex
+	  q := (sum P)*(1/#P);
+	  P = apply(F, f -> f | {q});
+	  (P,L));
+     -- Checking for input errors
+     if not isCompact P then error("The polytope must be compact!");
+     n := dim P;
+     -- Computing the facets of P as lists of their vertices
+     (HS,v) := halfspaces P;
+     (HP,w) := hyperplanes P;
+     originalFacets := apply(numRows HS, i -> intersection(HS,v, HP || HS^{i}, w || v^{i}));
+     originalFacets = apply(originalFacets, f -> (
+	       V := vertices f;
+	       (set apply(numColumns V, i -> V_{i}),set {})));
+     -- Making a list of the vertices of P
+     P = vertices P;
+     P = apply(numColumns P, i -> P_{i});
+     if #P == n+1 then {P} else (
+	  d := n;
+	  -- Initiating the list of already computed triangulations
+	  L := hashTable apply(n+1, i -> i => hashTable {});
+	  (P,L) = recursiveFaceTriangulation(P,d,originalFacets,L,n);
+	  P))
+
+-- PURPOSE : Computing the volume of a full dimensional polytope
+--   INPUT : 'P',  a compact polyhedron
+--  OUTPUT : QQ, giving the volume of the polytope
+volume = method(TypicalValue => QQ,Options=>pmopt)
+volume Polyhedron := opts->Q -> (
+     d := dim(Q);
+     if not Q#?"LatticeVolume" then (
+       	    if  not isCompact Q then error("The polyhedron must be compact, i.e. a polytope.");
+	    if opts#UsePolymake then runPolymake(Q,"LatticeVolume")
+	    else  (
+     -- If P is not full dimensional then project it down
+     P:=Q;
+     if d != ambDim Q then (
+	  A := substitute((hyperplanes Q)#0,ZZ);
+	  A = inverse (smithNormalForm A)#2;
+	  n := ambDim Q;
+	  A = A^{n-d..n-1};
+	  P = affineImage(A,Q));
+     -- Computing the triangulation of P
+     P = triangulate P;
+     -- Computing the volume of each simplex without the dimension factor, by 
+     -- taking the absolute of the determinant of |v_1-v_0..v_d-v_0|
+     P = apply(P, p -> abs det matrix transpose apply(toList(1..d), i -> flatten entries(p#i - p#0)));
+     -- Summing up the volumes and dividing out the dimension factor
+     Q#"LatticeVolume"=(sum P)));
+     (Q#"LatticeVolume")/d!)
+	       
+
+sublatticeBasis = method(TypicalValue => Matrix,Options=>pmopt)
+
+--   INPUT : 'M',  a Matrix
+--  OUTPUT : A matrix, a basis of the sublattice spanned by the lattice points in 'M'
+sublatticeBasis Matrix := pmopt-> M -> (
+     -- Checking for input errors
+     M = promote(M,QQ);
+     M = if promote(substitute(M,ZZ),QQ) == M then substitute(M,ZZ) else error("The matrix must contain only lattice points.");
+     -- The sublattice is isomorphic to source mod kernel, i.e. A/K
+     A := source M; 
+     K := ker M;
+     -- Taking minimal generators and applying M gives a basis in target M
+     M*(mingens (A/K)))
+
+
+--   INPUT : 'P',  a polyhedron,
+--  OUTPUT : A matrix, a basis of the sublattice spanned by the lattice points of 'P'
+sublatticeBasis Polyhedron := opts->P -> (
+     L := latticePoints(P,opts);
+     -- Checking for input errors
+     if L == {} then error("The polytope must contain lattice points.");
+     -- Translating 'P' so that it contains the origin if it did not already
+     if all(L,l -> l != 0) then L = apply(L, l -> l - L#0);
+     sublatticeBasis(matrix {L}))
+   
+   
+-- PURPOSE : Calculating the preimage of a polytope in the sublattice generated by its lattice points
+--   INPUT : 'P',  a polyhedron
+--  OUTPUT : A polyhedron, the projected polyhedron, which is now normal
+toSublattice = method(Options=>pmopt)
+toSublattice Polyhedron := opts->P -> (
+     L := latticePoints P;
+     -- Checking for input errors
+     if L == {} then error("The polytope must contain lattice points.");
+     b := L#0;
+     -- Translating 'P' so that it contains the origin if it did not already
+     if all(L,l -> l != 0) then L = apply(L, l -> l - L#0);     
+     affinePreimage(sublatticeBasis matrix {L},P,b))
+
+
+
+
 
 
 --Non-exported stuff
@@ -942,6 +1084,28 @@ constructHilbertBasis = A -> (
 	      H = select(G, g -> g_(i+1,0) >= 0)));
     H)
 
+-- PURPOSE : intersect every face in L with every facet in F and return the inclusion maximal intersections that
+--     	     are not equal to one element in L
+--   INPUT : 'L',  a list of Sequences each containing a set of vertices and a set of rays giving the faces of a 
+--     	    	   certain dimension of a polyhedron
+--     	     'F', a list of Sequences each containing a set of vertices and a set of rays giving the facets 
+--     	    	   of the same polyhedron
+--  OUTPUT : a list of Sequences each containing a set of vertices and a set of rays giving the faces 
+--     	    	   of the same polyhedron one dimension lower then the ones in 'L'
+intersectionWithFacets = (L,F) -> (
+	  -- Function to check if 'e' has at least one vertex and is not equal to 'l'
+	  isValid := (e,l) -> if e#0 =!= set{} then e =!= l else false;
+	  newL := {};
+	  -- Intersecting each element of 'L' with each element of 'F'
+	  scan(L, l -> (
+		    scan(F, f -> (
+			      e := ((l#0)*(f#0),(l#1)*(f#1));
+			      -- if the intersection is valid add it to newL if it is not contained in one of the elements 
+			      -- already in newL and remove those contained in 'e'
+			      if isValid(e,l) then (
+				   if not any(newL, g -> isSubset(e#0,g#0) and isSubset(e#1,g#1)) then (
+					newL = select(newL, g -> not (isSubset(g#0,e#0) and isSubset(g#1,e#1)))|{e}))))));
+	  newL);
 
 
 
