@@ -16,7 +16,7 @@ newPackage("Polyhedra2",
      	  {Name => "Qingchun Ren"},
 	  {Name => "Josephine Yu"}
      },
-    Configuration => {"DefaultUsePolymake"=>false,"PolymakePath"=>"./"},
+    Configuration => {"DefaultUsePolymake"=>false},
     DebuggingMode => true
     )
 
@@ -42,11 +42,15 @@ newPackage("Polyhedra2",
 --
 ---------------------------------------------------------------------------
 DefaultUsePolymake := (options Polyhedra2).Configuration#"DefaultUsePolymake"
-PolymakePath = (options Polyhedra2).Configuration#"PolymakePath"
+
 
 pmopt:={UsePolymake=>DefaultUsePolymake}
-export {
-     	     	 "posOrthant",
+export {    "ehrhart",
+     	     	 "newtonPolytope",
+		 "crossPolytope",
+		 "cyclicPolytope",
+		 "hypercube",
+		 "posOrthant",
 		 "bipyramid",
 		 "pyramid",
 		  "stdSimplex",
@@ -515,8 +519,8 @@ QQ * Polyhedron := (k,P) -> (
      if P#?"LinealitySpace" then Q#"LinealitySpace"=P#"LinealitySpace";
      if P#?"Inequalities" then Q#"Inequalities"=((k*(P#"Inequalities")_{0})|(P#"Inequalities")_(toList(1..numColumns P#"Inequalities")));
      if P#?"Equations" then Q#"Equations"=P#"Equations";
-     if P#?"Facets" then Q#"Facets"=((k*(P#"Facets")_{0})|(P#"Facets")_(toList(1..numColumns P#?"Facets")));
-     if P#?"LinSpan" then Q#"LinSpan"=P#"LinSpan";
+     if P#?"Facets" then Q#"Facets"=((k*(P#"Facets")_{0})|(P#"Facets")_(toList(1..numColumns P#"Facets"-1)));
+     if P#?"LinearSpan" then Q#"LinearSpan"=P#"LinearSpan";
      if P#?"AmbDim" then Q#"AmbDim"=P#"AmbDim";
      if P#?"Dim" then Q#"Dim"=P#"Dim";
      Q)
@@ -725,8 +729,97 @@ bipyramid Polyhedron := P -> (
      })
 
 
+-- PURPOSE : Generating the 'd'-dimensional crosspolytope with edge length 2*'s'
+crossPolytope = method(TypicalValue => Polyhedron)
+
+--   INPUT : '(d,s)',  where 'd' is a strictly positive integer, the dimension of the polytope, and 's' is
+--     	    	       a strictly positive rational number, the distance of the vertices to the origin
+--  OUTPUT : The 'd'-dimensional crosspolytope with vertex-origin distance 's'
+crossPolytope(ZZ,QQ) := (d,s) -> (
+     -- Checking for input errors
+     if d < 1 then error("dimension must at least be 1");
+     if s <= 0 then error("size of the crosspolytope must be positive");
+     constructMatrix := (d,v) -> (
+	  if d != 0 then flatten {constructMatrix(d-1,v|{-1}),constructMatrix(d-1,v|{1})}
+	  else {v});
+     homVert := (matrix {toList(2*d:1_QQ)} || (map(QQ^d,QQ^d,s) | map(QQ^d,QQ^d,-s)));
+     new Polyhedron from hashTable {
+	  "Rays"=>transpose homVert,
+	  "LinealitySpace"=>map(QQ^0,QQ^(d+1),0)})
 
 
+--   INPUT : '(d,s)',  where 'd' is a strictly positive integer, the dimension of the polytope, and 's' is a
+--     	    	        strictly positive integer, the distance of the vertices to the origin
+crossPolytope(ZZ,ZZ) := (d,s) -> crossPolytope(d,promote(s,QQ))
+
+
+--   INPUT :  'd',  where 'd' is a strictly positive integer, the dimension of the polytope
+crossPolytope ZZ := d -> crossPolytope(d,1_QQ)
+
+-- PURPOSE : Computing the cyclic polytope of n points in QQ^d
+--   INPUT : '(d,n)',  two positive integers
+--  OUTPUT : A polyhedron, the convex hull of 'n' points on the moment curve in 'd' space 
+-- COMMENT : The moment curve is defined by t -> (t,t^2,...,t^d) in QQ^d, if we say we take 'n' points 
+--            on the moment curve, we mean the images of 0,...,n-1
+cyclicPolytope = method(TypicalValue => Polyhedron)
+cyclicPolytope(ZZ,ZZ) := (d,n) -> (
+     -- Checking for input errors
+     if d < 1 then error("The dimension must be positive");
+     if n < 1 then error("There must be a positive number of points");
+     convexHull map(ZZ^d, ZZ^n, (i,j) -> j^(i+1)))
+
+-- PURPOSE : Generating the 'd'-dimensional hypercube with edge length 2*'s'
+hypercube = method(TypicalValue => Polyhedron)
+
+--   INPUT : '(d,s)',  where 'd' is a strictly positive integer, the dimension of the polytope, and
+--     	    	       's' is a positive rational number, half of the edge length
+--  OUTPUT : The 'd'-dimensional hypercube with edge length 2*'s' as a polyhedron
+hypercube(ZZ,QQ) := (d,s) -> (
+     -- Checking for input errors
+     if d < 1 then error("dimension must at least be 1");
+     if s <= 0 then error("size of the hypercube must be positive");
+     -- Generating half-spaces matrix and vector
+     intersection(map(QQ^d,QQ^d,1) || -map(QQ^d,QQ^d,1),matrix toList(2*d:{s})))
+
+
+--   INPUT : '(d,s)',  where 'd' is a strictly positive integer, the dimension of the polytope, and
+--     	    	       's' is a positive integer, half of the edge length
+hypercube(ZZ,ZZ) := (d,s) -> hypercube(d,promote(s,QQ))
+
+     
+--   INPUT : 'd',  is a strictly positive integer, the dimension of the polytope 
+hypercube ZZ := d -> hypercube(d,1_QQ)
+
+-- PURPOSE : Computing the Newton polytope for a given (Laurent) polynomial
+--   INPUT : 'p',  a RingElement
+--  OUTPUT : The polyhedron that has the exponent vectors of the monomials of 'p' as vertices
+newtonPolytope = method(TypicalValue => Polyhedron)
+newtonPolytope RingElement := p -> (
+     if class class p===PolynomialRing then convexHull transpose matrix exponents p
+     else if class class p===FractionField then (
+	  f:=numerator p;
+	  l:=(exponents denominator p);
+	  if #l =!=1 then error("Not a (Laurent) polynomial");
+	  convexHull transpose matrix apply(exponents f,i->i-l_0))
+     else error ("Not a (Laurent) polynomial"))
+	  
+-- PURPOSE : Computing the Ehrhart polynomial of a polytope
+--   INPUT : 'P',  a polyhedron which must be compact, i.e. a polytope
+--  OUTPUT : A polynomial in QQ[x], the Ehrhart polynomial
+-- COMMENT : Compactness is checked within latticePoints
+ehrhart = method(TypicalValue => RingElement,Options =>pmopt)
+ehrhart Polyhedron := opts->P -> (
+	n := dim P;
+	if not	P#?"EhrhartPolynomialCoeff" then (
+	     if opts#UsePolymake then runPolymake(P,"EhrhartPolynomialCoeff")
+	     else (
+		v := matrix apply(n,k -> {-1+#latticePoints( (k+1)*P)});
+		     print v;
+		     M := promote(matrix apply(n,i -> reverse apply(n, j -> (i+1)^(j+1))),QQ);
+		     P#"EhrhartPolynomialCoeff"={1}|reverse flatten entries ((inverse M)*v)));
+        R := QQ[getSymbol "x"];
+	x := R_"x";
+	sum apply(n+1,i -> P#"EhrhartPolynomialCoeff"#i * x^(i)))
 
 
 
