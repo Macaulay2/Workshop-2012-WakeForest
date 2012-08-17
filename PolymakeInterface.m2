@@ -3,11 +3,14 @@ newPackage(
     	Version => "0.3", 
     	Date => "Aug 6, 2012",
     	Authors => {{Name => "Josephine Yu", 
-		  Email => "josephine.yu@math.gatech.edu", 
-		  HomePage => "http://people.math.gatech.edu/~jyu67"},
+		     Email => "josephine.yu@math.gatech.edu", 
+		     HomePage => "http://people.math.gatech.edu/~jyu67"},
+	            {Name => "Nathan Ilten",
+	             HomePage => "http://math.berkeley.edu/~nilten",
+	             Email => "nilten@math.berkeley.edu"},
 	            {Name => "Qingchun Ren", 
-		  Email => "qingchun.ren@gmail.com", 
-		  HomePage => "http://math.berkeley.edu/~qingchun/"}},
+		    Email => "qingchun.ren@gmail.com", 
+		    HomePage => "http://math.berkeley.edu/~qingchun/"}},
     	Headline => "a package for interfacing with polymake",
     	DebuggingMode => true
     	)
@@ -42,10 +45,22 @@ runPolymake(String) := o -> (script) -> (
 --Types of properties in polymake (hard coded)
 ------------------------------------------------------------------------------
 
+emptyMatrixWithSource = (sourceDimensionPropertyName) -> (
+     (P) -> (
+          sourceDimension := runPolymake(P,sourceDimensionPropertyName);
+          map(QQ^0,QQ^sourceDimension,0)
+	  )
+     )
+
 propertyTypes = {
      {    
 	  "M2PropertyName" => "ConeDim",
 	  "PolymakePropertyName" => "CONE_DIM",
+	  "ValueType" => "Integer"
+	  },
+     {    
+	  "M2PropertyName" => "ConeAmbientDim",
+	  "PolymakePropertyName" => "CONE_AMBIENT_DIM",
 	  "ValueType" => "Integer"
 	  },
      {    
@@ -106,7 +121,8 @@ propertyTypes = {
      {    
 	  "M2PropertyName" => "LinearSpan",
 	  "PolymakePropertyName" => "LINEAR_SPAN",
-	  "ValueType" => "Matrix"
+	  "ValueType" => "Matrix",
+	  "EmptyMatrixFallback" => emptyMatrixWithSource("ConeAmbientDim")
 	  },
      {   
 	  "M2PropertyName" => "Facets",
@@ -129,57 +145,7 @@ propertyTypes = apply(propertyTypes, x -> new HashTable from x);
 polymakePropertyNameToValueType = new HashTable from apply(propertyTypes, x -> (x#"PolymakePropertyName",x#"ValueType"));
 M2PropertyNameToPolymakePropertyName = new HashTable from apply(propertyTypes, x -> (x#"M2PropertyName",x#"PolymakePropertyName"));
 polymakePropertyNameToM2PropertyName = new HashTable from apply(propertyTypes, x -> (x#"PolymakePropertyName",x#"M2PropertyName"));
-
----------------------------------------------------------------------------
--- Create a polymake input file
-
-toPolymakeFormat = method(TypicalValue => String)
-toPolymakeFormat(String, Matrix) := (propertyName, M) -> (
-     if M === null then ""
-     else(
-     	  S := propertyName|"\n";
-     	  if numRows M > 0 then
-	     S = S|replace("\\|", "", toString net M);
-     	  S
-     	  )
-     )
-toPolymakeFormat(String,Vector) := (propertyName,V) -> (
-     if V === null then ""
-     else(
-     	  S := propertyName|"\n";
-     	  if length V > 0 then
-              S = S|replace("\\|", "", toString net matrix{V});     
-     	  S
-     	  )
-     )
-toPolymakeFormat(String,ZZ) := (propertyName,x) -> (
-     if x === null then ""
-     else(
-     	  S := propertyName|"\n"|x|"\n";
-     	  S
-     	  )
-     )
-toPolymakeFormat(PolyhedralObject) := (P) -> (
-     parsedPropertyNames := for propertyName in keys(P) when (propertyName!="AvailableProperties") and (propertyName!="PolymakeFile") and (M2PropertyNameToPolymakePropertyName#?propertyName) list propertyName;
-     parsedProperties := apply(parsedPropertyNames,x->(M2PropertyNameToPolymakePropertyName#x,P#x));
-     concatenate apply(parsedProperties, a -> toPolymakeFormat(a)|"\n\n")
-     )
-
-writePolymakeFile = method(TypicalValue => Nothing)
-writePolymakeFile(PolyhedralObject, String) := (P, header) ->(
-     fileName := temporaryFileName()|currentTime()|".poly";
-     << "using temporary file " << fileName << endl;
-     fileName << header << endl << endl << toPolymakeFormat(P) << endl << close;
-     P#"PolymakeFile" = fileName;
-     fileName	  
-     )
-writePolymakeFile(PolyhedralObject) := (P) -> (
-     writePolymakeFile(P, "")
-     )
-writePolymakeFile(Cone) := (C) -> (
-     header := "_type Cone\n";
-     writePolymakeFile(C, header)
-     )
+polymakePropertyNameToEmptyMatrixFallback = new HashTable from apply(select(propertyTypes,x -> (x#?"EmptyMatrixFallback")), x -> (x#"PolymakePropertyName",x#"EmptyMatrixFallback"));
 
 ---------------------------------------------------------------------------
 ----- Utilities
@@ -193,8 +159,7 @@ makeList = (str) -> (
 makeMatrix = (str) -> (
      L := lines str;
      L = select (L, x -> x!="");
-     if #L == 0 then map(QQ^0,QQ^0,0)
-     else matrix(L/makeList)
+     matrix(L/makeList)
      )
 
 ------------------------------------------------------------------------------
@@ -204,7 +169,7 @@ makeMatrix = (str) -> (
 parseUnknownProperty = method(TypicalValue => String)
 parseUnknownProperty(PolyhedralObject,String) := (P, propertyName) -> (
      script := "use application \"polytope\";
-         my $object = load(\""|(P#"PolymakeFile")|"\");
+         my $object = load(\""|(P#cache#"PolymakeFile")|"\");
 	 print $object->"|propertyName|";";
      runPolymake(script)
      )
@@ -212,7 +177,7 @@ parseUnknownProperty(PolyhedralObject,String) := (P, propertyName) -> (
 parseBooleanProperty = method(TypicalValue => Boolean)
 parseBooleanProperty(PolyhedralObject,String) := (P, propertyName) -> (
      script := "use application \"polytope\";
-         my $object = load(\""|(P#"PolymakeFile")|"\");
+         my $object = load(\""|(P#cache#"PolymakeFile")|"\");
 	 my $v = $object->"|propertyName|";
 	 if($v){print(\"true\")}else{print(\"false\");}";
      (runPolymake(script)=="true")
@@ -221,7 +186,7 @@ parseBooleanProperty(PolyhedralObject,String) := (P, propertyName) -> (
 parseScalarProperty = method()
 parseScalarProperty(PolyhedralObject,String) := (P, propertyName) -> (
      script := "use application \"polytope\";
-         my $object = load(\""|(P#"PolymakeFile")|"\");
+         my $object = load(\""|(P#cache#"PolymakeFile")|"\");
 	 print $object->"|propertyName|";";
      value(runPolymake(script))
      )
@@ -229,7 +194,7 @@ parseScalarProperty(PolyhedralObject,String) := (P, propertyName) -> (
 parseListProperty = method(TypicalValue => List)
 parseListProperty(PolyhedralObject,String) := (P, propertyName) -> (
      script := "use application \"polytope\";
-         my $object = load(\""|(P#"PolymakeFile")|"\");
+         my $object = load(\""|(P#cache#"PolymakeFile")|"\");
 	 print $object->"|propertyName|";";
      makeList(runPolymake(script))
      )
@@ -237,9 +202,16 @@ parseListProperty(PolyhedralObject,String) := (P, propertyName) -> (
 parseMatrixProperty = method(TypicalValue => Matrix)
 parseMatrixProperty(PolyhedralObject,String) := (P, propertyName) -> (
      script := "use application \"polytope\";
-         my $object = load(\""|(P#"PolymakeFile")|"\");
+         my $object = load(\""|(P#cache#"PolymakeFile")|"\");
 	 print $object->"|propertyName|";";
-     makeMatrix(runPolymake(script))
+     result := runPolymake(script);
+     isEmpty := #(select (lines result, x -> x!=""))==0;
+     if (isEmpty and polymakePropertyNameToEmptyMatrixFallback#?propertyName) then (
+	  (polymakePropertyNameToEmptyMatrixFallback#propertyName)(P)
+	  )
+     else (
+          makeMatrix(result)
+	  )
      )
 
 parseProperty = method()
@@ -266,25 +238,27 @@ parseProperty(PolyhedralObject,String) := (P, propertyName) -> (
 --Getting properties from cache
 ------------------------------------------------------------------------------
 
+hasParsedProperty = method()
+hasParsedProperty(PolyhedralObject,String) := (P, propertyName) -> (
+     P#?propertyName
+     )
+
+hasCachedProperty = method()
+hasCachedProperty(PolyhedralObject,String) := (P, propertyName) -> (
+     P#?cache and P#cache#?"AvailableProperties" and M2PropertyNameToPolymakePropertyName#?propertyName and P#cache#"AvailableProperties"#?(M2PropertyNameToPolymakePropertyName#propertyName)
+     )
+
 hasProperty = method()
 hasProperty(PolyhedralObject,String) := (P, propertyName) -> (
-     if (P#?propertyName and propertyName!="PolymakeFile" and propertyName!="AvailableProperties") then (
-	  true
-	  )
-     else if (P#?"AvailableProperties" and M2PropertyNameToPolymakePropertyName#?propertyName and P#"AvailableProperties"#?(M2PropertyNameToPolymakePropertyName#propertyName)) then (
-	  true
-	  )
-     else (
-	  false
-	  )
+     hasParsedProperty(P,propertyName) or hasCachedProperty(P,propertyName)
      )
 
 getProperty = method()
 getProperty(PolyhedralObject,String) := (P, propertyName) -> (
-     if (P#?propertyName) then (
+     if (hasParsedProperty(P,propertyName)) then (
 	  P#propertyName
 	  )
-     else if (P#?"AvailableProperties" and M2PropertyNameToPolymakePropertyName#?propertyName and P#"AvailableProperties"#?(M2PropertyNameToPolymakePropertyName#propertyName)) then (
+     else if (hasCachedProperty(P,propertyName)) then (
 	  propertyValue := parseProperty(P,M2PropertyNameToPolymakePropertyName#propertyName);
 	  P#propertyName = propertyValue;
 	  propertyValue
@@ -294,30 +268,93 @@ getProperty(PolyhedralObject,String) := (P, propertyName) -> (
 	  )
      )
 
-getPropertyNames = method()
-getPropertyNames(PolyhedralObject) := (P) -> (
-     if (P#?"AvailableProperties") then (
-	  polymakePropertyNames := select(keys(P#"AvailableProperties"),x -> (polymakePropertyNameToM2PropertyName#?x));
-	  M2PropertyNames := apply(polymakePropertyNames,x -> polymakePropertyNameToM2PropertyName#x);
-	  new Set from M2PropertyNames
+getParsedPropertyNames = method()
+getParsedPropertyNames(PolyhedralObject) := (P) -> (
+     new Set from select(keys(P),x->(class(x)===String))
+     )
+
+getCachedPropertyNames = method()
+getCachedPropertyNames(PolyhedralObject) := (P) -> (
+     if (P#?cache and P#cache#?"AvailableProperties") then (
+	  polymakePropertyNames := select(keys(P#cache#"AvailableProperties"),x->(polymakePropertyNameToM2PropertyName#?x));
+	  new Set from apply(polymakePropertyNames,x->polymakePropertyNameToM2PropertyName#x)
 	  )
      else (
-	  parsedPropertyNames := for propertyName in keys(P) when (
-	       (propertyName!="AvailableProperties") and (propertyName!="PolymakeFile")
-	       )
-	  list propertyName;
-	  new Set from parsedPropertyNames
+	  new Set from {}
 	  )
+     )
+
+getPropertyNames = method()
+getPropertyNames(PolyhedralObject) := (P) -> (
+     getParsedPropertyNames(P)+getCachedPropertyNames(P)
      )
 
 parseAllAvailableProperties = method()
 parseAllAvailableProperties(PolyhedralObject) := (P) -> (
-     for propertyName in keys(getPropertyNames(P)) do (
-	  if (not(P#?propertyName)) then (
-	       polymakePropertyName := M2PropertyNameToPolymakePropertyName#propertyName;
-	       P#propertyName = parseProperty(P,polymakePropertyName);
-	       )
+     for propertyName in toList(getCachedPropertyNames(P)-getParsedPropertyNames(P)) do (
+	  polymakePropertyName := M2PropertyNameToPolymakePropertyName#propertyName;
+	  P#propertyName = parseProperty(P,polymakePropertyName);
 	  )
+     )
+
+---------------------------------------------------------------------------
+-- Create a polymake input file
+
+toPolymakeFormat = method(TypicalValue => String)
+toPolymakeFormat(String, Boolean) := (propertyName, x) -> (
+     if x === null then ""
+     else (
+	  S := propertyName|"\n";
+	  if x then (
+	       S = S|"1";
+	       );
+	  S
+	  )
+     )
+toPolymakeFormat(String, Matrix) := (propertyName, M) -> (
+     if M === null then ""
+     else(
+     	  S := propertyName|"\n";
+     	  if numRows M > 0 then
+	     S = S|replace("\\|", "", toString net M);
+     	  S
+     	  )
+     )
+toPolymakeFormat(String,Vector) := (propertyName,V) -> (
+     if V === null then ""
+     else(
+     	  S := propertyName|"\n";
+     	  if length V > 0 then
+              S = S|replace("\\|", "", toString net matrix{V});     
+     	  S
+     	  )
+     )
+toPolymakeFormat(String,ZZ) := (propertyName,x) -> (
+     if x === null then ""
+     else(
+     	  S := propertyName|"\n"|x|"\n";
+     	  S
+     	  )
+     )
+toPolymakeFormat(PolyhedralObject) := (P) -> (
+     parsedPropertyNames := select(toList(getParsedPropertyNames(P)), x->(M2PropertyNameToPolymakePropertyName#?x));
+     parsedProperties := apply(parsedPropertyNames,x->(M2PropertyNameToPolymakePropertyName#x,P#x));
+     concatenate apply(parsedProperties, a -> toPolymakeFormat(a)|"\n\n")
+     )
+
+writePolymakeFile = method(TypicalValue => Nothing)
+writePolymakeFile(PolyhedralObject, String) := (P, header) ->(
+     fileName := temporaryFileName()|currentTime()|".poly";
+     << "using temporary file " << fileName << endl;
+     fileName << header << endl << endl << toPolymakeFormat(P) << endl << close;
+     fileName	  
+     )
+writePolymakeFile(PolyhedralObject) := (P) -> (
+     writePolymakeFile(P, "")
+     )
+writePolymakeFile(Cone) := (C) -> (
+     header := "_type Cone\n";
+     writePolymakeFile(C, header)
      )
 
 ---------------------------------------------------------------------------
@@ -330,20 +367,27 @@ runPolymake(PolyhedralObject,String) := o -> (P,propertyName) -> (
      else (
 	  polymakePropertyName := M2PropertyNameToPolymakePropertyName#propertyName;
           if (not(hasProperty(P,polymakePropertyName))) then (
-               if (not P#?"PolymakeFile") then (
-                    writePolymakeFile(P);
-	            );
+	       if (not(P#?cache)) then (
+		    P#cache = new MutableHashTable;
+		    );
+               if (not(P#cache#?"PolymakeFile")) then (
+                    P#cache#"PolymakeFile" = writePolymakeFile(P);
+	            )
+	       else if (not(isSubset(getParsedPropertyNames(P),getCachedPropertyNames(P)))) then (
+		    parseAllAvailableProperties(P);
+		    P#cache#"PolymakeFile" = writePolymakeFile(P);
+		    );
                script := "use application \"polytope\";
-                    my $object = load(\""|(P#"PolymakeFile")|"\");
+                    my $object = load(\""|(P#cache#"PolymakeFile")|"\");
 	            $object->"|polymakePropertyName|";
-	            save($object,\""|(P#"PolymakeFile")|"\");
+	            save($object,\""|(P#cache#"PolymakeFile")|"\");
 	            my @properties = $object->list_properties;
 	            my $numberOfProperties = scalar @properties;
 	            for(my $i=0;$i<$numberOfProperties;$i++)
 	            {print \"$properties[$i]\\n\";}";
                propertiesString := runPolymake(script);
                propertiesList := lines propertiesString;
-               P#"AvailableProperties" = new Set from propertiesList;
+               P#cache#"AvailableProperties" = new Set from propertiesList;
 	       );
 	  if (o.ParseAllProperties) then (
 	       parseAllAvailableProperties(P);
@@ -373,21 +417,21 @@ doc ///
    Text
      We can use the interface to get properties of @TO "PolyhedralObjects"@
    Example
-     needsPackage "PolyhedralObjects"
-     P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}}
+     needsPackage "PolyhedralObjects";
+     P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
      runPolymake(P, "FVector")
    Text
      Instead of performing the computation every time, we store the result in a cache, and reuse the result every time the interface is called with the same object.
    Example
-     needsPackage "PolyhedralObjects"
-     P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}}
+     needsPackage "PolyhedralObjects";
+     P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
      runPolymake(P, "FVector")
      runPolymake(P, "FVector")
    Text
      Look in the cache for the properties already computed.
    Example
-     needsPackage "PolyhedralObjects"
-     P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}}
+     needsPackage "PolyhedralObjects";
+     P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
      runPolymake(P, "FVector")
      getPropertyNames(P)
      hasProperty(P, "FVector")
@@ -395,8 +439,8 @@ doc ///
    Text
      We can save the {\tt Polymake} output as a boolean, an integer, a list, or a matrix, depending on the type of the output.
    Example
-     needsPackage "PolyhedralObjects"
-     P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}}
+     needsPackage "PolyhedralObjects";
+     P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
      runPolymake(P, "Bounded")
      runPolymake(P, "ConeDim")
      runPolymake(P, "FVector")
@@ -427,7 +471,31 @@ doc ///
 	    the result returned from Polymake
     Description
         Text
-	    A
+	    Runs a Polymake script and returns whatever Polymake prints in its stardard output as a String.
+	Example
+	    script = "use application \"polytope\"; my $a = cube(2,2); print $a->F_VECTOR;";
+	    runPolymake(script)
+        Text
+	    Runs Polymake on a PolyhedralObject (such as Polyhedron, Cone) to get a property.
+	Example
+            needsPackage "PolyhedralObjects";
+            P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
+            runPolymake(P, "FVector")
+	Text
+	    When Polymake computes a property of a polyhedral object, it may compute other properties in the process. If the ParseAllProperties option is set {\tt true}, then all properties that is computed in the process are parsed into M2 format. Otherwise, only the needed property is parsed, and the other properties are stored in a temporary file in Polymake format.
+	Example
+	    needsPackage "PolyhedralObjects";
+            P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
+            runPolymake(P, "FVector",ParseAllProperties=>true)
+	Text
+	    The type of the output varies according to the type of the property.
+	Example
+            needsPackage "PolyhedralObjects";
+            P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
+	    runPolymake(P, "Feasible")
+	    runPolymake(P, "ConeDim")
+            runPolymake(P, "FVector")
+	    runPolymake(P, "Facets")
 ///
 
 doc ///
@@ -445,7 +513,12 @@ doc ///
 	    whether the polyhedral object has the property in its Polymake cache
     Description
         Text
-	    A
+	    Checks if a polyhedral object has a property in its Polymake cache.
+	Example
+            needsPackage "PolyhedralObjects";
+            P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
+            runPolymake(P, "FVector")
+	    hasProperty(P, "Facets")
 ///
 
 doc ///
@@ -463,7 +536,12 @@ doc ///
 	    the value of a property
     Description
         Text
-	    A
+	    Gets the value of a property in the Polymake cache.
+	Example
+            needsPackage "PolyhedralObjects";
+            P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
+            runPolymake(P, "FVector")
+	    getProperty(P, "Facets")
 ///
 
 doc ///
@@ -481,7 +559,12 @@ doc ///
 	    all property names in the Polymake cache
     Description
         Text
-	    A
+	    Gets all property names in the Polymake cache.
+	Example
+            needsPackage "PolyhedralObjects";
+            P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
+            runPolymake(P, "FVector")
+	    getPropertyNames(P)
 ///
 
 doc ///
@@ -495,7 +578,12 @@ doc ///
 	P:PolyhedralObject
     Description
         Text
-	    A
+	    Parses values of all property in the Polymake cache to M2 format.
+	Example
+	    needsPackage "PolyhedralObjects";
+            P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
+            runPolymake(P, "FVector")
+	    parseAllAvailableProperties(P)
 ///
 
 doc ///
@@ -505,7 +593,11 @@ doc ///
         optional parameter for runPolymake
     Description
         Text
-	    A
+	    When Polymake computes a property of a polyhedral object, it may compute other properties in the process. If the ParseAllProperties option is set {\tt true}, then all properties that is computed in the process are parsed into M2 format. Otherwise, only the needed property is parsed, and the other properties are stored in a temporary file in Polymake format.
+	Example
+	    needsPackage "PolyhedralObjects";
+            P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
+            runPolymake(P, "FVector",ParseAllProperties=>true)
 ///
 
 ---------------------------------------------------------------------------
@@ -662,26 +754,49 @@ TEST ///
 	);
 ///
 
---Failed examples
+TEST ///
+    needsPackage "PolyhedralObjects";
+    P = new Polyhedron from {"Feasible"=>true};
+    result = runPolymake(P,"Feasible");
+    assert(result);
 ///
+
+TEST ///
+    needsPackage "PolyhedralObjects";
+    P = new Polyhedron from {"Feasible"=>false};
+    result = runPolymake(P,"Feasible");
+    assert(not result);
+///
+
+TEST ///
+    needsPackage "PolyhedralObjects";
+    C = new Cone from {"InputRays" => matrix{{0,0,1},{0,1,1},{1,0,1},{1,1,1}}};
+    result = runPolymake(C,"LinearSpan");
+    assert(class(result)===Matrix);
+    assert(numRows(result)==0);
+    assert(numColumns(result)==3);
+///
+
+TEST ///
+    needsPackage "PolyhedralObjects";
+    P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
+    runPolymake(P,"Feasible");
+    P#"Facets" = matrix{{0,0,1},{0,1,0},{1,0,-1},{1,-1,0}};
+    result = runPolymake(P,"FVector");
+    assert (result=={4,4});
+///
+
+--Failed examples
+
+///
+    --This is a bug in Polymake. Need to contact its developers.
+    needsPackage "PolyhedralObjects"
     P = new Polyhedron from {"ConeDim"=>1};
+    --ConeDim is insufficient to determine Points
     runPolymake(P,"Points");
+    --So should not have property Points after calling runPolymake
     assert(not(hasProperty(P,"Points")));
 ///
-
-///
-    P = new Polyhedron from {"Feasible"=>true,"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
-    result = runPolymake(P,"Points");
-    assert(class(result)===Matrix);
-///
-
-///
-C = posHull matrix{{0,0,1,1},{0,1,0,1},{1,1,1,1}}
-runPolymake(C,"LinearSpan")
-result matrix is 0-> 0
-but needs to be QQ^CONE_DIM to 0
-///
-
 
 end
 
@@ -695,43 +810,13 @@ installPackage "PolymakeInterface"
 check PolymakeInterface
 help PolymakeInterface
 viewHelp PolymakeInterface
-needsPackage ("Polyhedra2")
-needsPackage "PolyhedralObjects"
-testScript = ///
-    use application "polytope";
-    my $a = cube(2,2);
-    print $a->F_VECTOR;
-    ///
-runPolymake(testScript)
-P = convexHull matrix{{0,0,1,1},{0,1,0,1}}
---P#"Points" = P#"InputRays";
-runPolymake(P,"Feasible")
-class oo
-runPolymake(P,"Bounded",ParseAllProperties=>true)
-class oo
-peek P
-runPolymake(P,"FVector")
-class oo
-runPolymake(P,"Facets")
-class oo
-getPropertyNames(P)
-class oo
-peek P
-parseAllAvailableProperties(P)
-peek P
-C = posHull matrix{{0,0,1,1},{0,1,0,1},{1,1,1,1}}
-runPolymake(C,"Facets")
-runPolymake(P,"dsgjewlksjflkdsjgflksdjlfksd")
-getProperty(P,"sdgjlejgoiwefioew")
-hasProperty(P,"Facets")
-getProperty(P,"LinearSpan")
+
 ---------------------------------------------------------------------------
 ------------------------- TO DO ---------------------------
 ---------------------------------------------------------------------------
 
--- toPolymakeFormat for Boolean type
--- If Polymake fails, don't add the key
--- If Polymake returns an empty matrix, it should be a matrix from QQ^{AmbientConeDim} to QQ^0.
+-- There is 1 known bug
+-- Need to handle error from Polymake
 -- Add new properties to the table
 -- Parse IncidenceMatrix,SimplicialComplex objects and other types
 -- Parse all properties in one round to save the overhead
