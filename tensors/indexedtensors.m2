@@ -2,8 +2,7 @@
 --Part 3: Indexed Tensors
 --should only depend on part 2
 ----------------------------
-needsPackage"Tensors"
-protect noname
+--needsPackage"Tensors"
 export{IndexedTensor,indexedTensor}
 IndexedTensor = new Type of HashTable
 subscriptFormat :=method()
