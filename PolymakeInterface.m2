@@ -78,6 +78,11 @@ propertyTypes = {
 	  "PolymakePropertyName" => "INPUT_LINEALITY",
 	  "ValueType" => "Matrix"
 	  },
+     {   
+	  "M2PropertyName" => "LinealitySpace",
+	  "PolymakePropertyName" => "LINEALITY_SPACE",
+	  "ValueType" => "Matrix",
+	  "EmptyMatrixFallback" => emptyMatrixWithSource("ConeAmbientDim")	  },     
      {    
 	  "M2PropertyName" => "FVector",
 	  "PolymakePropertyName" => "F_VECTOR",
@@ -124,6 +129,12 @@ propertyTypes = {
 	  "ValueType" => "Matrix",
 	  "EmptyMatrixFallback" => emptyMatrixWithSource("ConeAmbientDim")
 	  },
+     {    
+	  "M2PropertyName" => "AffineHull",
+	  "PolymakePropertyName" => "AFFINE_HULL",
+	  "ValueType" => "Matrix",
+	  "EmptyMatrixFallback" => emptyMatrixWithSource("ConeAmbientDim")
+	  },     
      {   
 	  "M2PropertyName" => "Facets",
 	  "PolymakePropertyName" => "FACETS",
