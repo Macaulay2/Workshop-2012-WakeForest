@@ -77,7 +77,7 @@ globalAssignment PolyhedralObject
 
 net PolyhedralObject := 
 P -> (
-	goodkeys := select(keys P, k -> not match("Gfan", k) and not match("Polymake", k));
+	goodkeys := select(keys P, k -> not match("Gfan", toString k) and not match("Polymake", toString k));
 	stack apply(goodkeys, k -> (net k) | " => " | (net P#k))
 )
 
