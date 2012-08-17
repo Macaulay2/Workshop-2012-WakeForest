@@ -112,7 +112,6 @@ tauAOverPEMinus1QGorAmb = (Sk, Jk, hk, ek, fm, a1, e1) -> (
                               --that tau(f^(1+k)) = f*tau(f^k) 
      fpow := fm^a2; 
      
-     --TODO:  Experiment with ascending this ideal
      Iasc := ascendIdeal(Jk*ideal(fm), fpow*hk1, et);
     
      Iasc*ideal(fm^k2)    
@@ -125,14 +124,15 @@ tauQGor = (Rk, ek, fk, t1) -> (
      Sk := ambient Rk;
      pp := char Sk;
      L1 := divideFraction(t1,pp); --this breaks up t1 into the pieces we need
-     hk := findQGorGen(Rk, ek); --this is being called twice sometimes, fix it.
+     hk := findQGorGen(Rk, ek); --the term in the test ideal
      Jk := findTestElementAmbient(Rk); --this finds some test elements (lifted on the ambient
                                        --ring).  Right now it is slow because of a call to 
 				       --singularLocus (ie, computing a Jacobian).
      I1 := ideal(0_Sk); I2 := ideal(0_Sk);
-     fm := lift(fk, Sk);
-     a1 := L1#0; e1 := L1#2; pPow := L1#1;
-     d1 := pp^(pPow); if (e1 != 0) then d1 = d1*(pp^e1-1);
+     fm := lift(fk, Sk); --we lift our f to the ambient polynomial ring
+     a1 := L1#0; e1 := L1#2; pPow := L1#1; --t1 = a1 / (pp^pPow * (pp^e1 - 1))
+     d1 := pp^(pPow); if (e1 != 0) then d1 = d1*(pp^e1-1); --this is our denominator, used
+                                                           --for simplifying computations
      a2 := a1 % d1;
      k2 := a1 // d1; --it seems faster to use the fact 
                               --that tau(f^(k+t)) = f^k*tau(f^t).  We'll toss on the multiple 
@@ -146,7 +146,8 @@ tauQGor = (Rk, ek, fk, t1) -> (
       );
  
      --now we compute the test ideal using a generalization of the fact that 
-     --tau(fm^t)^{[1/p^a]} = tau(fm^(t/p^a))
+     --tau(fm^t)^{[1/p^b]} = tau(fm^(t/p^b))
+     --this follows from Schwede-Tucker.
      if (pPow != 0) then (
           --we do a check to see if the indexes match well enough...
           --the problem is we can only take ek'th roots, but my t1 might be something like
@@ -160,7 +161,9 @@ tauQGor = (Rk, ek, fk, t1) -> (
           ); --note in the end here, ek divides pPow.
  
           --I also need to adjust hk if it is different from pPow.
-          if (hk != pPow) then hk = hk^(numerator ((pp^pPow - 1)/(pp^ek - 1)));
+          if (ek != pPow) then (
+	       hk = hk^(numerator ((pp^pPow - 1)/(pp^ek - 1)))	       
+	  ); --the division above makes sense because ek divides the modified pPow
  
           I2 = ethRoot(I1*ideal(hk), pPow) 
      )

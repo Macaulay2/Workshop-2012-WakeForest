@@ -1,5 +1,5 @@
 newPackage( "PosChar",
-Version => "1.0", Date => "August 5, 2012", Authors => {
+Version => "1.0", Date => "August 17, 2012", Authors => {
      {Name => "Karl Schwede",
      Email => "schwede@math.psu.edu",
      HomePage => "http://math.psu.edu/schwede/"
@@ -43,7 +43,12 @@ export{"basePExp",
      "dCalculation",
      "calculateEpsilon",
      "guessFPT",
-     "OutputRange"
+     "OutputRange",
+     "findQGorGen", --needs help entry
+     "tauQGorAmb", --needs help entry
+     "tauGorAmb", --needs help entry
+     "tauQGor", --needs help entry
+     "tauGor" --needs help entry
 }
 --This file has "finished" functions from the Macaulay2 workshop at Wake Forest
 --August 2012.  Sara Malec, Karl Schwede and Emily Witt contributed to it.
@@ -276,18 +281,53 @@ FPTApproxList (RingElement,ZZ) := (f,e) -> FPTApproxList(ideal(f),e)
 --***********************************************************--
 ---------------------------------------------------------------
 
+ 
 --The following raises an ideal to a Frobenius power.  It was written by Moty Katzman
 frobeniusPower=method()
 
-frobeniusPower(Ideal,ZZ) := (I,e) ->(
-     R:=ring I;
-     p:=char R;
-     local u;
+frobeniusPower(Ideal,ZZ) := (I1,e1) ->(
+     R1:=ring I1;
+     p1:=char R1;
      local answer;
-     G:=first entries gens I;
-     if (#G==0) then answer=ideal(0_R) else answer=ideal(apply(G, u->u^(p^e)));
+     G1:=first entries gens I1;
+     if (#G1==0) then answer=ideal(0_R1) else answer=ideal(apply(G1, j->j^(p1^e1)));
      answer
 );
+
+-- This function computes the element in the ambient ring S of R=S/I such that
+-- I^{[p^e]}:I = (f) + I^{[p^e]}.  
+-- If there is no such unique element, the function returns zero.
+
+findQGorGen=method();
+
+findQGorGen (Ring,ZZ) := (Rk,ek) -> (
+     Sk := ambient Rk; -- the ambient ring
+     Ik := ideal Rk; -- the defining ideal
+     pp := char Sk; --the characteristic
+     Ikpp := frobeniusPower(Ik,ek);
+     
+     J1 := trim (Ikpp : Ik); --compute the colon
+     Tk := Sk/Ikpp; --determine the ideal in 
+     
+     J2 := trim sub(J1, Tk);
+     
+     Lk := first entries gens J2;
+     
+     nk := #Lk;
+     val := 0_Sk;
+     
+     if (nk != 1) then (
+	  error "findGorGen: this ring does not appear to be (Q-)Gorenstein, or
+	   you might need to work on a smaller chart.  Or the index may not divide p^e-1
+	   for the e you have selected.";
+     )
+     else (
+	  val = lift(Lk#0, Sk);
+     );    
+     val 
+)
+
+findQGorGen(Ring) := (R2) -> ( findQGorGen(R2, 1) )
 
 
 ---------------------------------------------------------------------
@@ -633,7 +673,7 @@ isBinomial = f ->
 
 --Computes I^{[1/p^e]}, we must be over a perfect field. and working with a polynomial ring
 --This is a slightly stripped down function due to Moty Katzman, with some changes to avoid the
---use(Rm) which is commented out in a ring
+--use(Rm) which is commented out below.
 ethRoot = (Im,e) -> (
      if (isIdeal(Im) != true) then (
      	  error "ethRoot: Expted a nonnegative integer."; 
@@ -671,6 +711,61 @@ ethRoot = (Im,e) -> (
 -- a short version of ethRoot
 eR = (I1,e1)-> (ethRoot(I1,e1) )
 
+--this function finds the smallest phi-stable ideal containing the given ideal Jk
+--in a polynomial ring Sk.
+--Jk is the given ideal, ek is the power of Frobenius to use, hk is the function to multiply 
+--trace by to give phi.  phi(_) = Tr^(ek)(hk._)
+--this is based on ideas of Moty Katzman, and his star closure
+ascendIdeal = (Jk, hk, ek) -> (
+     print ".";
+     Sk := ring Jk;
+     pp := char Sk;
+     IN := Jk;
+     IP := ideal(0_Sk);
+     --we want to make the largest ideal that is phi-stable, following Moty Katzman's idea
+     --we do the following
+     while (isSubset(IN, IP) == false) do(
+     	  IP = IN;
+--	  error "help";
+	  IN = eR(ideal(hk)*IP, ek)+IP
+     );
+
+     --trim the output
+     trim IP
+)
+
+--this finds a test element of a ring R = k[x, y, ...]/I (or at least an ideal 
+--containing a nonzero test element).  It views it as an element of the ambient ring
+--of R.  It returns an ideal with some of these elements in it.
+--One could make this faster by not computing the entire jacobian / singular locus
+--instead, if we just find one element of the jacobian not in I, then that would also work
+--and perhaps be substantially faster
+findTestElementAmbient = Rk -> (
+     --Sk := ambient Rk;
+     -- Ik := ideal Sk;
+     
+     Jk := ideal singularLocus(Rk);
+     if (isSubset(Jk, ideal Rk) == true) then 
+          error "findTestElementAmbient: No test elements found, is the ring non-reduced?";
+	  
+     
+     Jk          
+)
+
+
+--this outputs the test ideal of a (Q-)Gorenstein ring (with no pair or exponent)
+--ek is the number such that the index divides (p^ek - 1).  
+--It actually spits out the appropriate stable/fixed ideal inside the ambient ring.
+tauQGorAmb = (Rk, ek) -> (
+     Jk := findTestElementAmbient(Rk);
+     hk := findQGorGen(Rk, ek);
+
+     ascendIdeal(Jk,hk,ek)
+)
+
+--computest the test ideal of an ambient Gorenstein ring
+tauGorAmb = (Rk) -> (tauQGorAmb(Rk, 1))
+
 -- the following function computes the test ideal of (R, f^(a/(p^e - 1)))
 -- when R is a polynomial ring.  This is based upon ideas of Moty.
 tauAOverPEMinus1Poly = (fm, a1, e1) -> (
@@ -679,18 +774,21 @@ tauAOverPEMinus1Poly = (fm, a1, e1) -> (
      a2 := a1 % (pp^e1 - 1);
      k2 := a1 // (pp^e1 - 1); --it seems faster to use the fact that tau(f^(1+k)) = f*tau(f^k) 
      fpow := fastExp(fm,a2);
-     IN := eR(ideal(fpow*fm),e1); -- this is going to be the new value.  The *fm is a test element
+     IN := eR(ideal(fpow*fm),e1);  --the idea contained inside the test ideal.
+     
+     IN = ascendIdeal(IN, fpow, e1);
+     -- this is going to be the new value.  The *fm is a test element
      -- the previous commands should use the fast power raising when Emily finishes it
-     IP := ideal(0_Rm); -- this is going to be the old value.
+ --    IP := ideal(0_Rm); -- this is going to be the old value.
      
      --our initial value is something contained in the test ideal.  
-     while (IN != IP) do(
-	  IP = IN;
-	  IN = eR(ideal(fpow)*IP,e1)+IP
-     );
+   --  while (IN != IP) do(
+--	  IP = IN;
+--	  IN = eR(ideal(fpow)*IP,e1)+IP
+--     );
 
      --return the final ideal
-     IP*ideal(fm^k2)
+     IN*ideal(fm^k2)
 )
 
 --the following function computes the test ideal of (R, f^t) when R 
@@ -711,6 +809,90 @@ tauPoly = (fm, t1) -> (
      if (L1#1 != 0) then 
           ethRoot(I1, L1#1) else I1
 )
+
+--this is an internal function
+--it is used to compute the test ideals of pairs (R, fm^(a1/p^e1-1)) where
+--R = Sk/Ik.
+--Inputs are Jk, a nonzero ideal contained in the test ideal
+--hk, the multiple used to form phi of the ambient ring.  ek is the power associated with hk
+--a1 and e1 and fm are as above
+tauAOverPEMinus1QGorAmb = (Sk, Jk, hk, ek, fm, a1, e1) -> (
+     pp := char Sk;
+     et := lcm(ek, e1);
+     hk1 := (hk)^(numerator ((pp^et - 1)/(pp^ek - 1)));  
+       --hk for higher powers are simply appropriate powers of hk for lower powers, 
+       --may as well take advantage of that
+     a3 := numerator (a1*(pp^et - 1)/(pp^e1 - 1)); --we need to use a common e for both the 
+                                               --index of R and of our divisor.
+     
+     a2 := a3 % (pp^et - 1);
+     k2 := a3 // (pp^et - 1); --it seems faster to use the fact 
+                              --that tau(f^(1+k)) = f*tau(f^k) 
+     fpow := fm^a2; 
+     
+     Iasc := ascendIdeal(Jk*ideal(fm), fpow*hk1, et);
+    
+     Iasc*ideal(fm^k2)    
+)
+
+
+--this computes the test ideal of (Rk, fk^t1).  Here we assume the index of the canonical
+--divides (p^ek - 1)
+tauQGor = (Rk, ek, fk, t1) -> (
+     Sk := ambient Rk;
+     pp := char Sk;
+     L1 := divideFraction(t1,pp); --this breaks up t1 into the pieces we need
+     hk := findQGorGen(Rk, ek); --the term in the test ideal
+     Jk := findTestElementAmbient(Rk); --this finds some test elements (lifted on the ambient
+                                       --ring).  Right now it is slow because of a call to 
+				       --singularLocus (ie, computing a Jacobian).
+     I1 := ideal(0_Sk); I2 := ideal(0_Sk);
+     fm := lift(fk, Sk); --we lift our f to the ambient polynomial ring
+     a1 := L1#0; e1 := L1#2; pPow := L1#1; --t1 = a1 / (pp^pPow * (pp^e1 - 1))
+     d1 := pp^(pPow); if (e1 != 0) then d1 = d1*(pp^e1-1); --this is our denominator, used
+                                                           --for simplifying computations
+     a2 := a1 % d1;
+     k2 := a1 // d1; --it seems faster to use the fact 
+                              --that tau(f^(k+t)) = f^k*tau(f^t).  We'll toss on the multiple 
+			      --f^k at the end
+     
+     --first we compute tau(fk^{a2/(p^e1-1)})
+     if (e1 != 0) then 
+          I1 = tauAOverPEMinus1QGorAmb(Sk,Jk,hk,ek,fm,a2,e1)
+     else (
+	  I1 = ideal(fm^(a2))*ascendIdeal(Jk, hk, ek)
+      );
+ 
+     --now we compute the test ideal using a generalization of the fact that 
+     --tau(fm^t)^{[1/p^b]} = tau(fm^(t/p^b))
+     --this follows from Schwede-Tucker.
+     if (pPow != 0) then (
+          --we do a check to see if the indexes match well enough...
+          --the problem is we can only take ek'th roots, but my t1 might be something like
+          --1/p.  I fix that by acting as if t1 is p^(ek-1)/p^ek.  
+          --We can take an ekth root of that.  Often, t1 = 1, so that will keep things easy.
+          remain := pPow % ek;
+          dualRemain := ek - remain;
+          if (remain != 0) then (
+               I1 = I1*ideal(fm^(pp^dualRemain) );
+     	       pPow = pPow + dualRemain;
+          ); --note in the end here, ek divides pPow.
+ 
+          --I also need to adjust hk if it is different from pPow.
+          if (ek != pPow) then (
+	       hk = hk^(numerator ((pp^pPow - 1)/(pp^ek - 1)))	       
+	  ); --the division above makes sense because ek divides the modified pPow
+ 
+          I2 = ethRoot(I1*ideal(hk), pPow) 
+     )
+     else --unless we don't have any p's in the denominator
+          I2 = I1;
+	  
+     sub(I2, Rk)*ideal(fk^k2)
+)
+
+--computes tau(Rk,fk^tk), assuming Gorenstein rings
+tauGor = (Rg,fg,tg) -> tauQGor (Rg,1,fg,tg)
 
 --computes Non-F-Pure ideals for (R, fm^{a/(p^{e1}-1)}) 
 --at least defined as in Fujin-Schwede-Takagi.
@@ -810,8 +992,8 @@ guessFPT ={OutputRange=>false}>>o -> (ff, e1, maxDenom) ->(
 ---e is the max depth to search in
 ---FinalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
 estFPT={FinalCheck=> true, Verbose=> false, DiagonalCheck=>true, BinomialCheck=>true, NuPEMinus1Check=>true} >> o -> (ff,ee)->(
-     --todo: rewrite this in a better way, that's more readable without so much crazy elseif nonsense
-     --error "help";
+     print "starting estFPT";
+
      foundAnswer := false; --this will be set to true as soon as we found the answer.  Setting it to true will stop further tests from being run
      answer := null; --this stores the answer until it can be returned.
      
