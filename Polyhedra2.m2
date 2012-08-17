@@ -998,7 +998,6 @@ mixedVolume List := L -> (
      Elist := apply(L, P -> apply(faces(dim P -1,P),vertices));
      liftings := apply(n, i -> map(ZZ^n,ZZ^n,1)||matrix{apply(n, j -> random 25)});
      Qlist := apply(n, i -> affineImage(liftings#i,L#i));
-     print "done with step 1";
      local Qsum;
      Qsums := apply(n, i -> if i == 0 then Qsum = Qlist#0 else Qsum = Qsum + Qlist#i);
      mV := 0;
@@ -1222,7 +1221,7 @@ faceBuilder = (k,P) -> (
 		    (HS,v) := halfspaces P;
 		    (HP,w) := hyperplanes P;
 		    -- Generating the list of facets where each facet is given by a list of its vertices and a list of its rays
-		    Fl := apply(numRows HS, i -> intersection(HS,v,HP || HS^{i},w || v^{i}));
+		    Fl := apply(numRows HS, i -> (intersection(HS,v,HP || HS^{i},w || v^{i})));
 		    Fl = apply(Fl, f -> (
 			      V := vertices f;
 			      R := rays f;
