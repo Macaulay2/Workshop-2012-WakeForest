@@ -674,6 +674,8 @@ contains = method(TypicalValue => Boolean)
 contains(Polyhedron,Polyhedron) := (P,Q) -> (
       vertices Q;
       halfspaces P;
+      hyperplanes P;
+      linSpace Q;
       A:=Q#"Vertices";
       B:=Q#"LinealitySpace";
       C:=P#"Facets";
@@ -685,6 +687,8 @@ contains(Polyhedron,Polyhedron) := (P,Q) -> (
 contains(Cone,Cone) := (P,Q) -> (
       vertices Q;
       halfspaces P;
+      hyperplanes P;
+      linSpace Q;
       A:=Q#"Rays";
       B:=Q#"LinealitySpace";
       C:=P#"Facets";
