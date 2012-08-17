@@ -140,6 +140,16 @@ propertyTypes = {
 	  "PolymakePropertyName" => "FACETS",
 	  "ValueType" => "Matrix"
 	  },
+     {   
+	  "M2PropertyName" => "Inequalities",
+	  "PolymakePropertyName" => "INEQUALITIES",
+	  "ValueType" => "Matrix"
+	  },
+     {   
+	  "M2PropertyName" => "Equations",
+	  "PolymakePropertyName" => "EQUATIONS",
+	  "ValueType" => "Matrix"
+	  },          
      {    
 	  "M2PropertyName" => "Feasible",
 	  "PolymakePropertyName" => "FEASIBLE",
