@@ -180,7 +180,7 @@ makeList = (str) -> (
 makeMatrix = (str) -> (
      L := lines str;
      L = select (L, x -> x!="");
-     matrix(L/makeList)
+     promote(matrix(L/makeList),QQ)
      )
 
 ------------------------------------------------------------------------------
