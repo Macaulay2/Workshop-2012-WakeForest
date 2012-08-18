@@ -44,11 +44,12 @@ export{"basePExp",
      "calculateEpsilon",
      "guessFPT",
      "OutputRange",
-     "findQGorGen", --needs help entry
-     "tauQGorAmb", --needs help entry
-     "tauGorAmb", --needs help entry
-     "tauQGor", --needs help entry
-     "tauGor" --needs help entry
+     "findQGorGen", 
+     "tauQGorAmb", 
+     "tauGorAmb", 
+     "tauQGor", 
+     "tauGor",
+     "isFRegularQGor"
 }
 --This file has "finished" functions from the Macaulay2 workshop at Wake Forest
 --August 2012.  Sara Malec, Karl Schwede and Emily Witt contributed to it.
@@ -760,7 +761,7 @@ tauQGorAmb = (Rk, ek) -> (
      Jk := findTestElementAmbient(Rk);
      hk := findQGorGen(Rk, ek);
 
-     ascendIdeal(Jk,hk,ek)
+     sub(ascendIdeal(Jk,hk,ek),Rk)
 )
 
 --computest the test ideal of an ambient Gorenstein ring
@@ -832,7 +833,7 @@ tauAOverPEMinus1QGorAmb = (Sk, Jk, hk, ek, fm, a1, e1) -> (
      
      Iasc := ascendIdeal(Jk*ideal(fm), fpow*hk1, et);
     
-     Iasc*ideal(fm^k2)    
+     Iasc*ideal(fm^k2)
 )
 
 
@@ -927,11 +928,35 @@ isFRegularPoly = (f1, t1) -> (
      isSubset(ideal(1_(ring f1)), tauPoly(f1,t1))
 )
 
---this function checks whether (R, f1^a1) is F-pure at the prime ideal m1
+--this function checks whether (R, f1^a1) is sharply F-pure at the prime ideal m1
 isSharplyFPurePoly = (f1, a1, e1,m1) -> (
      if (isPrime m1 == false) then error "isSharplyFPurePoly: expected a prime ideal.";
      not (isSubset(ideal(f1^a1), frobeniusPower(m1,e1)))
 )
+
+--checks whether a Q-Gorenstein pair is strongly F-regular 
+isFRegularQGor = method();
+
+--this computes whether (R, f1^t1) is F-regular, assuming the index of R divides p^e1-1
+isFRegularQGor (Ring, ZZ, RingElement, QQ) := (R, e1,f1, t1) ->(
+     isSubset(ideal(1_R), tauQGor(R,e1,f1,t1))
+)
+
+--this works in the Gorenstein case
+isFRegularQGor (Ring, RingElement, QQ) := (R, f1, t1) ->(
+     isSubset(ideal(1_R), tauQGor(R,1,f1,t1))
+)
+
+--assuming no pair
+isFRegularQGor (Ring,ZZ) := (R,e1) ->(
+     isSubset(ideal(1_R), tauQGor(R,e1,1_R,1/1 ) )
+)
+
+--assuming no pair, in the Gorenstein case
+isFRegularQGor (Ring) := (R) ->(
+     isSubset(ideal(1_R), tauQGor(R,1,1_R,1/1) )
+)
+
 
 
 ----------------------------------------------------------------
@@ -1291,4 +1316,71 @@ doc ///
      Outputs
          :Boolean
 ///
+doc ///
+     Key
+     	findQGorGen
+     Headline
+        If R = S/I where S is a polynomial ring, returns the ring element with I^{[p]} : I = (f) + I^{[p]}.
+     Usage
+     	 findQGorGen(R)
+     Inputs
+     	 R:Ring
+     Outputs
+         :RingElement
+///
+doc ///
+     Key
+     	tauQGorAmb
+     Headline
+        Computes tau(R) for a Q-Gorenstein ring with index not dividing p^e - 1.
+     Usage
+     	 tauQGorAmb(R,e)
+     Inputs
+     	 R:Ring
+	 e:ZZ
+     Outputs
+         :Ideal
+///
+doc ///
+     Key
+     	tauGorAmb
+     Headline
+        Computes tau(R) for a Gorenstein ring
+     Usage
+     	 tauGorAmb(R)
+     Inputs
+     	 R:Ring
+     Outputs
+         :Ideal
+///
+doc ///
+     Key
+     	tauQGor
+     Headline
+        Computes tau(R,f^t) for a Q-Gorenstein ring such that the index divides p^e -1
+     Usage
+     	 tauGorAmb(R,e,f,t)
+     Inputs
+     	 R:Ring
+	 e:ZZ
+	 f:RingElement
+	 t:QQ
+     Outputs
+         :Ideal
+///
+doc ///
+     Key
+     	tauGor
+     Headline
+        Computes tau(R,f^t) for a Gorenstein ring such that the index divides p^e -1
+     Usage
+     	 tauGorAmb(R,f,t)
+     Inputs
+     	 R:Ring
+	 f:RingElement
+	 t:QQ
+     Outputs
+         :Ideal
+///
+
 end
