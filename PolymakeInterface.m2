@@ -350,6 +350,14 @@ toPolymakeFormat(String,Vector) := (propertyName,V) -> (
      	  S
      	  )
      )
+toPolymakeFormat(String,List) := (propertyName,L) -> (
+     if L === null then ""
+     else(
+     	  S := propertyName|"\n";
+     	  S = S|concatenate(apply(L,x->(toString(x)|" ")));
+     	  S
+     	  )
+     )
 toPolymakeFormat(String,ZZ) := (propertyName,x) -> (
      if x === null then ""
      else(
@@ -387,7 +395,7 @@ runPolymake(PolyhedralObject,String) := o -> (P,propertyName) -> (
 	  )
      else (
 	  polymakePropertyName := M2PropertyNameToPolymakePropertyName#propertyName;
-          if (not(hasProperty(P,polymakePropertyName))) then (
+          if (not(hasProperty(P,propertyName))) then (
 	       if (not(P#?cache)) then (
 		    P#cache = new MutableHashTable;
 		    );
@@ -695,6 +703,7 @@ TEST ///
     needsPackage "PolyhedralObjects";
     P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
     assert(hasProperty(P,"Points"));
+    assert(not(hasProperty(P,"POINTS")));
     assert(not(hasProperty(P,"FVector")));
     assert(not(hasProperty(P,"PolymakeFile")));
     assert(not(hasProperty(P,"AvailableProperties")));
@@ -707,6 +716,8 @@ TEST ///
     runPolymake(P,"FVector");
     assert(hasProperty(P,"Points"));
     assert(hasProperty(P,"FVector"));
+    assert(not(hasProperty(P,"POINTS")));
+    assert(not(hasProperty(P,"F_VECTOR")));
     assert(not(hasProperty(P,"PolymakeFile")));
     assert(not(hasProperty(P,"AvailableProperties")));
     assert(not(hasProperty(P,"blahblahblahblahblahblahblahblahblahblahblahblahblah")));
@@ -734,6 +745,8 @@ TEST ///
     P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
     result = getPropertyNames(P);
     assert(result#?"Points");
+    assert(not(result#?cache));
+    assert(not(result#?"POINTS"));
     assert(not(result#?"FVector"));
     assert(not(result#?"PolymakeFile"));
     assert(not(result#?"blahblahblahblahblahblahblahblahblahblahblahblah"));
@@ -746,6 +759,9 @@ TEST ///
     result = getPropertyNames(P);
     assert(result#?"Points");
     assert(result#?"FVector");
+    assert(not(result#?cache));
+    assert(not(result#?"POINTS"));
+    assert(not(result#?"F_VECTOR"));
     assert(not(result#?"PolymakeFile"));
     assert(not(result#?"blahblahblahblahblahblahblahblahblahblahblahblah"));
 ///
@@ -807,6 +823,46 @@ TEST ///
     assert (result=={4,4});
 ///
 
+TEST ///
+    needsPackage "PolyhedralObjects";
+    P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}}};
+    runPolymake(P,"FVector");
+    result = runPolymake(P,"ConeDim");
+    assert(class(result)===class(1));
+///
+
+TEST ///
+    needsPackage "PolyhedralObjects";
+    P = new Polyhedron from {"Points" => matrix{{1,0,0},{1,0,1},{1,1,0},{1,1,1}},"FVector" => {4,4}};
+    result = runPolymake(P,"ConeDim");
+    assert(class(result)===class(1));
+///
+
+TEST ///
+    inputRays = matrix {{1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 1,
+       0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0,
+       0, 0, 0}, {1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0}, {1, 0, 0, 0,
+       1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0}, {1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0,
+       1, 0, 0, 0}, {1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0}, {1, 0, 1,
+       0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0}, {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 1, 1, 0, 0}, {1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0}, {1, 0,
+       1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0}, {1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 1, 0, 0, 1, 0}, {1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, {1,
+       0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1}, {1, 1, 0, 0, 0, 0, 0, 0, 0,
+       0, 1, 0, 0, 0, 0, 1}};
+    needsPackage "PolyhedralObjects";
+    P = new Polyhedron from {"InputRays"=>inputRays};
+    runPolymake(P,"FVector");
+    result = runPolymake(P,"ConeDim");
+    assert(class(result)===class(1));
+///
+
+end
+
+---------------------------------------------------------------------------
+------------------------- END ---------------------------
+---------------------------------------------------------------------------
+
 --Failed examples
 
 ///
@@ -819,11 +875,7 @@ TEST ///
     assert(not(hasProperty(P,"Points")));
 ///
 
-end
-
----------------------------------------------------------------------------
-------------------------- END ---------------------------
----------------------------------------------------------------------------
+--For Emacs with F11 hotkey
 
 restart
 needsPackage "PolymakeInterface"
