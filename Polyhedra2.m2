@@ -1056,11 +1056,17 @@ faces(ZZ,Polyhedron) := (k,P) -> (
 --     	     'C'  a cone
 --  OUTPUT : a List, containing the faces as cones
 faces(ZZ,Cone) := (k,P) -> (
-     if k== 0 then return P;
-     if not P.?cache then P.cache = hashTable {};
-     if not P.cache#?"Faces" then P.cache#"Faces" = hashTable;
-     if not P.cache#"Faces"?#k then (faceBuilder(k,P));
-     P.cache#"Faces"#k)
+     if k== 0 then return {P};
+     L:=linSpace P;
+     d := dim P - k;
+     dl := numColumns L;
+     if d < dl then return {};
+     if k== dim P then return {posHull map(QQ^(ambDim P),QQ^1,0)};
+     if not P.?cache then P.cache = new MutableHashTable from hashTable {};
+     if not P.cache#?"Faces" then P.cache#"Faces" = new MutableHashTable from hashTable {};
+     if not P.cache#"Faces"#?k then (faceBuilderCone(k,P));
+     apply(P.cache#"Faces"#k,i->(
+	  posHull(matrix {toList i},L))))
 
 
 
@@ -1212,6 +1218,28 @@ intersectionWithFacets = (L,F) -> (
 	  newL);
 
 
+-- PURPOSE : intersect every face in L with every facet in F and return the inclusion maximal intersections that
+--     	     are not equal to one element in L
+--   INPUT : 'L',  a list of sets each containing the rays of the faces of a certain dimension of a polyhedron
+--     	     'F', a list of sets each containing the rays of the facets of the same polyhedron
+--  OUTPUT : a list of sets each containing the rays of the faces of the same polyhedron one dimension lower 
+--     	     then the ones in 'L'
+intersectionWithFacetsCone = (L,F) -> (
+	  -- Function to check if 'e' has at least one vertex and is not equal to 'l'
+	  isValid := (e,l) -> if e =!= set{} then e =!= l else false;
+	  newL := {};
+	  -- Intersecting each element of 'L' with each element of 'F'
+	  scan(L, l -> (
+		    scan(F, f -> (
+			      e := l*f;
+			      -- if the intersection is valid add it to newL if it is not contained in one of the elements 
+			      -- already in newL and remove those contained in 'e'
+			     if isValid(e,l) then (
+				  if not any(newL, g -> isSubset(e,g)) then (
+					newL = select(newL, g -> not isSubset(g,e))|{e}))))));
+	  newL);
+
+
 
 faceBuilder = (k,P) -> (
      --Checking for input errors
@@ -1241,56 +1269,35 @@ faceBuilder = (k,P) -> (
 		    i = i+1;
 		    P.cache#"Faces"#i = L);)
 
-
-faceBuilderCone = (k,C) -> (
-     d := dim C - k;
-     dl := C#"dimension of lineality space";
-     LS := linSpace C;
+faceBuilderCone = (k,P) -> (
      --Checking for input errors
-     if d < 0 or d > dim C then error("the codimension must be between 0 and the dimension of the cone");
-     if not C.cache.?faces then C.cache.faces = new MutableList;
-     i := #(C.cache.faces);
-     if k < i then C.cache.faces#k
-     -- for d = dim C it is the cone itself
-     else if d == dim C then (
-	  Rd := rays C;
-	  C.cache.faces#k = {set apply(numColumns Rd, i -> Rd_{i})};
-	  C.cache.faces#k)
-     -- for d = dl it is the lineality space
-     else if d == dl then {set {map(QQ^(ambDim C),QQ^1,0)}}
-     -- for d = dl+1 it is the lineality space plus one of the rays
-     else if d == dl+1 then (
-	  -- Generating the list of cones given by one ray and the lineality space
-	  R1 := rays C;
-	  apply(numColumns R1, i -> set {R1_{i}}))
-     else if 0 <= d and d < dl then {}
-     else (
-	  if i == 0 then (
-	       R2 := rays C;
-	       C.cache.faces#0 = {set apply(numColumns R2, i -> R2_{i})};
-	       i = 1);
-	  if i == 1 then (
-	       -- Saving the half-spaces and hyperplanes
-	       HS := halfspaces C;
-	       HP := hyperplanes C;
-	       -- Generating the list of facets where each facet is given by a list of its vertices and a list of its rays
-	       F1 := apply(numRows HS, i -> intersection(HS,HP || HS^{i}));
-	       F1 = apply(F1, f -> (
+     if k < 1 or k > dim P then error("the codimension must be between 1 and the dimension of the cone");
+     i := (max (keys (P.cache#"Faces")|{1}));
+      if k < i then return;
+     --otherwise:
+
+	       if i == 1 then (
+		    -- Saving the half-spaces and hyperplanes
+		    HS := halfspaces P;
+		    HP := hyperplanes P;
+		    -- Generating the list of facets where each facet is given by a list of its vertices and a list of its rays
+	       Fl := apply(numRows HS, i -> intersection(HS,HP || HS^{i}));
+	       Fl = apply(Fl, f -> (
 			 R := rays f;
 			 (set apply(numColumns R, i -> R_{i}))));
-	       i = 2;
-	       C.cache.faces#1 = F1);	       
-	  -- Duplicating the list of facets
-	  F := C.cache.faces#1;
-	  i = i-1;
-	  L := C.cache.faces#i;
-	  -- Intersecting L k-1 times with F and returning the maximal inclusion sets. These are the faces of codim plus 1
-	  while i < k do (
---	       L = intersectionWithFacetsCone(L,F);
-	       i = i+1;
-	       C.cache.faces#i = L);
-	  -- Generating the corresponding polytopes out of the lists of vertices, rays and the lineality space
-	  C.cache.faces#k))
+		    i = 2;
+		    P.cache#"Faces"#1 = Fl);
+	       F := P.cache#"Faces"#1;
+	       i = i - 1;
+	       L := P.cache#"Faces"#i;
+	       -- Intersecting L k-1 times with F and returning the maximal inclusion sets which are the faces of codim plus 1
+	       while i < k do (
+		    L = intersectionWithFacetsCone(L,F);
+		    i = i+1;
+		    P.cache#"Faces"#i = L);)	  
+	  
+
+
 
 
 
