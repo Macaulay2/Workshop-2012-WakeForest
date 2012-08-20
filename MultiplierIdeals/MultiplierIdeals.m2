@@ -427,7 +427,7 @@ multiplierIdeal (MonomialIdeal, QQ) := (I,t) -> (
     
   );
   
-  return multIdeal;
+  return trim multIdeal;
 
 );
 multiplierIdeal(Sequence,QQ) := (S,t) -> multiplierIdeal(S#0,t)
@@ -801,7 +801,7 @@ multiplierIdeal (Ring, List, QQ) := (R, nn, t) -> (
     mm -> exceptionalDivisorValuationIdeal(R,ff,mm,
       floor(t*ord(mm,ff_1)-exceptionalDivisorDiscrepancy(mm,ff)) ));
   
-  intersect(symbpow,term,validl)
+  trim intersect(symbpow,term,validl)
 )
 
 
@@ -836,7 +836,8 @@ skodaPeriodicityOnset (Ring,List) := (R,exps) ->
 jumpingDenominators (Ring,List) := (R,exps) -> (
   ff := sortedGens(R,exps);
   indexList  := intersectionIndexSet(R,exps);
-  unique({1} | apply(indexList, m -> ord(m,ff_1)))
+  curveIdeal := ideal ff;
+  sort unique({1} | apply(indexList, m -> ord(m,ff_1)) | jumpingDenominators(termIdeal(curveIdeal)))
 )
 
 
@@ -943,8 +944,12 @@ skodaPeriodicityOnset(List,ZZ) := (mm,r) -> (
 )
 skodaPeriodicityOnset(Ring,List,ZZ) := (R,mm,r) ->
   skodaPeriodicityOnset(mm,r)
+skodaPeriodicityOnset(Matrix,ZZ) := (M,r) ->
+  skodaPeriodicityOnset({numRows M, numColumns M}, r)
 
 jumpingDenominators(Ring,List,ZZ) := (R,mm,r) -> toList(1..r-1)
+jumpingDenominators(List,ZZ) := (mm,r) -> toList(1..r-1)
+jumpingDenominators(Matrix,ZZ) := (M,r) -> toList(1..r-1)
 
 
 --------------------------------------------------------------------------------
@@ -1220,7 +1225,7 @@ assert ( Qinterval( 3 , 4 , 5 ) === ( 4/1 , 13/3 , 14/3 , 5/1 ) );
 assert ( Qinterval( 3 , 4.5 , 5 ) === ( 14/3 , 5/1 ) );
 R = QQ[x,y,z];
 assert( jumpingDenominators(R,{2,3,6}) === {1,6} )
-assert( jumpingDenominators(R,{4,5,11}) === {1,16} )
+assert( jumpingDenominators(R,{4,5,11}) === {1,2,3,12,16} )
 ///
 
 
@@ -1240,23 +1245,26 @@ TEST ///
   needsPackage "MultiplierIdeals";
   R = QQ[x,y,z];
   assert( (jumpingNumbers(R,{2,3,4})) == {
-    {11/6,2/1},{ideal(z,y,x,x^2-z),ideal(-y^2+x*z,-x^2+z)}
+    {11/6,2/1},{ideal(z,y,x),ideal(-y^2+x*z,-x^2+z)}
   } )
   assert( (jumpingNumbers(R,{3,4,5})) == {
-    {13/9,16/9,17/9,2/1,22/9,23/9,25/9,26/9,3/1},
-    {ideal(z,y,x),ideal(z,y,x^2),ideal(z,y^2,x*y,x^2),
-     ideal(-y^2+x*z,-y^2*z+x*z^2,x*y^2-x^2*z,-x^2*y+z^2,-x^3+y*z),
-     ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,-x^2*y+z^2,-y^2*z^2+x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^4+x*y*z),
-     ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,y^2*z^2-x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^3*y+x*z^2,-x^4+x*y*z),
-     ideal(-y^2*z+x*z^2,-y^3+x*y*z,y^2*z^2-x*z^3,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^2*y^2+y*z^2,-x^3*y+x*z^2,-x^2*y*z^2+z^4,-x^3*z^2+y*z^3,-x^5+z^3),
-     ideal(-y^2*z+x*z^2,y^2*z^2-x*z^3,-x^2*y*z+z^3,-x^3*z+y*z^2,-y^4+x^2*z^2,-x*y^3+z^3,-x^2*y^2+y*z^2,-x^2*y*z^2+z^4,x^3*z^2-y*z^3,-x^4*y+x^2*z^2,-x^5+z^3),
-     ideal(-y^4+2*x*y^2*z-x^2*z^2,-y^4*z+2*x*y^2*z^2-x^2*z^3,x*y^4-2*x^2*y^2*z+x^3*z^2,-x^2*y^3+x^3*y*z+y^2*z^2-x*z^3,-x^3*y^2+x^4*z+y^3*z-x*y*z^2,-x^5*z-x*y^3*z+3*x^2*y*z^2-z^4,-x^5*y-x*y^4+3*x^2*y^2*z-y*z^3,-x^6-x^2*y^3+3*x^3*y*z-x*z^3)}
+    {13/9, 16/9, 17/9, 2, 22/9, 5/2, 25/9, 26/9, 3},
+    {ideal(z,y,x),
+     ideal(z,y,x^2),
+     ideal(z,y^2,x*y,x^2),
+     ideal(y^2-x*z,x^2*y-z^2,x^3-y*z),
+     ideal(y^2*z-x*z^2,y^3-x*y*z,x*y^2-x^2*z,x^2*y-z^2,x^4-x*y*z),
+     ideal(y^2*z-x*z^2,y^3-x*y*z,x*y^2-x^2*z,x^2*y*z-z^3,x^3*z-y*z^2,x^3*y-x*z^2,x^4-x*y*z),
+     ideal(y^2*z-x*z^2,y^3-x*y*z,x^2*y*z-z^3,x^3*z-y*z^2,x^2*y^2-y*z^2,x^3*y-x*z^2,x^5-z^3),
+     ideal(y^2*z-x*z^2,x^2*y*z-z^3,x^3*z-y*z^2,y^4-x^2*z^2,x*y^3-z^3,x^2*y^2-y*z^2,x^4*y-x^2*z^2,x^5-z^3),
+     ideal(y^4-2*x*y^2*z+x^2*z^2,x^2*y^3-x^3*y*z-y^2*z^2+x*z^3,x^3*y^2-x^4*z-y^3*z+x*y*z^2,x^5*z+x*y^3*z-3*x^2*y*z^2+z^4,x^5*y-x^2*y^2*z-x^3*z^2+y*z^3,x^6-2*x^3*y*z+y^2*z^2)}
   } )
   assert( (jumpingNumbers(R,{3,4,5},Interval=>{3/2,5/2})) == {
-    {16/9,17/9,2/1,22/9},
+    {16/9,17/9,2/1,22/9,5/2},
     {ideal(z,y,x^2),ideal(z,y^2,x*y,x^2),
      ideal(-y^2+x*z,-y^2*z+x*z^2,x*y^2-x^2*z,-x^2*y+z^2,-x^3+y*z),
-     ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,-x^2*y+z^2,-y^2*z^2+x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^4+x*y*z)}
+     ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,-x^2*y+z^2,-y^2*z^2+x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^4+x*y*z),
+     ideal(y^2*z-x*z^2,y^3-x*y*z,x*y^2-x^2*z,x^2*y*z-z^3,x^3*z-y*z^2,x^3*y-x*z^2,x^4-x*y*z)}
   } )
 ///
 
