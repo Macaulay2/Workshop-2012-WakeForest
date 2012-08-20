@@ -884,7 +884,8 @@ jumpingNumbers CentralArrangement := o -> A -> jumpingNumbers(sequence A, o)
 -- GENERIC DETERMINANTS --------------------------------------------------------
 --------------------------------------------------------------------------------
 
-genericDeterminantalSymbolicPower := (M,r,a) -> (
+genericDeterminantalSymbolicPower = method();
+genericDeterminantalSymbolicPower (Matrix,ZZ,ZZ) := (M,r,a) -> (
   R := ring M;
   I := ideal(0_R);
   local J;
@@ -923,7 +924,7 @@ multiplierIdeal (Matrix,ZZ,QQ) := (X,r,c) -> (
   
   J := ideal(1_R);
   for i from 1 to r do (
-    ai := floor( c * (r+1-i) ) + 1 - (n-i+1)*(m-i+1);
+    ai := max(0, floor( c * (r+1-i) ) + 1 - (n-i+1)*(m-i+1));
     Ji := genericDeterminantalSymbolicPower(X,i,ai);
     J = intersect(J,Ji);
   );
@@ -931,8 +932,9 @@ multiplierIdeal (Matrix,ZZ,QQ) := (X,r,c) -> (
   return J;
 )
 
-logCanonicalThreshold(List,ZZ) := (mm,r) -> min( apply(1..<r , i -> (mm_0-i)*(mm_1-i)/(r-i)) )
-logCanonicalThreshold(Ring,List,ZZ) := (R,mm,r) -> min( apply(1..<r , i -> (mm_0-i)*(mm_1-i)/(r-i)) )
+logCanonicalThreshold(List,ZZ) := (mm,r) -> min( apply(0..<r , i -> (mm_0-i)*(mm_1-i)/(r-i)) )
+logCanonicalThreshold(Ring,List,ZZ) := (R,mm,r) -> logCanonicalThreshold(mm,r)
+logCanonicalThreshold(Matrix,ZZ) := (M,r) -> logCanonicalThreshold({numRows M, numColumns M},r)
 
 skodaPeriodicityOnset(List,ZZ) := (mm,r) -> (
   ambdim := mm_0 * mm_1;
@@ -1346,6 +1348,34 @@ TEST /// -- Example 6.3 of [Berkesch--Leykin 2010]
 -- GENERIC DETERMINANTAL -------------------------------------------------------
 --------------------------------------------------------------------------------
 
+TEST /// -- Example 3.9 of [Johnson, 2003] (thesis)
+  needsPackage "MultiplierIdeals";
+  debug MultiplierIdeals;
+  I = X -> genericDeterminantalSymbolicPower(X,3,4);
+  J = X -> ( minors(6,X)
+    + minors(3,X)*minors(5,X)
+    + (minors(4,X))^2
+    + (minors(3,X))^2*minors(4,X)
+    + (minors(3,X))^4 );
+  R = QQ[x_1..x_9];
+  X = genericMatrix(R,3,3);
+  assert(I(X) == J(X));
+  R = QQ[x_1..x_12];
+  X = genericMatrix(R,3,4);
+  assert(I(X) == J(X));
+  R = QQ[x_1..x_15];
+  X = genericMatrix(R,3,5);
+  assert(I(X) == J(X));
+///
+
+TEST /// -- Example 5.7 of [Johnson, 2003] (thesis)
+  needsPackage "MultiplierIdeals";
+  R = QQ[x_1..x_16];
+  X = genericMatrix(R,4,4);
+  J = multiplierIdeal(X,2,9);
+  JJ = intersect( (minors(1,X))^3, minors(2,X) );
+  assert( J == JJ );
+///
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -1724,11 +1754,30 @@ document {
   " matrix whose entries are independent variables ",
   "(a generic matrix).",
   
-  EXAMPLE lines ///
-    logCanonicalThreshold({4,5},2)
-  ///,
+  "lct of ideal of 2-by-2 minors of 4-by-5 matrix:",
+  EXAMPLE {"logCanonicalThreshold({4,5},2)"},
+  "We produce some tables of lcts:",
+  EXAMPLE {///
+    lctTable = (M,N,r) -> ( netList (
+      prepend( join({"m\\n"}, toList(3..M)),
+      for n from 3 to N list (
+        prepend(n,
+        for m from 3 to min(n,M) list (
+          logCanonicalThreshold({m,n},r)
+        ))
+      ))
+    ));
+  ///},
+  "Table of LCTs of ideals of 3-by-3 minors of various size matrices
+  (Table A.1 of [Johnson, 2003] (dissertation))",
+  EXAMPLE {"lctTable(6,10,3)"},
+  "Table of LCTs of ideals of 4-by-4 minors of various size matrices
+  (Table A.2 of [Johnson, 2003] (dissertation))",
+  EXAMPLE {"lctTable(8,14,4)"},
   
-  SeeAlso => { (multiplierIdeal,Ring,List,ZZ) }
+  SeeAlso => {
+    (multiplierIdeal,Ring,List,ZZ,QQ)
+  }
 }
 
 --------------------------------------------------------------------------------
@@ -1743,9 +1792,6 @@ end
 
 restart
 loadPackage "MultiplierIdeals"
-R = QQ[x_1..x_100]
-jumpingNumbers(R,{3,4},2)
-check oo
 installPackage oo
 
-
+check oo
