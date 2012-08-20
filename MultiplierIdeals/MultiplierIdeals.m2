@@ -877,18 +877,21 @@ jumpingDenominators(CentralArrangement,List) := (A,m) -> (
 jumpingDenominators(CentralArrangement) := A ->
   jumpingDenominators(A, toList((# flats(1,A)):1) )
 
+jumpingNumbers CentralArrangement := o -> A -> jumpingNumbers(sequence A, o)
+
 
 --------------------------------------------------------------------------------
 -- GENERIC DETERMINANTS --------------------------------------------------------
 --------------------------------------------------------------------------------
 
-genericDeterminantalSymbolicPower := (R,m,n,r,a) -> (
-  X := genericMatrix(R,m,n);
+genericDeterminantalSymbolicPower := (M,r,a) -> (
+  R := ring M;
   I := ideal(0_R);
+  local J;
   for p in partitions(a) do (
-    J := ideal(1_R);
+    J = ideal(1_R);
     for i from 0 to (#p - 1) do (
-      J = trim J * minors(r - 1 + p#i, X);
+      J = trim (J * minors(r - 1 + p#i, M));
     );
     
     I = I + J;
@@ -902,19 +905,26 @@ multiplierIdeal (Ring,List,ZZ,ZZ) := (R,mm,r,c) -> multiplierIdeal(R,mm,r,promot
 multiplierIdeal (Ring,List,ZZ,QQ) := (R,mm,r,c) -> (
   m := mm_0;
   n := mm_1;
-  
   if ( m*n > numcols vars R ) then (
     error "not enough variables in ring";
   );
   X := genericMatrix(R,m,n);
-  J := ideal(1_R);
+  
+  multiplierIdeal(X,r,c)
+)
+multiplierIdeal (Matrix,ZZ,ZZ) := (X,r,c) -> multiplierIdeal(X,r,promote(c,QQ))
+multiplierIdeal (Matrix,ZZ,QQ) := (X,r,c) -> (
+  R := ring(X);
+  m := numRows(X);
+  n := numColumns(X);
   
   -- should do:
   -- use skodaPeriodicityOnset to reduce coefficient 'c' before computing this
   
+  J := ideal(1_R);
   for i from 1 to r do (
-    ai := floor( c * (r+1-i) ) - (n-i+1)*(m-i+1);
-    Ji := genericDeterminantalSymbolicPower(R,m,n,i,ai);
+    ai := floor( c * (r+1-i) ) + 1 - (n-i+1)*(m-i+1);
+    Ji := genericDeterminantalSymbolicPower(X,i,ai);
     J = intersect(J,Ji);
   );
   
@@ -952,9 +962,9 @@ jumpingDenominators(Ring,List,ZZ) := (R,mm,r) -> toList(1..r-1)
 
 -- TEST ///
 --   needsPackage "MultiplierIdeals";
---   R := QQ[x,y];
+--   R = QQ[x,y];
 --   -- use R;
---   I := ideal(y^2-x^3,R);
+--   I = ideal(y^2-x^3,R);
 --   assert(logCanonicalThreshold(I) == 5/6);
 --   assert(multiplierIdealViaDmodules(I,1/2) == ideal(1_R));
 --   assert(multiplierIdealViaDmodules(I,5/6) == ideal(x,y));
@@ -972,15 +982,15 @@ TEST ///
   needsPackage "Normaliz";
   needsPackage "MultiplierIdeals";
   debug MultiplierIdeals;
-  R := QQ[x,y,z];
+  R = QQ[x,y,z];
   -- use R;
-  I := monomialIdeal(x*z^2,y^3,y*z^3,y^2*z^2,x*y^2*z,x^2*y*z,x^3*z,x^2*y^2,x^4*y,x^5,z^6);
+  I = monomialIdeal(x*z^2,y^3,y*z^3,y^2*z^2,x*y^2*z,x^2*y*z,x^3*z,x^2*y^2,x^4*y,x^5,z^6);
   -- this I is integrally closed!
-  M1 := NewtonPolyhedron(I); -- integer matrix (A|b) s.t. Newt(I) = {Ax \geq b}
-  nmzOut := normaliz(M1,4);
-  M2 := nmzOut#"gen"; -- integer matrix whose rows (minimally) generate semigroup 
+  M1 = NewtonPolyhedron(I); -- integer matrix (A|b) s.t. Newt(I) = {Ax \geq b}
+  nmzOut = normaliz(M1,4);
+  M2 = nmzOut#"gen"; -- integer matrix whose rows (minimally) generate semigroup 
    -- of lattice points in {Ax \geq b}, where M1 = (A|b)
-  J := intmat2monomIdeal(M2,R,1); -- integer matrix -> ideal
+  J = intmat2monomIdeal(M2,R,1); -- integer matrix -> ideal
   assert ( I === J );
 ///
 
@@ -990,7 +1000,7 @@ TEST ///
 -- Compute some LCTs of diagonal monomial ideals
 TEST ///
   needsPackage "MultiplierIdeals";
-  R := QQ[x_1..x_5];
+  R = QQ[x_1..x_5];
   -- use R;
   for a from 1 to 6 do (
     for b from a to 6 do (
@@ -1008,9 +1018,9 @@ TEST ///
 ///
 
 TEST ///
-  R := QQ[x,y];
-  I := monomialIdeal(y^2,x^3);
-  JN := jumpingNumbers(I);
+  R = QQ[x,y];
+  I = monomialIdeal(y^2,x^3);
+  JN = jumpingNumbers(I);
   assert ( JN#0 === {5/6, 7/6, 4/3, 3/2, 5/3, 11/6, 2/1} );
   assert ( JN#1 == {ideal (x,y),
                     ideal (x^2,y),
@@ -1022,9 +1032,9 @@ TEST ///
 ///
 
 TEST ///
-  R := QQ[x,y,z];
-  I := monomialIdeal( x*y , x*z , y*z );
-  JN1 := jumpingNumbers(I);
+  R = QQ[x,y,z];
+  I = monomialIdeal( x*y , x*z , y*z );
+  JN1 = jumpingNumbers(I);
   assert ( JN1#0 === {3/2, 2/1, 5/2, 3/1} );
   assert ( JN1#1 == {ideal (x,y,z),
                      ideal (x*y,x*z,y*z),
@@ -1034,9 +1044,9 @@ TEST ///
   JN2 := jumpingNumbers(I^2);
   assert ( JN2#0 === {3/4, 1/1, 5/4, 3/2, 7/4, 2/1, 9/4, 5/2, 11/4, 3/1} );
   
-  II := I^2 + monomialIdeal(x*y*z);
+  II = I^2 + monomialIdeal(x*y*z);
   assert ( II === monomialIdeal( x^2*y^2 , x^2*z^2 , y^2*z^2 , x*y*z ) ) ;
-  JN3 := jumpingNumbers(II);
+  JN3 = jumpingNumbers(II);
   assert ( JN3#0 === {1/1, 3/2, 2/1} );
   assert ( JN3#1 == {ideal (x*y,x*z,y*z),
                      ideal (x^2*y^2,x*y*z,x^2*z^2,y^2*z^2),
@@ -1055,6 +1065,14 @@ TEST ///
   I = monomialIdeal( x^3 , x*y , y^4 );
   assert ( logCanonicalThreshold( I , 1_R ) === (1/1,map(ZZ^2,ZZ^3,{{1, 2, -3}, {3, 1, -4}})) );
   assert ( logCanonicalThreshold( I , x ) === (4/3,map(ZZ^1,ZZ^3,{{1, 2, -3}})) );
+///
+
+TEST ///
+  R = QQ[x,y,z];
+  I = monomialIdeal(x^8,y^6); -- Example 2 of [Howald 2000]
+  assert ( multiplierIdeal(I,1) == monomialIdeal (x^6,x^5*y,x^4*y^2,x^2*y^3,x*y^4,y^5) );
+  I = monomialIdeal(x*y^4*z^6, x^5*y, y^7*z, x^8*z^8); -- Example 7 of [Howald 2000]
+  assert ( logCanonicalThreshold(I) == 68/191 );
 ///
 
 --------------------------------------------------------------------------------
@@ -1217,11 +1235,27 @@ assert( (logCanonicalThreshold(R,{3,4,11})) === 19/12 )
 
 ----Test 11 - monomialSpaceCurveJumpingNumbers
 TEST ///
-needsPackage "MultiplierIdeals";
-R = QQ[x,y,z];
-assert( (jumpingNumbers(R,{2,3,4})) == {{11/6,2/1},{ideal(z,y,x,x^2-z),ideal(-y^2+x*z,-x^2+z)}} )
-assert( (jumpingNumbers(R,{3,4,5})) == {{13/9,16/9,17/9,2/1,22/9,23/9,25/9,26/9,3/1},{ideal(z,y,x),ideal(z,y,x^2),ideal(z,y^2,x*y,x^2),ideal(-y^2+x*z,-y^2*z+x*z^2,x*y^2-x^2*z,-x^2*y+z^2,-x^3+y*z),ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,-x^2*y+z^2,-y^2*z^2+x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^4+x*y*z),ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,y^2*z^2-x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^3*y+x*z^2,-x^4+x*y*z),ideal(-y^2*z+x*z^2,-y^3+x*y*z,y^2*z^2-x*z^3,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^2*y^2+y*z^2,-x^3*y+x*z^2,-x^2*y*z^2+z^4,-x^3*z^2+y*z^3,-x^5+z^3),ideal(-y^2*z+x*z^2,y^2*z^2-x*z^3,-x^2*y*z+z^3,-x^3*z+y*z^2,-y^4+x^2*z^2,-x*y^3+z^3,-x^2*y^2+y*z^2,-x^2*y*z^2+z^4,x^3*z^2-y*z^3,-x^4*y+x^2*z^2,-x^5+z^3),ideal(-y^4+2*x*y^2*z-x^2*z^2,-y^4*z+2*x*y^2*z^2-x^2*z^3,x*y^4-2*x^2*y^2*z+x^3*z^2,-x^2*y^3+x^3*y*z+y^2*z^2-x*z^3,-x^3*y^2+x^4*z+y^3*z-x*y*z^2,-x^5*z-x*y^3*z+3*x^2*y*z^2-z^4,-x^5*y-x*y^4+3*x^2*y^2*z-y*z^3,-x^6-x^2*y^3+3*x^3*y*z-x*z^3)}} )
-assert( (jumpingNumbers(R,{3,4,5},Interval=>{3/2,5/2})) == {{16/9,17/9,2/1,22/9},{ideal(z,y,x^2),ideal(z,y^2,x*y,x^2),ideal(-y^2+x*z,-y^2*z+x*z^2,x*y^2-x^2*z,-x^2*y+z^2,-x^3+y*z),ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,-x^2*y+z^2,-y^2*z^2+x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^4+x*y*z)}} )
+  needsPackage "MultiplierIdeals";
+  R = QQ[x,y,z];
+  assert( (jumpingNumbers(R,{2,3,4})) == {
+    {11/6,2/1},{ideal(z,y,x,x^2-z),ideal(-y^2+x*z,-x^2+z)}
+  } )
+  assert( (jumpingNumbers(R,{3,4,5})) == {
+    {13/9,16/9,17/9,2/1,22/9,23/9,25/9,26/9,3/1},
+    {ideal(z,y,x),ideal(z,y,x^2),ideal(z,y^2,x*y,x^2),
+     ideal(-y^2+x*z,-y^2*z+x*z^2,x*y^2-x^2*z,-x^2*y+z^2,-x^3+y*z),
+     ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,-x^2*y+z^2,-y^2*z^2+x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^4+x*y*z),
+     ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,y^2*z^2-x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^3*y+x*z^2,-x^4+x*y*z),
+     ideal(-y^2*z+x*z^2,-y^3+x*y*z,y^2*z^2-x*z^3,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^2*y^2+y*z^2,-x^3*y+x*z^2,-x^2*y*z^2+z^4,-x^3*z^2+y*z^3,-x^5+z^3),
+     ideal(-y^2*z+x*z^2,y^2*z^2-x*z^3,-x^2*y*z+z^3,-x^3*z+y*z^2,-y^4+x^2*z^2,-x*y^3+z^3,-x^2*y^2+y*z^2,-x^2*y*z^2+z^4,x^3*z^2-y*z^3,-x^4*y+x^2*z^2,-x^5+z^3),
+     ideal(-y^4+2*x*y^2*z-x^2*z^2,-y^4*z+2*x*y^2*z^2-x^2*z^3,x*y^4-2*x^2*y^2*z+x^3*z^2,-x^2*y^3+x^3*y*z+y^2*z^2-x*z^3,-x^3*y^2+x^4*z+y^3*z-x*y*z^2,-x^5*z-x*y^3*z+3*x^2*y*z^2-z^4,-x^5*y-x*y^4+3*x^2*y^2*z-y*z^3,-x^6-x^2*y^3+3*x^3*y*z-x*z^3)}
+  } )
+  assert( (jumpingNumbers(R,{3,4,5},Interval=>{3/2,5/2})) == {
+    {16/9,17/9,2/1,22/9},
+    {ideal(z,y,x^2),ideal(z,y^2,x*y,x^2),
+     ideal(-y^2+x*z,-y^2*z+x*z^2,x*y^2-x^2*z,-x^2*y+z^2,-x^3+y*z),
+     ideal(-y^2*z+x*z^2,-y^3+x*y*z,-x*y^2+x^2*z,-x^2*y+z^2,-y^2*z^2+x*z^3,x*y^2*z-x^2*z^2,-x^2*y*z+z^3,-x^3*z+y*z^2,-x^3*z+y*z^2,-x^4+x*y*z)}
+  } )
 ///
 
 --------------------------------------------------------------------------------
@@ -1230,23 +1264,83 @@ assert( (jumpingNumbers(R,{3,4,5},Interval=>{3/2,5/2})) == {{16/9,17/9,2/1,22/9}
 
 TEST ///
   needsPackage "MultiplierIdeals";
-  R := QQ[x,y,z];
-  -- use R;
-  f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
-  A := arrangement f;
+  R = QQ[x,y,z];
+  f = toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
+  A = arrangement f;
   assert(A == arrangement {z, y - z, y + z, x - z, x + z, x - y, x + y});
   assert(logCanonicalThreshold(A) == 3/7);
 ///
 
 TEST ///
   needsPackage "MultiplierIdeals";
-  R := QQ[x,y,z];
-  f := toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
-  A := arrangement f;
+  R = QQ[x,y,z];
+  f = toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
+  A = arrangement f;
   assert(A == arrangement {z, y - z, y + z, x - z, x + z, x - y, x + y});
   assert(multiplierIdeal(3/7,A) == ideal(z,y,x));
 ///
 
+TEST /// -- Example 5(a) of [Budur 2010]
+  needsPackage "MultiplierIdeals";
+  R = QQ[x,y];
+  A = arrangement { y, x, y-x };
+  assert( (jumpingNumbers(A)) === {
+    {2/3,1/1},
+    {
+      ideal(y, x),
+      ideal(x^2*y-x*y^2)
+    }
+   }
+  )
+///
+
+TEST /// -- Example 5(b) of [Budur 2010]
+  needsPackage "MultiplierIdeals";
+  R = QQ[x,y,z];
+  f = toList factor( (x^2-y^2)*(x^2-z^2) ) / first;
+  A = arrangement f;
+  assert( (jumpingNumbers A) === {
+    {3/4,1/1},
+    {ideal(z, y, x),
+     ideal(x^4-x^2*y^2-x^2*z^2+y^2*z^2)}
+  } )
+///
+
+TEST /// -- Example 6.3 of [Berkesch--Leykin 2010]
+  needsPackage "MultiplierIdeals";
+  R = QQ[x,y,z];
+  f = (x^2-y^2)*(x^2-z^2)*(y^2-z^2)*z;
+  ff = toList factor ( f ) / first;
+  A = arrangement ff;
+  idealList = {
+    ideal(x,y,z),
+    (ideal(x,y,z))^2,
+    intersect(
+      ideal(z,x),
+      ideal(z,y),
+      ideal(y+z,x+z),
+      ideal(y+z,x-z),
+      ideal(y-z,x+z),
+      ideal(y-z,x-z)
+    ),
+    intersect(
+      ideal(z,x),
+      ideal(z,y),
+      ideal(y+z,x+z),
+      ideal(y+z,x-z),
+      ideal(y-z,x+z),
+      ideal(y-z,x-z),
+      ideal(z^3,y*z^2,x*z^2,x*y*z,y^3,x^3,x^2*y^2)
+    ),
+    ideal( f )
+  };
+  assert(
+    (jumpingNumbers(A)) == {
+      {3/7,4/7,2/3,6/7,1/1},
+      idealList
+    }
+  )
+///
 
 --------------------------------------------------------------------------------
 -- GENERIC DETERMINANTAL -------------------------------------------------------
@@ -1263,63 +1357,57 @@ beginDocumentation()
 document { 
   Key => MultiplierIdeals,
   Headline => "A package for computing multiplier ideals",
-  PARA {EM "MultiplierIdeals", " is a package for computing multiplier ideals ",
-  "and log canonical thresholds, ",
-  "using specialized routines wherever possible. "},
+  PARA {
+    EM "MultiplierIdeals",
+    " is a package for computing multiplier ideals,
+    log canonical thresholds, and jumping numbers,
+    using specialized routines wherever possible. "
+  },
   SUBSECTION "References",
   PARA {
-       "[BL] ",
-       "Blickle, Manuel and Lazarsfeld, Robert ",
-       EM "An informal introduction to multiplier ideals. ",
-       "Trends in commutative algebra, 87–114, ",
-       "Math. Sci. Res. Inst. Publ., 51, Cambridge Univ. Press, Cambridge, 2004."
-       },
+    "[BL] ",
+    "Blickle, Manuel and Lazarsfeld, Robert ",
+    EM "An informal introduction to multiplier ideals. ",
+    "Trends in commutative algebra, 87–114, ",
+    "Math. Sci. Res. Inst. Publ., 51, Cambridge Univ. Press, Cambridge, 2004."
+ },
   PARA {
-       "[H] ",
-       "Howald, J.A. ",
-       EM "Multiplier ideals of monomial ideals. ",
-       "Trans. Amer. Math. Soc. 353 (2001), no. 7, 2665–2671"
-       },
+    "[H] ",
+    "Howald, J.A. ",
+    EM "Multiplier ideals of monomial ideals. ",
+    "Trans. Amer. Math. Soc. 353 (2001), no. 7, 2665–2671"
+  },
   PARA {
-       "[J] ",
-       "Johnson, Amanda ",
-       EM "Multiplier ideals of determinantal ideals. ",
-       "Thesis (Ph.D.)–University of Michigan. 2003"
-       },
+    "[J] ",
+    "Johnson, Amanda ",
+    EM "Multiplier ideals of determinantal ideals. ",
+    "Thesis (Ph.D.)–University of Michigan. 2003"
+  },
   PARA {
-       "[L] ",
-       "Lazarsfeld, Robert ",
-       EM "Positivity in algebraic geometry. II. ",
-       "2004 "
-       },
+    "[L] ",
+    "Lazarsfeld, Robert ",
+    EM "Positivity in algebraic geometry. II. ",
+    "2004 "
+  },
   PARA {
-       "[M] ",
-       "Mustaţă, Mircea ",
-       EM "Multiplier ideals of hyperplane arrangements. ",
-       "Trans. Amer. Math. Soc. 358 (2006), no. 11, 5015–5023."
-       },
+    "[M] ",
+    "Mustaţă, Mircea ",
+    EM "Multiplier ideals of hyperplane arrangements. ",
+    "Trans. Amer. Math. Soc. 358 (2006), no. 11, 5015–5023."
+  },
   PARA {
-       "[T] ",
-       "Teitler, Zach ",
-       EM "A note on Mustaţă's computation of multiplier ideals of hyperplane arrangements. ",
-       "Proc. Amer. Math. Soc. 136 (2008), no. 5, 1575–1579."
-       },
+    "[T] ",
+    "Teitler, Zach ",
+    EM "A note on Mustaţă's computation of multiplier ideals of hyperplane arrangements. ",
+    "Proc. Amer. Math. Soc. 136 (2008), no. 5, 1575–1579."
+  },
   PARA {
-       "[Th] ",
-       "Thompson, H.M. ",
-       EM "Multiplier Ideals of Monomial Space Curves, ",
-       HREF { "http://arxiv.org/abs/1006.1915" , "arXiv:1006.1915v4" },
-       " [math.AG]."
-       },
-
---   UL{
---     TO (multiplierIdeal,MonomialIdeal,QQ),
---     TO (logCanonicalThreshold,MonomialIdeal),
---     TO (logCanonicalThreshold,MonomialIdeal,RingElement),
---     TO (multiplierIdeal,Ring,List,QQ),
---     TO (logCanonicalThreshold,Ring,List)
---   }
-  
+    "[Th] ",
+    "Thompson, H.M. ",
+    EM "Multiplier Ideals of Monomial Space Curves, ",
+    HREF { "http://arxiv.org/abs/1006.1915" , "arXiv:1006.1915v4" },
+    " [math.AG]."
+  }
 }
 
 --------------------------------------------------------------------------------
@@ -1328,16 +1416,23 @@ document {
 
 document {
   Key => {
-         multiplierIdeal
-         },
+    multiplierIdeal
+  },
   Headline => "multiplier ideal"
 }
 
 document {
   Key => {
-         logCanonicalThreshold
-         },
+    logCanonicalThreshold
+  },
   Headline => "log canonical threshold"
+}
+
+document {
+  Key => {
+    jumpingNumbers
+  },
+  Headline => "jumping numbers"
 }
 
 --------------------------------------------------------------------------------
@@ -1346,9 +1441,9 @@ document {
 
 document {
   Key => {
-         (multiplierIdeal, MonomialIdeal, QQ),
-         (multiplierIdeal, MonomialIdeal, ZZ)
-         },
+    (multiplierIdeal, MonomialIdeal, QQ),
+    (multiplierIdeal, MonomialIdeal, ZZ)
+  },
   Headline => "multiplier ideal of a monomial ideal",
   Usage => "multiplierIdeal(I,t)",
   Inputs => {
@@ -1362,17 +1457,23 @@ document {
   "using Howald's Theorem and the package ", TO Normaliz, ".",
   
   EXAMPLE lines ///
-R = QQ[x,y];
-I = monomialIdeal(y^2,x^3);
-multiplierIdeal(I,5/6)
+    R = QQ[x,y];
+    I = monomialIdeal(y^2,x^3);
+    multiplierIdeal(I,5/6)
+    J = monomialIdeal(x^8,y^6); -- Example 2 of [Howald 2000]
+    multiplierIdeal(J,1)
   ///,
   
-  SeeAlso => { (logCanonicalThreshold,MonomialIdeal) }
+  SeeAlso => {
+    (logCanonicalThreshold,MonomialIdeal)
+  }
 }
 
 
 document {
-  Key => {(logCanonicalThreshold, MonomialIdeal)},
+  Key => {
+    (logCanonicalThreshold, MonomialIdeal)
+  },
   Headline => "log canonical threshold of a monomial ideal",
   Usage => "logCanonicalThreshold I",
   Inputs => {
@@ -1386,12 +1487,17 @@ document {
   "of I with coefficient t is a proper ideal).",
   
   EXAMPLE lines ///
-R = QQ[x,y];
-I = monomialIdeal(y^2,x^3);
-logCanonicalThreshold(I)
+    R = QQ[x,y];
+    I = monomialIdeal(y^2,x^3);
+    logCanonicalThreshold(I)
+    S = QQ[x,y,z];
+    J = monomialIdeal(x*y^4*z^6, x^5*y, y^7*z, x^8*z^8); -- Example 7 of [Howald 2000]
+    logCanonicalThreshold(J)
   ///,
   
-  SeeAlso => { (multiplierIdeal,MonomialIdeal,QQ) }
+  SeeAlso => {
+    (multiplierIdeal,MonomialIdeal,QQ)
+  }
 }
 
 
@@ -1409,22 +1515,27 @@ document {
     QQ => {"the least t such that m is not in the t-th multiplier ideal of I"},
     Matrix => {"the equations of the facets of the Newton polyhedron of I which impose the threshold on m"}
   },
-  "Computes the threshold of inclusion of the monomial m=x^v in the multiplier ideal J(I^t), ",
-  "that is, the value t = sup{ c | m lies in J(I^c) } = min{ c | m does not lie in J(I^c)}. ",
-  "In other words, (1/t)*(v+(1,..,1)) lies on the boundary of the Newton polyhedron Newt(I). ",
-  "In addition, returns the linear inequalities for those facets of Newt(I) which contain (1/t)*(v+(1,..,1)). ",
-  "These are in the format of ", TO "Normaliz", ", i.e., a matrix (A | b) where the number of columns of A is ",
-  "the number of variables in the ring, b is a column vector, and the inequality on the column ",
-  "vector v is given by Av+b >= 0, entrywise. ",
-  "As a special case, the log canonical threshold is the threshold of the monomial 1_R = x^0.",
+  "Computes the threshold of inclusion of the monomial m=x^v in the multiplier ideal J(I^t),
+  that is, the value t = sup{ c | m lies in J(I^c) } = min{ c | m does not lie in J(I^c)}. 
+  In other words, (1/t)*(v+(1,..,1)) lies on the boundary of the Newton polyhedron Newt(I).
+  In addition, returns the linear inequalities for those facets of Newt(I) which contain (1/t)*(v+(1,..,1)).
+  These are in the format of ", TO "Normaliz", ", i.e., a matrix (A | b) where the number of columns of A is
+  the number of variables in the ring, b is a column vector, and the inequality on the column
+  vector v is given by Av+b >= 0, entrywise.
+  As a special case, the log canonical threshold is the threshold of the monomial 1_R = x^0.",
   
   EXAMPLE lines ///
-R = QQ[x,y];
-I = monomialIdeal(x^13,x^6*y^4,y^9);
-logCanonicalThreshold(I,x^2*y)
+    R = QQ[x,y];
+    I = monomialIdeal(x^13,x^6*y^4,y^9);
+    logCanonicalThreshold(I,x^2*y)
+    J = monomialIdeal(x^6,x^3*y^2,x*y^5); -- Example 6.7 of [Howald 2001] (thesis)
+    logCanonicalThreshold(I,1_R)
+    logCanonicalThreshold(I,x^2)
   ///,
   
-  SeeAlso => { (logCanonicalThreshold,MonomialIdeal) }
+  SeeAlso => {
+    (logCanonicalThreshold,MonomialIdeal)
+  }
 }
 
 
@@ -1434,9 +1545,9 @@ logCanonicalThreshold(I,x^2*y)
 
 document {
   Key => {
-         (multiplierIdeal,Number,CentralArrangement,List),
-         (multiplierIdeal,Number,CentralArrangement)
-         },
+    (multiplierIdeal,Number,CentralArrangement,List),
+    (multiplierIdeal,Number,CentralArrangement)
+  },
   Headline => "multiplier ideal of a hyperplane arrangement",
   Usage => "multiplierIdeal(s,A,m)",
   Inputs => {
@@ -1447,17 +1558,21 @@ document {
   Outputs => {
     Ideal => {}
   },
-  "Computes the multiplier ideal of the ideal of A with coefficient s ",
-  "using the package ", TO HyperplaneArrangements, ".",
+  "Computes the multiplier ideal of the ideal of A with coefficient s
+  using the package ",
+  TO HyperplaneArrangements,
+  ".",
   
   EXAMPLE lines ///
-R = QQ[x,y,z];
-f = toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
-A = arrangement f;
-multiplierIdeal(3/7,A)
+    R = QQ[x,y,z];
+    f = toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
+    A = arrangement f;
+    multiplierIdeal(3/7,A)
   ///,
   
-  SeeAlso => { (logCanonicalThreshold,CentralArrangement) }
+  SeeAlso => {
+    (logCanonicalThreshold,CentralArrangement)
+  }
 }
 
 
@@ -1473,18 +1588,20 @@ document {
   Outputs => {
     QQ => {}
   },
-  "Computes the log canonical threshold of a hyperplane arrangement A ",
-  "(the least positive value of t such that the multiplier ideal ",
-  "of A with coefficient t is a proper ideal).",
+  "Computes the log canonical threshold of a hyperplane arrangement A
+  (the least positive value of t such that the multiplier ideal
+  of A with coefficient t is a proper ideal).",
   
   EXAMPLE lines ///
-R = QQ[x,y,z];
-f = toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
-A = arrangement f;
-logCanonicalThreshold(A)
+    R = QQ[x,y,z];
+    f = toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
+    A = arrangement f;
+    logCanonicalThreshold(A)
   ///,
   
-  SeeAlso => { (multiplierIdeal,Number,CentralArrangement) }
+  SeeAlso => {
+    (multiplierIdeal,Number,CentralArrangement)
+  }
 }
 
 
@@ -1492,68 +1609,65 @@ logCanonicalThreshold(A)
 -- MONOMIAL CURVE --------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-doc ///
-Key
-  (multiplierIdeal,Ring,List,QQ)
-  (multiplierIdeal,Ring,List,ZZ)
-Headline
-  multiplier ideal of monomial space curve
-Usage
-  I = multiplierIdeal(R,n,t)
-Inputs
-  R:Ring
-  n:List
-     three integers
-  t:QQ
-Outputs
-  I:Ideal
-Description
-  Text
-  
-    Given a monomial space curve {\tt C} and a parameter {\tt t}, the function 
+document {
+  Key => {
+    (multiplierIdeal,Ring,List,QQ),
+    (multiplierIdeal,Ring,List,ZZ)
+  },
+  Headline => "multiplier ideal of monomial space curve",
+  Usage => "I = multiplierIdeal(R,n,t)",
+  Inputs => {
+    "R" => Ring,
+    "n" => List => {"a list of three integers"},
+    "t" => QQ
+  },
+  Outputs => {
+    "I" => Ideal
+  },
+  PARA {
+    "Given a monomial space curve {\tt C} and a parameter {\tt t}, the function 
     {\tt multiplierIdeal} computes the multiplier ideal associated to the embedding of {\tt C}
-    in {\tt 3}-space and the parameter {\tt t}.
-    
-    More precisely, we assume that {\tt R} is a polynomial ring in three variables, {\tt n = \{a,b,c\}}
+    in {\tt 3}-space and the parameter {\tt t}."
+  },
+  PARA {
+    "More precisely, we assume that {\tt R} is a polynomial ring in three variables, {\tt n = {a,b,c}}
     is a sequence of positive integers of length three, and that {\tt t} is a rational number. The corresponding
-    curve {\tt C} is then given by the embedding {\tt u\to(u^a,u^b,u^c)}.
+    curve {\tt C} is then given by the embedding {\tt u\to(u^a,u^b,u^c)}."
+  },
   
-  Example
+  EXAMPLE lines ///
     R = QQ[x,y,z];
     n = {2,3,4};
     t = 5/2;
     I = multiplierIdeal(R,n,t)
+  ///
+}
 
-///
-
-
-doc ///
-Key
-  (logCanonicalThreshold, Ring, List)
-    
-Headline
-  log canonical threshold of monomial space curves
-Usage
-  logCanonicalThreshold(R,n)
-Inputs
-  R:Ring
-  n:List 
-   three integers
-Outputs
-  logCanonicalThreshold:QQ 
-
-Description
-  Text
-  
-    The function {\tt logCanonicalThreshold} computes the log
+document {
+  Key => {
+    (logCanonicalThreshold, Ring, List)
+  },
+  Headline => "log canonical threshold of monomial space curves",
+  Usage => "logCanonicalThreshold(R,n)",
+  Inputs => {
+    "R" => Ring,
+    "n" => List => {"a list of three integers"}
+  },
+  Outputs => {
+    "logCanonicalThreshold" => QQ
+  },
+  PARA {
+    "The function {\tt logCanonicalThreshold} computes the log
     canonical threshold of a space curve. This curve is defined via
-    {\tt n = (a,b,c)} through the embedding {\tt u\to(u^a,u^b,u^c)}.
+    {\tt n = (a,b,c)} through the embedding {\tt u\to(u^a,u^b,u^c)}."
+  },
     
-  Example
+  EXAMPLE lines ///
     R = QQ[x,y,z];
     n = {2,3,4};
     logCanonicalThreshold(R,n)
-///
+  ///
+}
 
 
 --------------------------------------------------------------------------------
@@ -1562,9 +1676,9 @@ Description
 
 document {
   Key => {
-         (multiplierIdeal,Ring,List,ZZ,QQ),
-         (multiplierIdeal,Ring,List,ZZ,ZZ)
-         },
+    (multiplierIdeal,Ring,List,ZZ,QQ),
+    (multiplierIdeal,Ring,List,ZZ,ZZ)
+  },
   Headline => "multiplier ideal of a generic determinantal ideal",
   Usage => "multiplierIdeal(R,L,r,t)",
   Inputs => {
@@ -1582,11 +1696,13 @@ document {
   "(a generic matrix).",
   
   EXAMPLE lines ///
-R = QQ[x_1..x_20];
-multiplierIdeal(R,{4,5},2,5/7)
+    R = QQ[x_1..x_20];
+    multiplierIdeal(R,{4,5},2,5/7)
   ///,
   
-  SeeAlso => { (logCanonicalThreshold,List,ZZ) }
+  SeeAlso => {
+    (logCanonicalThreshold,List,ZZ)
+  }
 }
 
 
@@ -1609,7 +1725,7 @@ document {
   "(a generic matrix).",
   
   EXAMPLE lines ///
-logCanonicalThreshold({4,5},2)
+    logCanonicalThreshold({4,5},2)
   ///,
   
   SeeAlso => { (multiplierIdeal,Ring,List,ZZ) }
