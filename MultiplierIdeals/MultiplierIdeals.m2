@@ -24,22 +24,31 @@
 
 newPackage(
   "MultiplierIdeals",
-      Version => "0.1", 
-      Date => "August 6, 2012",
-      Authors => {
-        {
-          Name => "Zach Teitler",
-          Email => "zteitler@member.ams.org",
-          HomePage => "http://math.boisestate.edu/~zteitler/"
-        },
-       {Name => "Bart Snapp"},
-       {Name => "Claudiu Raicu"}
-       },
-      Headline => "multiplier ideals, log canonical thresholds, and jumping numbers",
-      PackageImports=>{"ReesAlgebra","Normaliz"},
-      PackageExports=>{"HyperplaneArrangements"},
-      DebuggingMode=>false
-      )
+  Version => "0.1", 
+  Date => "August 6, 2012",
+  Authors => {
+    {
+      Name => "Zach Teitler",
+      Email => "zteitler@member.ams.org",
+      HomePage => "http://math.boisestate.edu/~zteitler/"
+    },
+    {
+      Name => "Bart Snapp"
+    },
+    {
+      Name => "Claudiu Raicu"
+    }
+  },
+  Headline => "multiplier ideals, log canonical thresholds, and jumping numbers",
+  PackageImports=>{
+    "ReesAlgebra",
+    "Normaliz"
+  },
+  PackageExports=>{
+    "HyperplaneArrangements"
+  },
+  DebuggingMode=>false
+)
 
 -- Main functionality:
 -- Multiplier ideals.
@@ -73,11 +82,12 @@ newPackage(
 --------------------------------------------------------------------------------
 
 export {
-      multiplierIdeal,
-      logCanonicalThreshold,
-      jumpingNumbers,
-      Interval
-      }
+  multiplierIdeal,
+  logCanonicalThreshold,
+  jumpingNumbers,
+  Interval,
+  IntervalType
+}
 
 -- exportMutable {}
 
@@ -110,7 +120,12 @@ setNmzOption("bigint",true);
 -- Exported:
 multiplierIdeal = method();
 logCanonicalThreshold = method();
-jumpingNumbers = method(Dispatch => Thing, Options => {Interval => {0,infinity}});
+jumpingNumbers = method(Dispatch => Thing,
+  Options => {
+    Interval => {0,infinity},
+    IntervalType => "Closed"
+  }
+);
 
 -- Private:
 skodaPeriodicityOnset = method();
@@ -169,22 +184,34 @@ skodaPeriodicityOnset (Ideal) := (I) -> (
 -- Qinterval
 -- give all rational numbers k/denom in the interval [a, b]
 -- for one or a list of denominators
-Qinterval = method();
-Qinterval ( ZZ , Number , Number ) := ( denom, a, b ) ->
-  apply(ceiling(denom*a) .. floor(denom*b) , k -> promote(k/denom,QQ))
-Qinterval ( List , Number , Number ) := ( denoms , a , b ) -> (
+Qinterval = method(Options=>{IntervalType=>"Closed"});
+Qinterval ( ZZ , Number , Number ) := o -> ( denom, a, b ) -> (
+  ql := apply(ceiling(denom*a) .. floor(denom*b) , k -> promote(k/denom,QQ));
+  if ( o.IntervalType == "Closed" ) then (
+    return ql;
+  ) else if ( o.IntervalType == "Open" ) then (
+    return select(ql, x -> a<x and x<b);
+  ) else if ( o.IntervalType == "ClosedOpen" ) then (
+    return select(ql, x -> x<b);
+  ) else if ( o.IntervalType == "OpenClosed" ) then (
+    return select(ql, x -> a<x);
+  );
+)
+Qinterval ( List , Number , Number ) := o -> ( denoms , a , b ) -> (
   -- empty interval?
   if ( a > b ) then (
     return { };
   );
   qSet := set {};
   for d in denoms do (
-    qSet = qSet + set Qinterval( d , a , b );
+    qSet = qSet + set Qinterval( d , a , b , o );
   );
   return sort toList qSet;
 )
-Qinterval ( ZZ , List ) := (denom, interval) -> Qinterval(denom, interval#0, interval#1)
-Qinterval ( List , List ) := (denoms, interval) -> Qinterval(denoms, interval#0, interval#1)
+Qinterval ( ZZ , List ) := o -> (denom, interval) ->
+  Qinterval(denom, interval#0, interval#1, o)
+Qinterval ( List , List ) := o -> (denoms, interval) ->
+  Qinterval(denoms, interval#0, interval#1, o)
 
 
 
@@ -198,12 +225,12 @@ jumpingNumbers Sequence := o -> args -> (
   );
   
   -- potential jumping numbers
-  pjn := Qinterval(jumpingDenominators(args),a,b);
+  pjn := Qinterval(jumpingDenominators(args),a,b,IntervalType=>o.IntervalType);
   
   if ( #pjn == 0 ) then (
     return { { }, { } }; -- no jumping numbers, no multiplier ideals
   );
-
+  
   local prev;
   local next;
   local jumpingNumbers;
@@ -1009,7 +1036,7 @@ TEST ///
   needsPackage "MultiplierIdeals";
   R = QQ[x_1..x_5];
   -- use R;
-  for a from 1 to 6 do (
+  for a from 2 to 6 do (
     for b from a to 6 do (
       for c from b to 6 do (
         for d from c to 6 do (
@@ -1137,7 +1164,7 @@ assert( (exceptionalDivisorValuation({3,5,11},{7,1,2},(x^2*y-z)^2 * x * (y + z))
 ---Test 4 - monomialValuationIdeal
 TEST ///
 needsPackage"MultiplierIdeals";
-needsPackage "Normaliz";
+--needsPackage "Normaliz";
 debug MultiplierIdeals;
 R = QQ[x,y];
 assert( (monomialValuationIdeal(R,{2,3},6)) == monomialIdeal (x^3,x^2*y,y^2) )
@@ -1155,7 +1182,7 @@ assert( (monomialValuationIdeal(S,{3,5,11},2)) == monomialIdeal (x,y,z) )
 ---Test 5 - exceptionalDivisorValuationIdeal
 TEST ///
 needsPackage"MultiplierIdeals";
-needsPackage "Normaliz";
+--needsPackage "Normaliz";
 debug MultiplierIdeals;
 R = QQ[x,y,z];
 ff = sortedGens(R,{3,4,5});
@@ -1221,8 +1248,12 @@ assert(multiplierIdeal(R,{2,3,4},3/2) == Dmodules$multiplierIdeal(I,3/2))
 TEST ///
 needsPackage "MultiplierIdeals";
 debug MultiplierIdeals;
-assert ( Qinterval( 3 , 4 , 5 ) === ( 4/1 , 13/3 , 14/3 , 5/1 ) );
-assert ( Qinterval( 3 , 4.5 , 5 ) === ( 14/3 , 5/1 ) );
+assert( Qinterval( 3 , 4 , 5 ) === ( 4/1 , 13/3 , 14/3 , 5/1 ) );
+assert( Qinterval( 3 , 4.5 , 5 ) === ( 14/3 , 5/1 ) );
+assert( Qinterval(3,4,5, IntervalType=>"Closed") == (4/1, 13/3, 14/3, 5/1) );
+assert( Qinterval(3,4,5, IntervalType=>"Open") == (13/3, 14/3) );
+assert( Qinterval(3,4,5, IntervalType=>"OpenClosed") == (13/3, 14/3, 5/1) );
+assert( Qinterval(3,4,5, IntervalType=>"ClosedOpen") == (4/1, 13/3, 14/3) );
 R = QQ[x,y,z];
 assert( jumpingDenominators(R,{2,3,6}) === {1,6} )
 assert( jumpingDenominators(R,{4,5,11}) === {1,2,3,12,16} )
@@ -1247,8 +1278,8 @@ TEST ///
   assert( (jumpingNumbers(R,{2,3,4})) == {
     {11/6,2/1},{ideal(z,y,x),ideal(-y^2+x*z,-x^2+z)}
   } )
-  assert( (jumpingNumbers(R,{3,4,5})) == {
-    {13/9, 16/9, 17/9, 2, 22/9, 5/2, 25/9, 26/9, 3},
+  assert( jumpingNumbers(R,{3,4,5},IntervalType=>"ClosedOpen") == {
+    {13/9, 16/9, 17/9, 2, 22/9, 5/2, 25/9, 26/9},
     {ideal(z,y,x),
      ideal(z,y,x^2),
      ideal(z,y^2,x*y,x^2),
@@ -1256,8 +1287,7 @@ TEST ///
      ideal(y^2*z-x*z^2,y^3-x*y*z,x*y^2-x^2*z,x^2*y-z^2,x^4-x*y*z),
      ideal(y^2*z-x*z^2,y^3-x*y*z,x*y^2-x^2*z,x^2*y*z-z^3,x^3*z-y*z^2,x^3*y-x*z^2,x^4-x*y*z),
      ideal(y^2*z-x*z^2,y^3-x*y*z,x^2*y*z-z^3,x^3*z-y*z^2,x^2*y^2-y*z^2,x^3*y-x*z^2,x^5-z^3),
-     ideal(y^2*z-x*z^2,x^2*y*z-z^3,x^3*z-y*z^2,y^4-x^2*z^2,x*y^3-z^3,x^2*y^2-y*z^2,x^4*y-x^2*z^2,x^5-z^3),
-     ideal(y^4-2*x*y^2*z+x^2*z^2,x^2*y^3-x^3*y*z-y^2*z^2+x*z^3,x^3*y^2-x^4*z-y^3*z+x*y*z^2,x^5*z+x*y^3*z-3*x^2*y*z^2+z^4,x^5*y-x^2*y^2*z-x^3*z^2+y*z^3,x^6-2*x^3*y*z+y^2*z^2)}
+     ideal(y^2*z-x*z^2,x^2*y*z-z^3,x^3*z-y*z^2,y^4-x^2*z^2,x*y^3-z^3,x^2*y^2-y*z^2,x^4*y-x^2*z^2,x^5-z^3)}
   } )
   assert( (jumpingNumbers(R,{3,4,5},Interval=>{3/2,5/2})) == {
     {16/9,17/9,2/1,22/9,5/2},
@@ -1319,8 +1349,7 @@ TEST /// -- Example 5(b) of [Budur 2010]
 TEST /// -- Example 6.3 of [Berkesch--Leykin 2010]
   needsPackage "MultiplierIdeals";
   R = QQ[x,y,z];
-  f = (x^2-y^2)*(x^2-z^2)*(y^2-z^2)*z;
-  ff = toList factor ( f ) / first;
+  ff = toList factor ( (x^2-y^2)*(x^2-z^2)*(y^2-z^2)*z ) / first;
   A = arrangement ff;
   idealList = {
     ideal(x,y,z),
@@ -1341,12 +1370,11 @@ TEST /// -- Example 6.3 of [Berkesch--Leykin 2010]
       ideal(y-z,x+z),
       ideal(y-z,x-z),
       ideal(z^3,y*z^2,x*z^2,x*y*z,y^3,x^3,x^2*y^2)
-    ),
-    ideal( f )
+    )
   };
   assert(
-    (jumpingNumbers(A)) == {
-      {3/7,4/7,2/3,6/7,1/1},
+    jumpingNumbers(A,IntervalType=>"ClosedOpen") == {
+      {3/7,4/7,2/3,6/7},
       idealList
     }
   )
