@@ -1429,6 +1429,24 @@ document {
     log canonical thresholds, and jumping numbers,
     using specialized routines wherever possible. "
   },
+  PARA {
+    "The package Dmodules provides computations of multiplier ideals,
+    log canonical thresholds, and jumping numbers of arbitrary ideals
+    using general algorithms.
+    This package provides alternatives for special classes of ideals,
+    including monomial ideals, hyperplane arrangements,
+    generic determinantal ideals,
+    and binomial ideals
+    (currently, ideals of curves in 3-space parametrized by monomials).
+    These special computations are typically much faster than general methods
+    and can often handle larger examples."
+  },
+  PARA {
+    "It is hoped that future versions of this package will provide
+    computations via resolution of singularities for general ideals,
+    as well as computation for additional special classes of ideals,
+    such as plane curve singularities."
+  },
   SUBSECTION "References",
   PARA {
     "[BL] ",
@@ -1491,14 +1509,50 @@ document {
   Key => {
     logCanonicalThreshold
   },
-  Headline => "log canonical threshold"
+  Headline => "log canonical threshold",
+  PARA {
+    "The log canonical threshold of an ideal I is the infimum of t
+    for which the multiplier ideal J(I^t) is a proper ideal.
+    Equivalently it is the least nonzero jumping number."
+  },
+  SeeAlso => {
+    jumpingNumbers
+  }
 }
 
 document {
   Key => {
     jumpingNumbers
   },
-  Headline => "jumping numbers"
+  Headline => "jumping numbers",
+  PARA {
+    "Jumping numbers of an ideal I are those real numbers t
+    at which the multiplier ideal J(I^t), as a function of the parameter t,
+    changes.
+    The jumping numbers form a discrete sequence of rational numbers.
+    Thus t_1, t_2 are two consecutive jumping numbers of I
+    if and only if J(I^t) = J(I^t_1) for all t_1 <= t < t_2,
+    and J(I^t_2) \\neq J(I^t_1), and J(I^t_1) \\neq J(I^{t_1-\\epsilon})."
+  },
+  PARA {
+    "The jumpingNumbers command determines the jumping numbers
+    of an ideal along with the multiplier ideals at those jumping numbers.
+    By definition, the multiplier ideals are then determined at the
+    intermediate parameter values."
+  },
+  PARA {
+    "By default, jumpingNumbers looks for jumping numbers in a closed interval
+    [a,b] where a is the log canonical threshold of the ideal
+    and b is a sufficiently large value to ensure that Skoda periodicity holds,
+    that is, J(I^t) = I.J(I^{t-1}) for t \\geq b.
+    (In particular, the multiplier ideals and jumping numbers are determined
+    for all t by the output of this command.)
+    The user may specify a different interval and optionally may
+    specify an open, closed-open, or open-closed interval."
+  },
+  SeeAlso => {
+    logCanonicalThreshold
+  }
 }
 
 --------------------------------------------------------------------------------
@@ -1814,6 +1868,43 @@ document {
   SeeAlso => {
     (multiplierIdeal,Ring,List,ZZ,QQ)
   }
+}
+
+--------------------------------------------------------------------------------
+-- OPTIONAL ARGUMENTS ----------------------------------------------------------
+--------------------------------------------------------------------------------
+
+document {
+  Key => {
+    Interval
+  },
+  Headline => "name for an optional argument"
+}
+
+document {
+  Key => {
+    IntervalType
+  },
+  Headline => "name for an optional argument"
+}
+
+document {
+  Key => {
+    [jumpingNumbers, Interval],
+    [jumpingNumbers, IntervalType]
+  },
+  Headline => "interval for jumping numbers",
+  PARA {
+    "Specify the interval in which to search for jumping numbers."
+  },
+  EXAMPLE lines ///
+    R = QQ[x,y];
+    I = monomialIdeal(y^2,x^3);
+    jumpingNumbers(I) -- default: interval [5/6, 2]
+    jumpingNumbers(I,Interval=>{1,3/2}) -- [1,3/2]
+    jumpingNumbers(I,IntervalType=>"Open") -- (5/6,2)
+    jumpingNumbers(I,Interval=>{1,3/2},IntervalType=>"ClosedOpen") -- [1,3/2)
+  ///
 }
 
 --------------------------------------------------------------------------------
