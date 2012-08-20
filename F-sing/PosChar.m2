@@ -1,5 +1,12 @@
 newPackage( "PosChar",
 Version => "1.0", Date => "August 17, 2012", Authors => {
+     {Name => "Mordechai Katzman",
+     Email=> "m.katzman@sheffield.ac.uk",
+     HomePage=> "http://www.katzman.staff.shef.ac.uk/"
+     },
+     {Name => "Sara Malec",
+     Email=> "smalec@gsu.edu"
+     },
      {Name => "Karl Schwede",
      Email => "schwede@math.psu.edu",
      HomePage => "http://math.psu.edu/schwede/"
@@ -7,10 +14,8 @@ Version => "1.0", Date => "August 17, 2012", Authors => {
      {Name=> "Emily Witt",
      Email=> "ewitt@umn.edu",
      HomePage => "http://math.umn.edu/~ewitt/"
-     },
-     {Name => "Sara Malec",
-     Email=> "smalec@gsu.edu"
-     }},
+     }
+},
 Headline => "A package for calculations in positive characteristic", DebuggingMode => true, Reload => true )
 export{"basePExp",
      "fastExp",
@@ -49,7 +54,7 @@ export{"basePExp",
      "tauGorAmb", 
      "tauQGor", 
      "tauGor",
-     "isFRegularQGor"
+     "isFRegularQGor" --needs documentation / help entry
 }
 --This file has "finished" functions from the Macaulay2 workshop at Wake Forest
 --August 2012.  Sara Malec, Karl Schwede and Emily Witt contributed to it.
@@ -923,8 +928,16 @@ sigmaAOverPEMinus1Poly = (fm, a1, e1) -> (
 --************************************************************--
 ----------------------------------------------------------------
 
+isFRegularPoly = method();
+
+--this function determines if a pair (R, f^t) is F-regular at a prime
+--ideal Q in R, R is a polynomial ring.  
+isFRegularPoly (RingElement, QQ, Ideal) := (f1, t1, Q1) -> (
+     not isSubset(tauPoly(f1,t1), Q1)
+)
+
 --this function determines if a pair (R, f^t) is F-regular, R is a polynomial ring.  
-isFRegularPoly = (f1, t1) -> (
+isFRegularPoly (RingElement, QQ) := (f1, t1) -> (
      isSubset(ideal(1_(ring f1)), tauPoly(f1,t1))
 )
 
@@ -938,13 +951,14 @@ isSharplyFPurePoly = (f1, a1, e1,m1) -> (
 isFRegularQGor = method();
 
 --this computes whether (R, f1^t1) is F-regular, assuming the index of R divides p^e1-1
-isFRegularQGor (Ring, ZZ, RingElement, QQ) := (R, e1,f1, t1) ->(
-     isSubset(ideal(1_R), tauQGor(R,e1,f1,t1))
+isFRegularQGor (ZZ, RingElement, QQ) := (e1,f1, t1) ->(
+     R := ring f1;
+     isSubset(ideal(1_R), tauQGor((ring f1),e1,f1,t1))
 )
 
---this works in the Gorenstein case
-isFRegularQGor (Ring, RingElement, QQ) := (R, f1, t1) ->(
-     isSubset(ideal(1_R), tauQGor(R,1,f1,t1))
+--this computes whether (R, f1^t1) is F-regular at Q1, assuming the index of R divides p^e1-1
+isFRegularQGor (ZZ, RingElement, QQ, Ideal) := (e1,f1, t1, Q1) ->(
+     not isSubset(tauQGor((ring f1),e1,f1,t1), Q1)
 )
 
 --assuming no pair
@@ -952,9 +966,9 @@ isFRegularQGor (Ring,ZZ) := (R,e1) ->(
      isSubset(ideal(1_R), tauQGor(R,e1,1_R,1/1 ) )
 )
 
---assuming no pair, in the Gorenstein case
-isFRegularQGor (Ring) := (R) ->(
-     isSubset(ideal(1_R), tauQGor(R,1,1_R,1/1) )
+--assuming no pair checking at Q1
+isFRegularQGor (Ring,ZZ,Ideal) := (R,e1,Q1) ->(
+     not isSubset(tauQGor(R,e1,1_R,1/1 ),Q1 )
 )
 
 
@@ -1013,11 +1027,13 @@ guessFPT ={OutputRange=>false}>>o -> (ff, e1, maxDenom) ->(
           {{ nn/(pp^e1-1), (nn+1)/(pp^e1)}, findNumberBetween({nn/(pp^e1-1), (nn+1)/(pp^e1)}, maxDenom)}
 )
 
----f-pure threshold estimation
+---f-pure threshold estimation, at the origin
 ---e is the max depth to search in
 ---FinalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
 estFPT={FinalCheck=> true, Verbose=> false, DiagonalCheck=>true, BinomialCheck=>true, NuPEMinus1Check=>true} >> o -> (ff,ee)->(
      print "starting estFPT";
+     
+     maxIdeal := ideal( first entries vars( ring ff) );   --the maximal ideal we are computing the fpt at  
 
      foundAnswer := false; --this will be set to true as soon as we found the answer.  Setting it to true will stop further tests from being run
      answer := null; --this stores the answer until it can be returned.
@@ -1055,7 +1071,7 @@ estFPT={FinalCheck=> true, Verbose=> false, DiagonalCheck=>true, BinomialCheck=>
  
       --check to see if nu/(p^e-1) is the fpt
       if ((o.NuPEMinus1Check==true) and (foundAnswer == false)) then (
-	   if (isFRegularPoly(ff,(nn/(pp^ee-1)))==false) then ( 
+	   if (isFRegularPoly(ff,(nn/(pp^ee-1)),maxIdeal)==false) then ( 
 		if  (o.Verbose==true) then print "Found answer via nu/(p^e-1)."; 
 		answer = nn/(pp^ee-1);
 		foundAnswer = true
@@ -1078,7 +1094,7 @@ estFPT={FinalCheck=> true, Verbose=> false, DiagonalCheck=>true, BinomialCheck=>
       	   --if we run the final check, do the following
 	   if ( (foundAnswer == false) and (o.FinalCheck == true)) then ( 
 	       if  (o.Verbose==true) then print "Starting FinalCheck.";
-	       if ((isFRegularPoly(ff,(ak#1) )) ==false ) then ( 
+	       if ((isFRegularPoly(ff,(ak#1),maxIdeal)) ==false ) then ( 
 		    if  (o.Verbose==true) then print "FinalCheck successful"; 
 		    answer = (ak#1);
 		    foundAnswer = true 
