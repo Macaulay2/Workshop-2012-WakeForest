@@ -40,30 +40,18 @@ T**U
 T_5 -- by ordinal
 T_(1,0,1) -- by position
 
-m=matrix{{1,2,3},{4,5,6}}
-tensor'({2,3},flatten entries m)
-M=(tm target m)**(tm source m)
-new M from vector flatten entries m
-class M
-tensor' Matrix := m -> (
-     M:=(tm target m)**(tm dual source m);
-          
-     )
-tm R^{1,1,1}
-R^{1,1,1}
 ------------------------
 --Slices
 ------------------------
 -- to get slices of a tensor, use a 
 -- list subscript with blank spots (nulls)
 -- for unspecified indices:
-t
-t_{,0,}
-t
-t_{1,,}
-t
-t_{1,1,}
-
+T
+T_{,0,}
+T
+T_{1,,}
+T_{1,,1}
+T_{1,1,1}
 --------------------
 --Modules of tensors
 --------------------

@@ -96,6 +96,7 @@ tensorDimensions TensorModule := M -> M#(gs"dimensions")
 
 --Printing TensorModules:
 moduleSummary=M->(
+     n := rank ambient M;
      if M.?generators then
      if M.?relations then << ", subquotient of " << ambient M
      else << ", submodule of " << ambient M
@@ -112,7 +113,7 @@ TensorModule.synonym="tensor module"
 net TensorModule := M -> fold(apply(M#(gs"factors"),net@@module),(i,j)->i|" ** "|j)
 TensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
-     n := numgens M;
+     n := rank ambient M;
      << concatenate(interpreterDepth:"o") << lineNumber << " : "
      << ring M
      << "-TensorModule of order "|toString(#M#(gs"dimensions"))|
@@ -399,13 +400,14 @@ symbolicArgumentSequenceFunction=x->toSequence@@(saf x)
 ---------------------
 Tensor_List := (t,l) -> (
      assertFreeTensor t;
+     dims:=tensorDimensions t;
+     if #l===#dims then return t_(toSequence l);
      f:=tensorFunction t;
      g:=nullArgumentSequenceFunction l;
      nulls:=positions(l,i->i===null);
-     dims:=tensorDimensions t;
      odims:=dims_nulls;
      M:=tensorModule(ring t, odims);
-     inds:=acp apply(odims,i->0..<i);
+     inds:=acp toList apply(odims,i->0..<i);
      ents:=toList apply(inds,f@@g);
      new M from vector ents
      )
