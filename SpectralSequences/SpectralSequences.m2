@@ -552,7 +552,6 @@ maps={m2,m1,m0}
 
 
 homologicalFilteredComplex=method()
-homologicalFilteredComplex( )
 
 -- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
 -- defining inclusion maps C=F_nC > F_(n-1)C > ... > F_0 C = 0
@@ -594,13 +593,191 @@ K_0
 K^0
 K^1
 K_1
-
-K_1==K^1
-
-K^infinity
+max K
 
 
--- so want the relationship between K_n and K^n is that K_n=K^(-n).
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+-- the following portion of code contains general purpose methods that are simultaneously
+-- being tested on the running example. -----
+-- they need to be integrated in the existing code and tested on more sophisticated examples.
+-- the running example is K=homologicalFilteredComplex {m2,m1,m0}
+-- where the chain complex maps m2,m1,m0 are constructed above.
+-------------------------------------------------------------------------------------
+
+
+----------------------
+-- below are the methods which compute the
+-- individual terms on a page of a spectral sequence
+-- WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS.
+-----------------------
+-- By default, of the primitative homological constructor above the maximum integer key
+-- of the filtered complex corresponds to the ambient complex.
+-- This is used in the formula's below but should be made more "fool proof" in 
+-- what follows.
+
+-- the formula's below are the homological versions of the ones in I.2.4 of Danilov's 
+-- treatment of spectral sequences in Shafarevich's Encyolpaedia of 
+-- Math Algebraic Geometry II.  
+-- In any event it is easy enough to prove directly that they satisfy the requirments for
+-- a spectral sequence.
+
+zpq=method()
+zpq(FilteredComplex,ZZ,ZZ,ZZ):= (K,p,q,r)->(
+ker inducedMap((K_(max K))_(p+q-1) / K_(p-r) _ (p+q-1), 
+     K_p _ (p+q), K_(max K).dd_(p+q))
+     )
+zpq(K,0,0,0)
+
+
+bpq=method()
+bpq(FilteredComplex,ZZ,ZZ,ZZ):=(K,p,q,r) ->(
+    ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q))
+      )
+bpq(K,0,0,0)
+
+-- the following will compute the pq modules on the rth page explicitly.
+epq=method()
+epq(FilteredComplex,ZZ,ZZ,ZZ):=(K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)) )
+
+epq(K,0,0,0)
+
+prune epq(K,3,-2,0)
+prune epq(K,2,0,0)
+prune epq(K,1,-1,0)
+prune epq(K,1,0,0)
+prune epq(K,100,-100,0)
+
+-- let's compute all non-zero modules on the E0 page.
+
+myList:={};
+for p from 0 to 3 do (
+     for q from -p to 2-p do ( myList=append(myList,{p,q}=> prune epq(K,p,q,0)) ) )
+myHash=new HashTable from myList
+
+
+
+-- the above seems to compute the non-zero modules on the E0 page correctly.
+-- let's try the E1 page
+
+prune epq(K,3,-2,1)
+prune epq(K,2,0,1)
+prune epq(K,1,-1,1)
+prune epq(K,1,0,1)
+
+-- let's compute all non-zero modules on the E1 page.
+myList:={};
+for p from 0 to 3 do (
+     for q from -p to 2-p do ( myList=append(myList,{p,q}=> prune epq(K,p,q,1)) ) )
+myHash=new HashTable from myList
+
+-- the above agrees with my calculations by hand.
+-- let's compute all non-zero modules on the E2 page.
+
+myList:={};
+for p from 0 to 3 do (
+     for q from -p to 2-p do ( myList=append(myList,{p,q}=> prune epq(K,p,q,2)) ) )
+myHash=new HashTable from myList
+
+-- the above agrees with my calculations by hand.
+
+-- let's compute all non-zero modules on the E3 page.
+
+myList:={};
+for p from 0 to 3 do (
+     for q from -p to 2-p do ( myList=append(myList,{p,q}=> prune epq(K,p,q,3)) ) )
+myHash=new HashTable from myList
+
+-- again the above agrees with my calculations by hand.
+
+-- a more general purpose method which computes a hash table containg all non-zero
+-- modules is the following.
+
+min K
+computeErModules=method()
+
+computeErModules(FilteredComplex,ZZ):= (K,r) -> (myList:={};
+     for p from min K to max K do (
+	  for q from -p to length K_(max K) do (
+	       myList=append(myList, {p,q}=> epq(K,p,q,r)); )
+	       	    );
+	       new HashTable from myList
+      )
+E0Modules = computeErModules(K,0)
+
+new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
+
+-- so we get the same picture as before.
+
+E1Modules = computeErModules(K,1)
+
+new HashTable from apply(keys E1Modules, i-> i=> prune E1Modules#i)
+
+-- so we get the same picture as before.
+
+E2Modules = computeErModules(K,2)
+new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
+
+-- so we get the same picture as before.
+
+E3Modules = computeErModules(K,3)
+new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
+
+-- so we get the same picture as before.
+
+------------------------------------------------------------------------------
+-- now want to try to compute the maps with source pq on the rth page.
+-- AGAIN WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS ----------------------
+-----------------------------------------------------------------------------
+
+epqrMaps=method()
+epqrMaps(FilteredComplex,ZZ,ZZ,ZZ):=(K,p,q,r)-> (
+     inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),K_(max K).dd_(p+q)))
+
+-- In our running example the (3,-2) map on the E2 page is suppose to be a non-zero
+-- isomorphism.
+prune epqrMaps(K,3,-2,2)
+-- so this seems to be the case.
+
+-- The (2,0) map on th E1 page is also suppose to be a non-zero isomorphism
+
+prune epqrMaps(K,2,0,1)
+-- this also seems to be the case.
+
+--Let's now compute all of the maps on the Er page as we did above for the modules.
+
+computeErMaps=method()
+
+computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
+     for p from min K to max K do (
+	  for q from -p to length K_(max K) do (
+	       myList=append(myList, {p,q}=> epqrMaps(K,p,q,r)); )
+	       	    );
+	       new HashTable from myList
+      )
+
+
+
+E0Maps = computeErMaps(K,0)
+
+new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
+
+E1Maps = computeErMaps(K,1)
+
+new HashTable from apply(keys E1Maps, i-> i=> prune E1Maps#i)
+
+E2Maps = computeErMaps(K,2)
+
+new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
+
+E3Maps = computeErMaps(K,3)
+
+new HashTable from apply(keys E3Maps, i-> i=> prune E3Maps#i)
+
+-- the above appears to be working correctly.  Need to integrate code in
+-- actual package, export the functions and test on more sophisticated examples.
+-------------------------------------------------------------------------------------
+
 
 
 ---------------------------------------------------------------
