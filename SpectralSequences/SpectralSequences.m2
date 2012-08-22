@@ -49,7 +49,7 @@ export {
   "SpectralSequence",
   "spectralSequence",
   "SpectralSequenceSheet",
-  "see"
+  "see", "homologicalFilteredComplex", "computeErModules","computeErMaps"
   }
 
 -- symbols used as keys
@@ -250,6 +250,74 @@ filteredComplex List := L -> (
   if (last P)#1 != Z then P = P | {#maps+1 => Z};
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
+
+-------------------------------------------------------------------------------------
+--- the following code is related to filtered complexes and is needed to compute 
+--- spectral sequences with respect to homological conventions.
+--- At some point this needs to be integrated with cohomological conventions.
+--- I'm suggesting that the defaults be homological conventions.  
+-------------------------------------------------------------------------------
+
+-- we want to have an underscore operator for filtered complexes.
+-- this can be done easily as follows.
+--  Essentially copying the ^ method -- I'm assuming that it works OK.
+
+FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
+     -- We assume that spots form a consecutive sequence of integers
+  (maxK, minK) := (max K, min K);  -- all filtrations are assumed separated & exhaustive
+  if K#?p then K#p else if p < minK then K#minK else if p > maxK then K#maxK
+  else error "expected no gaps in filtration")
+
+
+
+homologicalFilteredComplex=method()
+
+-- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
+-- defining inclusion maps C=F_nC > F_(n-1)C > ... > F_0 C = 0
+-- -- subcomplexes of a chain complex (or simplicial complexes) 
+-- and produces a filtered complex with integer keys the
+-- corresponing  chain complex.
+-- this should be merged with the filtered complex constructor and should be
+-- the default.  An option should allow the user to choose to
+-- do things cohomologically.
+
+-- the following code changes one line from the primative FilteredComplex code...
+-- everything should be replaced and integrated in the future.
+-- I haven't tested this code for simplicial complexes yet.
+homologicalFilteredComplex List := L -> (
+  local maps;
+  local C;
+  if #L === 0 
+  then error "expected at least one chain complex map or simplicial complex";
+  if all(#L, p -> class L#p === SimplicialComplex) then (
+    kk := coefficientRing L#0;
+    C = chainComplex L#0;	       	    -- all filtrations are exhaustive
+    maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
+        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
+  else (
+    maps = L;
+    if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
+      error "expected sequence of chain complexes");
+    C = target maps#0;	       	       	    -- all filtrations are exhaustive
+    if any(#maps, p-> target maps#p != C) then (
+      error "expected all map to have the same target"));     
+  Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
+  -- THE FOLLOWING LINE HAS BEEN CHANGED FROM THE FILTERED COMPLEX CONSTRUCTOR --
+  P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
+  if (last P)#1 != Z then P = P | {#maps+1 => Z};
+  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
+
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
 -- Gives the homological filtration on a chain complex
 filteredComplex ChainComplex := C -> (
      complete C;
@@ -300,7 +368,84 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
 	  symbol filteredComplex => K,
 	  symbol zero => K.zero,
 	  symbol cache => CacheTable})
+-------------------------------------------------------------------------
+-------------------------------------------------------------------------
 
+
+----------------------
+-- below are the methods which compute the
+-- individual terms on a page of a spectral sequence
+-- WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS.
+-----------------------
+-- By default, of the primitative homological constructor above 
+--the maximum integer key
+-- of the filtered complex corresponds to the ambient complex.
+-- This is used in the formula's below but should be made more "fool proof" in 
+-- what follows.
+
+-- the formula's below are the homological versions of the ones in I.2.4 of Danilov's 
+-- treatment of spectral sequences in Shafarevich's Encyolpaedia of 
+-- Math Algebraic Geometry II.  
+-- In any event it is easy enough to prove directly that they satisfy the requirments for
+-- a spectral sequence.
+
+zpq:= (K,p,q,r)->(
+ker inducedMap((K_(max K))_(p+q-1) / K_(p-r) _ (p+q-1), 
+     K_p _ (p+q), K_(max K).dd_(p+q))
+     )
+
+
+
+bpq:= (K,p,q,r) ->(
+    ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q))
+      )
+
+-- the following will compute the pq modules on the rth page explicitly.
+
+epq:=(K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)) )
+
+
+-- the following computes all modules on the r-th page.
+
+computeErModules=method()
+
+computeErModules(FilteredComplex,ZZ):= (K,r) -> (myList:={};
+     for p from min K to max K do (
+	  for q from -p to length K_(max K) do (
+	       myList=append(myList, {p,q}=> epq(K,p,q,r)); )
+	       	    );
+	       new HashTable from myList
+      )
+----------------------------------------------------------------------------------
+------------------------------------------------------------------------------
+-- now want to try to compute the maps with source pq on the rth page.
+-- AGAIN WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS ----------------------
+-----------------------------------------------------------------------------
+---------------------------------------------------------------------------
+
+epqrMaps:=(K,p,q,r)-> (
+     inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),K_(max K).dd_(p+q)))
+
+
+--Compute all maps on the Er page as we did above for the modules.
+
+computeErMaps=method()
+
+computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
+     for p from min K to max K do (
+	  for q from -p to length K_(max K) do (
+	       myList=append(myList, {p,q}=> epqrMaps(K,p,q,r)); )
+	       	    );
+	       new HashTable from myList
+      )
+
+
+
+
+
+-----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------
 -- get the inverse image of C under the map d
 invSubmodule := (d,C) -> ker (inducedMap ((target d)/C,target d) * d)
 
@@ -369,11 +514,14 @@ viewHelp SpectralSequences
 restart
 needsPackage "SpectralSequences";
 debug SpectralSequences;
+needsPackage "ChainComplexExtras";
+
 
 
 -- This is the first example I studied.
 -- It has the advantage that we can compute everything explicitly by hand.
 -- Goal:  Try to implement the example using the current version of the code.
+
 
 k=QQ
 -- make some maps
@@ -387,8 +535,6 @@ d1*d2
 -- throughout this example I'm thinking homologically (by default this is how M2
 -- thinks of an displays chain complexes).  
 -- NAMELY THE DIFFERENTIAL HAS DEGREE -1.  
---I'm assuming that the spectral sequence
--- code in this version is designed for this.
 
 
 C=chainComplex({d1,d2})
@@ -405,17 +551,11 @@ prune HH C
 -- first make subcomplexes of C which will allow us to make a filtered complex
 
 -- We want to use homological indexing for the filtration.  
-
 --THE CONVENTION WE WANT TO FOLLOW IS IF C IS A COMPLEX WHOSE DIFFERENTIAL HAS
 -- DEGREE -1 THEN THE FILTRATION SHOULD HAVE THE SHAPE
 -- F_nC > F_(n-1)C. (See section 5.4 of Weibel.) 
 -- Q:  IS THIS ASSCENDING OR DESCENDING?? (I always forget the terminology.)
 -- 
---We will need to implement K_n operation for a filtered complex. 
---  for now K^(-n) should produce what we want although things will be shifted.
-
--- For now try to make appropriate chain complex maps to test the filtered complex
--- constructor.
 
 -- I want to make a filtration of the form
 -- C=F3C > F2C > F1C > F0C =0.
@@ -429,10 +569,10 @@ F3C0=image matrix(k,{{1}})
 
 -- The F3C complex. (Which should be isomorphic to C.  I want to explicitly make
 -- computer realize all terms in this complex as appropriate sub-quotients.)
+
 F3C=chainComplex({inducedMap(F3C0,F3C1,C.dd_1),inducedMap(F3C1,F3C2,C.dd_2)})
 F3C==C
 -- so I seem to have inputed things correctly.
-
 -- The F2C complex. 
 -- first make the modules 
 
@@ -442,9 +582,6 @@ F2C0=image matrix(k,{{1}})
 -- The F2C complex.  (Which should be a sub complex of F3C.)
 F2C=chainComplex({inducedMap(F2C0,F2C1,C.dd_1),inducedMap(F2C1,F2C2,C.dd_2)})
 
-prune F2C.dd_1
-prune F2C.dd_2
-prune HH F2C
 
 -- It is clear that the F2C complex is a sub complex of F3C in the most obvious way.
 --  Now try to construct an explicit chain complex map yielding this inclusion
@@ -456,13 +593,7 @@ prune HH F2C
 
 m2=chainComplexMap(F3C,F2C,{inducedMap(F3C_0,F2C_0,id_(F3C_0)), inducedMap(F3C_1,F2C_1,id_(F3C_1)),inducedMap(F3C_2,F2C_2,id_(F3C_2))})
 
-needsPackage "ChainComplexExtras"
-
-m2=chainComplexMap(F3C,F2C,{inducedMap(F3C_0,F2C_0,id_(F3C_0)), inducedMap(F3C_1,F2C_1,id_(F3C_1)),inducedMap(F3C_2,F2C_2,id_(F3C_2))})
-
--- apparently we need the package "ChainComplexExtras"
 -------------------------------------------------------------
-
 -- The F1C complex.  (Which should satisfy the relation F3C>F2C>F1C.)
 
 -- make the modules.
@@ -490,293 +621,32 @@ F0C=  chainComplex({inducedMap(F0C0,F0C1,C.dd_1),inducedMap(F0C1,F0C2,C.dd_2)})
 -- try to make a chain complex map expressing F0C as a subcomplex of F3C.
 m0=chainComplexMap(F3C,F0C,{inducedMap(F3C_0,F0C_0,id_(F3C_0)), inducedMap(F3C_1,F0C_1,id_(F3C_1)),inducedMap(F3C_2,F0C_2,id_(F3C_2))})
 
-
 ----------------------------------------------------------------------
---try now to make filteredComplex.
-filteredComplex({m1,m2})
--- the indexing of the filtertration should be different than mine, 
--- but what should be true is that the complex with label 2 should
--- be a sub complex of the complex with label 1 which is clearly not the case.
-
--- try different order.
-filteredComplex({m2,m1})
--- that seems to work better.  (the indexing is still different from mine which I would
--- like to change.
-
--- also by default the constuctor seems to add the zero complex.
-
--- also by default the constructor seems to add the zero complex. 
--- what happens if I explicilty add the zero complex?
-K=filteredComplex({m2,m1,m0})
-
--- no extra terms seem to be added.  So this seems to be OK.
-
---------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------
--- now let's try the existing spectral sequence code.
--- computing the spectral sequence by hand yeilds 4-nonzero modules on the E0 page
--- all maps on the E0 page are zero, 4 nonzero modules on the E1 page, one non-zero
--- map on the E1 page (which is an isomorphism), 2 nonzero modules on the E2 page, one
--- non-zero map on the E2 page (which is an isomorphism) and the spectral sequence
--- abuts to zero on the E3 page.  
-
-E=spectralSequence K
-
-support E_0
-support E_1
--- since there are suppose to be 4 non-zero modules on the E1 page there must be an
--- error in the existing code some where.
--- I won't bother trying to compute the maps.
---------------------------------------------------------------------------------------
-
---------------------------------------------------------------------------------------
--- we want to have an underscore operator for filtered complexes.
--- this can be done easily as follows.
---  Essentially copying the ^ method -- I'm assuming that it works OK.
-
-FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
-     -- We assume that spots form a consecutive sequence of integers
-  (maxK, minK) := (max K, min K);  -- all filtrations are assumed separated & exhaustive
-  if K#?p then K#p else if p < minK then K#minK else if p > maxK then K#maxK
-  else error "expected no gaps in filtration")
-
--- examples
-K_0
-K_1
-K_2
-
-maps={m2,m1,m0}
-#maps
-
- {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p)
-
-
-homologicalFilteredComplex=method()
-
--- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
--- defining inclusion maps C=F_nC > F_(n-1)C > ... > F_0 C = 0
--- -- subcomplexes of a chain complex (or simplicial complexes) 
--- and produces a filtered complex with integer keys the
--- corresponing  chain complex.
--- this should be merged with the filtered complex constructor and should be
--- the default.  An option should allow the user to choose to
--- do things cohomologically.
-
-
-homologicalFilteredComplex List := L -> (
-  local maps;
-  local C;
-  if #L === 0 
-  then error "expected at least one chain complex map or simplicial complex";
-  if all(#L, p -> class L#p === SimplicialComplex) then (
-    kk := coefficientRing L#0;
-    C = chainComplex L#0;	       	    -- all filtrations are exhaustive
-    maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
-        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
-  else (
-    maps = L;
-    if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
-      error "expected sequence of chain complexes");
-    C = target maps#0;	       	       	    -- all filtrations are exhaustive
-    if any(#maps, p-> target maps#p != C) then (
-      error "expected all map to have the same target"));     
-  Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
-  -- THE FOLLOWING LINE HAS BEEN CHANGED FROM THE FILTERED COMPLEX CONSTRUCTOR
-  P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
-  if (last P)#1 != Z then P = P | {#maps+1 => Z};
-  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
-
+-- Now test Nathan's spectral sequence code --------------------------
+----------------------------------------------------------------------
 K=homologicalFilteredComplex {m2,m1,m0}
 
-K
-K_0
-K^0
-K^1
-K_1
-max K
-
-
-------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------
--- the following portion of code contains general purpose methods that are simultaneously
--- being tested on the running example. -----
--- they need to be integrated in the existing code and tested on more sophisticated examples.
--- the running example is K=homologicalFilteredComplex {m2,m1,m0}
--- where the chain complex maps m2,m1,m0 are constructed above.
--------------------------------------------------------------------------------------
-
-
-----------------------
--- below are the methods which compute the
--- individual terms on a page of a spectral sequence
--- WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS.
------------------------
--- By default, of the primitative homological constructor above the maximum integer key
--- of the filtered complex corresponds to the ambient complex.
--- This is used in the formula's below but should be made more "fool proof" in 
--- what follows.
-
--- the formula's below are the homological versions of the ones in I.2.4 of Danilov's 
--- treatment of spectral sequences in Shafarevich's Encyolpaedia of 
--- Math Algebraic Geometry II.  
--- In any event it is easy enough to prove directly that they satisfy the requirments for
--- a spectral sequence.
-
-zpq=method()
-zpq(FilteredComplex,ZZ,ZZ,ZZ):= (K,p,q,r)->(
-ker inducedMap((K_(max K))_(p+q-1) / K_(p-r) _ (p+q-1), 
-     K_p _ (p+q), K_(max K).dd_(p+q))
-     )
-zpq(K,0,0,0)
-
-
-bpq=method()
-bpq(FilteredComplex,ZZ,ZZ,ZZ):=(K,p,q,r) ->(
-    ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q))
-      )
-bpq(K,0,0,0)
-
--- the following will compute the pq modules on the rth page explicitly.
-epq=method()
-epq(FilteredComplex,ZZ,ZZ,ZZ):=(K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)) )
-
-epq(K,0,0,0)
-
-prune epq(K,3,-2,0)
-prune epq(K,2,0,0)
-prune epq(K,1,-1,0)
-prune epq(K,1,0,0)
-prune epq(K,100,-100,0)
-
--- let's compute all non-zero modules on the E0 page.
-
-myList:={};
-for p from 0 to 3 do (
-     for q from -p to 2-p do ( myList=append(myList,{p,q}=> prune epq(K,p,q,0)) ) )
-myHash=new HashTable from myList
-
-
-
--- the above seems to compute the non-zero modules on the E0 page correctly.
--- let's try the E1 page
-
-prune epq(K,3,-2,1)
-prune epq(K,2,0,1)
-prune epq(K,1,-1,1)
-prune epq(K,1,0,1)
-
--- let's compute all non-zero modules on the E1 page.
-myList:={};
-for p from 0 to 3 do (
-     for q from -p to 2-p do ( myList=append(myList,{p,q}=> prune epq(K,p,q,1)) ) )
-myHash=new HashTable from myList
-
--- the above agrees with my calculations by hand.
--- let's compute all non-zero modules on the E2 page.
-
-myList:={};
-for p from 0 to 3 do (
-     for q from -p to 2-p do ( myList=append(myList,{p,q}=> prune epq(K,p,q,2)) ) )
-myHash=new HashTable from myList
-
--- the above agrees with my calculations by hand.
-
--- let's compute all non-zero modules on the E3 page.
-
-myList:={};
-for p from 0 to 3 do (
-     for q from -p to 2-p do ( myList=append(myList,{p,q}=> prune epq(K,p,q,3)) ) )
-myHash=new HashTable from myList
-
--- again the above agrees with my calculations by hand.
-
--- a more general purpose method which computes a hash table containg all non-zero
--- modules is the following.
-
-min K
-computeErModules=method()
-
-computeErModules(FilteredComplex,ZZ):= (K,r) -> (myList:={};
-     for p from min K to max K do (
-	  for q from -p to length K_(max K) do (
-	       myList=append(myList, {p,q}=> epq(K,p,q,r)); )
-	       	    );
-	       new HashTable from myList
-      )
-E0Modules = computeErModules(K,0)
+E0Modules=computeErModules(K,0)
 
 new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
 
--- so we get the same picture as before.
+E0Maps=computeErMaps(K,0)
 
-E1Modules = computeErModules(K,1)
-
+E1Modules=computeErModules(K,1)
 new HashTable from apply(keys E1Modules, i-> i=> prune E1Modules#i)
 
--- so we get the same picture as before.
-
-E2Modules = computeErModules(K,2)
-new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
-
--- so we get the same picture as before.
-
-E3Modules = computeErModules(K,3)
-new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
-
--- so we get the same picture as before.
-
-------------------------------------------------------------------------------
--- now want to try to compute the maps with source pq on the rth page.
--- AGAIN WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS ----------------------
------------------------------------------------------------------------------
-
-epqrMaps=method()
-epqrMaps(FilteredComplex,ZZ,ZZ,ZZ):=(K,p,q,r)-> (
-     inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),K_(max K).dd_(p+q)))
-
--- In our running example the (3,-2) map on the E2 page is suppose to be a non-zero
--- isomorphism.
-prune epqrMaps(K,3,-2,2)
--- so this seems to be the case.
-
--- The (2,0) map on th E1 page is also suppose to be a non-zero isomorphism
-
-prune epqrMaps(K,2,0,1)
--- this also seems to be the case.
-
---Let's now compute all of the maps on the Er page as we did above for the modules.
-
-computeErMaps=method()
-
-computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
-     for p from min K to max K do (
-	  for q from -p to length K_(max K) do (
-	       myList=append(myList, {p,q}=> epqrMaps(K,p,q,r)); )
-	       	    );
-	       new HashTable from myList
-      )
-
-
-
-E0Maps = computeErMaps(K,0)
-
-new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
-
-E1Maps = computeErMaps(K,1)
-
+E1Maps=computeErMaps(K,1)
 new HashTable from apply(keys E1Maps, i-> i=> prune E1Maps#i)
 
-E2Maps = computeErMaps(K,2)
 
+E2Modules=computeErModules(K,2)
+new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
+
+E2Maps=computeErMaps(K,2)
 new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
-
-E3Maps = computeErMaps(K,3)
-
-new HashTable from apply(keys E3Maps, i-> i=> prune E3Maps#i)
-
--- the above appears to be working correctly.  Need to integrate code in
--- actual package, export the functions and test on more sophisticated examples.
--------------------------------------------------------------------------------------
+------------------------------------------------------------------------
+--- All of the above coincidies with what I have computed by hand. -----
+------------------------------------------------------------------------
 
 
 
