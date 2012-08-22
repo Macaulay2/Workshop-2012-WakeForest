@@ -36,7 +36,8 @@ newPackage(
 --dual to the space, and
 --wants pieces of a resolution to be R-TensorModules
 
-export{Tensor,TensorModule,tensor',tensorModule,
+export{Tensor,TensorModule,FreeTensorModule,
+     tensor',tensorModule,
      tensorDimensions,tensorComposition,
      einsteinSummation}
 
@@ -90,8 +91,7 @@ tensorDimensions TensorModule := M -> M#(gs"dimensions")
 
 --Printing TensorModules:
 TensorModule.synonym="tensor module"
-net TensorModule := M -> (net module M)|
-     "{"|(fold(M#(gs"dimensions")/toString,(i,j)->i|"x"|j))|"}";
+net TensorModule := M -> fold(apply(M#(gs"factors"),net@@module),(i,j)->i|" ** "|j)
 TensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
      n := rank ambient M;
@@ -101,6 +101,24 @@ TensorModule#{Standard,AfterPrint} = M -> (
      ", dimensions "|toString(M#(gs"dimensions"));
      << endl;
      )
+
+-------------------------------------
+--Free Tensor Modules
+-------------------------------------
+FreeTensorModule = new Type of TensorModule
+net FreeTensorModule := M -> (net module M)|
+     "{"|(fold(M#(gs"dimensions")/toString,(i,j)->i|"x"|j))|"}";
+FreeTensorModule#{Standard,AfterPrint} = M -> (
+     << endl;				  -- double space
+     n := rank ambient M;
+     << concatenate(interpreterDepth:"o") << lineNumber << " : "
+     << "Free "
+     << ring M
+     << "-TensorModule of order "|toString(#M#(gs"dimensions"))|
+     ", dimensions "|toString(M#(gs"dimensions"));
+     << endl;
+     )
+
 -------------------------------------
 --Building tensor modules:
 -------------------------------------
@@ -109,7 +127,7 @@ tm=tensorModule = method()
 --make a free module into a tensor module:
 tm (Ring,List) := (R,dims) -> (
      d:=product dims;
-     new TensorModule of Tensor from (
+     new FreeTensorModule of Tensor from (
 	  new HashTable from (pairs R^d)|{
       	       gs"factors" =>  apply(dims,i->R^i),
      	       gs"dimensions" =>  dims,
@@ -121,7 +139,8 @@ tm (Ring,List) := (R,dims) -> (
 --for tensoring with other such modules to build higher-order
 --non-free tensor modules:
 tm Module := M -> (
-      new TensorModule of Tensor from (
+     T:=if isFreeModule M then FreeTensorModule else TensorModule;
+      new T of Tensor from (
        	   new HashTable from (pairs M)|{
 		gs"factors" =>  {M},
        	   	gs"dimensions" =>  {numgens M},
@@ -134,7 +153,8 @@ tm TensorModule := identity
 tm (Module,List) := (M,dims) -> (
      d:=product dims;
      if not numgens M == d then error "dimension mismatch";
-      new TensorModule of Tensor from (
+     if not isFreeModule M then error "expected a free module";
+     new FreeTensorModule of Tensor from (
 	   new HashTable from (pairs M)|{
 	   	gs"factors" =>  {M},
        	   	gs"dimensions" =>  dims,
@@ -158,12 +178,18 @@ tm List := (fctrs) -> (
      dims:=flatten(fctrs/tensorDimensions);
      f:=flatten(fctrs/tmf);
      M:=fold(fctrs/module,(i,j)->i**j);
-      new TensorModule of Tensor from (
+     T:=if all(fctrs,isFreeModule) then FreeTensorModule else TensorModule;
+      new T of Tensor from (
 	   new HashTable from (pairs M)|{
 	   	gs"factors" => f,
        	   	gs"dimensions" => dims,
 	        symbol module => M})
      )
+
+----------------------------
+--Comparing tensor modules
+----------------------------
+TensorModule == TensorModule := (M,N) -> (M#(gs"factors") / module)==(N#(gs"factors") / module)
 
 ----------------------------
 --TensorModule combinations
@@ -194,6 +220,8 @@ vector Tensor := t -> new (module t) from t
 
 --Extract an entry of a tensor
 --by a multi-index
+
+
 Tensor _ Sequence := (v,L) -> (
      M := tensorModule v;
      dims := M#(gs"dimensions");

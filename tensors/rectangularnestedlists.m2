@@ -273,7 +273,7 @@ f(4,5,6)
 --directly for tensors
 -------------------------------
 -----No longer necessary:
-RNL_Sequence:=(N,s) -> (
+RNL _ Sequence:=(N,s) -> (
      if not all(s,i->instance(i,ZZ) or 
 	  instance(i,Symbol) or 
 	  instance(i,Nothing)) then 

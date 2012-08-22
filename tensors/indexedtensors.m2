@@ -36,6 +36,12 @@ IndexedTensor#{Standard,AfterPrint} = T -> (
 
 end
 
+--desired behavior:
+
+IndexedTensor _ SequenceOfIntegers = entry
+IndexedTensor _ SequenceOfIntegers = entry
+
+
 
 restart
 debug loadPackage"Tensors"
