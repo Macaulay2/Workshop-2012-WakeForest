@@ -1,13 +1,85 @@
 restart
 debug loadPackage("Tensors")
-R=QQ[a,b,c]
+R=QQ[a..z]
+S=QQ[x,y]
 
---making modules of tensors:
-M0=R^3 ** R^3 ** R^4--doesn't remember it's a tensor product
-M=tensorModule(R,{4,3,3})--as a tensor module, M remembers its factors
-M'=tensorModule(R,{3,4,3})
+-----------------
+--Making a tensor
+-----------------
+
+ -- from a nested list
+T=tensor'{
+     {{a,b},{c,d}},
+     {{e,f},{g,h}},
+     {{i,j},{k,l}}}
+
+-- from a list and given dimensions
+tensor'({3,2,2},{a,b,c,d,e,f,g,h,i,j,k,l})
+
+-- generic tensors
+genericTensor(R,{3,2,2})
+U=genericTensor(R,12,{3,2,2})
+genericTensor(R,m,{3,2,2})
+
+-- random tensors of numbers
+randomTensor(ZZ,{4,2,2})
+randomTensor(QQ,{4,2,2})
+
+-- random tensors of homogeneous polynomials
+randomTensor(S,1,{4,2,2})
+
+-----------------------
+--Operations on tensors
+-----------------------
+3*T+U
+T**U
+
+---------
+--Entries
+---------
+T_5 -- by ordinal
+T_(1,0,1) -- by position
+
+m=matrix{{1,2,3},{4,5,6}}
+tensor'({2,3},flatten entries m)
+M=(tm target m)**(tm source m)
+new M from vector flatten entries m
+class M
+tensor' Matrix := m -> (
+     M:=(tm target m)**(tm dual source m);
+          
+     )
+tm R^{1,1,1}
+R^{1,1,1}
+------------------------
+--Slices
+------------------------
+-- to get slices of a tensor, use a 
+-- list subscript with blank spots (nulls)
+-- for unspecified indices:
+t
+t_{,0,}
+t
+t_{1,,}
+t
+t_{1,1,}
+
+--------------------
+--Modules of tensors
+--------------------
+
+-- a tensor is an element
+-- of a "tensor module",
+M=class t
+
+-- which is a module that remembers
+-- it is a tensor product of smaller 
+-- modules:
+M0=R^3 ** R^2 ** R^2 -- doesn't remember it's a tensor product
+M -- remembers
+M'=tensorModule(R,{2,2,3}) -- does
 (class M0,class M,class M')
-new TensorModule from M
+new TensorModule from M--doesn't know it's free
 M==M0--they are equal as modules, 
 M===M0--but not as hashtables,
 M==M'--and tensor modules with different factors are different

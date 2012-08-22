@@ -43,6 +43,11 @@ export{Tensor,TensorModule,FreeTensorModule,
 
 gs = getSymbol
 
+cs=coreSymbol = method()     
+cs String := nam -> (
+     getGlobalSymbol(Core#"private dictionary",nam))
+cs"RawRing"
+
 --these are currently used for einstein summation,
 --which needs to be rewritten
 protect Stops
@@ -90,15 +95,29 @@ tensorDimensions Module := M -> {numgens M}
 tensorDimensions TensorModule := M -> M#(gs"dimensions")
 
 --Printing TensorModules:
+moduleSummary=M->(
+     if M.?generators then
+     if M.?relations then << ", subquotient of " << ambient M
+     else << ", submodule of " << ambient M
+     else if M.?relations then << ", quotient of " << ambient M
+     else if n > 0 then (
+	  if not all(degrees M, d -> all(d, zero)) 
+	  then << ", degrees " << if degreeLength M === 1 then flatten degrees M else degrees M;
+	  );
+     )
+
+
+
 TensorModule.synonym="tensor module"
 net TensorModule := M -> fold(apply(M#(gs"factors"),net@@module),(i,j)->i|" ** "|j)
 TensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
-     n := rank ambient M;
+     n := numgens M;
      << concatenate(interpreterDepth:"o") << lineNumber << " : "
      << ring M
      << "-TensorModule of order "|toString(#M#(gs"dimensions"))|
      ", dimensions "|toString(M#(gs"dimensions"));
+     moduleSummary M;
      << endl;
      )
 
@@ -110,12 +129,13 @@ net FreeTensorModule := M -> (net module M)|
      "{"|(fold(M#(gs"dimensions")/toString,(i,j)->i|"x"|j))|"}";
 FreeTensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
-     n := rank ambient M;
+     n := numgens M;
      << concatenate(interpreterDepth:"o") << lineNumber << " : "
      << "Free "
      << ring M
      << "-TensorModule of order "|toString(#M#(gs"dimensions"))|
      ", dimensions "|toString(M#(gs"dimensions"));
+     moduleSummary M;
      << endl;
      )
 
@@ -145,7 +165,7 @@ tm Module := M -> (
 		gs"factors" =>  {M},
        	   	gs"dimensions" =>  {numgens M},
 	        symbol module => M}
-	   );
+	   )
      )
 tm TensorModule := identity
 
@@ -221,18 +241,27 @@ vector Tensor := t -> new (module t) from t
 --Extract an entry of a tensor
 --by a multi-index
 
+--fast access without error checking
 tensorAccess = method()
 tensorAccess (Tensor,Sequence) := (t,s) -> (
-     M := tensorModule t;
-     dims := M#(gs"dimensions");
+     dims := tensorDimensions t;
      if not #s == #dims then error "dimension mismatch";
      if not all(0..<#s,i->s#i<dims#i) then error "index out of range";
      ind := s#0;
-     for i from 0 to #s-2 do ind = ind*dims#i + s#(i+1);
+     for i in 1..<#s do ind = ind*(dims#i) + s#i;
      t_ind
      )
 
 Tensor _ Sequence := tensorAccess
+
+fta=fastTensorAccess = method()
+tensorAccess (Tensor,Sequence) := (t,s) -> (
+     dims := tensorDimensions t;
+     ind := s#0;
+     for i in 1..<#s do ind = ind*(dims#i) + s#i;
+     t_ind
+     )
+
 
 ------------------------------------------
 --Making tensors without RNLs (previously TensorArrays)
@@ -362,7 +391,7 @@ saf BasicList := l -> (
      f Thing := x -> f (1:x);
      f
      )
-ssaf=
+sasf=
 symbolicArgumentSequenceFunction=x->toSequence@@(saf x)
 
 ---------------------
@@ -373,9 +402,10 @@ Tensor_List := (t,l) -> (
      f:=tensorFunction t;
      g:=nullArgumentSequenceFunction l;
      nulls:=positions(l,i->i===null);
-     dims:=dims_nulls;
-     M:=tensorModule(ring t, dims);
-     inds:=acp apply(dims,i->0..<i);
+     dims:=tensorDimensions t;
+     odims:=dims_nulls;
+     M:=tensorModule(ring t, odims);
+     inds:=acp apply(odims,i->0..<i);
      ents:=toList apply(inds,f@@g);
      new M from vector ents
      )
@@ -439,6 +469,8 @@ diff(Tensor,RingElement) := (t,r) -> t/(i->diff(i,r))
 ---------------------
 --Load part 3
 ---------------------
+load "./tensors/gentensors.m2"
+
 load "./tensors/indexedtensors.m2"
 
 --
