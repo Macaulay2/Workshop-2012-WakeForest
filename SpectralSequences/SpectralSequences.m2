@@ -511,6 +511,96 @@ K=filteredComplex({m2,m1,m0})
 
 -- no extra terms seem to be added.  So this seems to be OK.
 
+--------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------
+-- now let's try the existing spectral sequence code.
+-- computing the spectral sequence by hand yeilds 4-nonzero modules on the E0 page
+-- all maps on the E0 page are zero, 4 nonzero modules on the E1 page, one non-zero
+-- map on the E1 page (which is an isomorphism), 2 nonzero modules on the E2 page, one
+-- non-zero map on the E2 page (which is an isomorphism) and the spectral sequence
+-- abuts to zero on the E3 page.  
+
+E=spectralSequence K
+
+support E_0
+support E_1
+-- since there are suppose to be 4 non-zero modules on the E1 page there must be an
+-- error in the existing code some where.
+-- I won't bother trying to compute the maps.
+--------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------
+-- we want to have an underscore operator for filtered complexes.
+-- this can be done easily as follows.
+--  Essentially copying the ^ method -- I'm assuming that it works OK.
+
+FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
+     -- We assume that spots form a consecutive sequence of integers
+  (maxK, minK) := (max K, min K);  -- all filtrations are assumed separated & exhaustive
+  if K#?p then K#p else if p < minK then K#minK else if p > maxK then K#maxK
+  else error "expected no gaps in filtration")
+
+-- examples
+K_0
+K_1
+K_2
+
+maps={m2,m1,m0}
+#maps
+
+ {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p)
+
+
+homologicalFilteredComplex=method()
+homologicalFilteredComplex( )
+
+-- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
+-- defining inclusion maps C=F_nC > F_(n-1)C > ... > F_0 C = 0
+-- -- subcomplexes of a chain complex (or simplicial complexes) 
+-- and produces a filtered complex with integer keys the
+-- corresponing  chain complex.
+-- this should be merged with the filtered complex constructor and should be
+-- the default.  An option should allow the user to choose to
+-- do things cohomologically.
+
+
+homologicalFilteredComplex List := L -> (
+  local maps;
+  local C;
+  if #L === 0 
+  then error "expected at least one chain complex map or simplicial complex";
+  if all(#L, p -> class L#p === SimplicialComplex) then (
+    kk := coefficientRing L#0;
+    C = chainComplex L#0;	       	    -- all filtrations are exhaustive
+    maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
+        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
+  else (
+    maps = L;
+    if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
+      error "expected sequence of chain complexes");
+    C = target maps#0;	       	       	    -- all filtrations are exhaustive
+    if any(#maps, p-> target maps#p != C) then (
+      error "expected all map to have the same target"));     
+  Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
+  -- THE FOLLOWING LINE HAS BEEN CHANGED FROM THE FILTERED COMPLEX CONSTRUCTOR
+  P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
+  if (last P)#1 != Z then P = P | {#maps+1 => Z};
+  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
+
+K=homologicalFilteredComplex {m2,m1,m0}
+
+K
+K_0
+K^0
+K^1
+K_1
+
+K_1==K^1
+
+K^infinity
+
+
+-- so want the relationship between K_n and K^n is that K_n=K^(-n).
 
 
 ---------------------------------------------------------------
