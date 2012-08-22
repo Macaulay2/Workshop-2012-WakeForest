@@ -175,8 +175,8 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 FilteredComplex = new Type of HashTable
 FilteredComplex.synonym = "filtered chain complex"
 
--- Retrieves the indices  of the (possibly nontrivial) pieces of the filtration 
-spots = K -> select(keys K, i -> class i === ZZ)
+-- Retrieves the sorted integer keys of a hash table. 
+spots = K -> sort select(keys K, i -> class i === ZZ)
 max FilteredComplex := K -> max spots K
 min FilteredComplex := K -> min spots K
 
@@ -363,6 +363,160 @@ installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
 
+
+
+--Nathan's first example
+restart
+needsPackage "SpectralSequences";
+debug SpectralSequences;
+
+
+-- This is the first example I studied.
+-- It has the advantage that we can compute everything explicitly by hand.
+-- Goal:  Try to implement the example using the current version of the code.
+
+k=QQ
+-- make some maps
+d2=matrix(k,{{1},{0}})
+d1=matrix(k,{{0,1}})
+d1*d2
+
+
+
+-- make a chain complex with these maps
+-- throughout this example I'm thinking homologically (by default this is how M2
+-- thinks of an displays chain complexes).  
+-- NAMELY THE DIFFERENTIAL HAS DEGREE -1.  
+--I'm assuming that the spectral sequence
+-- code in this version is designed for this.
+
+
+C=chainComplex({d1,d2})
+(C.dd_1)*(C.dd_2)==0
+
+C.dd_2==d2
+C.dd_1==d1
+prune HH C
+
+-- the above shows that C is acyclic.  
+--Hence whatever spectral sequences associated to filtrations of C 
+-- we compute they should abut to zero.
+
+-- first make subcomplexes of C which will allow us to make a filtered complex
+
+-- We want to use homological indexing for the filtration.  
+
+--THE CONVENTION WE WANT TO FOLLOW IS IF C IS A COMPLEX WHOSE DIFFERENTIAL HAS
+-- DEGREE -1 THEN THE FILTRATION SHOULD HAVE THE SHAPE
+-- F_nC > F_(n-1)C. (See section 5.4 of Weibel.) 
+-- Q:  IS THIS ASSCENDING OR DESCENDING?? (I always forget the terminology.)
+-- 
+--We will need to implement K_n operation for a filtered complex. 
+--  for now K^(-n) should produce what we want although things will be shifted.
+
+-- For now try to make appropriate chain complex maps to test the filtered complex
+-- constructor.
+
+-- I want to make a filtration of the form
+-- C=F3C > F2C > F1C > F0C =0.
+
+-- first make the modules.
+
+F3C2=image matrix(k,{{1}})
+F3C1=image matrix(k,{{1,0},{0,1}})
+F3C0=image matrix(k,{{1}})
+
+
+-- The F3C complex. (Which should be isomorphic to C.  I want to explicitly make
+-- computer realize all terms in this complex as appropriate sub-quotients.)
+F3C=chainComplex({inducedMap(F3C0,F3C1,C.dd_1),inducedMap(F3C1,F3C2,C.dd_2)})
+F3C==C
+-- so I seem to have inputed things correctly.
+
+-- The F2C complex. 
+-- first make the modules 
+
+F2C2= image matrix(k,{{1}})
+F2C1=image matrix(k,{{1,0},{0,0}})
+F2C0=image matrix(k,{{1}})
+-- The F2C complex.  (Which should be a sub complex of F3C.)
+F2C=chainComplex({inducedMap(F2C0,F2C1,C.dd_1),inducedMap(F2C1,F2C2,C.dd_2)})
+
+prune F2C.dd_1
+prune F2C.dd_2
+prune HH F2C
+
+-- It is clear that the F2C complex is a sub complex of F3C in the most obvious way.
+--  Now try to construct an explicit chain complex map yielding this inclusion
+-- of chain complexes.
+
+-- now want to construct a chain complex map defining the inclusion F2C --> F3C.
+-- we will label such maps by the source. (The number 2 in this case.) 
+
+
+m2=chainComplexMap(F3C,F2C,{inducedMap(F3C_0,F2C_0,id_(F3C_0)), inducedMap(F3C_1,F2C_1,id_(F3C_1)),inducedMap(F3C_2,F2C_2,id_(F3C_2))})
+
+needsPackage "ChainComplexExtras"
+
+m2=chainComplexMap(F3C,F2C,{inducedMap(F3C_0,F2C_0,id_(F3C_0)), inducedMap(F3C_1,F2C_1,id_(F3C_1)),inducedMap(F3C_2,F2C_2,id_(F3C_2))})
+
+-- apparently we need the package "ChainComplexExtras"
+-------------------------------------------------------------
+
+-- The F1C complex.  (Which should satisfy the relation F3C>F2C>F1C.)
+
+-- make the modules.
+
+F1C2=image matrix(k,{{0}})
+F1C1= image matrix(k,{{1,0},{0,0}})
+F1C0 = image matrix(k,{{1}})
+
+--  The F2C complex.  (Which should be a sub complex of F2C and F3C.  For now
+-- I will make it an explicit subcomplex of F3C which will be the "ambient complex".)
+
+F1C = chainComplex({inducedMap(F1C0,F1C1,C.dd_1),inducedMap(F1C1,F1C2,C.dd_2)})
+
+m1=chainComplexMap(F3C,F1C,{inducedMap(F3C_0,F1C_0,id_(F3C_0)), inducedMap(F3C_1,F1C_1,id_(F3C_1)),inducedMap(F3C_2,F1C_2,id_(F3C_2))})
+
+
+-- the terms / modules corresponding to the F0C complex. 
+F0C2= image matrix(k,{{0}})
+F0C1 = image matrix(k,{{0,0},{0,0}})
+F0C0= image matrix(k,{{0}})
+
+
+F0C=  chainComplex({inducedMap(F0C0,F0C1,C.dd_1),inducedMap(F0C1,F0C2,C.dd_2)})
+
+-- try to make a chain complex map expressing F0C as a subcomplex of F3C.
+m0=chainComplexMap(F3C,F0C,{inducedMap(F3C_0,F0C_0,id_(F3C_0)), inducedMap(F3C_1,F0C_1,id_(F3C_1)),inducedMap(F3C_2,F0C_2,id_(F3C_2))})
+
+
+----------------------------------------------------------------------
+--try now to make filteredComplex.
+filteredComplex({m1,m2})
+-- the indexing of the filtertration should be different than mine, 
+-- but what should be true is that the complex with label 2 should
+-- be a sub complex of the complex with label 1 which is clearly not the case.
+
+-- try different order.
+filteredComplex({m2,m1})
+-- that seems to work better.  (the indexing is still different from mine which I would
+-- like to change.
+
+-- also by default the constuctor seems to add the zero complex.
+
+-- also by default the constructor seems to add the zero complex. 
+-- what happens if I explicilty add the zero complex?
+K=filteredComplex({m2,m1,m0})
+
+-- no extra terms seem to be added.  So this seems to be OK.
+
+
+
+---------------------------------------------------------------
+-- examples by other people.
+---------------------------------------------------------------
+
 restart
 needsPackage "SpectralSequences";
 debug SpectralSequences;
@@ -403,46 +557,4 @@ netList apply(lim, k -> prune Tor_k(M,pushForward(map(S,R),N)))
 netList support E_0
 netList support E_1
 netList support E_infinity
-
--- Nathan's first example
-id_(QQ^1) || 0*id_(QQ
-C = chainComplex(matrix(QQ, {{1},{0}}), matrix(QQ,{{0,1}}))
-M1 = { matrix(QQ,{{1}}), matrix(QQ, {{1,0},{0,0}}), matrix(QQ,{{1}})
-
--- filtered simplicial complex
-D0 = simplicialComplex {product gens S}
-D1 = simplicialComplex {x*y, x*z}
-D2 = simplicialComplex {x*y}
-
-K = filteredComplex{D0,D1,D2}
-
-code(Hom,Module,Matrix)
-     
-
--- filtration by successive skeleta of the real projective plane
-S = QQ[a..f];
-D = simplicialComplex monomialIdeal(a*b*c, a*b*f, a*c*e, a*d*e, a*d*f, b*c*d,
-  b*d*e,b*e*f,c*d*f,c*e*f)
-
-C = chainComplex D
-D1 =simplicialComplex first entries faces(1,D)
-D0 =simplicialComplex first entries faces(0,D)
-Z =simplicialComplex first entries faces(-1,D)
-ring Z
-chainComplex Z
-
-K = filteredComplex {D,D1,D0,Z}
-E = spectralSequence K
-E_0
-
-code(chainComplex, SimplicialComplex)
-ring faces(2,D)
-
-chainComplex SimplicialComplex := (D) -> (
-  d := dim D;
-  C := if d < -1 then (coefficientRing ring D)^0[-1]
-  else if d === -1 then (coefficientRing ring D)^1
-  else chainComplex apply(0..d, r -> boundary(r,D));
-  if D.cache.?labels then C[0] else C[1]
-  )
 
