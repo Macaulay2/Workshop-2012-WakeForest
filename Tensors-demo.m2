@@ -72,3 +72,4 @@ tcomp({{T',i,j,k,l}},{i})
 
 (hold symbol T)_(i_1,i_2)
 
+

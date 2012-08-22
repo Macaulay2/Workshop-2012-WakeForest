@@ -221,16 +221,18 @@ vector Tensor := t -> new (module t) from t
 --Extract an entry of a tensor
 --by a multi-index
 
-
-Tensor _ Sequence := (v,L) -> (
-     M := tensorModule v;
+tensorAccess = method()
+tensorAccess (Tensor,Sequence) := (t,s) -> (
+     M := tensorModule t;
      dims := M#(gs"dimensions");
-     if not #L == #dims then error "dimension mismatch";
-     ind := L#0;
-     for i from 0 to #L-2 do ind = ind*dims#i + L#(i+1);
-     v_ind
+     if not #s == #dims then error "dimension mismatch";
+     if not all(0..<#s,i->s#i<dims#i) then error "index out of range";
+     ind := s#0;
+     for i from 0 to #s-2 do ind = ind*dims#i + s#(i+1);
+     t_ind
      )
 
+Tensor _ Sequence := tensorAccess
 
 ------------------------------------------
 --Making tensors without RNLs (previously TensorArrays)
