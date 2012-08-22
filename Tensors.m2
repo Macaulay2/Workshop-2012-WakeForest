@@ -238,13 +238,34 @@ Tensor _ Sequence := tensorAccess
 --Making tensors without RNLs (previously TensorArrays)
 ------------------------------------------
 tensor' = method()
+--tensor'(TensorModule,Vector):=(M,v)-> new M from v
 tensor'(TensorModule,List):=(M,ents)-> new M from vector ents
 tensor'(List,List):=(dims,ents)->(
      R:=commonRing ents;
      M:=tensorModule(R,dims);
      tensor'(M,ents)
      )
+tensor'(List,Function):=(dims,f)->(
+     inds:=acp apply(dims,i->0..<i);
+     ents:=toList apply(inds,f);
+     tensor'(dims,ents))
+
 Ring**Tensor := (r,t) -> error "not implemented yet"
+
+Tensor/Function := (t,f) -> new class t from tensor' ((entries t)/f)
+
+
+----------------------------
+--Access to basis elements
+--by multi-index
+----------------------------
+
+TensorModule _ Sequence := (M,s) -> (
+     if not #tensorDimensions M == #s then error "dimension mismatch";
+     f:=method(Dispatch=>Thing);
+     f Sequence := i -> if i==s then 1 else 0;
+     new M from tensor'(tensorDimensions M,f)
+     )
 
 ----------------------------------------------
 --Conversions between Tensors
@@ -290,6 +311,76 @@ Tensor**Tensor := (v,w) -> (
      new M from (vector v)**(vector w)
      )
 Tensor ^ ZZ := (t,n) -> fold(for i in 0..<n list t,(i,j)->i**j)
+
+--------------------------------------
+--Turn a free tensor into a function that
+--accesses its entries
+--------------------------------------
+assertFreeTensor=method()
+assertFreeTensor Tensor := t -> if not isFreeModule tensorModule t then error "expected a tensor in a free tensor module"
+
+tensorFunction = method()
+tensorFunction Tensor := t -> (
+     f:=method(Dispatch=>Thing);
+     f Sequence := s -> t_s;
+     f
+     )
+
+----------------------------------
+--Turn a BasicList into a function
+--which plugs things into null
+--or symbolic entries
+----------------------------------
+isSymbolic = x -> instance(x,Symbol) or instance(x,IndexedVariable)
+
+naf=nullArgumentFunction = method(Dispatch=>Thing)
+naf BasicList := l -> (
+     nulls:=positions(l,i->i===null);
+     n:=#nulls;
+     toPositions:=hashTable toList apply(0..<n,i->nulls_i=>i);
+     f:=method(Dispatch=>Thing);
+     f Sequence := s -> if not #s===n then error("expected "|toString n|" arguments") else
+          apply(0..<#l,i->if 
+	  not l#i===null then l#i else
+	  s#(toPositions#i));
+     f Thing := x -> f (1:x);
+     f
+     )
+nasf=
+nullArgumentSequenceFunction=x->toSequence@@(naf x)
+
+saf=symbolicArgumentFunction = method(Dispatch=>Thing)
+saf BasicList := l -> (
+     uniqueSymbols:=unique sort toList select(l,isSymbolic);
+     n:=#uniqueSymbols;
+     toPositions:=hashTable toList apply(0..<n,i->uniqueSymbols_i=>i);
+     f:=method(Dispatch=>Thing);
+     f Sequence := s -> if not #s===n then error("expected "|toString n|" arguments") else
+	  apply(l,i->if 
+	  not isSymbolic i then i else
+	  s#(toPositions#i));
+     f Thing := x -> f (1:x);
+     f
+     )
+ssaf=
+symbolicArgumentSequenceFunction=x->toSequence@@(saf x)
+
+---------------------
+--Tensor slices
+---------------------
+Tensor_List := (t,l) -> (
+     assertFreeTensor t;
+     f:=tensorFunction t;
+     g:=nullArgumentSequenceFunction l;
+     nulls:=positions(l,i->i===null);
+     dims:=dims_nulls;
+     M:=tensorModule(ring t, dims);
+     inds:=acp apply(dims,i->0..<i);
+     ents:=toList apply(inds,f@@g);
+     new M from vector ents
+     )
+--------
+
 
 -------------------------
 --Tensor Compositions
@@ -340,15 +431,9 @@ h#N==1--unfortunately
 
 
 --a.c. SORT THIS UPWARD:
-tensor'(List,Function):=(L,f) -> tensor' rnl(L,f)
-TensorModule _ Sequence := (M,s) -> (
-     if not #tensorDimensions M == #s then error "dimension mismatch";
-     f:=method(Dispatch=>Thing);
-     f Sequence := i -> if i==s then 1 else 0;
-     new M from tensor'(tensorDimensions M,f)
-     )
-Tensor/Function := (t,f) -> new class t from tensor' ((entries t)/f)
 diff(Tensor,RingElement) := (t,r) -> t/(i->diff(i,r))
+
+
 
 
 ---------------------
