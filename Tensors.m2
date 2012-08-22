@@ -19,16 +19,13 @@ newPackage(
    
 --ToDo:eventually ditch tensor arrays 
 --except for printing
---1) tensorContraction for tensors, for now
---by converting to and from arrays --for now; do faster and mostly ditch
---arrays except for printing later.
+--fix "new M from ..." somehow
+--flattenings (after learning to make module elements)
 --2)fix tm R^3
 --fix M++M
---3) change printing of non-free tensor modules
 --4)Exclude contraction for non-free modules
---4)make a tensor DIRECTLY from a function 
---5)make a tensor DIRECTLY from a list
 --6) command for dropping 1's in dimension list
+
 
 --Luke wants:
 --to identify deg 1 part of the 
@@ -37,7 +34,7 @@ newPackage(
 --wants pieces of a resolution to be R-TensorModules
 
 export{Tensor,TensorModule,FreeTensorModule,
-     tensor',tensorModule,
+     makeTensor,tensorModule,
      tensorDimensions,tensorComposition,
      einsteinSummation}
 
@@ -267,34 +264,38 @@ tensorAccess (Tensor,Sequence) := (t,s) -> (
 ------------------------------------------
 --Making tensors without RNLs (previously TensorArrays)
 ------------------------------------------
-tensor' = method()
---tensor'(TensorModule,Vector):=(M,v)-> new M from v
-tensor'(TensorModule,List):=(M,ents)-> new M from vector ents
-tensor'(List,List):=(dims,ents)->(
+tensor(TensorModule,Vector):=opts->(M,v)-> new M from v
+tensor(TensorModule,List):=opts->(M,l) -> (
+     new M from map(M,(ring M)^1,for i in l list {i}))
+--
+makeTensor=method()
+--a.c. fix "new M from" here...
+makeTensor (List,List):=(dims,ents)->(
      R:=commonRing ents;
      M:=tensorModule(R,dims);
-     tensor'(M,ents)
+     tensor(M,ents)
      )
-tensor'(List,Function):=(dims,f)->(
+makeTensor (List,Function):=(dims,f)->(
      inds:=acp apply(dims,i->0..<i);
      ents:=toList apply(inds,f);
-     tensor'(dims,ents))
+     makeTensor(dims,ents))
 
 Ring**Tensor := (r,t) -> error "not implemented yet"
 
-Tensor/Function := (t,f) -> new class t from tensor' ((entries t)/f)
+Tensor/Function := (t,f) -> tensor(class t,apply(entries t,f))
 
 
 ----------------------------
 --Access to basis elements
 --by multi-index
 ----------------------------
-
 TensorModule _ Sequence := (M,s) -> (
-     if not #tensorDimensions M == #s then error "dimension mismatch";
-     f:=method(Dispatch=>Thing);
-     f Sequence := i -> if i==s then 1 else 0;
-     new M from tensor'(tensorDimensions M,f)
+     dims := M#(gs"dimensions");
+     if not #s == #dims then error "dimension mismatch";
+     if not all(0..<#s,i->s#i<dims#i) then error "index out of range";
+     ind := s#0;
+     for i in 1..<#s do ind = ind*(dims#i) + s#i;
+     M_ind
      )
 
 ----------------------------------------------
@@ -303,10 +304,10 @@ TensorModule _ Sequence := (M,s) -> (
 ----------------------------------------------
 ------MINIMIZE DEPENDENCE ON TENSOR ARRAYS
 ----------------------------------------------
-T=tensor' List := L -> (
+makeTensor List := L -> (
      dims:=rnlDimensions rnl L;--check rectangularity and get dimensions
      ents:=ultimate(flatten,L);
-     tensor'(dims,ents)
+     makeTensor(dims,ents)
      )
 
 ------
@@ -401,7 +402,7 @@ symbolicArgumentSequenceFunction=x->toSequence@@(saf x)
 Tensor_List := (t,l) -> (
      assertFreeTensor t;
      dims:=tensorDimensions t;
-     if #l===#dims then return t_(toSequence l);
+     if all(l,i->not i === null) then return t_(toSequence l);
      f:=tensorFunction t;
      g:=nullArgumentSequenceFunction l;
      nulls:=positions(l,i->i===null);
@@ -409,7 +410,7 @@ Tensor_List := (t,l) -> (
      M:=tensorModule(ring t, odims);
      inds:=acp toList apply(odims,i->0..<i);
      ents:=toList apply(inds,f@@g);
-     new M from vector ents
+     tensor(M,ents)
      )
 --------
 
@@ -419,17 +420,17 @@ Tensor_List := (t,l) -> (
 -------------------------
 --REWRITE THESE FROM SCRATCH!!
 
-tcomp=
+tman=
 tensorComposition=method()
-tcomp (List,List,List) := 
+tman (List,List,List) := 
   (tensors,indicesByTensor,summationIndices) -> 
-  tensor' rnlComposition(tensors/rnl,indicesByTensor,summationIndices)
+  makeTensor rnlComposition(tensors/rnl,indicesByTensor,summationIndices)
 
-tcomp (List,List) := (L,summationIndices) -> (
+tman (List,List) := (L,summationIndices) -> (
     tensorComposition(L/first,L/(i->toSequence remove(i,0)),summationIndices)
      )
 
-tcomp (List) := L -> tcomp(L,{})
+tman (List) := L -> tman(L,{})
 
 esum=
 einsteinSummation=method()
@@ -442,7 +443,7 @@ esum (List,List) :=
      indexLocations:= i -> indicesByTensor/(j->positions(j,k->k===i));
      repeatedIndices:=select(allIndices,i->1<#flatten indexLocations i);
      summationIndices:=repeatedIndices-set(ZZindices);
-     tcomp(tensors,indicesByTensor,summationIndices)
+     tman(tensors,indicesByTensor,summationIndices)
      )
 
 esum(List) := (L) ->
@@ -485,6 +486,14 @@ TEST  ///
 load "./tensors/tensors-documentation.m2"
 
 end
+
+
+--wait to learn to make module elements
+--from here
+makeTensor Matrix := m -> (
+     M:=(tm target m)**(tm dual source m);
+          
+     )
 
 restart
 debug loadPackage"Tensors"

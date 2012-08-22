@@ -8,13 +8,13 @@ S=QQ[x,y]
 -----------------
 
  -- from a nested list
-T=tensor'{
+T=makeTensor{
      {{a,b},{c,d}},
      {{e,f},{g,h}},
      {{i,j},{k,l}}}
 
 -- from a list and given dimensions
-tensor'({3,2,2},{a,b,c,d,e,f,g,h,i,j,k,l})
+makeTensor({3,2,2},{a,b,c,d,e,f,g,h,i,j,k,l})
 
 -- generic tensors
 genericTensor(R,{3,2,2})
@@ -37,6 +37,7 @@ T**U
 ---------
 --Entries
 ---------
+T
 T_5 -- by ordinal
 T_(1,0,1) -- by position
 
@@ -52,72 +53,64 @@ T
 T_{1,,}
 T_{1,,1}
 T_{1,1,1}
+
 --------------------
 --Modules of tensors
 --------------------
 
 -- a tensor is an element
 -- of a "tensor module",
-M=class t
-
+M=class T
 -- which is a module that remembers
 -- it is a tensor product of smaller 
--- modules:
+-- modules.
+
 M0=R^3 ** R^2 ** R^2 -- doesn't remember it's a tensor product
 M -- remembers
-M'=tensorModule(R,{2,2,3}) -- does
-(class M0,class M,class M')
+
+M'=tensorModule(R,{2,2,3})
 new TensorModule from M--doesn't know it's free
 M==M0--they are equal as modules, 
 M===M0--but not as hashtables,
 M==M'--and tensor modules with different factors are different
 
-N=tensorModule(R,{2,2})
-
 --tensor products of tensor modules
+N=tensorModule(R,{2,2})
 P=M**N
-P_11
-P_(0,0,2,1,1)
---note it's easiest to see slice matrices
---with the column index and the final index
+P_7
+P_(0,0,1,1,1)
 
---making tensors that know where they live:
-T=tensor'{{a,b},{-b,a}}
-U=tensor'{{{b,c},{-c,b}},{{a,c},{-c,a}}}
-U=tensor'{{b,c},{-c,b}}
-ancestors class T
---Basic operations on tensors:
-3*T+T
-T**U
-ideal toList entries (T**U)
-T'=T**U
+-------------------------------
+--Manipulation of tensors using
+--symbolic index notation
+-------------------------------
+T=genericTensor(R,{3,3})
+U=genericTensor(R,9,{3,3})
+i=symbol i;j=symbol j;k=symbol k;l=symbol l
 
---aribtrary compositions of tensors:
+--A_(i,j,k) := T_(j,i) * U_(k,i), or
+tman({{T,j,i},{U,k,i}})
+--tcomp({{T,i_1,i_0},{U,i_2,i_0}})
 
---A_(i,j,k) := sum_j T_(i,j) * U_(j,k)
-tcomp({{T,i,j},{U,j,k}},{j})
+--A_(i,j,k) := sum_i T_(j,i) * U_(k,i)
+tman({{T,j,i},{U,k,i}},{i})
 
---A_(i,j,k) := T_(j,i) * U_(k,i)
-tcomp({{T,j,i},{U,k,i}},{})
+--A_(i_0,i_1,i_2) := T_(i_1,i_0) * U_(i_2,i_0)
 
 --higher order transpositions of a single tensor:
 
 --indices in alphabetical order
 --yields the same tensor:
-tcomp({{T',i,j,k,l}})
-tcomp({{T',l,j,k,i}})
+T'=T**U
+tman({{T',i,j,k,l}})
+tman({{T',l,j,k,i}})
 --a harder-to-visualize permutation:
-tcomp({{T',j,l,i,k}})
+tman({{T',j,l,i,k}})
 
 --Extracting order diagonal tensors:
-tcomp({{T',i,i,i,i}})
-tcomp({{T',i,i,j,j}})
-tcomp({{T',i,i,j,k}})
-
---Symbolic composition of tensors
---by summing over indices:
-T
-U
+tman({{T',i,i,i,i}})
+tman({{T',i,i,j,j}})
+tman({{T',i,i,j,k}})
 
 
 --Einstein summation:
@@ -126,9 +119,7 @@ U
 esum({{T,i,j},{U,j,k}})
 
 --marginalization
-tcomp({{T',i,j,k,l}},{i})
-
---T_(i,j) * U_(j,k)
+tman({{T',i,j,k,l}},{i})
 
 (hold symbol T)_(i_1,i_2)
 
