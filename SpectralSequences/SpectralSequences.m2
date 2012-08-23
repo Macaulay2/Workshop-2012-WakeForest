@@ -251,8 +251,13 @@ see FilteredComplex := K -> (
 
 filteredComplex = method(TypicalValue => FilteredComplex)
 
--- Primitive constructor, takes a descending list of inclusion maps of 
--- subcomplexes of a chain complex (or simplicial complexes) 
+-- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
+-- defining inclusion maps C=F_(n+1)C > F_(n-1)C > ... > F_0 C 
+-- -- subcomplexes of a chain complex (or simplicial complexes) 
+-- and produces a filtered complex with integer keys the
+-- corresponing  chain complex.
+-- If F_0C is not zero then by default F_(-1)C is added and is 0.
+
 filteredComplex List := L -> (
   local maps;
   local C;
@@ -271,8 +276,14 @@ filteredComplex List := L -> (
     if any(#maps, p-> target maps#p != C) then (
       error "expected all map to have the same target"));     
   Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
-  P := {0 => C} | apply (#maps, p -> p+1 => image maps#p);
-  if (last P)#1 != Z then P = P | {#maps+1 => Z};
+  -- THE FOLLOWING TWO LINEs HAVE BEEN CHANGED FROM THE FILTERED COMPLEX CONSTRUCTOR --
+  P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
+  if (last P)#1 != Z then P = P | {(-1) => Z};
+  -- the above two lines work, but we might want to shift everything up by one.
+  -- so the added zero complex sits in filtration degree 0 instead of -1.  See examples.
+  -- I THINK THE ABOVE CONVENTION IS WHAT WE WANT FOR THE DEFAULT.  SEE 
+  -- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
+  -- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
 
@@ -306,9 +317,6 @@ homologicalFilteredComplex=method()
 -- the default.  An option should allow the user to choose to
 -- do things cohomologically.
 
--- the following code changes one line from the primative FilteredComplex code...
--- everything should be replaced and integrated in the future.
--- I haven't tested this code for simplicial complexes yet.
 homologicalFilteredComplex List := L -> (
   local maps;
   local C;
@@ -541,6 +549,36 @@ restart
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
+---------------------------------
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[x,y,z]
+
+
+F3=simplicialComplex {x*y*z}
+
+homologicalFilteredComplex({F3})
+
+F2=simplicialComplex {y*z, x}
+
+filteredComplex({F3,F2})
+
+K=homologicalFilteredComplex({F3,F2})
+
+C=chainComplex F3
+
+m=chainComplexMap(C,C,apply(spots C, i->id_(C_i)))
+
+L=homologicalFilteredComplex({m})
+
+L^1==L_1
+
+--------------------------------------------------
+
 
 
 
@@ -702,7 +740,8 @@ e2maps = computeErMaps(L,2)
 new HashTable from apply(keys e2maps, i-> i=> prune e2maps#i)
 
 -- the above seems to work correctly.
-
+----------------------------------------
+----------------------------------------
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
@@ -1032,4 +1071,5 @@ netList apply(lim, k -> prune Tor_k(M,pushForward(map(S,R),N)))
 netList support E_0
 netList support E_1
 netList support E_infinity
+
 
