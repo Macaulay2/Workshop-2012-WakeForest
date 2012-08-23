@@ -63,6 +63,13 @@ protect inducedMaps
 needsPackage "SimplicialComplexes"
 needsPackage "ChainComplexExtras"
 
+------------------------------------------------------
+------------------------------------------------------
+-- Retrieves the sorted integer keys of a hash table. 
+spots = K -> sort select(keys K, i -> class i === ZZ)
+------------------------------------------------------
+------------------------------------------------------
+
 --------------------------------------------------------------------------------
 Module + Module := Module => (M,N) -> (
   if ring M =!= ring N  then error "expected modules over the same ring";
@@ -99,7 +106,7 @@ nonReducedChainComplex(ChainComplex):= K->(l:=apply(drop(sort spots K,1),i-> i);
 chainComplex(p)
  )
 -------------------------------------------------------------------------------------
-
+-------------------------------------------------------------------------------------
 
 
 --truncate C above ith spot, i.e. set everything weakly above homological degree i to 0
@@ -195,8 +202,6 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 FilteredComplex = new Type of HashTable
 FilteredComplex.synonym = "filtered chain complex"
 
--- Retrieves the sorted integer keys of a hash table. 
-spots = K -> sort select(keys K, i -> class i === ZZ)
 max FilteredComplex := K -> max spots K
 min FilteredComplex := K -> min spots K
 
@@ -365,7 +370,8 @@ ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
   filteredComplex for p from min K to max K list C ** inducedMap(K,p))
 
 --------------------------------------------------------------------------------
--- spectral sequences
+-- spectral sequences ----------------------------------------------------------
+--------------------------------------------------------------------------------
 SpectralSequence = new Type of MutableHashTable
 SpectralSequence.synonym = "spectral sequence"
 SpectralSequence.GlobalAssignHook = globalAssignFunction
@@ -976,14 +982,24 @@ K_3
 -- All of the above agrees with what I've calculated by hand. --
 ----------------------------------------------------------------
 
+-- I think that the betti table of the modules on the rth page would
+-- be something meaningfull to output to user.
 
+prune E3Modules#{0,0}
+
+betti E3Modules#{0,0}
+betti prune E3Modules#{0,0}
+
+help betti
+
+betti prune E3Modules#{1,0}
 
 
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 -- examples by other people. ------------------------------------------------------
 -----------------------------------------------------------------------------------
-
+-----------------------------------------------------------------------------------
 restart
 needsPackage "SpectralSequences";
 debug SpectralSequences;
