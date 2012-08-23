@@ -49,7 +49,7 @@ export {
   "SpectralSequence",
   "spectralSequence",
   "SpectralSequenceSheet",
-  "see", "homologicalFilteredComplex", "computeErModules","computeErMaps"
+  "see", "homologicalFilteredComplex", "computeErModules","computeErMaps", "spots"
   }
 
 -- symbols used as keys
@@ -308,7 +308,9 @@ homologicalFilteredComplex List := L -> (
   if (first P)#1 != Z then P = P | {(-1) => Z};
   -- the above two lines work, but we might want to shift everything up by one.
   -- so the added zero complex sits in filtration degree 0 instead of -1.  See examples.
-  
+  -- I THINK THE ABOVE CONVENTION IS WHAT WE WANT FOR THE DEFAULT.  SEE 
+  -- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
+  -- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
 ------------------------------------------------------------------------------------
@@ -658,6 +660,7 @@ new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
 --- All of the above coincidies with what I have computed by hand. -----
 ------------------------------------------------------------------------
 
+--more examples--
 
 L=homologicalFilteredComplex {m2,m1}
 
@@ -704,7 +707,165 @@ filteredComplex({F3,F2,F1})
 
 K=homologicalFilteredComplex({F3,F2,F1})
 
+
+help filteredComplex
+
+keys K
+
 --------------------------------------------------------------------------
+--------------------------------------------------------------------------
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes";
+
+
+-- the following is the input data for the hopf fibration--
+-- This example is using a minimial triangualtion of the hopf map
+-- S^1 --> S^3 -->> S^2 --
+-- S^2 is the sphere on vertex set a,b,c,d.  
+-- the map S^3 --> S^2 is defined by a_i --> a etc.
+-- the example is
+-- from a paper of Madahr, Sarkaria "Geometriae Dedicata 2000".  
+-- it was a motivating example to try at the start of this project.
+
+B=QQ[a_0..a_2,b_0..b_2,c_0..c_2,d_0..d_2]
+
+
+l1={a_0*b_0*b_1*c_1,a_0*b_0*c_0*c_1,a_0*a_1*b_1*c_1,b_0*b_1*c_1*d_1,b_0*c_0*c_1*d_2,a_0*a_1*c_1*d_2,
+     a_0*c_0*c_1*d_2,
+     b_0*c_1*d_1*d_2}
+
+L1=simplicialComplex(l1)
+l2={b_1*c_1*c_2*a_2,b_1*c_1*a_1*a_2,b_1*b_2*c_2*a_2,c_1*c_2*a_2*d_1,c_1*a_1*a_2*d_2,b_1*b_2*a_2*d_2,b_1*a_1*a_2*d_2,c_1*a_2*d_1*d_2}
+
+L2=simplicialComplex(l2)
+l3={c_2*a_2*a_0*b_0,c_2*a_2*b_2*b_0,c_2*c_0*a_0*b_0,a_2*a_0*b_0*d_1,a_2*b_2*b_0*d_2,c_2*c_0*b_0*d_2,c_2*b_2*b_0*d_2,a_2*b_0*d_1*d_2}
+
+L3=simplicialComplex(l3)
+l4={a_0*b_0*b_1*d_1,a_0*b_1*d_0*d_1,b_1*c_1*c_2*d_1,b_1*c_2*d_0*d_1,a_0*a_2*c_2*d_1,a_0*c_2*d_0*d_1}
+L4=simplicialComplex(l4)
+l5={a_0*b_1*d_0*d_2,a_0*a_1*b_1*d_2,b_1*c_2*d_0*d_2,b_1*b_2*c_2*d_2,a_0*c_2*d_0*d_2,a_0*c_0*c_2*d_2}
+L5=simplicialComplex(l5)
+
+D=simplicialComplex(join(l1,l2,l3,l4,l5))
+-- assuming I've entered things correctly D is supposed to be a triangulation of S^3
+-- the 3 sphere
+
+prune HH chainComplex(D)
+-- so there is homology ZZ in degree 3 so I think the above
+-- input is OK.
+
+f1l1={a_0*b_0*b_1,a_0*a_1*b_1,a_0*c_0*c_1,a_0*a_1*c_1,a_0*a_1*d_2,d_1*d_2,b_0*b_1*c_1,b_0*c_0*c_1,
+     b_0*b_1*d_1,b_0*d_1*d_2,c_1*d_1*d_2,c_0*c_1*d_2}
+#f1l1
+
+f1l2={b_1*a_1*a_2,b_1*b_2*a_2,c_1*c_2*a_2,c_1*a_1*a_2,a_1*a_2*d_2,a_2*d_1*d_2,b_1*c_1*c_2,b_1*b_2*c_2,b_1*b_2*d_2,d_1*d_2,c_1*d_1*d_2,c_1*c_2*d_1}
+#f1l2
+
+f1l3={a_2*a_0*b_0,a_2*b_2*b_0, c_2*a_2*a_0,c_2*c_0*a_0,a_2*a_0*d_1,a_2*d_1*d_2,b_2*b_0*c_2,c_2*c_0*b_0,b_2*b_0*d_2,b_0*d_1*d_2,c_2*c_0*d_2,d_1*d_2 }
+#f1l3
+f1l4={a_0*b_0*b_1,a_0*a_2,a_0*a_2*c_2,c_1*c_2,a_0*d_0*d_1,a_0*a_2*d_1,b_1*c_1*c_2,b_0*b_1,b_0*b_1*d_1,b_1*d_0*d_1,c_1*c_2*d_1,c_2*d_0*d_1}
+#f1l4
+
+f1l5={a_0*a_1*b_1,b_1*b_2,a_0*c_0*c_2,a_0*a_1,a_0*d_0*d_2,a_0*a_1*d_2,b_1*b_2*c_2,c_0*c_2,b_1*d_0*d_2,b_1*b_2*d_2,c_2*d_0*d_2,c_0*c_2*d_2 }
+#f1l5
+
+F1D=simplicialComplex(join(f1l1,f1l2,f1l3,f1l4,f1l5))
+--isSubSimplicialComplex(F1D,D)
+--isSubSimplicialComplex(D,F1D)
+
+f2l1={a_0*a_1,b_0*b_1,c_0*c_1,d_1*d_2}
+#f2l1
+
+f2l2={a_1*a_2,b_1*b_2,c_1*c_2,d_1*d_2}
+
+f2l3={a_0*a_2,b_0*b_2,c_0*c_2,d_1*d_2}
+f2l4={a_0*a_2,b_0*b_1,c_1*c_2,d_0*d_1}
+f2l5={a_0*a_1,b_1*b_2,c_0*c_2,d_0*d_2}
+
+F2D=simplicialComplex(join(f2l1,f2l2,f2l3,f2l4,f2l5))
+
+
+KK=homologicalFilteredComplex({D,F1D,F2D})
+
+-- to compute the serre spectral sequence of the hopf fibration S^1-> S^3 -> S^2 
+-- "correctly" meaning that we get the E2 page as asserted in the theorem
+-- with non-reduced homology need the following method which removes the empty face
+-- from the chain complex
+nonReducedChainComplex=method()
+nonReducedChainComplex(ChainComplex):= K->(l:=apply(drop(sort spots K,1),i-> i);
+    p:= (for i from 1 to #l-1 list K.dd_i);
+chainComplex(p)
+ )
+
+KK_2
+nonReducedChainComplex(KK_2)
+nonReducedChainComplex(KK_1)
+prune oo
+prune nonReducedChainComplex(KK_0)
+
+nonReducedChainComplex(KK_(-1))
+
+spots KK
+K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i)) 
+
+K_2
+K_1
+prune K_(-1)
+(chainComplex(D)).dd_1
+
+prune HH K_2
+
+-- Now try to compute the various pages of the spectral sequence.
+
+-- I have not made any serious attempt to compute the E0 and E1 page by hand. --
+
+E0Modules=computeErModules(K,0);
+
+
+new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
+
+E0Maps=computeErMaps(K,0);
+new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
+
+
+
+E1Modules=computeErModules(K,1);
+new HashTable from apply(keys E1Modules, i-> i=> prune E1Modules#i)
+
+E1Maps=computeErMaps(K,1);
+new HashTable from apply(keys E1Maps, i-> i=> prune E1Maps#i)
+
+
+
+
+E2Modules=computeErModules(K,2);
+new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
+
+-- note that the modules on the E2 page appear to have been computed correctly.  
+-- the Serre spectral sequence (see for example, Theorem 1.3 p. 8 of 
+-- Hatcher's Spectral Sequence book) claims that E^_{p,q}= HH_p(S^2,HH_q(S^1,QQ)).
+-- This is exactly what we are suppose to get.
+
+E2Maps=computeErMaps(K,2);
+new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
+-- the maps on the E2 page also seem to be computed correctly as the spectral sequence
+-- will abut to the homology of S^3.
+
+
+E3Modules=computeErModules(K,3);
+new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
+
+E3Maps=computeErMaps(K,3);
+new HashTable from apply(keys E3Maps, i-> i=> prune E3Maps#i)
+
+-- the E3 page appears to have been computed correctly.
+
+
+
+
+
+
 
 
 
