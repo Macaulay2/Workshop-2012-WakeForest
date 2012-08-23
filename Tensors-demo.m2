@@ -1,6 +1,6 @@
 restart
 path = path|{"/Users/andrew/Dropbox/Macaulay2","/Users/andrew/SVN/WFU-2012/"};
-debug loadPackage("Tensors")
+debug needsPackage("Tensors")
 
 R=QQ[a..z]
 S=QQ[x,y]
@@ -66,6 +66,37 @@ marginalize(T,{0})
 marginalize(T,{0,2})
 marginalize(T,{0,1,2})
 
+
+{{*-------------------------
+-- Indexed Tensor Methods --
+-------------------------*}};
+T=genericTensor(R,{3,3})
+U=genericTensor(R,9,{3,3})
+i=symbol i;j=symbol j;k=symbol k;l=symbol l
+tensor sum(i,T_(i,j)*U_(i,k))
+tensor sum(k,T_(i,j)*U_(i,k))
+tensor einsum{T_(i,j),U_(j,k)}
+
+
+{{*how indexed tensors work *}}
+t=T_(i,j)
+tensor t
+indices t
+peek t
+u=U_(i,k)
+peek t
+v=t*u
+peek v
+v'=sum(i,v)
+tensor v'
+
+
+{{*
+time T_(i1,i2) * T_(i3,i4) * T_(i5,i6) * T_(i7,i8)
+time indexedTensorProduct{T_(i1,i2),T_(i3,i4),T_(i5,i6),T_(i7,i8)}
+*}}
+
+
 {{*--------------------
 --Modules of tensors
 --------------------*}};
@@ -90,16 +121,13 @@ M==M'--and tensor modules with different factors are different
 N=tensorModule(R,{2,2})
 P=M**N
 P_7
-P_(0,0,1,1,1)
+P_(0,0,1,1)
+
 
 {{*--------------------------------
    Manipulation of tensors using
    symbolic index notation      
 --------------------------------*}};
-T=genericTensor(R,{3,3})
-U=genericTensor(R,9,{3,3})
-i=symbol i;j=symbol j;k=symbol k;l=symbol l
-
 {{* A_(i,j,k) := T_(j,i) * U_(k,i) *}};
 tman({{T,j,i},{U,k,i}})
 
@@ -127,27 +155,11 @@ tman({{T',i,i,j,k}})
 {{*Einstein summation:
 --repeated indices are
 --automatically summed over*}};
-esum({{T,i,j},{U,j,k}})
+--esum({{T,i,j},{U,j,k}})
 
 {{*symbolic marginalization*}};
 tman({{T',i,j,k,l}},{i})
 
-{{*------------------
--- indexed tensors --
-------------------*}};
-t=T_(i,j)
-u=U_(i,k)
-tensor t
-indices t
-peek t
-v=t*u
-peek v
-tensor sum(i,v)
-
-{{*
-time T_(i1,i2) * T_(i3,i4) * T_(i5,i6) * T_(i7,i8)
-time indexedTensorProduct{T_(i1,i2),T_(i3,i4),T_(i5,i6),T_(i7,i8)}
-*}}
 
 end
 

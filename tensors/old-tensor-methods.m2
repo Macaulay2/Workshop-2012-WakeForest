@@ -175,7 +175,7 @@ dse (Thing,Option) := opts -> (x,subs) -> (dse subs) x
 ef=expressionFunction=method()
 ef (Expression,List) := (exprn,args) -> (
      exprn=rea exprn;
-     assertClasses(args,Symbol,"expressionFunction(Expression,List)");
+     assertInstances(args,Symbol,"expressionFunction(Expression,List)");
      if #args == 0 then return value(exprn);
      subber:=method(Dispatch=>Thing);
      subber Sequence := s -> tis for i in 0..<#s list (args_i => s_i);

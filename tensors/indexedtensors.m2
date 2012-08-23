@@ -22,6 +22,7 @@ it (Tensor,List) := (t,inds) -> (
 
 tensor IndexedTensor := opts -> t -> t.tensor
 indices IndexedTensor := t -> t.indices
+entries IndexedTensor := entries@@tensor
 
 IndexedTensor.GlobalAssignHook = (sym,val) -> (
      if val.cache#(gs"name") === noname then val.cache#(gs"name") = sym;
@@ -68,7 +69,7 @@ Tensor_Sequence := (T,s) -> (
      ents:=toList apply(inds,i->fastTensorAccess(T,f i));
      M:=class T;
      factors:=M#(gs"factors")_firstsyms;
-     M':=tensorModule factors;
+     M':=tensorModuleProduct factors;
      T':=tensor(M',ents);
      indexedTensor(T',syms')
      )
@@ -97,6 +98,17 @@ sum(List,IndexedTensor):=(tosum,t)->(
      )
 sum(Symbol,IndexedTensor):=(s,t)->sum({s},t)
 sum(IndexedVariable,IndexedTensor):=(s,t)->sum({s},t)
+
+
+------------------------------
+--Einstein summation of lists
+------------------------------
+einsum=
+einsteinSum=method(Dispatch=>Thing)
+einsteinSum VisibleList := l -> (
+     tosum:=repeatedEntries flatten(apply(l,indices));
+     sum(tosum,indexedTensorProduct l)
+     )
 
 
 end

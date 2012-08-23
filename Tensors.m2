@@ -16,7 +16,6 @@ newPackage(
 --Searchable comment legend:
 --a.c. : andrew critch
 
-   
 --ToDo:eventually ditch tensor arrays 
 --1)eliminate dependency of 
 --itprod on tman, and reserve tman for
@@ -36,29 +35,32 @@ newPackage(
 --wants pieces of a resolution to be R-TensorModules
 
 export{Tensor,TensorModule,FreeTensorModule,
-     makeTensor,tensorModule,
-     tensorDimensions,tensorComposition,
-     einsteinSummation}
+     makeTensor,tensorModule,tensorModuleProduct,
+     tensorDimensions,einsteinSum}
+
+-------------------------
+--Symbol methods
+-------------------------
 
 gs = getSymbol
 
 cs=coreSymbol = method()     
 cs String := nam -> (
      getGlobalSymbol(Core#"private dictionary",nam))
-cs"RawRing"
+
+isSymbolic = x -> instance(x,Symbol) or instance(x,IndexedVariable)
 
 --these are currently used for einstein summation,
 --which needs to be rewritten
-protect Stops
 
 -----------------------
 --Error methods
 -----------------------
-assertClasses=method()
-assertClasses (List,Type) := (L,T) -> if not all(L,i->instance(i,T)) then (
-     error ("expected list entries of type "|toString(T)|"s"))
-assertClasses (List,Type,String) := (L,T,context) -> if not all(L,i->instance(i,T)) then (
-     error (context|" expected list entries of type "|toString(T)|"s"))
+assertInstances=method()
+assertInstances (List,Type) := (L,T) -> if not all(L,i->instance(i,T)) then (
+     error ("expected list entries to be instances of "|toString(T)|"s"))
+assertInstances (List,Type,String) := (L,T,context) -> if not all(L,i->instance(i,T)) then (
+     error (context|" expected list entries to be instances of "|toString(T)|"s"))
 
 allInstances = method()
 allInstances (VisibleList,List) := (things,types) -> (
@@ -72,7 +74,7 @@ allInstances (VisibleList,HashTable) := (things,type) -> (
 --Load part 1 (minimize dependence on this)
 --------------------------------------------
 --load "./tensors/tensorarrays.m2"
-load "./tensors/rectangularnestedlists.m2"
+load "./tensors/cartesian-list-methods.m2"
 load "./tensors/old-tensor-methods.m2"
 
 inserts=method()
@@ -106,7 +108,7 @@ module Module := identity
 --RNLs now for...
 if not class tensorDimensions === MethodFunction then (
      tensorDimensions = method())
-tensorDimensions Module := M -> {numgens M}
+tensorDimensions Module := M -> {rank ambient M}
 tensorDimensions TensorModule := M -> M#(gs"dimensions")
 
 --Printing TensorModules:
@@ -121,8 +123,6 @@ moduleSummary=M->(
 	  then << ", degrees " << if degreeLength M === 1 then flatten degrees M else degrees M;
 	  );
      )
-
-
 
 TensorModule.synonym="tensor module"
 net TensorModule := M -> fold(apply(M#(gs"factors"),net@@module),(i,j)->i|" ** "|j)
@@ -145,7 +145,7 @@ net FreeTensorModule := M -> (net module M)|
      "{"|(fold(M#(gs"dimensions")/toString,(i,j)->i|"x"|j))|"}";
 FreeTensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
-     n := numgens M;
+     n := rank ambient M;
      << concatenate(interpreterDepth:"o") << lineNumber << " : "
      << "Free "
      << ring M
@@ -158,7 +158,8 @@ FreeTensorModule#{Standard,AfterPrint} = M -> (
 -------------------------------------
 --Building tensor modules:
 -------------------------------------
-tm=tensorModule = method()
+tm=
+tensorModule = method()
 
 --make a free module into a tensor module:
 tensorModule (Ring,List) := (R,dims) -> (
@@ -179,7 +180,7 @@ tensorModule Module := M -> (
       new T of Tensor from (
        	   new HashTable from (pairs M)|{
 		gs"factors" =>  {M},
-       	   	gs"dimensions" =>  {numgens M},
+       	   	gs"dimensions" =>  {rank ambient M},
 	        symbol module => M}
 	   )
      )
@@ -188,7 +189,7 @@ tensorModule TensorModule := identity
 --this is conceptually weird if M is not free and #L>1
 tensorModule (Module,List) := (M,dims) -> (
      d:=product dims;
-     if not numgens M == d then error "dimension mismatch";
+     if not rank ambient M == d then error "dimension mismatch";
      if not isFreeModule M then error "expected a free module";
      new FreeTensorModule of Tensor from (
 	   new HashTable from (pairs M)|{
@@ -201,18 +202,24 @@ tensorModule (Module,List) := (M,dims) -> (
 --t-> (classes := ancestors class t;
 --     return classes#(position(classes,i->class i===TensorModule))
 --     )
-tmf=--[INTERNAL]
-tensorModuleFactors=method()
-tmf TensorModule := T -> T#(gs"factors")
-tmf Module := M -> {M}
+
+fm=--[INTERNAL]
+factorModules=method()
+factorModules TensorModule := T -> T#(gs"factors")
+factorModules Module := M -> {M}
 
 tensorDimensions Tensor := t -> tensorDimensions class t
+
+
 --Tensor module from a list of modules to tensor product,
 --which themselves may be tensor modules
-tensorModule List := (fctrs) -> (
-     assertClasses(fctrs,Module,"tensorModule(List)");
+tmp=
+tensorModuleProduct=method(Dispatch=>Thing)
+tensorModuleProduct Sequence := fctrs -> tensorModuleProduct toList fctrs
+tensorModuleProduct List := fctrs -> (
+     assertInstances(fctrs,Module,"tensorModuleProduct(List)");
      dims:=flatten(fctrs/tensorDimensions);
-     f:=flatten(fctrs/tmf);
+     f:=flatten(fctrs/factorModules);
      M:=fold(fctrs/module,(i,j)->i**j);
      T:=if all(fctrs,isFreeModule) then FreeTensorModule else TensorModule;
       new T of Tensor from (
@@ -222,6 +229,7 @@ tensorModule List := (fctrs) -> (
 	        symbol module => M})
      )
 
+--tensorModule List := (fctrs) -> tensorModuleProduct fctrs
 ----------------------------
 --Comparing tensor modules
 ----------------------------
@@ -230,7 +238,7 @@ TensorModule == TensorModule := (M,N) -> (M#(gs"factors") / module)==(N#(gs"fact
 ----------------------------
 --TensorModule combinations
 ----------------------------
-TensorModule^ZZ := (M,n) -> tensorModule toList (n:M)
+TensorModule^ZZ := (M,n) -> tensorModuleProduct (n:M)
 
 --a.c. bug for ++ below
 TensorModule++TensorModule := (M,N) -> (
@@ -239,7 +247,7 @@ TensorModule++TensorModule := (M,N) -> (
      tm(P,M#(gs"dimensions") + N#(gs"dimensions"))
      )
 
-TensorModule**TensorModule := (M,N) -> tm{M,N}
+TensorModule**TensorModule := (M,N) -> tensorModuleProduct(M,N)
 
 
 -----------------------------
@@ -361,7 +369,6 @@ Tensor**Tensor := (v,w) -> (
      new M from (vector v)**(vector w)
      )
 Tensor ^ ZZ := (t,n) -> fold(for i in 0..<n list t,(i,j)->i**j)
-
 --------------------------------------
 --Turn a free tensor into a function that
 --accesses its entries
@@ -381,7 +388,6 @@ tensorFunction Tensor := t -> (
 --which plugs things into null
 --or symbolic entries
 ----------------------------------
-isSymbolic = x -> instance(x,Symbol) or instance(x,IndexedVariable)
 
 naf=nullArgumentFunction = method(Dispatch=>Thing)
 naf BasicList := l -> (
@@ -427,7 +433,7 @@ Tensor_List := (t,l) -> (
      blanks:=positions(l,i->i===null);
      odims:=dims_blanks;
      M:=class t;
-     M':=tensorModule((M#(gs"factors"))_blanks);
+     M':=tensorModuleProduct((M#(gs"factors"))_blanks);
      inds:=toList \ acp apply(odims,i->0..<i);
      ents:=toList apply(inds,i->t_(inserts(blanks,i,l')));
      tensor(M',ents)
@@ -455,7 +461,7 @@ marg(Tensor,List) := (T,tosum) -> (
      suminds:=acp apply(dims_tosum,i->toList(0..<i));
      f := l -> sum apply(suminds,i->T_(inserts(tosum,i,l)));
      ents:=toList apply(keepinds,f);
-     M:=tensorModule((class T)#(gs"factors")_tokeep);
+     M:=tensorModuleProduct((class T)#(gs"factors")_tokeep);
      tensor(M,ents)
      )
 
@@ -476,6 +482,7 @@ tman (List,List) := (L,summationIndices) -> (
 
 tman (List) := L -> tman(L,{})
 
+{{*
 esum=
 einsteinSummation=method()
 esum (List,List) := 
@@ -492,6 +499,7 @@ esum (List,List) :=
 
 esum(List) := (L) ->
      esum(L/first,L/(i->toSequence remove(i,0)))
+*}}
 
 TEST ///
 R=QQ[x 1]
