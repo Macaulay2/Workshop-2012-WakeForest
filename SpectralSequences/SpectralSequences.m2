@@ -49,7 +49,8 @@ export {
   "SpectralSequence",
   "spectralSequence",
   "SpectralSequenceSheet",
-  "see", "homologicalFilteredComplex", "computeErModules","computeErMaps", "spots"
+  "see", "homologicalFilteredComplex", "computeErModules","computeErMaps", "spots",
+  "nonReducedChainComplex"
   }
 
 -- symbols used as keys
@@ -82,6 +83,24 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 --------------------------------------------------------------------------------
 -- CODE
 --------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------
+-- I need the following method in my examples. 
+--(Surely someting like it exists elsewhere.)
+-- Many of the examples I computed by
+-- hand arose from "simplicial complexes without the empty face."
+-- the out of the box chain complex code for simplicial complexes produces chain complexes
+-- which include the empty face.
+-- 
+-----------------------------------------------------------------------------------
+nonReducedChainComplex=method()
+nonReducedChainComplex(ChainComplex):= K->(l:=apply(drop(sort spots K,1),i-> i);
+    p:= (for i from 1 to #l-1 list K.dd_i);
+chainComplex(p)
+ )
+-------------------------------------------------------------------------------------
+
+
 
 --truncate C above ith spot, i.e. set everything weakly above homological degree i to 0
 truncate (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
@@ -885,7 +904,78 @@ new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
 E3Maps=computeErMaps(K,3);
 new HashTable from apply(keys E3Maps, i-> i=> prune E3Maps#i)
 
--- the E3 page appears to have been computed correctly. --
+----------------------------------------------------------------
+-- the E3 page appears to have been computed correctly. --------
+----------------------------------------------------------------
+
+-- New example to try.  Everything in this example can be computed easily by hand. --
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes";
+
+B=QQ[a,b,c];
+
+D=simplicialComplex({a*b*c})
+
+F3D=D;
+
+F2D=simplicialComplex({a*b,a*c,b*c})
+F1D=simplicialComplex({a*b,c})
+F0D=simplicialComplex({a,b})
+
+chainComplex F3D
+
+-- the order for the filtration is given by
+--  F3D>F2D>F1D>F0D >F(-1)D = 0
+
+KK=homologicalFilteredComplex {F3D,F2D,F1D,F0D}
+
+-- in order to get the example I did by hand want to remove the
+-- contribution of the empty face from these
+-- chain complexes.
+
+K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i)) 
+
+K
+prune HH K_3
+
+E0Modules=computeErModules(K,0);
+
+new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
+
+E0Maps=computeErMaps(K,0);
+new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
+
+E1Modules=computeErModules(K,1);
+new HashTable from apply(keys E1Modules, i-> i=> prune E1Modules#i)
+
+E1Maps=computeErMaps(K,1);
+new HashTable from apply(keys E1Maps, i-> i=> prune E1Maps#i)
+E1Maps#{1,0}
+prune ker E1Maps#{2,-1}
+
+prune ker E1Maps#{3,-1}
+
+E2Modules=computeErModules(K,2);
+new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
+
+E2Maps=computeErMaps(K,2);
+new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
+
+E3Modules=computeErModules(K,3);
+new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
+
+E3Maps=computeErMaps(K,3);
+new HashTable from apply(keys E3Maps, i-> i=> prune E3Maps#i)
+
+prune HH K_3
+K_3
+
+----------------------------------------------------------------
+-- All of the above agrees with what I've calculated by hand. --
+----------------------------------------------------------------
+
 
 
 
