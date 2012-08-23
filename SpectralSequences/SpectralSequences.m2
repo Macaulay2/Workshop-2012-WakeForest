@@ -656,53 +656,7 @@ m0=chainComplexMap(F3C,F0C,{inducedMap(F3C_0,F0C_0,id_(F3C_0)), inducedMap(F3C_1
 -- Now test Nathan's spectral sequence code --------------------------
 ----------------------------------------------------------------------
 
-testHomologicalFilteredComplex= method()
-
-testHomologicalFilteredComplex List := L -> (
-  local maps;
-  local C;
-  if #L === 0 
-  then error "expected at least one chain complex map or simplicial complex";
-  if all(#L, p -> class L#p === SimplicialComplex) then (
-    kk := coefficientRing L#0;
-    C = chainComplex L#0;	       	    -- all filtrations are exhaustive
-    maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
-        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
-  else (
-    maps = L;
-    if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
-      error "expected sequence of chain complexes");
-    C = target maps#0;	       	       	    -- all filtrations are exhaustive
-    if any(#maps, p-> target maps#p != C) then (
-      error "expected all map to have the same target"));     
-  Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
-  -- THE FOLLOWING TWO LINEs HAVE BEEN CHANGED FROM THE FILTERED COMPLEX CONSTRUCTOR --
-  P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
-  if (last P)#1 != Z then P = P | {(-1) => Z};
-  -- the above two lines work, but we might want to shift everything up by one.
-  -- so the added zero complex sits in filtration degree 0 instead of -1.  See examples.
-  -- I THINK THE ABOVE CONVENTION IS WHAT WE WANT FOR THE DEFAULT.  SEE 
-  -- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
-  -- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
-  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
-
-testHomologicalFilteredComplex {m2,m1,m0}
-
-testHomologicalFilteredComplex {m2,m1}
-
--- so there is a bug in homologicalFilteredComplex. -- an extra complex is added.
-
-L={m2,m1,m0}
-
-L#2==0
-
-homologicalFilteredComplex {m2,m1}
-
-filteredComplex {m2,m1,m0}
-
-see K
--- so there is a bug in see filteredComplex.  We are missing One complex.
-
+K= homologicalFilteredComplex{m2,m1,m0}
 
 
 E0Modules=computeErModules(K,0)
@@ -774,10 +728,6 @@ filteredComplex({F3,F2,F1})
 
 K=homologicalFilteredComplex({F3,F2,F1})
 
-
-help filteredComplex
-
-keys K
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
