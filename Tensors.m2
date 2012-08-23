@@ -23,7 +23,7 @@ newPackage(
 --expressional inputs
 --fix "new M from ..." somehow
 --flattenings (after learning to make module elements)
---2)fix tm R^3
+--2)fix tensorModule R^3
 --fix M++M
 --4)Exclude contraction for non-free modules
 --6) command for dropping 1's in dimension list
@@ -73,6 +73,7 @@ allInstances (VisibleList,HashTable) := (things,type) -> (
 --------------------------------------------
 --load "./tensors/tensorarrays.m2"
 load "./tensors/rectangularnestedlists.m2"
+load "./tensors/old-tensor-methods.m2"
 
 inserts=method()
 inserts(VisibleList,VisibleList,VisibleList):=(locs,things,host)->(
@@ -160,7 +161,7 @@ FreeTensorModule#{Standard,AfterPrint} = M -> (
 tm=tensorModule = method()
 
 --make a free module into a tensor module:
-tm (Ring,List) := (R,dims) -> (
+tensorModule (Ring,List) := (R,dims) -> (
      d:=product dims;
      new FreeTensorModule of Tensor from (
 	  new HashTable from (pairs R^d)|{
@@ -173,7 +174,7 @@ tm (Ring,List) := (R,dims) -> (
 --make a possibly non-free module into an order 1 tensor module, 
 --for tensoring with other such modules to build higher-order
 --non-free tensor modules:
-tm Module := M -> (
+tensorModule Module := M -> (
      T:=if isFreeModule M then FreeTensorModule else TensorModule;
       new T of Tensor from (
        	   new HashTable from (pairs M)|{
@@ -182,10 +183,10 @@ tm Module := M -> (
 	        symbol module => M}
 	   )
      )
-tm TensorModule := identity
+tensorModule TensorModule := identity
 
 --this is conceptually weird if M is not free and #L>1
-tm (Module,List) := (M,dims) -> (
+tensorModule (Module,List) := (M,dims) -> (
      d:=product dims;
      if not numgens M == d then error "dimension mismatch";
      if not isFreeModule M then error "expected a free module";
@@ -205,10 +206,10 @@ tensorModuleFactors=method()
 tmf TensorModule := T -> T#(gs"factors")
 tmf Module := M -> {M}
 
-tensorDimensions Tensor := t -> tensorDimensions tm t
+tensorDimensions Tensor := t -> tensorDimensions class t
 --Tensor module from a list of modules to tensor product,
 --which themselves may be tensor modules
-tm List := (fctrs) -> (
+tensorModule List := (fctrs) -> (
      assertClasses(fctrs,Module,"tensorModule(List)");
      dims:=flatten(fctrs/tensorDimensions);
      f:=flatten(fctrs/tmf);
@@ -229,7 +230,7 @@ TensorModule == TensorModule := (M,N) -> (M#(gs"factors") / module)==(N#(gs"fact
 ----------------------------
 --TensorModule combinations
 ----------------------------
-TensorModule^ZZ := (M,n) -> tm toList (n:M)
+TensorModule^ZZ := (M,n) -> tensorModule toList (n:M)
 
 --a.c. bug for ++ below
 TensorModule++TensorModule := (M,N) -> (
@@ -316,12 +317,11 @@ TensorModule _ Sequence := (M,s) -> (
      M_ind
      )
 
-----------------------------------------------
+------------------------------
 --Conversions between Tensors
 --and RectangularRestedLists
-----------------------------------------------
-------MINIMIZE DEPENDENCE ON TENSOR ARRAYS
-----------------------------------------------
+------------------------------
+TensorNet := new Type of Net
 makeTensor List := L -> (
      dims:=rnlDimensions rnl L;--check rectangularity and get dimensions
      ents:=ultimate(flatten,L);
@@ -329,6 +329,7 @@ makeTensor List := L -> (
      )
 
 ------
+
 rnl Tensor := t -> (
      if RNL.cache#?t then return RNL.cache#t;
      a := new RNL from rnl (tensorDimensions t,entries t);
@@ -343,20 +344,20 @@ net Tensor := t -> net rnl t;
 --Tensor combinations
 ---------------------------
 Tensor+Tensor := (v,w) -> (
-     if not tm v == tm w then error "Tensor+Tensor not from the same TensorModule";
-     new (tm v) from (vector v)+(vector w)
+     if not class v === class w then error "Tensor+Tensor not from the same TensorModule";
+     new (class v) from (vector v)+(vector w)
      )
 Tensor-Tensor := (v,w) -> (
-     if not tm v == tm w then error "Tensor-Tensor not from the same TensorModule";
-     new (tm v) from (vector v)-(vector w)
+     if not class v === class w then error "Tensor-Tensor not from the same TensorModule";
+     new (class v) from (vector v)-(vector w)
      )
 RingElement*Tensor := (r,w) -> (
-     if not ring r == ring w then error "RingElement*Tensor not over the same ring";
-     new (tm w) from r*(vector w)
+     if not ring r === ring w then error "RingElement*Tensor not over the same ring";
+     new (class w) from r*(vector w)
      )
 Tensor*RingElement := (w,r) -> r*w
 Tensor**Tensor := (v,w) -> (
-     M:=(tm v)**(tm w);
+     M:=(class v)**(class w);
      new M from (vector v)**(vector w)
      )
 Tensor ^ ZZ := (t,n) -> fold(for i in 0..<n list t,(i,j)->i**j)
@@ -534,7 +535,7 @@ end
 --wait to learn to make module elements
 --from here
 makeTensor Matrix := m -> (
-     M:=(tm target m)**(tm dual source m);
+     M:=(tensorModule target m)**(tensorModule dual source m);
           
      )
 

@@ -144,6 +144,10 @@ v=t*u
 peek v
 tensor sum(i,v)
 
+{{*
+time T_(i1,i2) * T_(i3,i4) * T_(i5,i6) * T_(i7,i8)
+time indexedTensorProduct{T_(i1,i2),T_(i3,i4),T_(i5,i6),T_(i7,i8)}
+*}}
 
 end
 
