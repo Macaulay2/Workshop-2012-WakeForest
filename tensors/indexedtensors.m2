@@ -46,12 +46,12 @@ rit (IndexedTensor,Symbol) := (t,s) -> t.cache#(gs"name") = s
 itprod=
 indexedTensorProduct = method()
 itprod List := its -> (
+     --a.c. eliminate dependency on tman
      T:=tman apply(its,t->{t.tensor}|t.indices);
      indexedTensor(T,sort unique flatten apply(its,t->t.indices))
      )
-
 IndexedTensor*IndexedTensor := (t,u) -> itprod{t,u}
-
+--note that itprod is faster than * iterated by folding
 
 end
 

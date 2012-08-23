@@ -55,6 +55,13 @@ T_{1,,}
 T_{1,,1}
 T_{1,1,1}
 
+---------------
+--Marginals
+---------------
+marginalize(T,{0})
+marginalize(T,{0,2})
+marginalize(T,{0,1,2})
+
 --------------------
 --Modules of tensors
 --------------------

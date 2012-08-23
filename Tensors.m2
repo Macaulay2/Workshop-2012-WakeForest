@@ -430,6 +430,24 @@ TEST///
 -------------------
 --Tensor marginals
 --------------------
+marg=
+marginalize=method()
+marg(Tensor,List) := (T,tosum) -> (
+     assertFreeTensor T;
+     dims:=tensorDimensions T;
+     n:=#dims;
+     if not all(tosum,i->instance(i,ZZ) and i<n) then 
+      error "marginalize(Tensor,List) expected a list of integers less than the dimensions of the tensor";
+     if #tosum===n then return sum entries T;
+     tokeep := toList(0..<n)-set(tosum);
+     keepinds:=acp apply(dims_tokeep,i->toList(0..<i));
+     suminds:=acp apply(dims_tosum,i->toList(0..<i));
+     f := l -> sum apply(suminds,i->T_(inserts(tosum,i,l)));
+     ents:=toList apply(keepinds,f);
+     M:=tensorModule((class T)#(gs"factors")_tokeep);
+     tensor(M,ents)
+     )
+
 
 -------------------------
 --Tensor Compositions
