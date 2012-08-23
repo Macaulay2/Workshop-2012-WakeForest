@@ -60,6 +60,7 @@ protect maxH
 protect inducedMaps
 
 needsPackage "SimplicialComplexes"
+needsPackage "ChainComplexExtras"
 
 --------------------------------------------------------------------------------
 Module + Module := Module => (M,N) -> (
@@ -302,9 +303,12 @@ homologicalFilteredComplex List := L -> (
     if any(#maps, p-> target maps#p != C) then (
       error "expected all map to have the same target"));     
   Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
-  -- THE FOLLOWING LINE HAS BEEN CHANGED FROM THE FILTERED COMPLEX CONSTRUCTOR --
+  -- THE FOLLOWING TWO LINEs HAVE BEEN CHANGED FROM THE FILTERED COMPLEX CONSTRUCTOR --
   P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
-  if (last P)#1 != Z then P = P | {#maps+1 => Z};
+  if (first P)#1 != Z then P = P | {(-1) => Z};
+  -- the above two lines work, but we might want to shift everything up by one.
+  -- so the added zero complex sits in filtration degree 0 instead of -1.  See examples.
+  
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
 ------------------------------------------------------------------------------------
@@ -516,8 +520,9 @@ viewHelp SpectralSequences
 --Nathan's first example
 restart
 needsPackage "SpectralSequences";
-debug SpectralSequences;
 needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
 
 
 
@@ -625,6 +630,7 @@ m0=chainComplexMap(F3C,F0C,{inducedMap(F3C_0,F0C_0,id_(F3C_0)), inducedMap(F3C_1
 ----------------------------------------------------------------------
 K=homologicalFilteredComplex {m2,m1,m0}
 
+
 see K
 -- so there is a bug in see filteredComplex.  We are missing One complex.
 
@@ -651,6 +657,55 @@ new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
 ------------------------------------------------------------------------
 --- All of the above coincidies with what I have computed by hand. -----
 ------------------------------------------------------------------------
+
+
+L=homologicalFilteredComplex {m2,m1}
+
+-- we are probably going to want a shift operator for filtered complexes.
+
+
+e0modules=computeErModules(L,0)
+new HashTable from apply(keys e0modules, i-> i=>prune e0modules#i)
+e0maps = computeErMaps(L,0)
+new HashTable from apply(keys e0maps, i-> i=> prune e0maps#i)
+e1modules = computeErModules(L,1)
+new HashTable from apply(keys e1modules, i-> i=>prune e1modules#i)
+e1maps = computeErMaps(L,1)
+new HashTable from apply(keys e1maps, i-> i=> prune e1maps#i)
+e2modules = computeErModules(L,2)
+new HashTable from apply(keys e2modules, i-> i=>prune e2modules#i)
+e2maps = computeErMaps(L,2)
+new HashTable from apply(keys e2maps, i-> i=> prune e2maps#i)
+
+-- the above seems to work correctly.
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[x,y,z,w]
+
+help SimplicialComplexes
+help simplicialComplex
+
+help simplicialComplex
+
+F3=simplicialComplex {x*y*z*w}
+
+homologicalFilteredComplex({F3})
+
+F2=simplicialComplex {x*y*z, x*w}
+
+F1 = simplicialComplex {z,w}
+
+filteredComplex({F3,F2,F1})
+
+K=homologicalFilteredComplex({F3,F2,F1})
+
+--------------------------------------------------------------------------
+
 
 
 
