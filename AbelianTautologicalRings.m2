@@ -8,7 +8,7 @@ newPackage(
                   {Name => "David Swinarski", 
 		  Email => "dswinarski@fordham.edu ", 
 		  HomePage => "http://www.math.uga.edu/~davids"}                   },
-    	Headline => "Construction of tautological rings of cycles on Jacobian and Prym varieties and operators on them",
+    	Headline => "Construction of model tautological rings of cycles on Jacobian and Prym varieties and operators on them",
     	DebuggingMode => true
         )
    
@@ -43,7 +43,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 
 
-export{"modelRing","abelianTautologicalRing","AbelianVarietyType","polishchukD","polishchukDelta"}
+export{"modelRing","abelianTautologicalRing","polishchukD","polishchukDelta","AbelianVarietyType","IndexedVariableName"}
 export{"monomialToList", "listToMonomial","monomialFourierTransform","fourierTransform","listDelta"}
 
 
@@ -54,10 +54,11 @@ if version#"VERSION" < "1.4" then error "This package was written for Macaulay2 
 ----------------------------------------------------------------------------------
 -- Public functions
 ----------------------------------------------------------------------------------
-modelRing=method(TypicalValue => PolynomialRing, Options=>{AbelianVarietyType=>"Jacobian"})
+modelRing=method(TypicalValue => PolynomialRing, Options=>{AbelianVarietyType=>"Jacobian",IndexedVariableName=>"x"})
 modelRing ZZ := opts -> g -> (
-       x:=getSymbol("x");
-       variables:=toList (x_1..x_(g-1));
+       w:=null;
+       if opts#?IndexedVariableName then w=getSymbol(opts.IndexedVariableName) else w=getSymbol("x");
+       variables:=toList (w_1..w_(g-1));
        degs:=apply(g-1,i->{i+1,i});
        S:=QQ[variables,Degrees=>degs];
        S#"AbelianVarietyType"=opts.AbelianVarietyType;
@@ -71,10 +72,11 @@ assert(modelRing(5) === QQ[x_1,x_2,x_3,x_4])
 assert(modelRing(5,AbelianVarietyType=>"Prym") === QQ[x_1,x_2,x_3,x_4])
 ///
 
-abelianTautologicalRing=method(TypicalValue=>Ring, Options=>{AbelianVarietyType=>"Jacobian"})
+abelianTautologicalRing=method(TypicalValue=>Ring, Options=>{AbelianVarietyType=>"Jacobian",IndexedVariableName=>"x"})
 abelianTautologicalRing ZZ := opts -> g -> (
 if g < 0 then error "The dimension of the abelian variety must be positive.";     
-S:=modelRing(g);
+S:=null;
+if opts#?IndexedVariableName then S=modelRing(g,IndexedVariableName=>opts.IndexedVariableName) else S=modelRing(g);
 if g < 2 then return S;
 --generate Polishchuk relations       
 trivialRels:={}; 
@@ -366,17 +368,17 @@ doc ///
       algebraic equivalence. Tautological rings of Jacobians and Pryms contain the classes of essentially all known 
       algebraic cycles on these varieties and are fundamental objects in the study of cycles on abelian varieties.  
       The model tautological ring of a Jacobian was constructed in [P05] and surjects onto the tautological ring of a Jacobian. 
-      The surjection is conjecturally an isomorphism for the generic Jacobian. The analogous construction and the conjecture have 
+      The surjection is conjecturally an isomorphism for the generic Jacobian. The analogous construction for Prym varieties  
       been carried out in [A11]. The Hilbert function of the model tautological ring of a Jacobian has a beautiful conjectural 
       description due to van der Geer and Kouvidakis, see [M09]. The van der Geer-Kouvidakis conjecture has a strong form that 
       gives a basis for the bi-graded pieces of the model tautological ring. Our package provides the tools for verifying these 
-      conjectures.    
+      conjectures experimentally.    
       
-      The Chow group of algebraic 1-cycles modulo algebraic equivalence on a generic abelian 3-fold is known to be not 
-      finite dimesional. FIXME
+--      The Chow group of algebraic 1-cycles modulo algebraic equivalence on a generic abelian 3-fold is known to be not 
+--      finite dimesional. FIXME
             
 --      We provide a general command @TO modelTautologicalRing@ for the construction of the model tautological ring of a Jacobian 
-      variety (and, with an optional argument, of a Prym variety). FIXME 
+--      variety (and, with an optional argument, of a Prym variety). FIXME 
       
     
       {\bf References:}
@@ -409,7 +411,7 @@ doc ///
 --      @TO modelTautologicalRing@  -- The construction of the model tautological ring of a Jacobian or Prym 
 
 
-      {\it An essentail tool for studying tautological cycles is the function that computes the:}
+      {\it An essential tool for studying tautological cycles is the function that computes the:}
 
 --      @TO FourierTransform@ -- Compute the Fourier Trasnform of a tautological cycle
 
@@ -435,15 +437,18 @@ doc ///
 
   Inputs
     g:ZZ
-        dimension of the abelian variety
+        dimension of the abelian variety.
   Outputs
     :PolynomialRing
   Description
    Text
-    Construct the bi-graded polynomial ring that is the ambient ring for the Beauville-Polishchuk ring.
+    Construct the bi-graded polynomial ring that is the ambient ring for the Beauville-Polishchuk ring. Use the option @TO IndexedVariableName@, if necessary, to specify the name of the 
+    indexed variable for the model ring (default is "x") to avoid shadowing existing variables. 
    Example
-     modelRing(10)
-     modelRing(9,AbelianVarietyType=>"Prym")
+     modelRing(8)
+     modelRing(8,IndexedVariableName=>"u")
+     modelRing(9,AbelianVarietyType=>"Prym",IndexedVariableName=>"w")
+     
      
   SeeAlso
    abelianTautologicalRing
@@ -454,7 +459,7 @@ doc ///
     (abelianTautologicalRing, ZZ)
     abelianTautologicalRing
   Headline
-    Construct the Beauville-Polishchuk ring of an abelian variety (default: "Jacobian") of dimension g. 
+    Construct the Beauville-Polishchuk ring. 
   Usage
     abelianTautologicalRing(g)
   Inputs
@@ -464,11 +469,13 @@ doc ///
     :Ring
   Description
    Text
-    Construct the Beauville-Polishchuk ring of an abelian variety (default: "Jacobian") of dimension g. 
+    Construct the Beauville-Polishchuk ring of an abelian variety (default: "Jacobian") of dimension g. Use the option @TO AbelianVarietyType@ to change the type of 
+    abelian variety for which the Beauville-Polishchuk ring is to be constructed. Use the option @TO IndexedVariableName@, if necessary, to specify the name of the 
+    indexed variable for the Beauville-Polishchuk ring (default is "x") to avoid shadowing existing variables. 
    Example
-     abelianTautologicalRing(10)
-     abelianTautologicalRing(9, AbelianVarietyType=>"Prym")
-     
+     abelianTautologicalRing(5)
+     abelianTautologicalRing(5, AbelianVarietyType=>"Prym")
+     abelianTautologicalRing(5, AbelianVarietyType=>"Prym",IndexedVariableName=>"u")
   SeeAlso
    modelRing
 ///
@@ -485,14 +492,14 @@ doc ///
     polishchukD(f,n)
   Inputs
     f:RingElement
-        an element of a ring returned by modelRing or abelianTautologicalRing FIXME hyperlink the functions  
+        an element of a ring returned by @TO modelRing @ or @TO abelianTautologicalRing@.
     n:ZZ
         an integer to specify the number of iterations of the Polishchuk operator to be applied
   Outputs
     :RingElement
   Description
    Text
-    Apply the Polishchuk D operator, see [P05] FIXME. 
+    Apply the Polishchuk D operator to an element of a polynomial ring, which is the output of @TO modelRing@, see [P05] FIXME. 
    Example
      S=modelRing(5);
      polishchukD(x_1^2*x_2*x_3);
@@ -542,7 +549,6 @@ doc ///
       It takes @TO String@ value "Jacobian" or "Prym" (default is "Jacobian").
 ///
 
-
 doc ///
   Key
     [modelRing, AbelianVarietyType]
@@ -556,6 +562,7 @@ doc ///
 ///
 
 
+
 doc ///
   Key
     [abelianTautologicalRing, AbelianVarietyType]
@@ -566,4 +573,41 @@ doc ///
     @TO Option@ to specify the type of abelian variety whose abelianTautologicalRing will be created.
 
     It takes @TO String@ value "Jacobian" or "Prym" (default is "Jacobian").
+///
+
+doc ///
+  Key
+    IndexedVariableName
+  Headline
+    Option to specify the name of the indexed variable. 
+  Description
+    Text
+      @TO Option@ to specify the name of the variable to be used in the output of @TO modelRing@ and @TO abelianTautologicalRing@.
+
+      It takes @TO String@ value, e.g., "w" (default is "x").
+///
+
+doc ///
+  Key
+    [modelRing, IndexedVariableName]
+  Headline
+    Option to specify the name of the indexed variable. 
+  Description
+    Text
+      @TO Option@ to specify the name of the variable to be used in the output of @TO modelRing@.
+
+      It takes @TO String@ value, e.g., "w" (default is "x").
+///
+
+doc ///
+  Key
+    IndexedVariableName
+    [abelianTautologicalRing, IndexedVariableName]
+  Headline
+    Option to specify the name of the indexed variable. 
+  Description
+    Text
+      @TO Option@ to specify the name of the variable to be used in the output of @TO abelianTautologicalRing@.
+
+      It takes @TO String@ value, e.g., "w" (default is "x").
 ///
