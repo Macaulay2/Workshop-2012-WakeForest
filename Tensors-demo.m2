@@ -129,6 +129,15 @@ esum({{T,i,j},{U,j,k}})
 --marginalization
 tman({{T',i,j,k,l}},{i})
 
-(hold symbol T)_(i_1,i_2)
+------------------
+--indexed tensors
+------------------
+t=it(T,{i,j})
+u=it(U,{i,k})
+tensor t
+indices t
+peek t
+v=t*u
+peek v
 
-
+marginalize({i},v)

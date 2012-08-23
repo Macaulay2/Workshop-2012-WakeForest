@@ -53,6 +53,16 @@ itprod List := its -> (
 IndexedTensor*IndexedTensor := (t,u) -> itprod{t,u}
 --note that itprod is faster than * iterated by folding
 
+--Marginalization
+
+marg(List,IndexedTensor):=(tosum,t)->(
+     inds:=indices t;
+     n:=#inds;
+     tosum':=toList select(0..<n,i->member(inds_i,tosum));
+     marg(tensor t,tosum')
+     )
+
+
 end
 
 --desired behavior:
