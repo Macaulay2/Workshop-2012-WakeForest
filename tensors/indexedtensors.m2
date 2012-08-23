@@ -70,6 +70,14 @@ end
 IndexedTensor _ SequenceOfIntegers = entry
 IndexedTensor _ SequenceOfIntegers = entry
 
+t=symbol t
+I=n->value("i"|toString n)
+J=n->value("j"|toString n)
+
+l=n->for i in 0..n list t_i=it(T,{I i,J i})
+n=2
+time fold(l n,(i,j)->i*j);
+time itprod(l n);
 
 
 restart

@@ -18,7 +18,9 @@ newPackage(
 
    
 --ToDo:eventually ditch tensor arrays 
---except for printing
+--1)eliminate dependency of 
+--itprod on tman, and reserve tman for
+--expressional inputs
 --fix "new M from ..." somehow
 --flattenings (after learning to make module elements)
 --2)fix tm R^3
