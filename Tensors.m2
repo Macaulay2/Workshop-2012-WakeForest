@@ -64,6 +64,13 @@ assertClasses (List,Type,String) := (L,T,context) -> if not all(L,i->instance(i,
 --load "./tensors/tensorarrays.m2"
 load "./tensors/rectangularnestedlists.m2"
 
+inserts=method()
+inserts(VisibleList,VisibleList,VisibleList):=(locs,things,host)->(
+     if not #locs===#things then error "#locations =!= #things to insert";
+     for i in 0..<#locs do host=insert(locs#i,things#i,host);
+     host
+     )
+
 ----------------------------------
 --Part 2 of 3:
 --Tensors and Tensor Modules
@@ -252,8 +259,9 @@ tensorAccess (Tensor,Sequence) := (t,s) -> (
 
 Tensor _ Sequence := tensorAccess
 
-fta=fastTensorAccess = method()
-tensorAccess (Tensor,Sequence) := (t,s) -> (
+fta=
+fastTensorAccess = method()
+fta (Tensor,Sequence) := (t,s) -> (
      dims := tensorDimensions t;
      ind := s#0;
      for i in 1..<#s do ind = ind*(dims#i) + s#i;
@@ -399,21 +407,29 @@ symbolicArgumentSequenceFunction=x->toSequence@@(saf x)
 ---------------------
 --Tensor slices
 ---------------------
+--use inserts function here!
 Tensor_List := (t,l) -> (
+     l':=toSequence select(l,i->not i===null);
+     if #l'==#l then return t_(toSequence l);
      assertFreeTensor t;
      dims:=tensorDimensions t;
-     if all(l,i->not i === null) then return t_(toSequence l);
-     f:=tensorFunction t;
-     g:=nullArgumentSequenceFunction l;
-     nulls:=positions(l,i->i===null);
-     odims:=dims_nulls;
-     M:=tensorModule(ring t, odims);
-     inds:=acp toList apply(odims,i->0..<i);
-     ents:=toList apply(inds,f@@g);
-     tensor(M,ents)
+     blanks:=positions(l,i->i===null);
+     odims:=dims_blanks;
+     M:=class t;
+     M':=tensorModule((M#(gs"factors"))_blanks);
+     inds:=toList \ acp apply(odims,i->0..<i);
+     ents:=toList apply(inds,i->t_(inserts(blanks,i,l')));
+     tensor(M',ents)
      )
 --------
+TEST///
 
+
+///
+
+-------------------
+--Tensor marginals
+--------------------
 
 -------------------------
 --Tensor Compositions

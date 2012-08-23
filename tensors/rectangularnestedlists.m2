@@ -20,7 +20,7 @@ List**List := (L,M) -> flatten for l in L list for m in M list (l,m)
 Sequence**Sequence := (L,M) -> join apply(L,l->apply(M,m->(l,m)))
 
 acp=--INTERNAL ABBREVIATION
-associativeCartesianProduct = method()
+associativeCartesianProduct = method(Dispatch=>Thing)
 associativeCartesianProduct VisibleList := L -> (
      p:=fold((i,j)->(i**j)/splice,L);
      if not class p_0 === Sequence then p=p/(i->1:i);

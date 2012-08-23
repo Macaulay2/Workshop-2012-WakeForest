@@ -8,30 +8,49 @@ IndexedTensor = new Type of HashTable
 subscriptFormat :=method()
 subscriptFormat List := inds -> toString(inds_0)|concatenate(
      (take(inds,{1,#inds}))/(i->","|toString(i)))
-net IndexedTensor := A -> net (hold A.cache#(gs"name"))_(subscriptFormat A#(gs"indices"))
+net IndexedTensor := A -> net (hold A.cache#(gs"name"))_(subscriptFormat A#(cs"indices"))
 noname="[unnamed IndexedTensor]"
 it=
 indexedTensor=method()
 it (Tensor,List) := (t,inds) -> (
      c:=new CacheTable from {(gs"name") => noname};
      new IndexedTensor from hashTable{
-     	  gs"tensor" => t,
-     	  gs"indices" => inds,
-     	  cache => c,     
-     	  gs"name" => () -> c#(gs"name")}
+     	  cache => c,
+       	  symbol indices => inds,
+     	  symbol tensor => t}
      )
+
+tensor IndexedTensor := opts -> t -> t.tensor
+indices IndexedTensor := t -> t.indices
+
 IndexedTensor.GlobalAssignHook = (sym,val) -> (
      if val.cache#(gs"name") === noname then val.cache#(gs"name") = sym;
      )
 IndexedTensor#{Standard,AfterPrint} = T -> (
      << endl;				  -- double space
-     t:= T#(gs"tensor");
+     t:= T.tensor;
      << concatenate(interpreterDepth:"o") << lineNumber << " : "
-     << ring t
-     << "-IndexedTensor of order "|toString(#tensorDimensions t)|
-     ", dimensions "|toString(tensorDimensions t);
-     << endl;
+     << net class t
+     << "-IndexedTensor with indices "
+     << net indices T
+     << endl
      )
+
+rit=
+renameIndexedTensor=method()
+rit (IndexedTensor,Symbol) := (t,s) -> t.cache#(gs"name") = s
+
+---------------------------------------
+--"Hadamard" products of indexed tensors
+---------------------------------------
+itprod=
+indexedTensorProduct = method()
+itprod List := its -> (
+     T:=tman apply(its,t->{t.tensor}|t.indices);
+     indexedTensor(T,sort unique flatten apply(its,t->t.indices))
+     )
+
+IndexedTensor*IndexedTensor := (t,u) -> itprod{t,u}
 
 
 end

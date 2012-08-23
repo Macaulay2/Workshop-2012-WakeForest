@@ -12,7 +12,6 @@ T=makeTensor{
      {{a,b},{c,d}},
      {{e,f},{g,h}},
      {{i,j},{k,l}}}
-
 -- from a list and given dimensions
 makeTensor({3,2,2},{a,b,c,d,e,f,g,h,i,j,k,l})
 
@@ -49,6 +48,8 @@ T_(1,0,1) -- by position
 -- for unspecified indices:
 T
 T_{,0,}
+t=T
+l={,0,}
 T
 T_{1,,}
 T_{1,,1}
