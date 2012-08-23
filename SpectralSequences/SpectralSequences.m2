@@ -467,6 +467,9 @@ differential = method ();
 differential (ZZ,FilteredComplex,ZZ,ZZ):=Matrix => (r,F,p,q) -> 
      inducedMap(pageZ(r,F,p+r,q-r+1),pageZ(r,F,p,q),F^p.dd_(-p-q))
 
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+
 SpectralSequenceSheet = new Type of MutableHashTable
 SpectralSequenceSheet.synonym = "spectral sequence sheet"
 
@@ -527,7 +530,6 @@ k=QQ
 -- make some maps
 d2=matrix(k,{{1},{0}})
 d1=matrix(k,{{0,1}})
-d1*d2
 
 
 
@@ -538,10 +540,7 @@ d1*d2
 
 
 C=chainComplex({d1,d2})
-(C.dd_1)*(C.dd_2)==0
 
-C.dd_2==d2
-C.dd_1==d1
 prune HH C
 
 -- the above shows that C is acyclic.  
@@ -587,7 +586,7 @@ F2C=chainComplex({inducedMap(F2C0,F2C1,C.dd_1),inducedMap(F2C1,F2C2,C.dd_2)})
 --  Now try to construct an explicit chain complex map yielding this inclusion
 -- of chain complexes.
 
--- now want to construct a chain complex map defining the inclusion F2C --> F3C.
+-- Want to construct a chain complex map defining the inclusion F2C --> F3C.
 -- we will label such maps by the source. (The number 2 in this case.) 
 
 
@@ -625,6 +624,11 @@ m0=chainComplexMap(F3C,F0C,{inducedMap(F3C_0,F0C_0,id_(F3C_0)), inducedMap(F3C_1
 -- Now test Nathan's spectral sequence code --------------------------
 ----------------------------------------------------------------------
 K=homologicalFilteredComplex {m2,m1,m0}
+
+see K
+-- so there is a bug in see filteredComplex.  We are missing One complex.
+
+
 
 E0Modules=computeErModules(K,0)
 
