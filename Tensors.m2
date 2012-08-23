@@ -60,6 +60,14 @@ assertClasses (List,Type) := (L,T) -> if not all(L,i->instance(i,T)) then (
 assertClasses (List,Type,String) := (L,T,context) -> if not all(L,i->instance(i,T)) then (
      error (context|" expected list entries of type "|toString(T)|"s"))
 
+allInstances = method()
+allInstances (VisibleList,List) := (things,types) -> (
+     all(things,i->not all(types,j->not instance(i,j)))
+     )
+allInstances (VisibleList,HashTable) := (things,type) -> (
+     allInstances(things,{type})
+     )
+
 --------------------------------------------
 --Load part 1 (minimize dependence on this)
 --------------------------------------------
@@ -449,7 +457,6 @@ marg(Tensor,List) := (T,tosum) -> (
      M:=tensorModule((class T)#(gs"factors")_tokeep);
      tensor(M,ents)
      )
-
 
 -------------------------
 --Tensor Compositions

@@ -40,6 +40,39 @@ rit=
 renameIndexedTensor=method()
 rit (IndexedTensor,Symbol) := (t,s) -> t.cache#(gs"name") = s
 
+-----------------------
+--Indexed tensors from
+--subscripting tensors
+----------------------
+--a.c. needs error checking
+Tensor_Sequence := (T,s) -> (
+     if allInstances(s,ZZ) then return (
+	  tensorAccess(T,s));
+     if not allInstances(s,
+	  {ZZ,Symbol,IndexedVariable}) then 
+          error "Tensor_Sequence expected a sequence 
+          of integers, symbols, or indexed variables";
+     dims:=tensorDimensions T;
+     if not #dims==#s then error "dimension mismatch";
+     syms:=toList select(s,isSymbolic);
+     syms':=unique syms;
+     if #syms'==#s then return (
+	  indexedTensor(T,syms'));
+--     locs:=positions(s,isSymbolic)
+     p:=hashTable apply(syms,i->i=>position(syms',j->j===i));
+     f := l -> apply(s,i->if instance(i,ZZ) then i 
+	  else l#(p#i));
+     firstsyms:=apply(syms',i->position(s,j->i===j));
+     odims:=dims_firstsyms;
+     inds:=toList \ acp apply(odims,i->0..<i);
+     ents:=toList apply(inds,i->fastTensorAccess(T,f i));
+     M:=class T;
+     factors:=M#(gs"factors")_firstsyms;
+     M':=tensorModule factors;
+     T':=tensor(M',ents);
+     indexedTensor(T',syms')
+     )
+
 ---------------------------------------
 --"Hadamard" products of indexed tensors
 ---------------------------------------
@@ -55,12 +88,15 @@ IndexedTensor*IndexedTensor := (t,u) -> itprod{t,u}
 
 --Marginalization
 
-marg(List,IndexedTensor):=(tosum,t)->(
+sum(List,IndexedTensor):=(tosum,t)->(
      inds:=indices t;
      n:=#inds;
      tosum':=toList select(0..<n,i->member(inds_i,tosum));
-     marg(tensor t,tosum')
+     T:=marginalize(tensor t,tosum');
+     indexedTensor(T,inds-set(tosum))
      )
+sum(Symbol,IndexedTensor):=(s,t)->sum({s},t)
+sum(IndexedVariable,IndexedTensor):=(s,t)->sum({s},t)
 
 
 end

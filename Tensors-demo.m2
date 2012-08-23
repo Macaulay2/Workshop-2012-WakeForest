@@ -93,8 +93,8 @@ P_7
 P_(0,0,1,1,1)
 
 {{*--------------------------------
--- Manipulation of tensors using --
--- symbolic index notation       --
+   Manipulation of tensors using
+   symbolic index notation      
 --------------------------------*}};
 T=genericTensor(R,{3,3})
 U=genericTensor(R,9,{3,3})
@@ -135,15 +135,15 @@ tman({{T',i,j,k,l}},{i})
 {{*------------------
 -- indexed tensors --
 ------------------*}};
-t=it(T,{i,j})
-u=it(U,{i,k})
+t=T_(i,j)
+u=U_(i,k)
 tensor t
 indices t
 peek t
 v=t*u
 peek v
+tensor sum(i,v)
 
-marginalize({i},v)
 
 end
 
