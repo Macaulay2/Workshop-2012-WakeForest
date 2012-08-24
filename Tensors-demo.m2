@@ -43,6 +43,19 @@ T
 T_5 -- by ordinal
 T_(1,0,1) -- by position
 
+{{*-----------------------
+-- Permutation action: ---
+-----------------------*}};
+T
+T@{0,1,2}--same as T
+T@{2,0,1}--different!
+
+{{*The action is designed to be
+equivariant with respct to the 
+action on the keys: *}}
+I=(0,1,0);perm={2,0,1};
+T_I===(T@perm)_(toSequence I_perm)
+
 {{*---------
 -- Slices --
 ---------*}};
@@ -90,6 +103,26 @@ peek v
 v'=sum(i,v)
 tensor v'
 
+{{*---------------------------
+-- Index permutation action --
+---------------------------*}};
+x=symbol x;i=symbol i;j=symbol j;k=symbol k;
+R'=QQ[x_0..x_60]
+T=genericTensor(R',{3,4,5})
+t=T_(i,j,k)
+t'=t@(k,i,j)--index permutations are sequences, not lists
+T'=tensor t'
+T
+T_(2,3,0)
+T'_(0,2,3)
+
+{{*The action is designed to be
+equivariant with respect to the 
+action on the index sequence: *}}
+I=(1,3,4)
+perm={2,0,1}
+t_I===(t@(toSequence (i,j,k)_perm))_(toSequence I_perm)
+(tensor t)@perm===tensor(t@(toSequence (i,j,k)_perm))
 
 {{*
 time T_(i1,i2) * T_(i3,i4) * T_(i5,i6) * T_(i7,i8)

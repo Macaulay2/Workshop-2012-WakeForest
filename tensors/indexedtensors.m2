@@ -5,18 +5,18 @@
 --needsPackage"Tensors"
 export{IndexedTensor,indexedTensor}
 IndexedTensor = new Type of HashTable
-subscriptFormat :=method()
-subscriptFormat List := inds -> toString(inds_0)|concatenate(
+subscriptNet :=method(Dispatch=>Thing)
+subscriptNet VisibleList := inds -> toString(inds_0)|concatenate(
      (take(inds,{1,#inds}))/(i->","|toString(i)))
-net IndexedTensor := A -> net (hold A.cache#(gs"name"))_(subscriptFormat A#(cs"indices"))
+net IndexedTensor := A -> net (hold A.cache#(gs"name"))_(subscriptNet A#(cs"indices"))
 noname="[unnamed IndexedTensor]"
 it=
 indexedTensor=method()
-it (Tensor,List) := (t,inds) -> (
+it (Tensor,VisibleList) := (t,inds) -> (
      c:=new CacheTable from {(gs"name") => noname};
      new IndexedTensor from hashTable{
      	  cache => c,
-       	  symbol indices => inds,
+       	  symbol indices => toSequence inds,
      	  symbol tensor => t}
      )
 
@@ -33,7 +33,7 @@ IndexedTensor#{Standard,AfterPrint} = T -> (
      << concatenate(interpreterDepth:"o") << lineNumber << " : "
      << net class t
      << "-IndexedTensor with indices "
-     << net indices T
+     << subscriptNet indices T
      << endl
      )
 
@@ -73,6 +73,31 @@ Tensor_Sequence := (T,s) -> (
      T':=tensor(M',ents);
      indexedTensor(T',syms')
      )
+Tensor_Symbol := (T,s) -> T_(1:s)
+Tensor_IndexedVariable := (T,v) -> T_(1:v)
+
+IndexedTensor_Sequence := (t,s) -> tensorAccess(tensor t,s)
+
+
+-------------------------------------------
+-- Permuting the axes of indexed tensors
+-------------------------------------------
+IndexedTensor @ List := (t,l) -> (
+     indexedTensor((tensor t)@l,(indices t)@l))
+
+IndexedTensor @ Sequence := (t,s) -> (
+    if not allInstances(s,{Symbol,IndexedVariable}) then error "
+    IndexedTensor @ Sequence expected a sequence of Symbols 
+    or IndexedVariables";
+    inds:=toList indices t;
+    inds':=sort inds;
+    n:=#inds;
+    perm:=toList apply(0..<n,i->find(s_i,inds'));
+    assert(inds_perm===toList s);
+    indexedTensor((tensor t)@perm,s)    
+    )
+
+
 
 ---------------------------------------
 --"Hadamard" products of indexed tensors
@@ -81,8 +106,8 @@ itprod=
 indexedTensorProduct = method()
 itprod List := its -> (
      --a.c. eliminate dependency on tman
-     T:=tman apply(its,t->{t.tensor}|t.indices);
-     indexedTensor(T,sort unique flatten apply(its,t->t.indices))
+     T:=tman apply(its,t->{t.tensor}|toList(t.indices));
+     indexedTensor(T,sort unique flatten apply(its,t->toList(t.indices)))
      )
 IndexedTensor*IndexedTensor := (t,u) -> itprod{t,u}
 --note that itprod is faster than * iterated by folding
@@ -90,7 +115,7 @@ IndexedTensor*IndexedTensor := (t,u) -> itprod{t,u}
 --Marginalization
 
 sum(List,IndexedTensor):=(tosum,t)->(
-     inds:=indices t;
+     inds:=toList indices t;
      n:=#inds;
      tosum':=toList select(0..<n,i->member(inds_i,tosum));
      T:=marginalize(tensor t,tosum');
@@ -106,7 +131,7 @@ sum(IndexedVariable,IndexedTensor):=(s,t)->sum({s},t)
 einsum=
 einsteinSum=method(Dispatch=>Thing)
 einsteinSum VisibleList := l -> (
-     tosum:=repeatedEntries flatten(apply(l,indices));
+     tosum:=repeatedEntries flatten(apply(l,toList@@indices));
      sum(tosum,indexedTensorProduct l)
      )
 

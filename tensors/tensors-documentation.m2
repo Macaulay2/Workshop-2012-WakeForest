@@ -24,7 +24,6 @@ doc ///
 Key
   TensorModule
   (symbol ^,TensorModule,ZZ)
-  (symbol ++,TensorModule,TensorModule) 
   (symbol **,TensorModule,TensorModule)
 Headline
   The class of all tensor modules

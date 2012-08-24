@@ -17,13 +17,16 @@ newPackage(
 --a.c. : andrew critch
 
 --ToDo:eventually ditch tensor arrays 
---1)eliminate dependency of 
+--1) TxensorNet for printing instead of rnl
+--USE MEMOIZE INSTEAD?
+--1')permutation(Tensor)
+--Tensor@@Function, 
+--1) sort Indexed Tensor
+--2) eliminate dependency of 
 --itprod on tman, and reserve tman for
 --expressional inputs
 --fix "new M from ..." somehow
 --flattenings (after learning to make module elements)
---2)fix tensorModule R^3
---fix M++M
 --4)Exclude contraction for non-free modules
 --6) command for dropping 1's in dimension list
 
@@ -36,7 +39,7 @@ newPackage(
 
 export{Tensor,TensorModule,FreeTensorModule,
      makeTensor,tensorModule,tensorModuleProduct,
-     tensorDimensions,einsteinSum}
+     tensorDims,einsteinSum}
 
 -------------------------
 --Symbol methods
@@ -84,6 +87,10 @@ inserts(VisibleList,VisibleList,VisibleList):=(locs,things,host)->(
      host
      )
 
+find = method()
+find (Thing,VisibleList) := (x,l) -> (
+     position(l,i->i===x))
+
 ----------------------------------
 --Part 2 of 3:
 --Tensors and Tensor Modules
@@ -106,10 +113,16 @@ module Module := identity
 ------
 --Using dimensions method previously defined for
 --RNLs now for...
-if not class tensorDimensions === MethodFunction then (
-     tensorDimensions = method())
-tensorDimensions Module := M -> {rank ambient M}
-tensorDimensions TensorModule := M -> M#(gs"dimensions")
+--if not class tensorDims === MethodFunction then (
+
+tensorDims =
+tensorDimensions = method()
+tensorDims Module := M -> {rank ambient M}
+tensorDims TensorModule := M -> M#(gs"dimensions")
+
+tensorKeys = method(Dispatch=>Thing)
+tensorKeys VisibleList := l ->  toList acp(apply(l,i->0..<i)) 
+tensorKeys Tensor := t -> tensorKeys tensorDims t
 
 --Printing TensorModules:
 moduleSummary=M->(
@@ -208,7 +221,7 @@ factorModules=method()
 factorModules TensorModule := T -> T#(gs"factors")
 factorModules Module := M -> {M}
 
-tensorDimensions Tensor := t -> tensorDimensions class t
+tensorDims Tensor := t -> tensorDims class t
 
 
 --Tensor module from a list of modules to tensor product,
@@ -218,7 +231,7 @@ tensorModuleProduct=method(Dispatch=>Thing)
 tensorModuleProduct Sequence := fctrs -> tensorModuleProduct toList fctrs
 tensorModuleProduct List := fctrs -> (
      assertInstances(fctrs,Module,"tensorModuleProduct(List)");
-     dims:=flatten(fctrs/tensorDimensions);
+     dims:=flatten(fctrs/tensorDims);
      f:=flatten(fctrs/factorModules);
      M:=fold(fctrs/module,(i,j)->i**j);
      T:=if all(fctrs,isFreeModule) then FreeTensorModule else TensorModule;
@@ -236,19 +249,21 @@ tensorModuleProduct List := fctrs -> (
 TensorModule == TensorModule := (M,N) -> (M#(gs"factors") / module)==(N#(gs"factors") / module)
 
 ----------------------------
---TensorModule combinations
+--TensorModule operations
 ----------------------------
 TensorModule^ZZ := (M,n) -> tensorModuleProduct (n:M)
+TensorModule**TensorModule := (M,N) -> tensorModuleProduct(M,N)
 
---a.c. bug for ++ below
+--permute the factors of a tensor module:
+TensorModule @ List := (M,l) -> tensorModuleProduct M#(gs"factors")_l
+
+{*a.c. doesn't make sense:
 TensorModule++TensorModule := (M,N) -> (
      if not #M#(gs"dimensions") == #N#(gs"dimensions") then error "dimension mismatch in TensorModule++TensorModule";
      P:=(module M)++(module N);
      tm(P,M#(gs"dimensions") + N#(gs"dimensions"))
      )
-
-TensorModule**TensorModule := (M,N) -> tensorModuleProduct(M,N)
-
+*}
 
 -----------------------------
 --Basic tensor methods
@@ -268,7 +283,7 @@ vector Tensor := t -> new (module t) from t
 --fast access without error checking
 tensorAccess = method()
 tensorAccess (Tensor,Sequence) := (t,s) -> (
-     dims := tensorDimensions t;
+     dims := tensorDims t;
      if not #s == #dims then error "dimension mismatch";
      if not all(0..<#s,i->s#i<dims#i) then error "index out of range";
      ind := s#0;
@@ -281,7 +296,7 @@ Tensor _ Sequence := tensorAccess
 fta=
 fastTensorAccess = method()
 fta (Tensor,Sequence) := (t,s) -> (
-     dims := tensorDimensions t;
+     dims := tensorDims t;
      ind := s#0;
      for i in 1..<#s do ind = ind*(dims#i) + s#i;
      t_ind
@@ -312,6 +327,7 @@ Ring**Tensor := (r,t) -> error "not implemented yet"
 Tensor/Function := (t,f) -> tensor(class t,apply(entries t,f))
 
 
+
 ----------------------------
 --Access to basis elements
 --by multi-index
@@ -340,7 +356,7 @@ makeTensor List := L -> (
 
 rnl Tensor := t -> (
      if RNL.cache#?t then return RNL.cache#t;
-     a := new RNL from rnl (tensorDimensions t,entries t);
+     a := new RNL from rnl (tensorDims t,entries t);
      RNL.cache#t = a;
 --     Tensor.cache#a = t; the array does not retain the base ring!
      a
@@ -349,26 +365,44 @@ net Tensor := t -> net rnl t;
 ------
 
 ---------------------------
---Tensor combinations
+--Tensor operations
 ---------------------------
-Tensor+Tensor := (v,w) -> (
+Tensor + Tensor := (v,w) -> (
      if not class v === class w then error "Tensor+Tensor not from the same TensorModule";
-     new (class v) from (vector v)+(vector w)
+     tensor(class v,(vector v)+(vector w))
      )
-Tensor-Tensor := (v,w) -> (
+Tensor - Tensor := (v,w) -> (
      if not class v === class w then error "Tensor-Tensor not from the same TensorModule";
-     new (class v) from (vector v)-(vector w)
+     tensor(class v,(vector v)-(vector w))
      )
-RingElement*Tensor := (r,w) -> (
+RingElement * Tensor := (r,w) -> (
      if not ring r === ring w then error "RingElement*Tensor not over the same ring";
-     new (class w) from r*(vector w)
+     tensor(class w,r*(vector w))
      )
-Tensor*RingElement := (w,r) -> r*w
-Tensor**Tensor := (v,w) -> (
+Tensor * RingElement := (w,r) -> r*w
+Tensor ** Tensor := (v,w) -> (
      M:=(class v)**(class w);
-     new M from (vector v)**(vector w)
+     tensor(M,(vector v)**(vector w))
      )
 Tensor ^ ZZ := (t,n) -> fold(for i in 0..<n list t,(i,j)->i**j)
+
+--------------------------------
+--Permuting the axes of a tensor
+--------------------------------
+
+Tensor @ List := (T,l) -> (
+     assertInstances(l,ZZ,"tensor(Tensor,List)");
+     dims:=tensorDims T;
+     if not set l === set(0..<#dims) then error "
+     Tensor @ List expected a permutation of 0..<#d, where
+     d is the number of dimensions of the Tensor";
+     l':=inversePermutation l;
+     M:=(class T)@l;
+     inds:=tensorKeys dims_l;
+     ents:=apply(inds,i->T_(toSequence i_l'));
+     tensor(M,ents)
+     )
+
 --------------------------------------
 --Turn a free tensor into a function that
 --accesses its entries
@@ -429,7 +463,7 @@ Tensor_List := (t,l) -> (
      l':=toSequence select(l,i->not i===null);
      if #l'==#l then return t_(toSequence l);
      assertFreeTensor t;
-     dims:=tensorDimensions t;
+     dims:=tensorDims t;
      blanks:=positions(l,i->i===null);
      odims:=dims_blanks;
      M:=class t;
@@ -451,7 +485,7 @@ marg=
 marginalize=method()
 marg(Tensor,List) := (T,tosum) -> (
      assertFreeTensor T;
-     dims:=tensorDimensions T;
+     dims:=tensorDims T;
      n:=#dims;
      if not all(tosum,i->instance(i,ZZ) and i<n) then 
       error "marginalize(Tensor,List) expected a list of integers less than the dimensions of the tensor";
