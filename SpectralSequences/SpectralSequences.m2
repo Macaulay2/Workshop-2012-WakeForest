@@ -50,7 +50,7 @@ export {
   "spectralSequence",
   "SpectralSequenceSheet",
   "see", "computeErModules","computeErMaps", "spots",
-  "nonReducedChainComplex"
+  "nonReducedChainComplex", "SpectralSequencePage", "spectralSequencePage"
   }
 
 -- symbols used as keys
@@ -59,7 +59,9 @@ protect maxF
 protect minH
 protect maxH
 protect inducedMaps
-
+protect pageNumber
+protect pageModules
+protect pageMaps
 needsPackage "SimplicialComplexes"
 needsPackage "ChainComplexExtras"
 
@@ -178,9 +180,7 @@ FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
 -- we want to preserve is F_p C_q = F^(-p)C^(-q) for all p and q.
 
 FilteredComplex ^ InfiniteNumber :=
-FilteredComplex ^ ZZ := ChainComplex => (K,p) -> (
-  if K#?(-p) then K#(-p) else if (-p) < min K then K#(min K) 
-  else if (-p) > max K then K#(max K)
+FilteredComplex ^ ZZ := ChainComplex => (K,p) -> ( K_(-p)
   )
 
 
@@ -262,6 +262,35 @@ computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
 	       new HashTable from myList
       )
 
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Following Hatcher's terminology and the terminology I first learned,
+-- I prefer to use spectral sequence page rather than spectral sequence sheet.
+-------------------------------------------------------------------------------
+-- I also wanted to add certain keys to a spectral sequence page / sheet
+SpectralSequencePage = new Type of MutableHashTable
+SpectralSequencePage.synonym = "spectral sequence page"
+
+spectralSequencePage = method ()
+spectralSequencePage(FilteredComplex, ZZ):= (K,r) ->( 
+new SpectralSequencePage from 
+ {symbol filteredComplex=> K, symbol pageNumber =>r, 
+      symbol pageModules => computeErModules(K,r), symbol dd => computeErMaps(K,r), 
+     symbol zero => (ring K_infinity)^0})
+
+
+
+-- in the following we are assuming that user is inputing a list of 
+-- pairs of integers.
+-- should return an error message if this isn't the case.
+
+SpectralSequencePage _ List := Module => (E,i)-> if (E.pageModules)#?i then 
+ (E.pageModules)#i else image(0*id_((E.filteredComplex_infinity)_(sum i)))  
+
+SpectralSequencePage ^ List := Module => (E,i)-> E_(apply(i, j-> -j))    
+
+--------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------
 
 
 -------------------------------------------------------------------------------------
@@ -426,6 +455,8 @@ FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
 ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
   filteredComplex for p from min K to max K list C ** inducedMap(K,p))
 
+
+
 --------------------------------------------------------------------------------
 -- spectral sequences ----------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -442,9 +473,15 @@ expression SpectralSequence := E -> stack(
   "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ..ooOOOooooOO", 
   "  \\   \\  ", "   `~~~` ")
 
-filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+-- Now starting to think about SpectralSequence data type. -----------------
+-- I'm not sure we need to store the things labeled minF, max F, maxH, minH below.
+-- these are trivial to compute from the abmient filtered complex.
+-- I'm also not sure if we need or want a degree option.
 
-chainComplex SpectralSequence := ChainComplex => E -> chainComplex filteredComplex E
+-- For now I am going to comment out things that I don't think we need.
+
 
 spectralSequence = method(Options => {Degree => 1})
 spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
@@ -459,31 +496,55 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
 
 
 
+  SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> ()
+  
+ --    F := filteredComplex E;
+  --   L := for p from E.minF to E.maxF list (
+--	  for q from E.minH - E.maxF to E.maxH - E.minF list (
+--	       M := pageE(r,F,p,q);
+--	       if M!= 0 then {{p,q}, M} else continue));
+--     new SpectralSequenceSheet from flatten L | {symbol zero => E.zero})
+
+
+-- SpectralSequence _ InfiniteNumber := SpectralSequenceSheet => (E,r) -> (
+--  C:= E_0;
+--  if r == -infinity then C 
+--  else (
+ --   maxC := max (select (keys C, i -> class i === List)/last);
+ --   minC := min (select (keys C, i -> class i === List)/last);
+  --  E_(maxC -minC + 1)))
+
+
+filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
+
+chainComplex SpectralSequence := ChainComplex => E -> chainComplex filteredComplex E
+
+
 
 
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 -- get the inverse image of C under the map d
-invSubmodule := (d,C) -> ker (inducedMap ((target d)/C,target d) * d)
+-- invSubmodule := (d,C) -> ker (inducedMap ((target d)/C,target d) * d)
 
 -- internal functions (creating approximate cycle & boundary subquotients)
 
-pageZ := (r, F,p,q) -> 
-     (invSubmodule (F^p.dd_(-p-q),F^(p+r)_(-p-q-1)) + F^(p+1)_(-p-q))/F^(p+1)_(-p-q)
+-- pageZ := (r, F,p,q) -> 
+--     (invSubmodule (F^p.dd_(-p-q),F^(p+r)_(-p-q-1)) + F^(p+1)_(-p-q))/F^(p+1)_(-p-q)
 
-pageB := (r, F,p,q) -> 
-     (intersect (image F^(p-r+1).dd_(1-p-q),F^p_(-p-q)) + F^(p+1)_(-p-q)) / F^(p+1)_(-p-q)
+-- pageB := (r, F,p,q) -> 
+--     (intersect (image F^(p-r+1).dd_(1-p-q),F^p_(-p-q)) + F^(p+1)_(-p-q)) / F^(p+1)_(-p-q)
 
-pageE := (r, F,p,q) -> (
-     if r < 1 then F^p_(-p-q)/F^(p+1)_(-p-q) else 
-     if r == 1 then ker F^p.dd_(-p-q) / image F^p.dd_(1-p-q)
-     else pageZ(r,F,p,q)/pageB(r,F,p,q))
+--- pageE := (r, F,p,q) -> (
+---     if r < 1 then F^p_(-p-q)/F^(p+1)_(-p-q) else 
+---     if r == 1 then ker F^p.dd_(-p-q) / image F^p.dd_(1-p-q)
+---     else pageZ(r,F,p,q)/pageB(r,F,p,q))
 
 
-differential = method ();
-differential (ZZ,FilteredComplex,ZZ,ZZ):=Matrix => (r,F,p,q) -> 
-     inducedMap(pageZ(r,F,p+r,q-r+1),pageZ(r,F,p,q),F^p.dd_(-p-q))
+--differential = method ();
+--differential (ZZ,FilteredComplex,ZZ,ZZ):=Matrix => (r,F,p,q) -> 
+--    inducedMap(pageZ(r,F,p+r,q-r+1),pageZ(r,F,p,q),F^p.dd_(-p-q))
 
 -----------------------------------------------------------------------
 -----------------------------------------------------------------------
@@ -491,23 +552,9 @@ differential (ZZ,FilteredComplex,ZZ,ZZ):=Matrix => (r,F,p,q) ->
 SpectralSequenceSheet = new Type of MutableHashTable
 SpectralSequenceSheet.synonym = "spectral sequence sheet"
 
-SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> (
-     F := filteredComplex E;
-     L := for p from E.minF to E.maxF list (
-	  for q from E.minH - E.maxF to E.maxH - E.minF list (
-	       M := pageE(r,F,p,q);
-	       if M!= 0 then {{p,q}, M} else continue));
-     new SpectralSequenceSheet from flatten L | {symbol zero => E.zero})
 
 SpectralSequenceSheet ^ List := Module => (Er,L) -> if Er#?L then Er#L else Er.zero
 
-SpectralSequence _ InfiniteNumber := SpectralSequenceSheet => (E,r) -> (
-  C:= E_0;
-  if r == -infinity then C 
-  else (
-    maxC := max (select (keys C, i -> class i === List)/last);
-    minC := min (select (keys C, i -> class i === List)/last);
-    E_(maxC -minC + 1)))
 
 support SpectralSequenceSheet := List => E -> 
   apply (select(keys E,i -> class i === List), j -> j => prune E^j)
@@ -528,6 +575,79 @@ restart
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
+-------------------------------------------------------------------
+
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+
+
+
+SpectralSequencePage = new Type of MutableHashTable
+SpectralSequencePage.synonym = "spectral sequence page"
+
+spectralSequencePage = method ()
+spectralSequencePage(FilteredComplex, ZZ):= (K,r) ->( 
+new SpectralSequencePage from 
+ {symbol filteredComplex=> K, symbol pageNumber =>r, 
+      symbol pageModules => computeErModules(K,r), symbol dd => computeErMaps(K,r), 
+     symbol zero => (ring K_infinity)^0})
+
+
+
+-- in the following we are assuming that user is inputing a list of 
+-- pairs of integers.
+-- should return an error message if this isn't the case.
+
+SpectralSequencePage _ List := Module => (E,i)-> if (E.pageModules)#?i then 
+ (E.pageModules)#i else image(0*id_((E.filteredComplex_infinity)_(sum i)))  
+
+SpectralSequencePage ^ List := Module => (E,i)-> E_(apply(i, j-> -j))    
+
+
+e0^{1,1}
+
+e0_{-1,-1}
+
+e0_{0,0}
+e0_{10,10}
+
+sum {10,10}
+
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+F2D=D
+
+F1D= simplicialComplex {a*c, d}
+
+F0D = simplicialComplex {a,d}
+
+K= filteredComplex {F2D, F1D, F0D}
+
+E0=spectralSequencePage(K,0)
+(E0.dd)#{0,0}
+E0.filteredComplex
+E0.pageNumber
+E0.pageModules
+E0.zero
+
+E1=spectralSequencePage(K,1)
+(E1.dd)#{0,0}
+E1.filteredComplex
+E1.pageNumber
+E1.pageModules
+E1.dd
+E1.zero
+
+
+
+------------------------------------------------------------
+-----------------------------------------------------------
+
 -------------------------------------------------------------
 -- another example to try and which can be computed by hand.
 --------------------------------------------------------------
@@ -710,7 +830,10 @@ A=QQ[x,y,z]
 
 F3=simplicialComplex {x*y*z}
 
-homologicalFilteredComplex({F3})
+filteredComplex({F3})
+
+simplicialComplex({})
+-- I guess the simplicial complex code doesn't allow for the "empty simplicial complex"
 
 F2=simplicialComplex {y*z, x}
 
@@ -1017,7 +1140,7 @@ F0D=simplicialComplex(join(f0l1,f0l2,f0l3,f0l4,f0l5))
 -- So F0D corresponds to the filtration of D by considering the inverse images of the 
 -- 0-dimensional faces of the triangulation of S^2.
 
-KK=homologicalFilteredComplex({D,F1D,F0D});
+KK=filteredComplex({D,F1D,F0D});
 
 
 -- to compute the serre spectral sequence of the hopf fibration S^1-> S^3 -> S^2 
@@ -1025,11 +1148,6 @@ KK=homologicalFilteredComplex({D,F1D,F0D});
 -- with non-reduced homology we need the following method which removes the empty face
 -- from the chain complex
 
-nonReducedChainComplex=method()
-nonReducedChainComplex(ChainComplex):= K->(l:=apply(drop(sort spots K,1),i-> i);
-    p:= (for i from 1 to #l-1 list K.dd_i);
-chainComplex(p)
- )
 
 KK_2
 nonReducedChainComplex(KK_2)
