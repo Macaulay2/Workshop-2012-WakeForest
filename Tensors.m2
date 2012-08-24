@@ -20,6 +20,9 @@ newPackage(
 --2) eliminate dependency of 
 --itprod on tman, and reserve tman for
 --expressional inputs
+--1)netList': learn to pad nested lists
+--methods Net
+--netPadToWidth:=method...
 --flattenings (after learning to make module elements)
 --4)Exclude contraction for non-free modules
 --6) command for dropping 1's in dimension list
