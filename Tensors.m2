@@ -19,8 +19,6 @@ newPackage(
 --ToDo:eventually ditch tensor arrays 
 --1) TxensorNet for printing instead of rnl
 --USE MEMOIZE INSTEAD?
---1')permutation(Tensor)
---Tensor@@Function, 
 --1) sort Indexed Tensor
 --2) eliminate dependency of 
 --itprod on tman, and reserve tman for

@@ -86,9 +86,10 @@ marginalize(T,{0,1,2})
 T=genericTensor(R,{3,3})
 U=genericTensor(R,9,{3,3})
 i=symbol i;j=symbol j;k=symbol k;l=symbol l
-tensor sum(i,T_(i,j)*U_(i,k))
-tensor sum(k,T_(i,j)*U_(i,k))
-tensor einsum{T_(i,j),U_(j,k)}
+tensor sum(i, T_(i,j) * U_(i,k) )
+tensor ( T_(i,j) * U_(i,k) )
+tensor sum(k, T_(i,j) * U_(i,k) )
+tensor einsum{T_(i,j), U_(j,k)}
 
 
 {{*how indexed tensors work *}}
@@ -142,10 +143,10 @@ M=class T
 it is a tensor product of smaller 
 modules.*}};
 M0=R^3 ** R^2 ** R^2 -- doesn't remember it's a tensor product
-M -- remembers
+M=tensorModule(R,{3,2,2}) -- remembers
 
 M'=tensorModule(R,{2,2,3})
-new TensorModule from M--doesn't know it's free
+new TensorModule from M -- doesn't know it's free
 M==M0--they are equal as modules, 
 M===M0--but not as hashtables,
 M==M'--and tensor modules with different factors are different
@@ -154,7 +155,7 @@ M==M'--and tensor modules with different factors are different
 N=tensorModule(R,{2,2})
 P=M**N
 P_7
-P_(0,0,1,1)
+P_(0,0,1,1,1)
 
 
 {{*--------------------------------
@@ -162,6 +163,9 @@ P_(0,0,1,1)
    symbolic index notation      
 --------------------------------*}};
 {{* A_(i,j,k) := T_(j,i) * U_(k,i) *}};
+T=genericTensor(R,{3,3})
+U=genericTensor(R,12,{3,3})
+
 tman({{T,j,i},{U,k,i}})
 
 {{*--A_(i,j,k) := sum_i T_(j,i) * U_(k,i)*}};
@@ -191,8 +195,6 @@ tman({{T',i,i,j,k}})
 --esum({{T,i,j},{U,j,k}})
 
 {{*symbolic marginalization*}};
-tman({{T',i,j,k,l}},{i})
-
 
 end
 
