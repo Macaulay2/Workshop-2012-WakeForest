@@ -483,37 +483,38 @@ expression SpectralSequence := E -> stack(
 -- For now I am going to comment out things that I don't think we need.
 
 
+-------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- spectral sequences ----------------------------------------------------------
+--------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+-- Now starting to think about SpectralSequence data type. -----------------
+-- I'm not sure we need to store the things labeled minF, max F, maxH, minH below.
+-- these are trivial to compute from the abmient filtered complex.
+-- I'm also not sure if we need or want a degree option.
+
+-- For now I am going to comment out things that I don't think we need.
+
+
 spectralSequence = method(Options => {Degree => 1})
 spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
      new SpectralSequence from {
-	  symbol minF => min K,
-	  symbol maxF => max K,
-	  symbol maxH => - min K^-infinity,
-	  symbol minH => - max K^-infinity,
 	  symbol filteredComplex => K,
 	  symbol zero => K.zero,
 	  symbol cache => CacheTable})
 
+-- In the following we are still going to want E^infinity etc. --
 
+  SpectralSequence ^ ZZ := SpectralSequencePage => (E,r) -> (
+       if E#?r then E#r else E#r= spectralSequencePage(E.filteredComplex,r);
+       E#r
+       )
 
-  SpectralSequence _ ZZ := SpectralSequenceSheet => (E,r) -> ()
-  
- --    F := filteredComplex E;
-  --   L := for p from E.minF to E.maxF list (
---	  for q from E.minH - E.maxF to E.maxH - E.minF list (
---	       M := pageE(r,F,p,q);
---	       if M!= 0 then {{p,q}, M} else continue));
---     new SpectralSequenceSheet from flatten L | {symbol zero => E.zero})
-
-
--- SpectralSequence _ InfiniteNumber := SpectralSequenceSheet => (E,r) -> (
---  C:= E_0;
---  if r == -infinity then C 
---  else (
- --   maxC := max (select (keys C, i -> class i === List)/last);
- --   minC := min (select (keys C, i -> class i === List)/last);
-  --  E_(maxC -minC + 1)))
-
+SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r       )
+------------------------------------------------------------------------------------
 
 filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
 
@@ -577,44 +578,58 @@ check "SpectralSequences";
 viewHelp SpectralSequences
 -------------------------------------------------------------------
 
+------------------------------------------------------------------
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
 needsPackage "ChainComplexExtras";
 debug SpectralSequences;
 
 
+--try to test some aspects of SpectralSequence Code. --
+
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+F2D=D
+
+F1D= simplicialComplex {a*c, d}
+
+F0D = simplicialComplex {a,d}
+
+K= filteredComplex {F2D, F1D, F0D}
+
+E=spectralSequence K
+
+E0=E^0
+
+E0.dd
+
+E0 _ {2,-1}
+
+E0 ^ {-2,1}
+
+keys E
+
+E1= E_1
+
+keys E
+
+-- we might want to add "ambient spectral sequence or some such thing to a spectral
+-- sequence page.
+-- I think we will also want to overload HH to go from one spectral sequence page
+-- to another.
 
 
-SpectralSequencePage = new Type of MutableHashTable
-SpectralSequencePage.synonym = "spectral sequence page"
 
-spectralSequencePage = method ()
-spectralSequencePage(FilteredComplex, ZZ):= (K,r) ->( 
-new SpectralSequencePage from 
- {symbol filteredComplex=> K, symbol pageNumber =>r, 
-      symbol pageModules => computeErModules(K,r), symbol dd => computeErMaps(K,r), 
-     symbol zero => (ring K_infinity)^0})
+------------------------------------------------------------------
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
 
 
-
--- in the following we are assuming that user is inputing a list of 
--- pairs of integers.
--- should return an error message if this isn't the case.
-
-SpectralSequencePage _ List := Module => (E,i)-> if (E.pageModules)#?i then 
- (E.pageModules)#i else image(0*id_((E.filteredComplex_infinity)_(sum i)))  
-
-SpectralSequencePage ^ List := Module => (E,i)-> E_(apply(i, j-> -j))    
-
-
-e0^{1,1}
-
-e0_{-1,-1}
-
-e0_{0,0}
-e0_{10,10}
-
-sum {10,10}
+--test SpectralSequencePage Code. --
 
 A=QQ[a,b,c,d]
 
@@ -636,14 +651,16 @@ E0.pageModules
 E0.zero
 
 E1=spectralSequencePage(K,1)
-(E1.dd)#{0,0}
+E1.dd #{0,0}
+-- We might want to add the capaility of E1.dd _{0,0} or some such thing --
+
 E1.filteredComplex
 E1.pageNumber
 E1.pageModules
 E1.dd
 E1.zero
 
-
+------------------------------------------------------------------------------------
 
 ------------------------------------------------------------
 -----------------------------------------------------------

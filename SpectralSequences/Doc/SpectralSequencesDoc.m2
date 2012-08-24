@@ -189,7 +189,7 @@ doc ///
      	  E:SpectralSequence
 	  k:ZZ
      Outputs
-     	  P: SpectralSequenceSheet
+     	  P: SpectralSequencePage
      Description
      	  Text 
 	      Returns the kth page of the spectral sequence
