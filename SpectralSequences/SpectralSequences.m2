@@ -214,8 +214,8 @@ net FilteredComplex := K -> (
 -- the formula's below are the homological versions of the ones in I.2.4 of Danilov's 
 -- treatment of spectral sequences in Shafarevich's Encyolpaedia of 
 -- Math Algebraic Geometry II.  
--- In any event it is easy enough to prove directly that they satisfy the requirments for
--- a spectral sequence.
+-- In any event it is easy enough to prove directly that they satisfy the requirments 
+-- for a spectral sequence.
 
 zpq:= (K,p,q,r)->(
 ker inducedMap((K_(max K))_(p+q-1) / K_(p-r) _ (p+q-1), 
@@ -743,7 +743,6 @@ new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
 
 L=homologicalFilteredComplex {m2,m1}
 
--- we are probably going to want a shift operator for filtered complexes.
 
 
 e0modules=computeErModules(L,0)
