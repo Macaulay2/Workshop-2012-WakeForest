@@ -113,9 +113,22 @@ nonReducedChainComplex(ChainComplex):= K->(l:=apply(drop(sort spots K,1),i-> i);
     p:= (for i from 1 to #l-1 list K.dd_i);
 chainComplex(p)
  )
+
+---
+-- The sections  '"Core" filtered complex code' and '"Core spectral sequence code'
+-- all are based on homological indexing conventions and have been tested on 
+-- Nathan's examples.
+--
 -------------------------------------------------------------------------------------
 -- "Core" filtered complex code. --
 -------------------------------------------------------------------------------------
+-- We want to use homological indexing for the filtration.  
+--THE CONVENTION WE WANT TO FOLLOW IS IF C IS A COMPLEX WHOSE DIFFERENTIAL HAS
+-- DEGREE -1 THEN THE FILTRATION SHOULD HAVE THE SHAPE
+-- F_nC > F_(n-1)C. (See section 5.4 of Weibel.) 
+-- Q:  IS THIS ASSCENDING OR DESCENDING?? (I always forget the terminology.)
+ 
+
 FilteredComplex = new Type of HashTable
 FilteredComplex.synonym = "filtered chain complex"
 
@@ -128,7 +141,7 @@ filteredComplex = method(TypicalValue => FilteredComplex)
 -- and produces a filtered complex with integer keys the
 -- corresponing chain complex.
 -- If F_0C is not zero then by default F_(-1)C is added and is 0.
--- I THINK THE ABOVE CONVENTION IS WHAT WE WANT FOR THE DEFAULT.  SEE 
+-- I THINK THIS IS THE CONVENTION WE WANT BY DEFAULT.  SEE 
 -- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
 -- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
 
@@ -180,7 +193,80 @@ FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
 net FilteredComplex := K -> (
   v := between("", apply(sort spots K, p -> p | " : " | net K_p));
   if #v === 0 then "0" else stack v)
+-------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------
+-------------------------------------------------------------------------
+-------------------------------------------------------------------------
+-- "Core" spectral sequence code. --------------------------------------
+------------------------------------------------------------------------
 
+------------------------------------------------------------------------
+-- below are the methods which compute the
+-- individual terms on a page of a spectral sequence
+-- WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS.
+---------------------------------------------------------------------
+-- By default of the primitative homological constructor above, 
+--the maximum integer key
+-- of the filtered complex corresponds to the ambient complex.
+-- This is used in the formula's below but should be made more "fool proof" in 
+-- what follows.
+
+-- the formula's below are the homological versions of the ones in I.2.4 of Danilov's 
+-- treatment of spectral sequences in Shafarevich's Encyolpaedia of 
+-- Math Algebraic Geometry II.  
+-- In any event it is easy enough to prove directly that they satisfy the requirments for
+-- a spectral sequence.
+
+zpq:= (K,p,q,r)->(
+ker inducedMap((K_(max K))_(p+q-1) / K_(p-r) _ (p+q-1), 
+     K_p _ (p+q), K_(max K).dd_(p+q))
+     )
+
+
+
+bpq:= (K,p,q,r) ->(
+    ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q))
+      )
+
+-- the following will compute the pq modules on the rth page explicitly.
+
+epq:=(K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)) )
+
+
+-- the following computes all modules on the r-th page.
+
+computeErModules=method()
+
+computeErModules(FilteredComplex,ZZ):= (K,r) -> (myList:={};
+     for p from min K to max K do (
+	  for q from -p to length K_(max K) do (
+	       myList=append(myList, {p,q}=> epq(K,p,q,r)); )
+	       	    );
+	       new HashTable from myList
+      )
+
+-- the following will compute the pq maps on the rth page explicitly.
+epqrMaps:=(K,p,q,r)-> (
+     inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),K_(max K).dd_(p+q)))
+
+
+--Compute all maps on the Er page as we did above for the modules.
+
+computeErMaps=method()
+
+computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
+     for p from min K to max K do (
+	  for q from -p to length K_(max K) do (
+	       myList=append(myList, {p,q}=> epqrMaps(K,p,q,r)); )
+	       	    );
+	       new HashTable from myList
+      )
+
+
+
+-------------------------------------------------------------------------------------
+-- End of tested code ---
+-------------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------------
 
@@ -364,7 +450,7 @@ homologicalFilteredComplex List := L -> (
 
 
 
--- Gives the homological filtration on a chain complex
+-- Gives the naive filtration on a chain complex
 filteredComplex ChainComplex := C -> (
      complete C;
      filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))  
@@ -415,76 +501,6 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
 	  symbol filteredComplex => K,
 	  symbol zero => K.zero,
 	  symbol cache => CacheTable})
--------------------------------------------------------------------------
--------------------------------------------------------------------------
-
-
-----------------------
--- below are the methods which compute the
--- individual terms on a page of a spectral sequence
--- WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS.
------------------------
--- By default, of the primitative homological constructor above 
---the maximum integer key
--- of the filtered complex corresponds to the ambient complex.
--- This is used in the formula's below but should be made more "fool proof" in 
--- what follows.
-
--- the formula's below are the homological versions of the ones in I.2.4 of Danilov's 
--- treatment of spectral sequences in Shafarevich's Encyolpaedia of 
--- Math Algebraic Geometry II.  
--- In any event it is easy enough to prove directly that they satisfy the requirments for
--- a spectral sequence.
-
-zpq:= (K,p,q,r)->(
-ker inducedMap((K_(max K))_(p+q-1) / K_(p-r) _ (p+q-1), 
-     K_p _ (p+q), K_(max K).dd_(p+q))
-     )
-
-
-
-bpq:= (K,p,q,r) ->(
-    ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q))
-      )
-
--- the following will compute the pq modules on the rth page explicitly.
-
-epq:=(K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)) )
-
-
--- the following computes all modules on the r-th page.
-
-computeErModules=method()
-
-computeErModules(FilteredComplex,ZZ):= (K,r) -> (myList:={};
-     for p from min K to max K do (
-	  for q from -p to length K_(max K) do (
-	       myList=append(myList, {p,q}=> epq(K,p,q,r)); )
-	       	    );
-	       new HashTable from myList
-      )
-----------------------------------------------------------------------------------
-------------------------------------------------------------------------------
--- now want to try to compute the maps with source pq on the rth page.
--- AGAIN WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS ----------------------
------------------------------------------------------------------------------
----------------------------------------------------------------------------
-
-epqrMaps:=(K,p,q,r)-> (
-     inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),K_(max K).dd_(p+q)))
-
-
---Compute all maps on the Er page as we did above for the modules.
-
-computeErMaps=method()
-
-computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
-     for p from min K to max K do (
-	  for q from -p to length K_(max K) do (
-	       myList=append(myList, {p,q}=> epqrMaps(K,p,q,r)); )
-	       	    );
-	       new HashTable from myList
-      )
 
 
 
@@ -575,15 +591,17 @@ F2=simplicialComplex {y*z, x}
 
 filteredComplex({F3,F2})
 
-K=homologicalFilteredComplex({F3,F2})
+K=filteredComplex({F3,F2})
 
 C=chainComplex F3
 
 m=chainComplexMap(C,C,apply(spots C, i->id_(C_i)))
 
-L=homologicalFilteredComplex({m})
+L=filteredComplex({m})
 
-L^1==L_1
+K_1==K^(-1)
+
+L_1==L^1
 
 --------------------------------------------------
 
@@ -601,15 +619,11 @@ debug SpectralSequences;
 
 -- This is the first example I studied.
 -- It has the advantage that we can compute everything explicitly by hand.
--- Goal:  Try to implement the example using the current version of the code.
 
 
 k=QQ
--- make some maps
 d2=matrix(k,{{1},{0}})
 d1=matrix(k,{{0,1}})
-
-
 
 -- make a chain complex with these maps
 -- throughout this example I'm thinking homologically (by default this is how M2
@@ -627,12 +641,6 @@ prune HH C
 
 -- first make subcomplexes of C which will allow us to make a filtered complex
 
--- We want to use homological indexing for the filtration.  
---THE CONVENTION WE WANT TO FOLLOW IS IF C IS A COMPLEX WHOSE DIFFERENTIAL HAS
--- DEGREE -1 THEN THE FILTRATION SHOULD HAVE THE SHAPE
--- F_nC > F_(n-1)C. (See section 5.4 of Weibel.) 
--- Q:  IS THIS ASSCENDING OR DESCENDING?? (I always forget the terminology.)
--- 
 
 -- I want to make a filtration of the form
 -- C=F3C > F2C > F1C > F0C =0.
@@ -723,6 +731,10 @@ new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
 
 E2Maps=computeErMaps(K,2)
 new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
+
+E3Modules=computeErModules(K,3)
+new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
+
 ------------------------------------------------------------------------
 --- All of the above coincidies with what I have computed by hand. -----
 ------------------------------------------------------------------------
@@ -746,6 +758,8 @@ e2modules = computeErModules(L,2)
 new HashTable from apply(keys e2modules, i-> i=>prune e2modules#i)
 e2maps = computeErMaps(L,2)
 new HashTable from apply(keys e2maps, i-> i=> prune e2maps#i)
+e3modules = computeErModules(L,3)
+new HashTable from apply(keys e3modules, i-> i=>prune e3modules#i)
 
 -- the above seems to work correctly.
 ----------------------------------------
