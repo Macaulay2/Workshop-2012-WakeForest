@@ -598,12 +598,32 @@ F0D=simplicialComplex {a,b,c}
 K=filteredComplex {F2D,F1D,F0D}
 
 C=K_infinity
-
 --------------------------------------------------------------------------
 -- The following shows that there is a bug in the code which is suppose to 
 -- compute the naive filtration of a chain complex.
 filteredComplex C
 ---------------------------------------------------------------------------
+
+-- Let's try to test truncate(C,p) --
+
+spots C
+(truncate(C,1)).dd
+
+spots C
+
+spots truncate(C,1)
+
+-- the above shows that there is a bug in trucate as well.  -- 
+
+-- truncate(C,1) needs to to shifted appropriately. --
+
+-- we also need to decide if trucate(C,p) should set all homological degrees >=p 
+-- to zero
+-- all homological degrees > p to zero, all degrees <= p to zero or all degrees <p to
+-- zero.  
+
+-- This will require a moments thought.
+
 
 prune K
 
