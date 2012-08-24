@@ -492,8 +492,6 @@ expression SpectralSequence := E -> stack(
 ----------------------------------------------------------------------------
 ----------------------------------------------------------------------------
 -- Now starting to think about SpectralSequence data type. -----------------
--- I'm not sure we need to store the things labeled minF, max F, maxH, minH below.
--- these are trivial to compute from the abmient filtered complex.
 -- I'm also not sure if we need or want a degree option.
 
 -- For now I am going to comment out things that I don't think we need.
@@ -514,6 +512,14 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
        )
 
 SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r       )
+
+-- Need to check again carefully that the following is true!! --
+--SpectralSequence ^ InfiniteNumber := SpectralSequencePage => (E,r) -> (
+--     E^ (abs(max E.filteredComplex - min E.filteredComplex))
+     
+--     ) 
+
+-- SpectralSequence _ InfiniteNumber := SpectralSequencePage => (E,r) ->( E^r)
 ------------------------------------------------------------------------------------
 
 filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
@@ -601,6 +607,8 @@ K= filteredComplex {F2D, F1D, F0D}
 
 E=spectralSequence K
 
+E^infinity
+
 E0=E^0
 
 E0.dd
@@ -615,12 +623,14 @@ E1= E_1
 
 keys E
 
+E^infinity
+
 -- we might want to add "ambient spectral sequence or some such thing to a spectral
 -- sequence page.
 -- I think we will also want to overload HH to go from one spectral sequence page
 -- to another.
 
-
+------------------------------------------------------------------------------------
 
 ------------------------------------------------------------------
 needsPackage "SpectralSequences";
