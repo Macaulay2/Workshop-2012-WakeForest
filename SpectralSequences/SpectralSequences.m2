@@ -268,6 +268,90 @@ computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
 -- End of tested code ---
 -------------------------------------------------------------------------------------
 
+
+
+--------------------------------------------------------------------------------------
+-- Retrieves (or lazily constructs) the inclusion map from the pth subcomplex to the top
+inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
+  if not K.cache#?inducedMaps then K.cache.inducedMaps = new MutableHashTable;
+  if not K.cache.inducedMaps#?p then K.cache.inducedMaps#p = inducedMap(K^-infinity, K^p);
+  K.cache.inducedMaps#p)
+
+project := (K,p) -> (
+     f:= i -> map(K^p_i,K^-infinity_i,1);
+     map(K^p,K^-infinity,f)
+     )
+
+
+
+-- Method for looking at all of the chain subcomplexes pleasantly
+see = method();
+see FilteredComplex := K -> (
+     -- Eliminate the duplication of the homological indices
+  (minK, maxK) := (min K, max K);
+  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
+    toList(minK .. maxK), (p,i) ->
+    if i === minK then p | " : " | net prune K^p_i else
+    " <-- " | net prune K^p_i);
+  T = T | {toList(minK .. maxK)};
+  netList T)
+
+
+
+-------------------------------------------------------------------------------------
+--- the following code is related to filtered complexes and is needed to compute 
+--- spectral sequences with respect to homological conventions.
+--- At some point this needs to be integrated with cohomological conventions.
+--- I'm suggesting that the defaults be homological conventions.  
+-------------------------------------------------------------------------------
+
+
+
+
+homologicalFilteredComplex=method()
+
+-- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
+-- defining inclusion maps C=F_nC > F_(n-1)C > ... > F_0 C = 0
+-- -- subcomplexes of a chain complex (or simplicial complexes) 
+-- and produces a filtered complex with integer keys the
+-- corresponing  chain complex.
+-- this should be merged with the filtered complex constructor and should be
+-- the default.  An option should allow the user to choose to
+-- do things cohomologically.
+
+homologicalFilteredComplex List := L -> (
+  local maps;
+  local C;
+  if #L === 0 
+  then error "expected at least one chain complex map or simplicial complex";
+  if all(#L, p -> class L#p === SimplicialComplex) then (
+    kk := coefficientRing L#0;
+    C = chainComplex L#0;	       	    -- all filtrations are exhaustive
+    maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
+        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
+  else (
+    maps = L;
+    if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
+      error "expected sequence of chain complexes");
+    C = target maps#0;	       	       	    -- all filtrations are exhaustive
+    if any(#maps, p-> target maps#p != C) then (
+      error "expected all map to have the same target"));     
+  Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
+  -- THE FOLLOWING TWO LINEs HAVE BEEN CHANGED FROM THE FILTERED COMPLEX CONSTRUCTOR --
+  P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
+  if (last P)#1 != Z then P = P | {(-1) => Z};
+  -- the above two lines work, but we might want to shift everything up by one.
+  -- so the added zero complex sits in filtration degree 0 instead of -1.  See examples.
+  -- I THINK THE ABOVE CONVENTION IS WHAT WE WANT FOR THE DEFAULT.  SEE 
+  -- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
+  -- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
+  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
+
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+-- ChainComplexExtraExtras  --------------------------------------------------------
+
 --------------------------------------------------------------------------------------
 
 --truncate C above ith spot, i.e. set everything weakly above homological degree i to 0
@@ -358,99 +442,18 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 	  if j === k then C_(j#0) ** f_(j#1) 
 	  else 0)))))
 
+
+
+
+
 --------------------------------------------------------------------------------
 -- constructing filtered complexes ---------------------------------------------
-
-
---------------------------------------------------------------------------------------
--- Retrieves (or lazily constructs) the inclusion map from the pth subcomplex to the top
-inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
-  if not K.cache#?inducedMaps then K.cache.inducedMaps = new MutableHashTable;
-  if not K.cache.inducedMaps#?p then K.cache.inducedMaps#p = inducedMap(K^-infinity, K^p);
-  K.cache.inducedMaps#p)
-
-project := (K,p) -> (
-     f:= i -> map(K^p_i,K^-infinity_i,1);
-     map(K^p,K^-infinity,f)
-     )
-
-
-
--- Method for looking at all of the chain subcomplexes pleasantly
-see = method();
-see FilteredComplex := K -> (
-     -- Eliminate the duplication of the homological indices
-  (minK, maxK) := (min K, max K);
-  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
-    toList(minK .. maxK), (p,i) ->
-    if i === minK then p | " : " | net prune K^p_i else
-    " <-- " | net prune K^p_i);
-  T = T | {toList(minK .. maxK)};
-  netList T)
-
-
-
--------------------------------------------------------------------------------------
---- the following code is related to filtered complexes and is needed to compute 
---- spectral sequences with respect to homological conventions.
---- At some point this needs to be integrated with cohomological conventions.
---- I'm suggesting that the defaults be homological conventions.  
--------------------------------------------------------------------------------
-
-
-
-
-homologicalFilteredComplex=method()
-
--- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
--- defining inclusion maps C=F_nC > F_(n-1)C > ... > F_0 C = 0
--- -- subcomplexes of a chain complex (or simplicial complexes) 
--- and produces a filtered complex with integer keys the
--- corresponing  chain complex.
--- this should be merged with the filtered complex constructor and should be
--- the default.  An option should allow the user to choose to
--- do things cohomologically.
-
-homologicalFilteredComplex List := L -> (
-  local maps;
-  local C;
-  if #L === 0 
-  then error "expected at least one chain complex map or simplicial complex";
-  if all(#L, p -> class L#p === SimplicialComplex) then (
-    kk := coefficientRing L#0;
-    C = chainComplex L#0;	       	    -- all filtrations are exhaustive
-    maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
-        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
-  else (
-    maps = L;
-    if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
-      error "expected sequence of chain complexes");
-    C = target maps#0;	       	       	    -- all filtrations are exhaustive
-    if any(#maps, p-> target maps#p != C) then (
-      error "expected all map to have the same target"));     
-  Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
-  -- THE FOLLOWING TWO LINEs HAVE BEEN CHANGED FROM THE FILTERED COMPLEX CONSTRUCTOR --
-  P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
-  if (last P)#1 != Z then P = P | {(-1) => Z};
-  -- the above two lines work, but we might want to shift everything up by one.
-  -- so the added zero complex sits in filtration degree 0 instead of -1.  See examples.
-  -- I THINK THE ABOVE CONVENTION IS WHAT WE WANT FOR THE DEFAULT.  SEE 
-  -- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
-  -- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
-  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
-
-------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------
-
-
-
-
-
-
-
+--------------------------------------------------------------------------------
 
 
 -- Gives the naive filtration on a chain complex
+
+-- there is a bug in this code.  See example. ---
 filteredComplex ChainComplex := C -> (
      complete C;
      filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))  
@@ -573,7 +576,39 @@ restart
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
----------------------------------
+-----------------------------------------------
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[a,b,c]
+
+-- another example which can be checked by hand.  Will try to test the code which
+-- computes the "naive truncation" of a complex.
+
+D=simplicialComplex {a*b*c}
+
+F2D=D
+F1D=simplicialComplex {a*b,a*c,b*c}
+F0D=simplicialComplex {a,b,c}
+
+K=filteredComplex {F2D,F1D,F0D}
+
+C=K_infinity
+
+--------------------------------------------------------------------------
+-- The following shows that there is a bug in the code which is suppose to 
+-- compute the naive filtration of a chain complex.
+filteredComplex C
+---------------------------------------------------------------------------
+
+prune K
+
+-- so prune of a filtered complex seems to be OK.
+-----------------------------------------------
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
@@ -897,7 +932,7 @@ KK=homologicalFilteredComplex({D,F1D,F0D});
 
 -- to compute the serre spectral sequence of the hopf fibration S^1-> S^3 -> S^2 
 -- "correctly" meaning that we get the E2 page as asserted in the theorem
--- with non-reduced homology need the following method which removes the empty face
+-- with non-reduced homology we need the following method which removes the empty face
 -- from the chain complex
 
 nonReducedChainComplex=method()
