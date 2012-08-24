@@ -576,8 +576,68 @@ restart
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
------------------------------------------------
+-------------------------------------------------------------
+-- another example to try and which can be computed by hand.
+--------------------------------------------------------------
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
 
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+F2D=D
+
+F1D= simplicialComplex {a*c, d}
+
+F0D = simplicialComplex {a,d}
+
+KK= filteredComplex {F2D, F1D, F0D}
+
+K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i)) 
+
+E0Modules = computeErModules(K,0)
+
+new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
+
+E0Maps=computeErMaps(K,0)
+new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
+prune ker E0Maps#{2,-1}
+
+E1Modules=computeErModules(K,1)
+new HashTable from apply(keys E1Modules, i-> i=> prune E1Modules#i)
+
+E1Maps=computeErMaps(K,1)
+new HashTable from apply(keys E1Maps, i-> i=> prune E1Maps#i)
+
+
+E2Modules=computeErModules(K,2)
+new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
+
+prune HH K_infinity
+---------------
+-- using the above we conclude that the map with source 2,-1 on the E2 page
+-- must have a 1-diml image and 1-diml kernel.
+-------------
+
+E2Maps=computeErMaps(K,2)
+new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
+
+prune ker E2Maps#{2,-1}
+
+E3Modules=computeErModules(K,3)
+new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
+
+---------------------------------------------------
+-- the above aggrees with my calculations by hand.
+---------------------------------------------------
+
+
+
+-----------------------------------------------
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
