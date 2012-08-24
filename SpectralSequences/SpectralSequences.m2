@@ -49,7 +49,7 @@ export {
   "SpectralSequence",
   "spectralSequence",
   "SpectralSequenceSheet",
-  "see", "homologicalFilteredComplex", "computeErModules","computeErMaps", "spots",
+  "see", "computeErModules","computeErMaps", "spots",
   "nonReducedChainComplex"
   }
 
@@ -298,54 +298,6 @@ see FilteredComplex := K -> (
 
 
 
--------------------------------------------------------------------------------------
---- the following code is related to filtered complexes and is needed to compute 
---- spectral sequences with respect to homological conventions.
---- At some point this needs to be integrated with cohomological conventions.
---- I'm suggesting that the defaults be homological conventions.  
--------------------------------------------------------------------------------
-
-
-
-
-homologicalFilteredComplex=method()
-
--- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
--- defining inclusion maps C=F_nC > F_(n-1)C > ... > F_0 C = 0
--- -- subcomplexes of a chain complex (or simplicial complexes) 
--- and produces a filtered complex with integer keys the
--- corresponing  chain complex.
--- this should be merged with the filtered complex constructor and should be
--- the default.  An option should allow the user to choose to
--- do things cohomologically.
-
-homologicalFilteredComplex List := L -> (
-  local maps;
-  local C;
-  if #L === 0 
-  then error "expected at least one chain complex map or simplicial complex";
-  if all(#L, p -> class L#p === SimplicialComplex) then (
-    kk := coefficientRing L#0;
-    C = chainComplex L#0;	       	    -- all filtrations are exhaustive
-    maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
-        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
-  else (
-    maps = L;
-    if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
-      error "expected sequence of chain complexes");
-    C = target maps#0;	       	       	    -- all filtrations are exhaustive
-    if any(#maps, p-> target maps#p != C) then (
-      error "expected all map to have the same target"));     
-  Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
-  -- THE FOLLOWING TWO LINEs HAVE BEEN CHANGED FROM THE FILTERED COMPLEX CONSTRUCTOR --
-  P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
-  if (last P)#1 != Z then P = P | {(-1) => Z};
-  -- the above two lines work, but we might want to shift everything up by one.
-  -- so the added zero complex sits in filtration degree 0 instead of -1.  See examples.
-  -- I THINK THE ABOVE CONVENTION IS WHAT WE WANT FOR THE DEFAULT.  SEE 
-  -- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
-  -- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
-  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
 ------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------
@@ -883,7 +835,7 @@ m0=chainComplexMap(F3C,F0C,{inducedMap(F3C_0,F0C_0,id_(F3C_0)), inducedMap(F3C_1
 -- Now test Nathan's spectral sequence code --------------------------
 ----------------------------------------------------------------------
 
-K= homologicalFilteredComplex{m2,m1,m0}
+K= filteredComplex{m2,m1,m0}
 
 
 E0Modules=computeErModules(K,0)
@@ -914,7 +866,7 @@ new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
 
 --more examples--
 
-L=homologicalFilteredComplex {m2,m1}
+L=filteredComplex {m2,m1}
 
 
 
@@ -951,7 +903,7 @@ help simplicialComplex
 
 F3=simplicialComplex {x*y*z*w}
 
-homologicalFilteredComplex({F3})
+filteredComplex({F3})
 
 F2=simplicialComplex {x*y*z, x*w}
 
@@ -959,7 +911,7 @@ F1 = simplicialComplex {z,w}
 
 filteredComplex({F3,F2,F1})
 
-K=homologicalFilteredComplex({F3,F2,F1})
+K=filteredComplex({F3,F2,F1})
 
 
 --------------------------------------------------------------------------
@@ -1160,7 +1112,7 @@ chainComplex F3D
 -- the order for the filtration is given by
 --  F3D>F2D>F1D>F0D >F(-1)D = 0
 
-KK=homologicalFilteredComplex {F3D,F2D,F1D,F0D}
+KK=filteredComplex {F3D,F2D,F1D,F0D}
 
 -- in order to get the example I did by hand want to remove the
 -- contribution of the empty face from these
