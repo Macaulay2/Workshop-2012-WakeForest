@@ -54,7 +54,10 @@ export{"basePExp",
      "tauGorAmb", 
      "tauQGor", 
      "tauGor",
-     "isFRegularQGor" --needs documentation / help entry
+     "upperBoundFSig", --needs documentation / help entry
+     "isFRegularQGor", --needs documentation / help entry
+     "guessFSig",  --needs documentation / help entry
+     "findNumberBetween"  --needs documentation / help entry
 }
 --This file has "finished" functions from the Macaulay2 workshop at Wake Forest
 --August 2012.  Sara Malec, Karl Schwede and Emily Witt contributed to it.
@@ -995,7 +998,33 @@ fSig = (f1, a1, e1) -> (
      pp:= char ring f1;     
      1-(1/pp^(dim(R1)*e1))*
           degree( (ideal(apply(first entries vars R1, i->i^(pp^e1)))+ideal(fastExp(f1,a1) ))) 
-)     
+)  
+
+--this gives a lower bound for the F-signature at the origin of R/f1
+--e is the max depth to search.
+--this uses the fact that the slope is an upper bound for the F-signature
+upperBoundFSig = (f1,e2) -> (
+     pp := char ring f1;
+     fSig(f1,pp^e2-1,e2)*pp^e2
+)   
+
+--this tries to guess the F-signature of a polynomial ring mod f1 
+--at the origin.  e is the max depth to search.
+--it only returns rational numbers, so if your FSignature is irrational, 
+--it is hopeless.
+--this returns the guess of the F-signature and the upperbound
+guessFSig = (f1,e2,maxDenom) -> (
+     pp := char ring f1;
+     fSigBound := upperBoundFSig(f1,e2);
+     bestLower := 0; --this is our working approximation of fSignature
+     count := maxDenom;
+     
+     while(count >= 1) do (
+	  if ( floor( (fSigBound)*count)/count > bestLower) then (bestLower = floor((fSigBound)*count)/count);
+	  count = count - 1
+     );  
+     {bestLower,fSigBound}
+)
 
 --- Calculates the x-int of the secant line between two guesses for the fpt
 --- Input:
