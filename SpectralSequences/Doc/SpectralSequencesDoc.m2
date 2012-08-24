@@ -146,36 +146,36 @@ doc ///
 
  doc ///
      Key
-     	  (max, FilteredComplex)
+     	  (max, HashTable)
      Headline
-     	  The maximum filtered piece of a filtered complex
+     	  The largest integer valued key in the hash table 
      Usage
      	  m = max(K)
      Inputs
-     	  K:FilteredComplex
-	       A filtered complex
+     	  K:HashTable
+	       A hash table
      Outputs
      	  m:ZZ
      Description
      	  Text 
-	      Returns the smallest filtered piece
+	      Returns the largest integer valued key in the hash table
      ///
      
  doc ///
      Key
-     	  (min, FilteredComplex)
+     	  (min, HashTable)
      Headline
-     	  The largest filtered piece of a filtered complex
+     	  The smallest integer valued key in the hash table 
      Usage
      	  m = min(K)
      Inputs
-     	  K:FilteredComplex
-	       A filtered complex
+     	  K:HashTable
+	       A hash table
      Outputs
      	  m:ZZ
      Description
      	  Text 
-	      Returns the largest filtered piece
+	      Returns the smallest integer valued key in the hash table
      ///     
 
  doc ///
@@ -337,12 +337,12 @@ doc ///
 
   doc ///
      Key
-          (symbol ^, FilteredComplex, ZZ)
-	  (symbol ^, FilteredComplex, InfiniteNumber)
+          (symbol _, FilteredComplex, ZZ)
+	  (symbol _, FilteredComplex, InfiniteNumber)
      Headline
      	  The filtered pieces
      Usage
-     	  C = K^j
+     	  C = K_j
      Inputs
      	  K:FilteredComplex
 	  j:ZZ 
@@ -370,6 +370,9 @@ doc ///
      	  Text 
 	       Blah
     ///
+
+
+
 
      end
      

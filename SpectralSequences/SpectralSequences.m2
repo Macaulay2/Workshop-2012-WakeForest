@@ -64,9 +64,17 @@ needsPackage "SimplicialComplexes"
 needsPackage "ChainComplexExtras"
 
 ------------------------------------------------------
+-- Hash table functions--
 ------------------------------------------------------
 -- Retrieves the sorted integer keys of a hash table. 
-spots = K -> sort select(keys K, i -> class i === ZZ)
+spots =method ()
+spots HashTable := K -> sort select(keys K, i -> class i === ZZ)
+
+-- selects the largest integer value in the key of a hash table
+max HashTable := K -> max spots K
+--selects the least integer vaule in the key of a hash table
+min HashTable := K -> min spots K
+
 ------------------------------------------------------
 ------------------------------------------------------
 
@@ -106,8 +114,75 @@ nonReducedChainComplex(ChainComplex):= K->(l:=apply(drop(sort spots K,1),i-> i);
 chainComplex(p)
  )
 -------------------------------------------------------------------------------------
+-- "Core" filtered complex code. --
 -------------------------------------------------------------------------------------
+FilteredComplex = new Type of HashTable
+FilteredComplex.synonym = "filtered chain complex"
 
+
+filteredComplex = method(TypicalValue => FilteredComplex)
+
+-- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
+-- defining inclusion maps C=F_(n+1)C > F_(n-1)C > ... > F_0 C 
+-- of subcomplexes of a chain complex (or simplicial complexes) 
+-- and produces a filtered complex with integer keys the
+-- corresponing chain complex.
+-- If F_0C is not zero then by default F_(-1)C is added and is 0.
+-- I THINK THE ABOVE CONVENTION IS WHAT WE WANT FOR THE DEFAULT.  SEE 
+-- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
+-- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
+
+
+filteredComplex List := L -> (
+  local maps;
+  local C;
+  if #L === 0 
+  then error "expected at least one chain complex map or simplicial complex";
+  if all(#L, p -> class L#p === SimplicialComplex) then (
+    kk := coefficientRing L#0;
+    C = chainComplex L#0; -- By default the ambient simplicial complex is the first element of the list
+    maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
+        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
+  else (
+    maps = L;
+    if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
+      error "expected sequence of chain complexes");
+    C = target maps#0;-- By default the ambient chain complex is target of first map.
+    if any(#maps, p-> target maps#p != C) then (
+      error "expected all map to have the same target"));     
+  Z := image map(C, C, i -> 0*id_(C#i)); -- make zero subcomplex as a subcomplex of ambient complex 
+ P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
+  if (last P)#1 != Z then P = P | {(-1) => Z};
+  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
+
+
+FilteredComplex _ InfiniteNumber :=
+FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
+  if K#?p then K#p else if p < min K then K#(min K) else if p > max K then K#(max K)
+  )
+
+-- since we are using "homologicial indexing" by default the relationship
+-- we want to preserve is F_p C_q = F^(-p)C^(-q) for all p and q.
+
+FilteredComplex ^ InfiniteNumber :=
+FilteredComplex ^ ZZ := ChainComplex => (K,p) -> (
+  if K#?(-p) then K#(-p) else if (-p) < min K then K#(min K) 
+  else if (-p) > max K then K#(max K)
+  )
+
+
+chainComplex FilteredComplex := ChainComplex => K -> K_infinity
+
+
+FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
+  all(min(min C,min D)..max(max C,max D),i-> C_i == D_i))
+
+net FilteredComplex := K -> (
+  v := between("", apply(sort spots K, p -> p | " : " | net K_p));
+  if #v === 0 then "0" else stack v)
+
+
+--------------------------------------------------------------------------------------
 
 --truncate C above ith spot, i.e. set everything weakly above homological degree i to 0
 truncate (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
@@ -198,24 +273,10 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 	  else 0)))))
 
 --------------------------------------------------------------------------------
--- constructing filtered complexes
-FilteredComplex = new Type of HashTable
-FilteredComplex.synonym = "filtered chain complex"
+-- constructing filtered complexes ---------------------------------------------
 
-max FilteredComplex := K -> max spots K
-min FilteredComplex := K -> min spots K
 
--- Returns the pth subcomplex in a filtration of a chain complex 
--- (our filtrations are descending)
-FilteredComplex ^ InfiniteNumber :=
-FilteredComplex ^ ZZ := ChainComplex => (K,p) -> (
-     -- We assume that spots form a consecutive sequence of integers
-  (maxK, minK) := (max K, min K);  -- all filtrations are assumed separated & exhaustive
-  if K#?p then K#p else if p < minK then K#minK else if p > maxK then K#maxK
-  else error "expected no gaps in filtration")
-
-chainComplex FilteredComplex := ChainComplex => K -> K^-infinity
-
+--------------------------------------------------------------------------------------
 -- Retrieves (or lazily constructs) the inclusion map from the pth subcomplex to the top
 inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
   if not K.cache#?inducedMaps then K.cache.inducedMaps = new MutableHashTable;
@@ -227,15 +288,7 @@ project := (K,p) -> (
      map(K^p,K^-infinity,f)
      )
 
-FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
-  all(min(min C,min D)..max(max C,max D),i-> C^i == D^i))
 
-net FilteredComplex := K -> (
-     -- Don't want to display all filtered pieces
-     -- Should we display the quotients rather than the submodules?
-     -- Plan: display sequence of form "K^(min K) \supset .. \supset K^(max K)"
-  v := between("", apply(sort spots K, p -> p | " : " | net K^p));
-  if #v === 0 then "0" else stack v)
 
 -- Method for looking at all of the chain subcomplexes pleasantly
 see = method();
@@ -249,42 +302,6 @@ see FilteredComplex := K -> (
   T = T | {toList(minK .. maxK)};
   netList T)
 
-filteredComplex = method(TypicalValue => FilteredComplex)
-
--- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
--- defining inclusion maps C=F_(n+1)C > F_(n-1)C > ... > F_0 C 
--- -- subcomplexes of a chain complex (or simplicial complexes) 
--- and produces a filtered complex with integer keys the
--- corresponing  chain complex.
--- If F_0C is not zero then by default F_(-1)C is added and is 0.
-
-filteredComplex List := L -> (
-  local maps;
-  local C;
-  if #L === 0 
-  then error "expected at least one chain complex map or simplicial complex";
-  if all(#L, p -> class L#p === SimplicialComplex) then (
-    kk := coefficientRing L#0;
-    C = chainComplex L#0;	       	    -- all filtrations are exhaustive
-    maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
-        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
-  else (
-    maps = L;
-    if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
-      error "expected sequence of chain complexes");
-    C = target maps#0;	       	       	    -- all filtrations are exhaustive
-    if any(#maps, p-> target maps#p != C) then (
-      error "expected all map to have the same target"));     
-  Z := image map(C, C, i -> 0*id_(C#i));    -- all filtrations are separated
-  -- THE FOLLOWING TWO LINEs HAVE BEEN CHANGED FROM THE FILTERED COMPLEX CONSTRUCTOR --
-  P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
-  if (last P)#1 != Z then P = P | {(-1) => Z};
-  -- the above two lines work, but we might want to shift everything up by one.
-  -- so the added zero complex sits in filtration degree 0 instead of -1.  See examples.
-  -- I THINK THE ABOVE CONVENTION IS WHAT WE WANT FOR THE DEFAULT.  SEE 
-  -- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
-  -- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
-  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
 
 -------------------------------------------------------------------------------------
@@ -294,15 +311,6 @@ filteredComplex List := L -> (
 --- I'm suggesting that the defaults be homological conventions.  
 -------------------------------------------------------------------------------
 
--- we want to have an underscore operator for filtered complexes.
--- this can be done easily as follows.
---  Essentially copying the ^ method -- I'm assuming that it works OK.
-
-FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
-     -- We assume that spots form a consecutive sequence of integers
-  (maxK, minK) := (max K, min K);  -- all filtrations are assumed separated & exhaustive
-  if K#?p then K#p else if p < minK then K#minK else if p > maxK then K#maxK
-  else error "expected no gaps in filtration")
 
 
 
