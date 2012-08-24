@@ -31,7 +31,7 @@ newPackage(
 --dual to the space, and
 --wants pieces of a resolution to be R-TensorModules
 
-export{Tensor,TensorModule,FreeTensorModule,
+export{Tensor,TensorModule,
      makeTensor,tensorModule,tensorModuleProduct,
      tensorDims,einsteinSum}
 
@@ -131,12 +131,29 @@ moduleSummary=M->(
 	  );
      )
 
+iftm=
+isFreeTensorModule = method()
+iftm TensorModule := M -> (
+     try M.cache#(gs"isFree") else
+     M.cache#(gs"isFree")=all(M#(gs"factors"),isFreeModule)
+     )
+
 TensorModule.synonym="tensor module"
-net TensorModule := M -> fold(apply(M#(gs"factors"),net@@module),(i,j)->i|" ** "|j)
+
+net TensorModule := M -> (
+     if isFreeTensorModule M then (
+	  (net module M)|
+	  "{"|(fold(M#(gs"dimensions")/toString,(i,j)->i|"x"|j))|"}"
+	  ) else (
+	  fold(apply(M#(gs"factors"),net@@module),(i,j)->i|" ** "|j)
+	  )
+     )
+
 TensorModule#{Standard,AfterPrint} = M -> (
      << endl;				  -- double space
      n := rank ambient M;
      << concatenate(interpreterDepth:"o") << lineNumber << " : "
+     << (if isFreeTensorModule M then "Free " else "")
      << ring M
      << "-TensorModule of order "|toString(#M#(gs"dimensions"))|
      ", dimensions "|toString(M#(gs"dimensions"));
@@ -144,9 +161,11 @@ TensorModule#{Standard,AfterPrint} = M -> (
      << endl;
      )
 
+--if isFreeTensorModule M then "Free " else ""
 -------------------------------------
 --Free Tensor Modules
 -------------------------------------
+{{*
 FreeTensorModule = new Type of TensorModule
 net FreeTensorModule := M -> (net module M)|
      "{"|(fold(M#(gs"dimensions")/toString,(i,j)->i|"x"|j))|"}";
@@ -161,6 +180,8 @@ FreeTensorModule#{Standard,AfterPrint} = M -> (
      moduleSummary M;
      << endl;
      )
+*}}
+--FreeTensorModule=TensorModule
 
 -------------------------------------
 --Building tensor modules:
@@ -171,7 +192,7 @@ tensorModule = method()
 --make a free module into a tensor module:
 tensorModule (Ring,List) := (R,dims) -> (
      d:=product dims;
-     new FreeTensorModule of Tensor from (
+     new TensorModule of Tensor from (
 	  new HashTable from (pairs R^d)|{
       	       gs"factors" =>  apply(dims,i->R^i),
      	       gs"dimensions" =>  dims,
@@ -183,8 +204,8 @@ tensorModule (Ring,List) := (R,dims) -> (
 --for tensoring with other such modules to build higher-order
 --non-free tensor modules:
 tensorModule Module := M -> (
-     T:=if isFreeModule M then FreeTensorModule else TensorModule;
-      new T of Tensor from (
+--     T:=if isFreeModule M then FrFreeTensorModuleeeTensorModule else TensorModule;
+      new TensorModule of Tensor from (
        	   new HashTable from (pairs M)|{
 		gs"factors" =>  {M},
        	   	gs"dimensions" =>  {rank ambient M},
@@ -198,7 +219,7 @@ tensorModule (Module,List) := (M,dims) -> (
      d:=product dims;
      if not rank ambient M == d then error "dimension mismatch";
      if not isFreeModule M then error "expected a free module";
-     new FreeTensorModule of Tensor from (
+     new TensorModule of Tensor from (
 	   new HashTable from (pairs M)|{
 	   	gs"factors" =>  {M},
        	   	gs"dimensions" =>  dims,
@@ -228,7 +249,7 @@ tensorModuleProduct List := fctrs -> (
      dims:=flatten(fctrs/tensorDims);
      f:=flatten(fctrs/factorModules);
      M:=fold(fctrs/module,(i,j)->i**j);
-     T:=if all(fctrs,isFreeModule) then FreeTensorModule else TensorModule;
+     T:=if all(fctrs,isFreeModule) then TensorModule else TensorModule;
       new T of Tensor from (
 	   new HashTable from (pairs M)|{
 	   	gs"factors" => f,
@@ -312,8 +333,7 @@ makeTensor (List,List):=(dims,ents)->(
      tensor(M,ents)
      )
 makeTensor (List,Function):=(dims,f)->(
-     inds:=acp apply(dims,i->0..<i);
-     ents:=toList apply(inds,f);
+     ents:=toList apply(tensorKeys dims,f);
      makeTensor(dims,ents))
 
 Ring**Tensor := (r,t) -> error "not implemented yet"
@@ -481,8 +501,8 @@ Tensor_List := (t,l) -> (
      odims:=dims_blanks;
      M:=class t;
      M':=tensorModuleProduct((M#(gs"factors"))_blanks);
-     inds:=toList \ acp apply(odims,i->0..<i);
-     ents:=toList apply(inds,i->t_(inserts(blanks,i,l')));
+     keylists:=toList \ tensorKeys odims;
+     ents:=toList apply(keylists,i->t_(inserts(blanks,i,l')));
      tensor(M',ents)
      )
 --------
@@ -504,10 +524,10 @@ marg(Tensor,List) := (T,tosum) -> (
       error "marginalize(Tensor,List) expected a list of integers less than the dimensions of the tensor";
      if #tosum===n then return sum entries T;
      tokeep := toList(0..<n)-set(tosum);
-     keepinds:=acp apply(dims_tokeep,i->toList(0..<i));
-     suminds:=acp apply(dims_tosum,i->toList(0..<i));
-     f := l -> sum apply(suminds,i->T_(inserts(tosum,i,l)));
-     ents:=toList apply(keepinds,f);
+     keepkeys:=tensorKeys dims_tokeep;
+     sumkeys:=tensorKeys dims_tosum;
+     f := l -> sum apply(sumkeys,i->T_(inserts(tosum,i,l)));
+     ents:=toList apply(keepkeys,f);
      M:=tensorModuleProduct((class T)#(gs"factors")_tokeep);
      tensor(M,ents)
      )

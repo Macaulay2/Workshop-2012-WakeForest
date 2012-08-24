@@ -46,6 +46,30 @@ rit (IndexedTensor,Symbol) := (t,s) -> t.cache#(gs"name") = s
 --subscripting tensors
 ----------------------
 --a.c. needs error checking
+parseIndexedTensor=method()
+parseIndexedTensor (Tensor,Sequence) := (T,s) -> (
+     dims:=tensorDimensions T;
+     if not #dims==#s then error "dimension mismatch";
+     syms:=toList select(s,isSymbolic);
+     syms':=unique syms;
+     --if a list of unique symbols is given...
+     if #syms'==#s then return (
+	  indexedTensor(T,syms'));
+     p:=hashTable apply(syms,i->i=>position(syms',j->j===i));
+     f := l -> apply(s,i->if instance(i,ZZ) then i 
+	  else l#(p#i));
+     firstsyms:=apply(syms',i->position(s,j->i===j));
+     --a.c. need error check that repeated indices
+     --have the same ranges...
+     odims:=dims_firstsyms;
+     ents:=toList apply(tensorKeys odims,i->fastTensorAccess(T,f i));
+     M:=class T;
+     factors:=M#(gs"factors")_firstsyms;
+     M':=tensorModuleProduct factors;
+     T':=tensor(M',ents);
+     indexedTensor(T',syms')
+     )
+
 Tensor_Sequence := (T,s) -> (
      if allInstances(s,ZZ) then return (
 	  tensorAccess(T,s));
@@ -53,25 +77,7 @@ Tensor_Sequence := (T,s) -> (
 	  {ZZ,Symbol,IndexedVariable}) then 
           error "Tensor_Sequence expected a sequence 
           of integers, symbols, or indexed variables";
-     dims:=tensorDimensions T;
-     if not #dims==#s then error "dimension mismatch";
-     syms:=toList select(s,isSymbolic);
-     syms':=unique syms;
-     if #syms'==#s then return (
-	  indexedTensor(T,syms'));
---     locs:=positions(s,isSymbolic)
-     p:=hashTable apply(syms,i->i=>position(syms',j->j===i));
-     f := l -> apply(s,i->if instance(i,ZZ) then i 
-	  else l#(p#i));
-     firstsyms:=apply(syms',i->position(s,j->i===j));
-     odims:=dims_firstsyms;
-     inds:=toList \ acp apply(odims,i->0..<i);
-     ents:=toList apply(inds,i->fastTensorAccess(T,f i));
-     M:=class T;
-     factors:=M#(gs"factors")_firstsyms;
-     M':=tensorModuleProduct factors;
-     T':=tensor(M',ents);
-     indexedTensor(T',syms')
+     parseIndexedTensor(T,s)
      )
 Tensor_Symbol := (T,s) -> T_(1:s)
 Tensor_IndexedVariable := (T,v) -> T_(1:v)

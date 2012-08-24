@@ -86,6 +86,7 @@ marginalize(T,{0,1,2})
 T=genericTensor(R,{3,3})
 U=genericTensor(R,9,{3,3})
 i=symbol i;j=symbol j;k=symbol k;l=symbol l
+T_(i,j)
 tensor sum(i, T_(i,j) * U_(i,k) )
 tensor ( T_(i,j) * U_(i,k) )
 tensor sum(k, T_(i,j) * U_(i,k) )
