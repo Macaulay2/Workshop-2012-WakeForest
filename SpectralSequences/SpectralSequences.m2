@@ -262,12 +262,26 @@ computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
 	       new HashTable from myList
       )
 
+
+
+-------------------------------------------------------------------------------------
+-- End of tested code ---
+-------------------------------------------------------------------------------------
+
+
+----------------------------------------------------------------------------------
+-- begining of partially tested code. ---------
+---------------------------------------------------------------------------------
+
+
 --------------------------------------------------------------------------------
+-- spectral sequence pages
 --------------------------------------------------------------------------------
 -- Following Hatcher's terminology and the terminology I first learned,
 -- I prefer to use spectral sequence page rather than spectral sequence sheet.
 -------------------------------------------------------------------------------
 -- I also wanted to add certain keys to a spectral sequence page / sheet
+-- might want to make this a hash table instead of a mutable hash table.
 SpectralSequencePage = new Type of MutableHashTable
 SpectralSequencePage.synonym = "spectral sequence page"
 
@@ -293,11 +307,45 @@ SpectralSequencePage ^ List := Module => (E,i)-> E_(apply(i, j-> -j))
 --------------------------------------------------------------------------------------
 
 
--------------------------------------------------------------------------------------
--- End of tested code ---
--------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- spectral sequences ----------------------------------------------------------
+--------------------------------------------------------------------------------
+SpectralSequence = new Type of MutableHashTable
+SpectralSequence.synonym = "spectral sequence"
+SpectralSequence.GlobalAssignHook = globalAssignFunction
+SpectralSequence.GlobalReleaseHook = globalReleaseFunction
+describe SpectralSequence := E -> net expression E
+net SpectralSequence := E -> (
+  if hasAttribute(E, ReverseDictionary) 
+  then toString getAttribute(E, ReverseDictionary) 
+  else net expression E)
+expression SpectralSequence := E -> stack(
+  "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ..ooOOOooooOO", 
+  "  \\   \\  ", "   `~~~` ")
 
+----------------------------------------------------------------------------
+-- I'm also not sure if we need or want a degree option.
 
+spectralSequence = method(Options => {Degree => 1})
+spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
+     new SpectralSequence from {
+	  symbol filteredComplex => K,
+	  symbol zero => K.zero,
+	  symbol cache => CacheTable})
+
+-- In the following we are still going to want E^infinity etc. --
+
+  SpectralSequence ^ ZZ := SpectralSequencePage => (E,r) -> (
+       if E#?r then E#r else E#r= spectralSequencePage(E.filteredComplex,r);
+       E#r
+       )
+
+SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r       )
+
+-----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------
+-- end of partially tested code. --------------------------------------------------
+-----------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------------
 -- Retrieves (or lazily constructs) the inclusion map from the pth subcomplex to the top
@@ -456,71 +504,6 @@ ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
   filteredComplex for p from min K to max K list C ** inducedMap(K,p))
 
 
-
---------------------------------------------------------------------------------
--- spectral sequences ----------------------------------------------------------
---------------------------------------------------------------------------------
-SpectralSequence = new Type of MutableHashTable
-SpectralSequence.synonym = "spectral sequence"
-SpectralSequence.GlobalAssignHook = globalAssignFunction
-SpectralSequence.GlobalReleaseHook = globalReleaseFunction
-describe SpectralSequence := E -> net expression E
-net SpectralSequence := E -> (
-  if hasAttribute(E, ReverseDictionary) 
-  then toString getAttribute(E, ReverseDictionary) 
-  else net expression E)
-expression SpectralSequence := E -> stack(
-  "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ..ooOOOooooOO", 
-  "  \\   \\  ", "   `~~~` ")
-
-----------------------------------------------------------------------------
-----------------------------------------------------------------------------
--- Now starting to think about SpectralSequence data type. -----------------
--- I'm not sure we need to store the things labeled minF, max F, maxH, minH below.
--- these are trivial to compute from the abmient filtered complex.
--- I'm also not sure if we need or want a degree option.
-
--- For now I am going to comment out things that I don't think we need.
-
-
--------------------------------------------------------------------
-
---------------------------------------------------------------------------------
--- spectral sequences ----------------------------------------------------------
---------------------------------------------------------------------------------
-
-----------------------------------------------------------------------------
-----------------------------------------------------------------------------
--- Now starting to think about SpectralSequence data type. -----------------
--- I'm also not sure if we need or want a degree option.
-
--- For now I am going to comment out things that I don't think we need.
-
-
-spectralSequence = method(Options => {Degree => 1})
-spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
-     new SpectralSequence from {
-	  symbol filteredComplex => K,
-	  symbol zero => K.zero,
-	  symbol cache => CacheTable})
-
--- In the following we are still going to want E^infinity etc. --
-
-  SpectralSequence ^ ZZ := SpectralSequencePage => (E,r) -> (
-       if E#?r then E#r else E#r= spectralSequencePage(E.filteredComplex,r);
-       E#r
-       )
-
-SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r       )
-
--- Need to check again carefully that the following is true!! --
---SpectralSequence ^ InfiniteNumber := SpectralSequencePage => (E,r) -> (
---     E^ (abs(max E.filteredComplex - min E.filteredComplex))
-     
---     ) 
-
--- SpectralSequence _ InfiniteNumber := SpectralSequencePage => (E,r) ->( E^r)
-------------------------------------------------------------------------------------
 
 filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
 
