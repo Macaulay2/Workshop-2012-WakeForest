@@ -93,10 +93,11 @@ IndexedTensor @ Sequence := (t,s) -> (
     inds':=sort inds;
     n:=#inds;
     perm:=toList apply(0..<n,i->find(s_i,inds'));
-    assert(inds_perm===toList s);
+    assert(inds'_perm===toList s);
     indexedTensor((tensor t)@perm,s)    
     )
 
+sort IndexedTensor := opts -> t -> t@(toSequence sort toList indices t)
 
 
 ---------------------------------------

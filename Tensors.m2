@@ -17,13 +17,9 @@ newPackage(
 --a.c. : andrew critch
 
 --ToDo:eventually ditch tensor arrays 
---1) TxensorNet for printing instead of rnl
---USE MEMOIZE INSTEAD?
---1) sort Indexed Tensor
 --2) eliminate dependency of 
 --itprod on tman, and reserve tman for
 --expressional inputs
---fix "new M from ..." somehow
 --flattenings (after learning to make module elements)
 --4)Exclude contraction for non-free modules
 --6) command for dropping 1's in dimension list
@@ -343,15 +339,18 @@ TensorModule _ Sequence := (M,s) -> (
 --Conversions between Tensors
 --and RectangularRestedLists
 ------------------------------
-TensorNet := new Type of Net
+
 makeTensor List := L -> (
-     dims:=rnlDimensions rnl L;--check rectangularity and get dimensions
+     if not isrect(L) then error "makeTensor List expected a rectangular nested list";
+     dims:=initialDimensions L;
      ents:=ultimate(flatten,L);
      makeTensor(dims,ents)
      )
 
 ------
 
+----------------
+--ELIMINATE THIS:
 rnl Tensor := t -> (
      if RNL.cache#?t then return RNL.cache#t;
      a := new RNL from rnl (tensorDims t,entries t);
@@ -359,8 +358,23 @@ rnl Tensor := t -> (
 --     Tensor.cache#a = t; the array does not retain the base ring!
      a
      )
-net Tensor := t -> net rnl t;
-------
+------------------
+
+
+rnl'=
+rectangularNestedList'=method()
+rnl'(List,List):=(dims,L) -> (
+     if not product dims == #L then error "dimensions mismatch";
+     while #dims>1 do (
+	  d:=last dims;
+	  L = for i in 0..<round(#L/d) list take(L,{i*d,(i+1)*d-1});
+	  dims = take(dims,{0,-2+#dims}));
+     L)
+
+tensorNet = method()
+tensorNet Tensor := t -> netList rnl' (tensorDims t,entries t)
+net Tensor := memoize tensorNet;
+
 
 ---------------------------
 --Tensor operations
@@ -387,7 +401,6 @@ Tensor ^ ZZ := (t,n) -> fold(for i in 0..<n list t,(i,j)->i**j)
 --------------------------------
 --Permuting the axes of a tensor
 --------------------------------
-
 Tensor @ List := (T,l) -> (
      assertInstances(l,ZZ,"tensor(Tensor,List)");
      dims:=tensorDims T;
@@ -415,6 +428,7 @@ tensorFunction Tensor := t -> (
      f
      )
 
+{{*
 ----------------------------------
 --Turn a BasicList into a function
 --which plugs things into null
@@ -452,6 +466,7 @@ saf BasicList := l -> (
      )
 sasf=
 symbolicArgumentSequenceFunction=x->toSequence@@(saf x)
+*}}
 
 ---------------------
 --Tensor slices

@@ -113,6 +113,7 @@ T=genericTensor(R',{3,4,5})
 t=T_(i,j,k)
 t'=t@(k,i,j)--index permutations are sequences, not lists
 T'=tensor t'
+s=(k,i,j)
 T
 T_(2,3,0)
 T'_(0,2,3)
