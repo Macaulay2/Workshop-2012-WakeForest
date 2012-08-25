@@ -183,6 +183,11 @@ FilteredComplex ^ InfiniteNumber :=
 FilteredComplex ^ ZZ := ChainComplex => (K,p) -> ( K_(-p)
   )
 
+----------------------------------------------------
+--- I think we are going to want "shift of a filtered complex."  I'm suggesting
+-- that it should look like  K[a,b] and 
+-- have the property that K_p _ q [a,b] = K_(p+q)  _(q+b)
+-----------------------------------------------------------
 
 chainComplex FilteredComplex := ChainComplex => K -> K_infinity
 
@@ -566,6 +571,175 @@ installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
 -------------------------------------------------------------------
+-- the following is very experimental code.  Once the bugs are worked out
+-- this should be included and exported.  Basically I want to 
+-- compute the "homology of a spectral sequence page" and then
+-- express the isomorphism between this and the modules on the next page.
+
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+F2D=D
+
+F1D= simplicialComplex {a*c, d}
+
+F0D = simplicialComplex {a,d}
+
+KK= filteredComplex {F2D, F1D, F0D}
+
+K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero} 
+
+-- need to add zero to K to use the spectral sequence constructor.
+
+E0Modules = computeErModules(K,0)
+
+new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
+
+E0Maps=computeErMaps(K,0)
+new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
+prune ker E0Maps#{2,-1}
+
+
+E=spectralSequence(K)
+
+E_0
+
+
+-- want to compute homology of a spectral sequence page...  
+-- the out put of such a function should be a hash table "isomorphic" to the 
+-- modules on the next page.
+
+rpqHomology :=(p,q,r,Er) -> ( (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) )
+
+(ker (E_0).dd #{2,0}) / image (E_0).dd #{2,1}
+
+
+rpqHomology(2,0,0, E_0)
+
+K_infinity
+
+
+E_1 . filteredComplex _infinity
+keys E_1
+
+E_1 .pageModules #{2,0}
+
+inducedMap(rpqHomology(2,0,0,E_0), E_1 .pageModules #{2,0}, id_(K_infinity _2))
+
+-- want to compute the isomorphism from the homology of the rth page with
+-- the r+1 th page.
+
+rpqIsomorphism :=(p,q,r,page,nextPage) -> (
+inducedMap(rpqHomology(p,q,r,page), nextPage.pageModules #{p,q}, id_(nextPage.filteredComplex _infinity _(p+q)))
+  )
+
+
+ 
+isIsomorphism rpqIsomorphism(2,0,0,E_0,E_1)
+
+-- so the above seems to be working OK.
+
+L=keys E_0 .dd
+
+L#0 #0
+L#0 #1
+
+
+apply(keys E_0 .dd, i-> rpqIsomorphism(i#0,i#1,0,E_0,E_1))
+
+-- so there is a bug in the above.
+
+rpqIsomorphism(-1,2,0,E_0,E_1)
+
+-- I think the bug is in rpqHomology.  {-1,3} is not in keys E_0 .dd .
+-- Need to handle this case.
+
+rpqHomology :=(p,q,r,Er) -> ( 
+     if Er.dd #?{p+r,q-r+1} then 
+     (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) 
+ else (ker(Er.dd #{p,q})) / (image(0*id_(Er.filteredComplex _infinity _ (p+q)) ))
+     )
+rpqHomology(-1,2,0,E_0)
+
+rpqIsomorphism :=(p,q,r,page,nextPage) -> (
+inducedMap(rpqHomology(p,q,r,page), nextPage.pageModules #{p,q}, id_(nextPage.filteredComplex _infinity _(p+q)))
+  )
+
+
+rpqIsomorphism(-1,2,0,E_0,E_1)
+
+-- so the above seemed to work better.
+
+apply(keys E_0 .dd, i-> isIsomorphism rpqIsomorphism(i#0,i#1,0,E_0,E_1))
+
+-- so the above seems to work!! Cool!!
+
+apply(keys E_1 .dd, i->  rpqIsomorphism(i#0,i#1,1,E_1,E_2))
+
+-- so there seems to be a problem in the above.
+
+keys E_1 .dd
+
+ E_1 .pageModules
+ E_2 .filteredComplex
+
+rpqIsomorphism(2,1,1,E_1,E_2)
+
+ rpqHomology(1,-1,1,E_1)
+
+K_infinity _0
+
+prune E_2 .pageModules #{1,-1}
+
+inducedMap(rpqHomology(1,-1,1,E_1), E_2 .pageModules #{1,-1}, id_ (K_infinity) _0)
+
+-- so the above seems to be the problem.
+
+-- try instead
+inducedMap(E_2 .pageModules #{1,-1}, rpqHomology(1,-1,1,E_1), id_ (K_infinity) _0)
+
+-- on the otherhand, the above seems to be ok.
+
+rpqHomology :=(p,q,r,Er) -> ( 
+     if Er.dd #?{p+r,q-r+1} then 
+     (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) 
+ else (ker(Er.dd #{p,q})) / (image(0*id_(Er.filteredComplex _infinity _ (p+q)) ))
+     )
+rpqHomology(-1,2,0,E_0)
+
+rpqIsomorphism :=(p,q,r,page,nextPage) -> (
+inducedMap(nextPage.pageModules #{p,q},rpqHomology(p,q,r,page), id_(nextPage.filteredComplex _infinity _(p+q)))
+  )
+
+
+rpqIsomorphism(1,-1,1,E_1, E_2)
+
+
+isIsomorphism rpqIsomorphism(1,-1,1,E_1,E_2)
+
+apply(keys E_1 .dd, i->  rpqIsomorphism(i#0,i#1,1,E_1,E_2))
+
+apply(keys E_1 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,1,E_1,E_2))
+-- cool.
+
+apply(keys E_0 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,0,E_0,E_1))
+-- cool.
+
+apply(keys E_2 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,2,E_2,E_3))
+--cool.
+
+-- should investigate the above further.
+
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 ------------------------------------------------------------------
 needsPackage "SpectralSequences";
@@ -593,6 +767,8 @@ E=spectralSequence K
 E^infinity
 
 E0=E^0
+
+HH E0
 
 E0.dd
 
