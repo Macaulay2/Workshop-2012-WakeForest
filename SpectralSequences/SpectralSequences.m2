@@ -289,6 +289,9 @@ computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
 -- might want to make this a hash table instead of a mutable hash table.
 SpectralSequencePage = new Type of MutableHashTable
 SpectralSequencePage.synonym = "spectral sequence page"
+SpectralSequencePage.GlobalAssignHook = globalAssignFunction
+SpectralSequencePage.GlobalReleaseHook = globalReleaseFunction
+
 
 spectralSequencePage = method ()
 spectralSequencePage(FilteredComplex, ZZ):= (K,r) ->( 
@@ -303,10 +306,17 @@ new SpectralSequencePage from
 -- pairs of integers.
 -- should return an error message if this isn't the case.
 
-SpectralSequencePage _ List := Module => (E,i)-> if (E.pageModules)#?i then 
- (E.pageModules)#i else image(0*id_((E.filteredComplex_infinity)_(sum i)))  
+SpectralSequencePage _ List := Module => (E,i)-> if (E.dd)#?i then 
+source(E.dd #i) else image(0*id_((E.filteredComplex_infinity)_(sum i)))  
 
 SpectralSequencePage ^ List := Module => (E,i)-> E_(apply(i, j-> -j))    
+
+-- view the modules on a Spectral Sequence Page.  We are refering to these
+-- as the support of the page.
+
+support SpectralSequencePage := E->(
+     new HashTable from apply(keys E.dd, i-> i=> source E.dd #i) )
+
 
 --------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------
@@ -570,6 +580,9 @@ restart
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
+--------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
 -------------------------------------------------------------------
 -- the following is very experimental code.  Once the bugs are worked out
 -- this should be included and exported.  Basically I want to 
@@ -595,7 +608,63 @@ F0D = simplicialComplex {a,d}
 
 KK= filteredComplex {F2D, F1D, F0D}
 
-K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero} 
+K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero, symbol cache =>  new CacheTable} 
+
+-- need to add zero to K to use the spectral sequence constructor.
+
+E=spectralSequence(K)
+
+
+E^0
+E^1
+E^2
+E^3
+
+support E^0
+E^0 _{1,1}
+E^0 _{2,-1}
+
+support E^1
+
+E^1 _{2,-2}
+
+support E^2
+support E^3
+
+new HashTable from apply(keys E^0 .dd, i-> i=> source E^0 .dd #i)
+
+support SpectralSequencePage := E->(
+     new HashTable from apply(keys E.dd, i-> i=> source E.dd #i) )
+
+
+
+
+-------------------------------------------------------------------
+-- the following is very experimental code.  Once the bugs are worked out
+-- this should be included and exported.  Basically I want to 
+-- compute the "homology of a spectral sequence page" and then
+-- express the isomorphism between this and the modules on the next page.
+
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+F2D=D
+
+F1D= simplicialComplex {a*c, d}
+
+F0D = simplicialComplex {a,d}
+
+KK= filteredComplex {F2D, F1D, F0D}
+
+K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero, symbol cache =>  new CacheTable} 
 
 -- need to add zero to K to use the spectral sequence constructor.
 
@@ -610,7 +679,18 @@ prune ker E0Maps#{2,-1}
 
 E=spectralSequence(K)
 
-E_0
+
+E^0 .pageModules
+
+E^0 .dd.source
+
+E^0 .dd #{2,-1}.source
+-- so maybe the above is the better way to do this.
+
+E^1 .pageModules
+
+
+keys E_0
 
 
 -- want to compute homology of a spectral sequence page...  
@@ -1427,7 +1507,7 @@ prune nonReducedChainComplex(KK_0)
 nonReducedChainComplex(KK_(-1))
 
 spots KK
-K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero} 
+K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero, symbol cache =>  new CacheTable} 
 
 K_2
 K_1
@@ -1484,8 +1564,11 @@ new HashTable from apply(keys E3Maps, i-> i=> prune E3Maps#i)
 
 E=spectralSequence(K)
 
+keys E^0
 
-E_0 .pageModules
+E^0 #(symbol pageModules)
+
+E^0 .pageModules
 apply(keys E_0, i-> class i)
 
 E_0 .dd
@@ -1503,10 +1586,10 @@ keys E_0
 
 (E_0).pageNumber
 E_0 .pageNumber
-
+-------------------------------------------------------------------
 -- I don't understand why the above doesn't work for this example... 
 -- The above seemed to work in previous examples.
-
+-------------------------------------------------------------------
 
 
 E=spectralSequence(K)
