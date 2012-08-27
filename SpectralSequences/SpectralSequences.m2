@@ -296,8 +296,12 @@ SpectralSequencePage.GlobalReleaseHook = globalReleaseFunction
 spectralSequencePage = method ()
 spectralSequencePage(FilteredComplex, ZZ):= (K,r) ->( 
 new SpectralSequencePage from 
- {symbol filteredComplex=> K, symbol pageNumber =>r, 
-      symbol pageModules => computeErModules(K,r), symbol dd => computeErMaps(K,r), 
+ {symbol filteredComplex=> K, 
+     symbol pageNumber =>r, 
+   --we don't need a key with
+   -- pageModules.  We can get this by
+   -- looking at the source of the differential at the pq spot
+      symbol dd => computeErMaps(K,r), 
      symbol zero => (ring K_infinity)^0})
 
 
@@ -316,6 +320,9 @@ SpectralSequencePage ^ List := Module => (E,i)-> E_(apply(i, j-> -j))
 
 support SpectralSequencePage := E->(
      new HashTable from apply(keys E.dd, i-> i=> source E.dd #i) )
+
+
+
 
 
 --------------------------------------------------------------------------------------
@@ -631,10 +638,40 @@ E^1 _{2,-2}
 support E^2
 support E^3
 
-new HashTable from apply(keys E^0 .dd, i-> i=> source E^0 .dd #i)
+-- I think that these are the functions we want for this. --
+-- Need to try this on other pages. --
 
-support SpectralSequencePage := E->(
-     new HashTable from apply(keys E.dd, i-> i=> source E.dd #i) )
+-- the following computes the homology of the maps at the pq spot on the r-th page
+-- in the following we want to have arguments SpectralSequence and not HashTable.
+
+rpqHomology = method()
+rpqHomology(SpectralSequence,ZZ,ZZ,ZZ) :=(E,p,q,r) -> ( 
+     if E^r .dd #?{p+r,q-r+1} then 
+     (ker(E^ r.dd #{p,q})) / (image(E^ r.dd #{p+r,q-r+1}) ) 
+ else (ker(E^ r.dd #{p,q})) / (image(0*id_(E^ r.filteredComplex _infinity _ (p+q)) ))
+     )
+
+-- the following computes the isomorphism of the homology at the pq spot
+-- on the r-th page and the module on at the pq spot on the r+1-th page.
+rpqIsomorphism = method()
+rpqIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) :=(E,p,q,r) -> (
+inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filteredComplex _infinity _(p+q)))
+  ) 
+
+apply(keys E_1 .dd, i->  rpqIsomorphism(E,i#0,i#1,1))
+
+
+apply(keys E^0 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
+-- cool.
+
+apply(keys E^1 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
+-- cool.
+
+apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
+-- cool.
+
+-- should try this again on other examples. 
+
 
 
 
@@ -1564,48 +1601,30 @@ new HashTable from apply(keys E3Maps, i-> i=> prune E3Maps#i)
 
 E=spectralSequence(K)
 
-keys E^0
-
-E^0 #(symbol pageModules)
-
-E^0 .pageModules
-apply(keys E_0, i-> class i)
-
-E_0 .dd
-E_0 . filteredComplex
+support E^0
+-- might want the support function to prune the entries of the spectral sequence page? --
 
 
-E^0 .pageModules
-
-keys E^0
-
-
-E_0 .pageNumber
-
-keys E_0
-
-(E_0).pageNumber
-E_0 .pageNumber
--------------------------------------------------------------------
--- I don't understand why the above doesn't work for this example... 
--- The above seemed to work in previous examples.
--------------------------------------------------------------------
+rpqHomology :=(p,q,r,Er) -> ( 
+     if Er.dd #?{p+r,q-r+1} then 
+     (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) 
+ else (ker(Er.dd #{p,q})) / (image(0*id_(Er.filteredComplex _infinity _ (p+q)) ))
+     )
 
 
-E=spectralSequence(K)
-keys E
+rpqIsomorphism :=(p,q,r,page,nextPage) -> (
+inducedMap(source (nextPage.dd #{p,q}),rpqHomology(p,q,r,page), id_(nextPage.filteredComplex _infinity _(p+q)))
+  ) 
 
-E.filteredComplex
 
-E_0
-E_1
-E_2
-E_3
+apply(keys E^0 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,0,E^0,E^1))
+-- cool.
+apply(keys E^1 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,1,E^1,E^2))
+-- cool.
+apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,2,E^2,E^3))
+-- cool.
 
-keys E
 
-keys E_0
-E_0 .pageNumber
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
