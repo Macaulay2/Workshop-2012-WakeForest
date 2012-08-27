@@ -54,6 +54,18 @@ doc ///
 	       
      ///	       
      
+doc ///
+     Key
+     	  SpectralSequencePage
+     Headline
+     	  The type of all spectral sequence pages
+     Description
+     	  Text
+	       A spectral sequence page (or sheet) is the 
+	       
+     ///	       
+
+
 -------------------------
 -----Functions
 -------------------------
@@ -70,7 +82,8 @@ doc ///
 	       A list of ChainComplexes or SimplicialComplexes
      Outputs
      	  K:FilteredComplex
-	       A filtered complex with a descending filtration.
+	       A filtered complex with a filtration of the form
+	       K=F_nK > F_(n-1)K > ... > F_0K.
      Description
      	  Text 
 	       Blah
@@ -94,6 +107,63 @@ doc ///
      	  Text 
 	       Blah
      ///
+     
+     
+     doc ///
+     Key
+     	  spectralSequencePage
+     Headline
+     	  Construct a SpectralPage from a filtered complex
+     Usage
+     	  E = spectralSequencePage(K,r)
+     Inputs
+     	  K:FilteredComplex
+	       A filtered complex
+	       r: an integer
+     Outputs
+     	  E:SpectralSequencePage
+     Description
+     	  Text 
+	       Blah
+     ///
+ 
+ doc ///
+     Key
+     	  computeErModules
+     Headline
+     	  Construct all modules on the r th page of a spectral sequence
+     Usage
+     	 M= computeErModules(K,r)
+     Inputs
+     	  K:FilteredComplex
+	       A filtered complex
+	       r: A non-negative integer
+     Outputs
+     	M:HashTable
+     Description
+     	  Text 
+	       Blah
+     ///
+ 
+ doc ///
+     Key
+     	  computeErMaps
+     Headline
+     	  Construct all maps on the r th page of a spectral sequence
+     Usage
+     	  M=computeErMaps(K,r)
+     Inputs
+     	  K:FilteredComplex
+	       A filtered complex
+	       r: A non-negative integer
+     Outputs
+     	  M:HashTable
+     Description
+     	  Text 
+	       Blah
+     ///
+ 
+ 
      
 -------------------------
 -----Methods
@@ -182,7 +252,7 @@ doc ///
      Key
      	  (symbol _, SpectralSequence, ZZ)
      Headline
-     	  The kth sheet of a spectral sequence
+     	  The kth page of a spectral sequence
      Usage
      	  P = E_k
      Inputs
@@ -214,13 +284,13 @@ doc ///
  
   doc ///
      Key
-     	  (symbol ^, SpectralSequenceSheet, List)
+     	  (symbol ^, SpectralSequencePage, List)
      Headline
-     	  The module in the i,j position on the sheet
+     	  The module in the i,j position on the page
      Usage
      	  M = P^L
      Inputs
-     	  P:SpectralSequenceSheet
+     	  P:SpectralSequencePage
 	  L:List
 	       A list L = \{i,j\} of integers
      Outputs

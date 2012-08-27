@@ -1310,6 +1310,7 @@ viewHelp SpectralSequences
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes";
+needsPackage "ChainComplexExtras";
 
 
 -- the following is the input data for the hopf fibration--
@@ -1426,7 +1427,7 @@ prune nonReducedChainComplex(KK_0)
 nonReducedChainComplex(KK_(-1))
 
 spots KK
-K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i)) 
+K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero} 
 
 K_2
 K_1
@@ -1472,12 +1473,63 @@ new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
 
 E3Maps=computeErMaps(K,3);
 new HashTable from apply(keys E3Maps, i-> i=> prune E3Maps#i)
+
 ----------------------------------------------------------------
 -- the E3 page appears to have been computed correctly. --------
 ----------------------------------------------------------------
 
--- New example to try.  Everything in this example can be computed easily by hand. --
+-- there seems to be a bug in the following --
+-- I don't understand why the symbol pageModules is not in the keys of the
+-- E_0 page for example.
 
+E=spectralSequence(K)
+
+
+E_0 .pageModules
+apply(keys E_0, i-> class i)
+
+E_0 .dd
+E_0 . filteredComplex
+
+
+E^0 .pageModules
+
+keys E^0
+
+
+E_0 .pageNumber
+
+keys E_0
+
+(E_0).pageNumber
+E_0 .pageNumber
+
+-- I don't understand why the above doesn't work for this example... 
+-- The above seemed to work in previous examples.
+
+
+
+E=spectralSequence(K)
+keys E
+
+E.filteredComplex
+
+E_0
+E_1
+E_2
+E_3
+
+keys E
+
+keys E_0
+E_0 .pageNumber
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------
+-- New example to try.  Everything in this example can be computed easily by hand. --
+------------------------------
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes";
