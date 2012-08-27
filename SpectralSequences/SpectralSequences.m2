@@ -855,7 +855,17 @@ F0D = simplicialComplex {a,d}
 
 KK= filteredComplex {F2D, F1D, F0D}
 
-K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i)) 
+K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero} 
+
+E=spectralSequence(K)
+
+E0=E_0
+
+E1=E_1
+
+E2=E_2
+
+
 
 E0Modules = computeErModules(K,0)
 
@@ -892,6 +902,36 @@ new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
 ---------------------------------------------------
 -- the above aggrees with my calculations by hand.
 ---------------------------------------------------
+
+--
+-- let's try now to test the following code which seemed to work on an eariler example.
+
+-- on the otherhand, the above seems to be ok.
+
+
+rpqHomology :=(p,q,r,Er) -> ( 
+     if Er.dd #?{p+r,q-r+1} then 
+     (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) 
+ else (ker(Er.dd #{p,q})) / (image(0*id_(Er.filteredComplex _infinity _ (p+q)) ))
+     )
+
+rpqIsomorphism :=(p,q,r,page,nextPage) -> (
+inducedMap(nextPage.pageModules #{p,q},rpqHomology(p,q,r,page), id_(nextPage.filteredComplex _infinity _(p+q)))
+  )
+
+apply(keys E_0 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,0,E_0,E_1))
+-- cool.
+
+apply(keys E_1 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,1,E_1,E_2))
+-- cool.
+
+apply(keys E_2 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,2,E_2,E_3))
+-- cool.
+
+E_2 .pageNumber
+
+E_2 .pageModules
+
 
 
 
@@ -970,7 +1010,7 @@ KK=filteredComplex {F2D,F1D,F0D}
 -- the example I did by hand was done using non-reduced homology. --
 -- should go back and try it with reduced homology later. --
 
-K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i)) 
+K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i)) |{symbol zero => KK.zero}
 
 
 C=K_infinity
@@ -1005,6 +1045,43 @@ new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
 -- the above agrees with my caclulations by hand. --
 ----------------------------------------------------
 
+E=spectralSequence(K)
+E_0
+E_1
+E_2
+
+E_0 .pageModules
+
+E_1 .pageModules
+
+E_0 .pageNumber
+
+-- let's try now to test the following code which seemed to work on an eariler example.
+
+-- on the otherhand, the above seems to be ok.
+
+
+rpqHomology :=(p,q,r,Er) -> ( 
+     if Er.dd #?{p+r,q-r+1} then 
+     (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) 
+ else (ker(Er.dd #{p,q})) / (image(0*id_(Er.filteredComplex _infinity _ (p+q)) ))
+     )
+
+rpqIsomorphism :=(p,q,r,page,nextPage) -> (
+inducedMap(nextPage.pageModules #{p,q},rpqHomology(p,q,r,page), id_(nextPage.filteredComplex _infinity _(p+q)))
+  )
+
+apply(keys E_0 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,0,E_0,E_1))
+-- cool.
+
+apply(keys E_1 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,1,E_1,E_2))
+--cool.
+
+apply(keys E_2 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,2,E_2,E_3))
+--cool.
+
+--------------------------------------------------------
+--------------------------------------------------------
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
@@ -1226,6 +1303,11 @@ K=filteredComplex({F3,F2,F1})
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 restart
+installPackage("SpectralSequences",RemakeAllDocumentation=>true)
+check "SpectralSequences";
+viewHelp SpectralSequences
+--------------------------------------------------------------------------
+restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes";
 
@@ -1390,7 +1472,6 @@ new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
 
 E3Maps=computeErMaps(K,3);
 new HashTable from apply(keys E3Maps, i-> i=> prune E3Maps#i)
-
 ----------------------------------------------------------------
 -- the E3 page appears to have been computed correctly. --------
 ----------------------------------------------------------------
