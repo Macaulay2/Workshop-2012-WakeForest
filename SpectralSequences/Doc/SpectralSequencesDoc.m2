@@ -264,6 +264,24 @@ doc ///
      	  Text 
 	      Returns the kth page of the spectral sequence
      ///
+     
+doc ///
+     Key
+     	  (symbol ^, SpectralSequence, ZZ)
+     Headline
+     	  The kth page of a spectral sequence
+     Usage
+     	  P = E^k
+     Inputs
+     	  E:SpectralSequence
+	  k:ZZ
+     Outputs
+     	  P: SpectralSequencePage
+     Description
+     	  Text 
+	      Returns the kth page of the spectral sequence
+     ///
+
 
  doc ///
      Key
@@ -289,6 +307,24 @@ doc ///
      	  The module in the i,j position on the page
      Usage
      	  M = P^L
+     Inputs
+     	  P:SpectralSequencePage
+	  L:List
+	       A list L = \{i,j\} of integers
+     Outputs
+     	  M:Module
+     Description
+     	  Text 
+	       Blah
+    ///
+
+doc ///
+     Key
+     	  (symbol _, SpectralSequencePage, List)
+     Headline
+     	  The module in the i,j position on the page
+     Usage
+     	  M = P_L
      Inputs
      	  P:SpectralSequencePage
 	  L:List

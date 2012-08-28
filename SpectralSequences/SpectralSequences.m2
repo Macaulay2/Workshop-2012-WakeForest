@@ -50,7 +50,7 @@ export {
   "spectralSequence",
   "SpectralSequenceSheet",
   "see", "computeErModules","computeErMaps", "spots",
-  "nonReducedChainComplex", "SpectralSequencePage", "spectralSequencePage"
+  "nonReducedChainComplex", "SpectralSequencePage", "spectralSequencePage","rpqHomology","rpqIsomorphism"
   }
 
 -- symbols used as keys
@@ -364,6 +364,22 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
 
 SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r       )
 
+
+-- the following computes the homology at the pq spot on the rth page.
+rpqHomology = method()
+rpqHomology(SpectralSequence,ZZ,ZZ,ZZ) :=(E,p,q,r) -> ( 
+     if E^r .dd #?{p+r,q-r+1} then 
+     (ker(E^ r.dd #{p,q})) / (image(E^ r.dd #{p+r,q-r+1}) ) 
+ else (ker(E^ r.dd #{p,q})) / (image(0*id_(E^ r.filteredComplex _infinity _ (p+q)) ))
+     )
+
+-- the following computes the isomorphism of the homology at the pq spot
+-- on the r-th page and the module on at the pq spot on the r+1-th page.
+rpqIsomorphism = method()
+rpqIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) :=(E,p,q,r) -> (
+inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filteredComplex _infinity _(p+q)))
+  ) 
+
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 -- end of partially tested code. --------------------------------------------------
@@ -638,25 +654,7 @@ E^1 _{2,-2}
 support E^2
 support E^3
 
--- I think that these are the functions we want for this. --
--- Need to try this on other pages. --
 
--- the following computes the homology of the maps at the pq spot on the r-th page
--- in the following we want to have arguments SpectralSequence and not HashTable.
-
-rpqHomology = method()
-rpqHomology(SpectralSequence,ZZ,ZZ,ZZ) :=(E,p,q,r) -> ( 
-     if E^r .dd #?{p+r,q-r+1} then 
-     (ker(E^ r.dd #{p,q})) / (image(E^ r.dd #{p+r,q-r+1}) ) 
- else (ker(E^ r.dd #{p,q})) / (image(0*id_(E^ r.filteredComplex _infinity _ (p+q)) ))
-     )
-
--- the following computes the isomorphism of the homology at the pq spot
--- on the r-th page and the module on at the pq spot on the r+1-th page.
-rpqIsomorphism = method()
-rpqIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) :=(E,p,q,r) -> (
-inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filteredComplex _infinity _(p+q)))
-  ) 
 
 apply(keys E_1 .dd, i->  rpqIsomorphism(E,i#0,i#1,1))
 
@@ -674,7 +672,7 @@ apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
 
 
 
-
+-----------------------------------------------------------------
 
 -------------------------------------------------------------------
 -- the following is very experimental code.  Once the bugs are worked out
