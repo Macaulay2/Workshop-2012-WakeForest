@@ -397,6 +397,7 @@ rnl'(List,List):=(dims,L) -> (
 tensorNet = method()
 tensorNet Tensor := T -> (
      dims := tensorDimensions T;
+     if #dims < 3 then return netList rnl'(dims,entries T);
      colKeys := tensorKeys(remove(dims,0));
      rowKeys := 0..<dims#0;
      colWidth := j -> j => max apply(rowKeys,i->width net T_((1:i)|j));

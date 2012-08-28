@@ -68,9 +68,6 @@ t=T
 l={,0,}
 T
 T_{1,,}
-u=T_{1,,1}--
-net u
-T=u
 T_{1,1,1}
 
 {{*------------
@@ -80,7 +77,7 @@ T
 marginalize(T,{0})
 marginalize(T,{0,2})
 marginalize(T,{0,1,2})
-
+a+b+c+d+e+f+g
 
 {{*-------------------------
 -- Indexed Tensor Methods --
