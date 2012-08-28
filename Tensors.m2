@@ -395,9 +395,18 @@ rnl'(List,List):=(dims,L) -> (
      L)
 
 tensorNet = method()
-tensorNet Tensor := t -> netList rnl' (tensorDims t,entries t)
-net Tensor := memoize tensorNet;
+tensorNet Tensor := t -> (
+     dims := tensorDimensions T;
+     colKeys := tensorKeys(remove(dims,0));
+     rowKeys=0..<dims#0;
+     colWidth := j -> j => max apply(rowKeys,i->width net T_((1:i)|j));
+     colWidths := hashTable apply(colKeys,colWidth);
+     padding := I -> concatenate(colWidths#(remove(I,0)) - (width net T_I):" ");
+     padEntry = I -> (net T_I)|(padding I);
+     netList rnl'(dims,apply(tensorKeys dims,padEntry))
+     )
 
+net Tensor := memoize tensorNet;
 
 ---------------------------
 --Tensor operations
