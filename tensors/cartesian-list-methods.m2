@@ -20,7 +20,7 @@ cartesianProduct(Sequence,Sequence) := (L,M) -> join apply(L,l->apply(M,m->(l,m)
 acp=--INTERNAL ABBREVIATION
 associativeCartesianProduct = method(Dispatch=>Thing)
 associativeCartesianProduct VisibleList := L -> (
-     p:=apply(fold(L,cp),splice);
+     p:=apply(fold(L,cp),deepSplice);
      if not class p_0 === Sequence then p=apply(p,i->1:i);
      p
      )

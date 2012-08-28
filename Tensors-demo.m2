@@ -19,7 +19,7 @@ T=makeTensor{
 makeTensor({3,2,2},{a,b,c,d,e,f,g,h,i,j,k,l})
 
 {{* generic tensors *}};
-genericTensor(R,{3,2,2})
+T=genericTensor(R,{3,2,2})
 U=genericTensor(R,12,{3,2,2})
 genericTensor(R,m,{3,2,2})
 
@@ -34,7 +34,6 @@ randomTensor(S,1,{4,2,2})
 -- Operations on tensors --
 ------------------------*}};
 3*T+U
-T**U
 
 {{*----------
 -- Entries --
@@ -69,12 +68,15 @@ t=T
 l={,0,}
 T
 T_{1,,}
-T_{1,,1}
+u=T_{1,,1}--
+net u
+T=u
 T_{1,1,1}
 
 {{*------------
 -- Marginals --
 ------------*}};
+T
 marginalize(T,{0})
 marginalize(T,{0,2})
 marginalize(T,{0,1,2})
@@ -86,7 +88,9 @@ marginalize(T,{0,1,2})
 T=genericTensor(R,{3,3})
 U=genericTensor(R,9,{3,3})
 i=symbol i;j=symbol j;k=symbol k;l=symbol l
-T_(i,j)
+t=T_(i,j)
+tensor t
+
 tensor sum(i, T_(i,j) * U_(i,k) )
 tensor ( T_(i,j) * U_(i,k) )
 tensor sum(k, T_(i,j) * U_(i,k) )
