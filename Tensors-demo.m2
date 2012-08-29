@@ -159,43 +159,5 @@ P_7
 P_(0,0,1,1,1)
 
 
-{{*--------------------------------
-   Manipulation of tensors using
-   symbolic index notation      
---------------------------------*}};
-{{* A_(i,j,k) := T_(j,i) * U_(k,i) *}};
-T=genericTensor(R,{3,3})
-U=genericTensor(R,12,{3,3})
-
-tman({{T,j,i},{U,k,i}})
-
-{{*--A_(i,j,k) := sum_i T_(j,i) * U_(k,i)*}};
-tman({{T,j,i},{U,k,i}},{i})
-
---A_(i_0,i_1,i_2) := T_(i_1,i_0) * U_(i_2,i_0)
-
---higher order transpositions of a single tensor:
-
-{{*indices in alphabetical order
-yields the same tensor:*}};
-T'=T**U
-tman({{T',i,j,k,l}})
-tman({{T',l,j,k,i}})
-
-{{*a harder-to-visualize permutation:*}};
-tman({{T',j,l,i,k}})
-
-{{*Extracting order diagonal tensors:*}};
-tman({{T',i,i,i,i}})
-tman({{T',i,i,j,j}})
-tman({{T',i,i,j,k}})
-
-{{*Einstein summation:
---repeated indices are
---automatically summed over*}};
---esum({{T,i,j},{U,j,k}})
-
-{{*symbolic marginalization*}};
-
 end
 

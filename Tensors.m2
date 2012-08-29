@@ -79,7 +79,7 @@ allInstances (VisibleList,HashTable) := (things,type) -> (
 --------------------------------------------
 --load "./tensors/tensorarrays.m2"
 load "./tensors/cartesian-list-methods.m2"
-load "./tensors/old-tensor-methods.m2"
+--load "./tensors/old-tensor-methods.m2"
 
 inserts=method()
 inserts(VisibleList,VisibleList,VisibleList):=(locs,things,host)->(
@@ -375,7 +375,7 @@ makeTensor List := L -> (
      )
 
 ------
-
+{{*
 ----------------
 --ELIMINATE THIS:
 rnl Tensor := t -> (
@@ -386,7 +386,7 @@ rnl Tensor := t -> (
      a
      )
 ------------------
-
+*}}
 
 rnl'=
 rectangularNestedList'=method()
@@ -553,7 +553,7 @@ marg(Tensor,List) := (T,tosum) -> (
 --Tensor Compositions
 -------------------------
 --REWRITE THESE FROM SCRATCH!!
-
+{{*
 tman=
 tensorComposition=method()
 tman (List,List,List) := 
@@ -565,7 +565,7 @@ tman (List,List) := (L,summationIndices) -> (
      )
 
 tman (List) := L -> tman(L,{})
-
+*}}
 {{*
 esum=
 einsteinSummation=method()
