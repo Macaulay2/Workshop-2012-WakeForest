@@ -16,11 +16,11 @@ newPackage(
 --Searchable comment legend:
 --a.c. : andrew critch
 ----------------------------------------
-
 export{Tensor,TensorModule,
      makeTensor,tensorModule,tensorModuleProduct,
-     tensorDims,einsteinSum,
-     indexedTensorProduct}
+     tensorDims,genericTensor,
+     randomTensor,
+     indexedTensorProduct,einsteinSum}
 export{associativeCartesianProduct}
 
 -------------------------
@@ -80,6 +80,7 @@ find (Thing,VisibleList) := (x,l) -> (
 --Tensor Modules
 ----------------
 Tensor=new Type of Vector
+Tensor.synonym="tensor"
 Tensor.cache = new CacheTable
 vector Tensor := t -> new Vector from t
 
@@ -165,7 +166,7 @@ tensorModule (Ring,List) := (R,dims) -> (
 --for tensoring with other such modules to build higher-order
 --non-free tensor modules:
 tensorModule Module := M -> (
---     T:=if isFreeModule M then FrFreeTensorModuleeeTensorModule else TensorModule;
+     if not isQuotientModule M then error "tensorModule(Module) expected a free module or quotient module";
       new TensorModule of Tensor from (
        	   new HashTable from (pairs M)|{
 		gs"factors" =>  {M},
@@ -235,9 +236,6 @@ TensorModule @ List := (M,l) -> tensorModuleProduct M#(gs"factors")_l
 -----------------------------
 --Basic tensor methods
 -----------------------------
---Get the ambient tensor module of a tensor:
-tensorModule Tensor := t -> class t;
-
 --Get the ambient module of a tensor
 module Tensor := t -> module class t;
 
@@ -272,19 +270,19 @@ fta (Tensor,Sequence) := (t,s) -> (
 ------------------------------------------
 --Making tensors without RNLs (previously TensorArrays)
 ------------------------------------------
-tensor(TensorModule,Vector):=opts->(M,v)-> new M from v
-tensor(TensorModule,List):=opts->(M,l) -> (
+tensor (TensorModule,Vector) := opts -> (M,v) -> new M from v
+tensor (TensorModule,VisibleList) := opts -> (M,l) -> (
      new M from map(M,(ring M)^1,for i in l list {i}))
 --
 makeTensor=method()
 --a.c. fix "new M from" here...
-makeTensor (List,List):=(dims,ents)->(
-     R:=commonRing ents;
+makeTensor (VisibleList,VisibleList):=(dims,ents)->(
+     R:=commonRing toList ents;
      M:=tensorModule(R,dims);
      tensor(M,ents)
      )
-makeTensor (List,Function):=(dims,f)->(
-     ents:=toList apply(tensorKeys dims,f);
+makeTensor (VisibleList,Function):=(dims,f)->(
+     ents:=apply(tensorKeys dims,f);
      makeTensor(dims,ents))
 
 Ring**Tensor := (r,t) -> error "not implemented yet"
@@ -329,7 +327,7 @@ rnl(List,List):=(dims,L) -> (
 
 tensorNet = method()
 tensorNet Tensor := T -> (
-     dims := tensorDimensions T;
+     dims := tensorDims T;
      if #dims < 3 then return netList rnl(dims,entries T);
      colKeys := tensorKeys(remove(dims,0));
      rowKeys := 0..<dims#0;
@@ -385,7 +383,10 @@ Tensor @ List := (T,l) -> (
 --accesses its entries
 --------------------------------------
 assertFreeTensor=method()
-assertFreeTensor Tensor := t -> if not isFreeModule tensorModule t then error "expected a tensor in a free tensor module"
+assertFreeTensor Tensor := t -> (
+     if not isFreeModule class t then 
+     error "expected a tensor in a free tensor module"
+     )
 
 tensorFunction = method()
 tensorFunction Tensor := t -> (

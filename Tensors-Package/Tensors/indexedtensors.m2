@@ -5,6 +5,7 @@
 --needsPackage"Tensors"
 export{IndexedTensor,indexedTensor}
 IndexedTensor = new Type of HashTable
+IndexedTensor.synonym="indexed tensor"
 subscriptNet :=method(Dispatch=>Thing)
 subscriptNet VisibleList := inds -> toString(inds_0)|concatenate(
      (take(inds,{1,#inds}))/(i->","|toString(i)))
