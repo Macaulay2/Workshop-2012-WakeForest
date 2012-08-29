@@ -269,15 +269,6 @@ computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
 
 
 
--------------------------------------------------------------------------------------
--- End of tested code ---
--------------------------------------------------------------------------------------
-
-
-----------------------------------------------------------------------------------
--- begining of partially tested code. ---------
----------------------------------------------------------------------------------
-
 
 --------------------------------------------------------------------------------
 -- spectral sequence pages
@@ -379,6 +370,33 @@ rpqIsomorphism = method()
 rpqIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) :=(E,p,q,r) -> (
 inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filteredComplex _infinity _(p+q)))
   ) 
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+-------------------------------------------------------------------------------------
+-- End of tested code ---
+-------------------------------------------------------------------------------------
+
+
+----------------------------------------------------------------------------------
+-- begining of partially tested code. ---------
+---------------------------------------------------------------------------------
+
+
+--partially tested filtered complex code.--
+
+
+--truncate C above pth spot, i.e. set everything > homological degree p to 0
+
+
+truncate (ChainComplex, ZZ) := ChainComplex => (C,p) -> (
+    if p>= max C then return C else (
+    
+     K:=new ChainComplex;
+     for i from min C +1 to max C do (
+     if i <= p then K.dd_i=C.dd_i else (
+if i-1>p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+else K.dd_i=inducedMap(C_(i-1), 0*C_i, C.dd_i) );););
+K ) 
 
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -421,13 +439,7 @@ see FilteredComplex := K -> (
 
 --------------------------------------------------------------------------------------
 
---truncate C above ith spot, i.e. set everything weakly above homological degree i to 0
-truncate (ChainComplex, ZZ) := ChainComplex => (C,i) -> (
-  complete C;
-  if i < min C then chainComplex gradedModule (ring C)^0
-  else chainComplex apply(drop(spots C,1), k -> if k < i then C.dd_k else if k===i then 
-       map(C_(k-1), 0*C_k, 0) else map(0*C_(k-1),0*C_k,0)))   
-    
+  
 -- Computes the graded pieces of the total complex of a Hom double complex 
 -- (just as a graded module, so no maps!)
 Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
@@ -605,6 +617,31 @@ check "SpectralSequences";
 viewHelp SpectralSequences
 --------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
+
+-- trying to test truncate(ChainComplex, ZZ) code. --
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+C=chainComplex(D)
+
+
+truncate(C,2)==C
+truncate(C,1)
+truncate(C,10)==C
+truncate(C,0)
+truncate(C,-1)
+truncate(C,-2)
+(truncate(C,-10)) _0
+truncate(C,-100)==0
+
 
 -------------------------------------------------------------------
 -- the following is very experimental code.  Once the bugs are worked out
@@ -906,45 +943,6 @@ E^infinity
 
 ------------------------------------------------------------------------------------
 
-------------------------------------------------------------------
-needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
-
-
---test SpectralSequencePage Code. --
-
-A=QQ[a,b,c,d]
-
-D=simplicialComplex {a*d*c, a*b, a*c, b*c}
-
-F2D=D
-
-F1D= simplicialComplex {a*c, d}
-
-F0D = simplicialComplex {a,d}
-
-K= filteredComplex {F2D, F1D, F0D}
-
-E0=spectralSequencePage(K,0)
-(E0.dd)#{0,0}
-E0.filteredComplex
-E0.pageNumber
-E0.pageModules
-E0.zero
-
-E1=spectralSequencePage(K,1)
-E1.dd #{0,0}
--- We might want to add the capaility of E1.dd _{0,0} or some such thing --
-
-E1.filteredComplex
-E1.pageNumber
-E1.pageModules
-E1.dd
-E1.zero
-
-------------------------------------------------------------------------------------
 
 ------------------------------------------------------------
 -----------------------------------------------------------
@@ -1018,35 +1016,20 @@ new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
 -- the above aggrees with my calculations by hand.
 ---------------------------------------------------
 
---
--- let's try now to test the following code which seemed to work on an eariler example.
-
--- on the otherhand, the above seems to be ok.
 
 
-rpqHomology :=(p,q,r,Er) -> ( 
-     if Er.dd #?{p+r,q-r+1} then 
-     (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) 
- else (ker(Er.dd #{p,q})) / (image(0*id_(Er.filteredComplex _infinity _ (p+q)) ))
-     )
-
-rpqIsomorphism :=(p,q,r,page,nextPage) -> (
-inducedMap(nextPage.pageModules #{p,q},rpqHomology(p,q,r,page), id_(nextPage.filteredComplex _infinity _(p+q)))
-  )
-
-apply(keys E_0 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,0,E_0,E_1))
+apply(keys E^0 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
 -- cool.
 
-apply(keys E_1 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,1,E_1,E_2))
+apply(keys E^1 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
 -- cool.
 
-apply(keys E_2 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,2,E_2,E_3))
+apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
 -- cool.
 
-E_2 .pageNumber
-
-E_2 .pageModules
-
+apply(keys E^5 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,5))
+-- cool.
+----------------------------------------------------------
 
 
 
@@ -1165,35 +1148,18 @@ E_0
 E_1
 E_2
 
-E_0 .pageModules
-
-E_1 .pageModules
-
-E_0 .pageNumber
-
--- let's try now to test the following code which seemed to work on an eariler example.
-
--- on the otherhand, the above seems to be ok.
-
-
-rpqHomology :=(p,q,r,Er) -> ( 
-     if Er.dd #?{p+r,q-r+1} then 
-     (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) 
- else (ker(Er.dd #{p,q})) / (image(0*id_(Er.filteredComplex _infinity _ (p+q)) ))
-     )
-
-rpqIsomorphism :=(p,q,r,page,nextPage) -> (
-inducedMap(nextPage.pageModules #{p,q},rpqHomology(p,q,r,page), id_(nextPage.filteredComplex _infinity _(p+q)))
-  )
-
-apply(keys E_0 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,0,E_0,E_1))
+apply(keys E^0 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
 -- cool.
 
-apply(keys E_1 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,1,E_1,E_2))
---cool.
+apply(keys E^1 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
+-- cool.
 
-apply(keys E_2 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,2,E_2,E_3))
---cool.
+apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
+-- cool.
+
+apply(keys E^5 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,5))
+-- cool.
+
 
 --------------------------------------------------------
 --------------------------------------------------------
@@ -1360,6 +1326,22 @@ new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
 
 E3Modules=computeErModules(K,3)
 new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
+
+
+E=spectralSequence(K)
+
+apply(keys E^0 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
+-- cool.
+
+apply(keys E^1 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
+-- cool.
+
+apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
+-- cool.
+
+apply(keys E^5 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,5))
+-- cool.
+
 
 ------------------------------------------------------------------------
 --- All of the above coincidies with what I have computed by hand. -----
