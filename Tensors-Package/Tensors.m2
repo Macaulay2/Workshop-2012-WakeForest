@@ -179,13 +179,13 @@ tensorModule TensorModule := identity
 --this is conceptually weird if M is not free and #L>1
 tensorModule (Module,List) := (M,dims) -> (
      d:=product dims;
-     if not rank ambient M == d then error "dimension mismatch";
-     if not isFreeModule M then error "expected a free module";
+     if not rank ambient M == d then error "dimensions do not multiply to the number of entries";
+     if not isQuotientModule M then error "tensorModule (Module,List) expected a quotient module";
      new TensorModule of Tensor from (
 	   new HashTable from (pairs M)|{
 	   	gs"factors" =>  {M},
        	   	gs"dimensions" =>  dims,
-	        symbol module => M});
+	        symbol module => M})
      )
 
 --perhaps this should instead be
@@ -356,6 +356,7 @@ RingElement * Tensor := (r,w) -> (
      tensor(class w,r*(vector w))
      )
 Tensor * RingElement := (w,r) -> r*w
+- Tensor := w -> (-1)*w
 Tensor ** Tensor := (v,w) -> (
      M:=(class v)**(class w);
      tensor(M,(vector v)**(vector w))

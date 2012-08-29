@@ -121,7 +121,7 @@ Caveat
 
 ///
 
-
+--a.c. incomplete
 doc ///
 Key
   tensorModule
@@ -132,28 +132,37 @@ Key
 Headline
   Constructor for making modules whose elements are tensors
 Usage   
-  tensorModule(R,L)
+  tensorModule(R,dims)
   tensorModule(M)
-  tensorModule(M,L)
+  tensorModule(M,dims)
   tensorModule(N)
 Inputs
   R:Ring
-  L:List
-    a list of dimensions for the tensors
+  dims:List
+    specifying dimensions for the tensors in the module
   M:Module
     a free module or quotient module.
-  L:List
-    dimensions of the tensor
   N:TensorModule
+Consequences
+  Item
+    Returns a module whose elements are interpreted 
+    and displayed as tensors, which "remembers" if
+    it is a tensor product of smaller modules.
+  Item
+    {\tt tensorModule(R,dims)} 
 Description
-  Text
-   ...
-   
   Example
-    R=QQ[x,y,z]
-    T=makeTensor({3,3,3},(i,j,k)->x^i*y^j*z^k)
-    T_(1,2,2)==x^1*y^2*z^2
-
+    R=QQ[x,y]
+    M=tensorModule(R,{4,3,2})
+    M_(2,0,1) -- same as M_13
+    M.factors
+    M.dimensions
+  Example
+    I = ideal(x*y)
+    M=R^4/I
+    N=tensorModule(M,{2,2})
+    N_(0,0)
+    oo*x*y==0_N
 ///
 
 
