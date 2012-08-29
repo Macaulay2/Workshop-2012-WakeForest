@@ -49,7 +49,7 @@ rit (IndexedTensor,Symbol) := (t,s) -> t.cache#(gs"name") = s
 parseIndexedTensor=method()
 parseIndexedTensor (Tensor,Sequence) := (T,s) -> (
      dims:=tensorDimensions T;
-     if not #dims==#s then error "dimension mismatch";
+     if not #dims==#s then error "tensor subscripted with the wrong number of indices";
      syms:=toList select(s,isSymbolic);
      syms':=unique syms;
      --if a list of unique symbols is given...
@@ -82,8 +82,19 @@ Tensor_Sequence := (T,s) -> (
 Tensor_Symbol := (T,s) -> T_(1:s)
 Tensor_IndexedVariable := (T,v) -> T_(1:v)
 
+----------------------------------
+-- Basic Indexed Tensor operations
+----------------------------------
+tensorDimensions IndexedTensor := t -> tensorDimensions tensor t
+
 IndexedTensor_Sequence := (t,s) -> tensorAccess(tensor t,s)
 
+indexPosition:=method()
+indexPosition (Symbol,IndexedTensor):=(i,t) -> position(indices t,j->j===i)
+dim (Symbol,IndexedTensor) := (i,t) -> (
+     p:=indexPosition(i,t);
+     if p===null then 0 else dim(p,tensor t)
+     )
 
 -------------------------------------------
 -- Permuting the axes of indexed tensors
@@ -111,15 +122,40 @@ sort IndexedTensor := opts -> t -> t@(toSequence sort toList indices t)
 ---------------------------------------
 itprod=
 indexedTensorProduct = method()
+{{*old:
 itprod List := its -> (
      --a.c. eliminate dependency on tman
      T:=tman apply(its,t->{t.tensor}|toList(t.indices));
      indexedTensor(T,sort unique flatten apply(its,t->toList(t.indices)))
      )
+*}}
+itprod List := its -> (
+     assertInstances(its,IndexedTensor,"indexedTensorProduct(List)");
+     inds := unique splice apply(its,indices);
+     n := #inds;
+     ranges := hashTable apply(inds,i->i=>apply(its,t->dim(i,t)));
+     --check index ranges match
+     for i in inds do 
+       if not #unique delete(0,ranges#i) == 1 then 
+       error("dimension mismatch for index "|toString(i));
+     dims := apply(inds,i->max ranges#i);
+     keys':=apply(tensorKeys dims,toList);
+     subs := (keyList,indSeq) -> (
+	  h:=hashTable toList apply(0..<n,i->inds#i=>keyList#i);
+	  apply(indSeq,i->h#i)
+	  );
+     entry := keyList -> product apply(its,t->
+	  fastTensorAccess(tensor t,subs(keyList,indices t))
+	  );	  
+     ents := apply(keys',entry);
+     T:=makeTensor(dims,ents);
+     indexedTensor(T,inds)
+     )
+
 IndexedTensor*IndexedTensor := (t,u) -> itprod{t,u}
 --note that itprod is faster than * iterated by folding
 
---Marginalization
+--Symbolic marginalization
 
 sum(List,IndexedTensor):=(tosum,t)->(
      inds:=toList indices t;
@@ -132,9 +168,9 @@ sum(Symbol,IndexedTensor):=(s,t)->sum({s},t)
 sum(IndexedVariable,IndexedTensor):=(s,t)->sum({s},t)
 
 
-------------------------------
---Einstein summation of lists
-------------------------------
+-------------------------------------------------
+--Einstein summation of lists of indexed tensors
+-------------------------------------------------
 einsum=
 einsteinSum=method(Dispatch=>Thing)
 einsteinSum VisibleList := l -> (

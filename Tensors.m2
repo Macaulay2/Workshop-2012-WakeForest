@@ -36,7 +36,11 @@ newPackage(
 
 export{Tensor,TensorModule,
      makeTensor,tensorModule,tensorModuleProduct,
-     tensorDims,einsteinSum}
+     tensorDims,einsteinSum,
+     indexedTensorProduct}
+
+export{associativeCartesianProduct}
+
 
 -------------------------
 --Symbol methods
@@ -240,7 +244,7 @@ factorModules TensorModule := T -> T#(gs"factors")
 factorModules Module := M -> {M}
 
 tensorDims Tensor := t -> tensorDims class t
-
+dim (ZZ,Tensor) := (n,T) -> (tensorDims T)#n
 
 --Tensor module from a list of modules to tensor product,
 --which themselves may be tensor modules

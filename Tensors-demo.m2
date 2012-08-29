@@ -2,12 +2,11 @@ restart
 path = path|{"/Users/andrew/Dropbox/Macaulay2","/Users/andrew/SVN/WFU-2012/"};
 debug needsPackage("Tensors")
 
-R=QQ[a..z]
-S=QQ[x,y]
-
 {{*------------------
 -- Making a tensor --
 ------------------*}};
+R=QQ[a..z]
+S=QQ[x,y]
 
 {{* from a nested list *}};
 T=makeTensor{
@@ -82,29 +81,28 @@ a+b+c+d+e+f+g
 {{*-------------------------
 -- Indexed Tensor Methods --
 -------------------------*}};
-T=genericTensor(R,{3,3})
-U=genericTensor(R,9,{3,3})
-i=symbol i;j=symbol j;k=symbol k;l=symbol l
-t=T_(i,j)
-tensor t
+R=QQ[a..z]
+S=QQ[x,y]
+i=symbol i;j=symbol j;k=symbol k;l=symbol l;
 
-tensor sum(i, T_(i,j) * U_(i,k) )
-tensor ( T_(i,j) * U_(i,k) )
-tensor sum(k, T_(i,j) * U_(i,k) )
-tensor einsum{T_(i,j), U_(j,k)}
+T=genericTensor(R,{3,2,2})
+U=randomTensor(ZZ,{2,2})
 
+tensor T_(0,i,j)
+tensor sum(k,T_(i,j,k) * U_(k,l))
 
 {{*how indexed tensors work *}}
-t=T_(i,j)
-tensor t
-indices t
+t=T_(i,j,k)
+u=U_(k,l)
 peek t
-u=U_(i,k)
-peek t
-v=t*u
-peek v
-v'=sum(i,v)
-tensor v'
+peek u
+t*u
+sum(k,t*u)
+tensor sum(k, t*u)
+tensor sum(k, T_(i,j,k) * U_(k,l))
+tensor (T_(i,j,k) * U_(k,l))
+tensor sum(i, T_(i,j,k) * U_(k,l))
+tensor einsum{T_(i,j,k), U_(j,k)}
 
 {{*---------------------------
 -- Index permutation action --
