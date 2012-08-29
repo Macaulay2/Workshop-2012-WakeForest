@@ -4,7 +4,6 @@
 --MINIMIZE dependence on this 
 --section in future versions
 ------------------------------------------------
---Currently being used for einsteinsummation:
 
 {*The following cartesian product lists have sequences
 as their entries, rather than lists.  this is intentional, 

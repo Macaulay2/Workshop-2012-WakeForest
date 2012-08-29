@@ -1,6 +1,6 @@
 newPackage(
 	"Tensors",
-    	Version => "0.02", 
+    	Version => "0.1", 
     	Date => "August 5, 2012",
     	Authors => {
 	     {Name => "Andrew Critch", Email => "critch@math.berkeley.edu", HomePage => "http://www.acritch.com/"},
@@ -15,32 +15,13 @@ newPackage(
 ----------------------------------------
 --Searchable comment legend:
 --a.c. : andrew critch
-
---ToDo:eventually ditch tensor arrays 
---2) eliminate dependency of 
---itprod on tman, and reserve tman for
---expressional inputs
---1)netList': learn to pad nested lists
---methods Net
---netPadToWidth:=method...
---flattenings (after learning to make module elements)
---4)Exclude contraction for non-free modules
---6) command for dropping 1's in dimension list
-
-
---Luke wants:
---to identify deg 1 part of the 
---coordinate ring of a tensor space with the
---dual to the space, and
---wants pieces of a resolution to be R-TensorModules
+----------------------------------------
 
 export{Tensor,TensorModule,
      makeTensor,tensorModule,tensorModuleProduct,
      tensorDims,einsteinSum,
      indexedTensorProduct}
-
 export{associativeCartesianProduct}
-
 
 -------------------------
 --Symbol methods
@@ -77,9 +58,7 @@ allInstances (VisibleList,HashTable) := (things,type) -> (
 --------------------------------------------
 --Load part 1 (minimize dependence on this)
 --------------------------------------------
---load "./tensors/tensorarrays.m2"
 load "./tensors/cartesian-list-methods.m2"
---load "./tensors/old-tensor-methods.m2"
 
 inserts=method()
 inserts(VisibleList,VisibleList,VisibleList):=(locs,things,host)->(
@@ -95,9 +74,6 @@ find (Thing,VisibleList) := (x,l) -> (
 ----------------------------------
 --Part 2 of 3:
 --Tensors and Tensor Modules
---(define methods here which
---can be made self-sufficient
---later)
 ----------------------------------
 
 ----------------
@@ -167,28 +143,6 @@ TensorModule#{Standard,AfterPrint} = M -> (
      moduleSummary M;
      << endl;
      )
-
---if isFreeTensorModule M then "Free " else ""
--------------------------------------
---Free Tensor Modules
--------------------------------------
-{{*
-FreeTensorModule = new Type of TensorModule
-net FreeTensorModule := M -> (net module M)|
-     "{"|(fold(M#(gs"dimensions")/toString,(i,j)->i|"x"|j))|"}";
-FreeTensorModule#{Standard,AfterPrint} = M -> (
-     << endl;				  -- double space
-     n := rank ambient M;
-     << concatenate(interpreterDepth:"o") << lineNumber << " : "
-     << "Free "
-     << ring M
-     << "-TensorModule of order "|toString(#M#(gs"dimensions"))|
-     ", dimensions "|toString(M#(gs"dimensions"));
-     moduleSummary M;
-     << endl;
-     )
-*}}
---FreeTensorModule=TensorModule
 
 -------------------------------------
 --Building tensor modules:
@@ -264,7 +218,6 @@ tensorModuleProduct List := fctrs -> (
 	        symbol module => M})
      )
 
---tensorModule List := (fctrs) -> tensorModuleProduct fctrs
 ----------------------------
 --Comparing tensor modules
 ----------------------------
@@ -278,14 +231,6 @@ TensorModule**TensorModule := (M,N) -> tensorModuleProduct(M,N)
 
 --permute the factors of a tensor module:
 TensorModule @ List := (M,l) -> tensorModuleProduct M#(gs"factors")_l
-
-{*a.c. doesn't make sense:
-TensorModule++TensorModule := (M,N) -> (
-     if not #M#(gs"dimensions") == #N#(gs"dimensions") then error "dimension mismatch in TensorModule++TensorModule";
-     P:=(module M)++(module N);
-     tm(P,M#(gs"dimensions") + N#(gs"dimensions"))
-     )
-*}
 
 -----------------------------
 --Basic tensor methods
@@ -324,7 +269,6 @@ fta (Tensor,Sequence) := (t,s) -> (
      t_ind
      )
 
-
 ------------------------------------------
 --Making tensors without RNLs (previously TensorArrays)
 ------------------------------------------
@@ -346,8 +290,6 @@ makeTensor (List,Function):=(dims,f)->(
 Ring**Tensor := (r,t) -> error "not implemented yet"
 
 Tensor/Function := (t,f) -> tensor(class t,apply(entries t,f))
-
-
 
 ----------------------------
 --Access to basis elements
@@ -374,23 +316,10 @@ makeTensor List := L -> (
      makeTensor(dims,ents)
      )
 
-------
-{{*
-----------------
---ELIMINATE THIS:
-rnl Tensor := t -> (
-     if RNL.cache#?t then return RNL.cache#t;
-     a := new RNL from rnl (tensorDims t,entries t);
-     RNL.cache#t = a;
---     Tensor.cache#a = t; the array does not retain the base ring!
-     a
-     )
-------------------
-*}}
 
-rnl'=
-rectangularNestedList'=method()
-rnl'(List,List):=(dims,L) -> (
+rnl=
+rectangularNestedList=method()
+rnl(List,List):=(dims,L) -> (
      if not product dims == #L then error "dimensions mismatch";
      while #dims>1 do (
 	  d:=last dims;
@@ -401,14 +330,14 @@ rnl'(List,List):=(dims,L) -> (
 tensorNet = method()
 tensorNet Tensor := T -> (
      dims := tensorDimensions T;
-     if #dims < 3 then return netList rnl'(dims,entries T);
+     if #dims < 3 then return netList rnl(dims,entries T);
      colKeys := tensorKeys(remove(dims,0));
      rowKeys := 0..<dims#0;
      colWidth := j -> j => max apply(rowKeys,i->width net T_((1:i)|j));
      colWidths := hashTable apply(colKeys,colWidth);
      padding := I -> concatenate(colWidths#(remove(I,0)) - (width net T_I):" ");
      padEntry := I -> (net T_I)|(padding I);
-     netList rnl'(dims,apply(tensorKeys dims,padEntry))
+     netList rnl(dims,apply(tensorKeys dims,padEntry))
      )
 
 net Tensor := memoize tensorNet;
@@ -465,46 +394,6 @@ tensorFunction Tensor := t -> (
      f
      )
 
-{{*
-----------------------------------
---Turn a BasicList into a function
---which plugs things into null
---or symbolic entries
-----------------------------------
-
-naf=nullArgumentFunction = method(Dispatch=>Thing)
-naf BasicList := l -> (
-     nulls:=positions(l,i->i===null);
-     n:=#nulls;
-     toPositions:=hashTable toList apply(0..<n,i->nulls_i=>i);
-     f:=method(Dispatch=>Thing);
-     f Sequence := s -> if not #s===n then error("expected "|toString n|" arguments") else
-          apply(0..<#l,i->if 
-	  not l#i===null then l#i else
-	  s#(toPositions#i));
-     f Thing := x -> f (1:x);
-     f
-     )
-nasf=
-nullArgumentSequenceFunction=x->toSequence@@(naf x)
-
-saf=symbolicArgumentFunction = method(Dispatch=>Thing)
-saf BasicList := l -> (
-     uniqueSymbols:=unique sort toList select(l,isSymbolic);
-     n:=#uniqueSymbols;
-     toPositions:=hashTable toList apply(0..<n,i->uniqueSymbols_i=>i);
-     f:=method(Dispatch=>Thing);
-     f Sequence := s -> if not #s===n then error("expected "|toString n|" arguments") else
-	  apply(l,i->if 
-	  not isSymbolic i then i else
-	  s#(toPositions#i));
-     f Thing := x -> f (1:x);
-     f
-     )
-sasf=
-symbolicArgumentSequenceFunction=x->toSequence@@(saf x)
-*}}
-
 ---------------------
 --Tensor slices
 ---------------------
@@ -549,41 +438,6 @@ marg(Tensor,List) := (T,tosum) -> (
      tensor(M,ents)
      )
 
--------------------------
---Tensor Compositions
--------------------------
---REWRITE THESE FROM SCRATCH!!
-{{*
-tman=
-tensorComposition=method()
-tman (List,List,List) := 
-  (tensors,indicesByTensor,summationIndices) -> 
-  makeTensor rnlComposition(tensors/rnl,indicesByTensor,summationIndices)
-
-tman (List,List) := (L,summationIndices) -> (
-    tensorComposition(L/first,L/(i->toSequence remove(i,0)),summationIndices)
-     )
-
-tman (List) := L -> tman(L,{})
-*}}
-{{*
-esum=
-einsteinSummation=method()
-esum (List,List) := 
-  (tensors,indicesByTensor) -> (
-     numberOfTensors:=#tensors;
-     indicesByTensor=indicesByTensor/toSequence;
-     allIndices:=toList set splice indicesByTensor;
-     ZZindices:=(select(allIndices,i->class i === ZZ));
-     indexLocations:= i -> indicesByTensor/(j->positions(j,k->k===i));
-     repeatedIndices:=select(allIndices,i->1<#flatten indexLocations i);
-     summationIndices:=repeatedIndices-set(ZZindices);
-     tman(tensors,indicesByTensor,summationIndices)
-     )
-
-esum(List) := (L) ->
-     esum(L/first,L/(i->toSequence remove(i,0)))
-*}}
 
 TEST ///
 R=QQ[x 1]
@@ -602,14 +456,10 @@ h#N==1--unfortunately
 --a.c. SORT THIS UPWARD:
 diff(Tensor,RingElement) := (t,r) -> t/(i->diff(i,r))
 
-
-
-
 ---------------------
 --Load part 3
 ---------------------
 load "./tensors/gentensors.m2"
-
 load "./tensors/indexedtensors.m2"
 
 --
@@ -622,14 +472,6 @@ TEST  ///
 load "./tensors/tensors-documentation.m2"
 
 end
-
-
---wait to learn to make module elements
---from here
-makeTensor Matrix := m -> (
-     M:=(tensorModule target m)**(tensorModule dual source m);
-          
-     )
 
 restart
 debug loadPackage"Tensors"

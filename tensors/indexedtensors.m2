@@ -122,13 +122,7 @@ sort IndexedTensor := opts -> t -> t@(toSequence sort toList indices t)
 ---------------------------------------
 itprod=
 indexedTensorProduct = method()
-{{*old:
-itprod List := its -> (
-     --a.c. eliminate dependency on tman
-     T:=tman apply(its,t->{t.tensor}|toList(t.indices));
-     indexedTensor(T,sort unique flatten apply(its,t->toList(t.indices)))
-     )
-*}}
+
 itprod List := its -> (
      assertInstances(its,IndexedTensor,"indexedTensorProduct(List)");
      inds := unique splice apply(its,indices);
@@ -180,21 +174,6 @@ einsteinSum VisibleList := l -> (
 
 
 end
-
---desired behavior:
-
-IndexedTensor _ SequenceOfIntegers = entry
-IndexedTensor _ SequenceOfIntegers = entry
-
-t=symbol t
-I=n->value("i"|toString n)
-J=n->value("j"|toString n)
-
-l=n->for i in 0..n list t_i=it(T,{I i,J i})
-n=2
-time fold(l n,(i,j)->i*j);
-time itprod(l n);
-
 
 restart
 debug loadPackage"Tensors"
