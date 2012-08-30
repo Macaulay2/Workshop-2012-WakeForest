@@ -392,6 +392,7 @@ truncate (ChainComplex, ZZ) := ChainComplex => (C,p) -> (
     if p>= max C then return C else (
     
      K:=new ChainComplex;
+     K.ring=C.ring;
      for i from min C +1 to max C do (
      if i <= p then K.dd_i=C.dd_i else (
 if i-1>p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
@@ -630,17 +631,53 @@ A=QQ[a,b,c,d]
 
 D=simplicialComplex {a*d*c, a*b, a*c, b*c}
 
-C=chainComplex(D)
+C=nonReducedChainComplex chainComplex(D)
 
 
 truncate(C,2)==C
 truncate(C,1)
+keys C
+keys truncate(C,2)
+keys truncate(C,1)
+
+spots C
+F2C=truncate(C,2)
+image id_C
+filteredComplex {id_C}
+
+filteredComplex{id_C, id_C}
+filteredComplex {id_(F2C)}
+
+F1C=truncate(C,1)
+
+m1=chainComplexMap(C,F1C,apply(spots C, i-> inducedMap(C_i, F1C_i, id_(F1C_i))))
+
+
+filteredComplex {m1}
+
+
 truncate(C,10)==C
 truncate(C,0)
 truncate(C,-1)
 truncate(C,-2)
 (truncate(C,-10)) _0
 truncate(C,-100)==0
+
+
+myFilteredComplex=method()
+
+filteredComplex C
+H=new HashTable from apply(spots C, i->i=>truncate(C,i))
+L=apply(spots C, i-> chainComplexMap(C,H#i,apply(spots C, j-> inducedMap(C_j, H#i _j, id_(C_j)))))
+L#0
+L#1
+spots C
+LL=reverse L
+LL#0
+LL#1
+LL#2
+filteredComplex LL
+filteredComplex apply(spots C, i-> chainComplexMap(C,H#i,apply(spots C, j-> inducedMap(C_j, H#i _j, id_(C_j)))))
 
 
 -------------------------------------------------------------------
