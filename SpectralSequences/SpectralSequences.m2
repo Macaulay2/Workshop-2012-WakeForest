@@ -404,6 +404,15 @@ filteredComplex ChainComplex := C -> (
      complete C;
      filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))  
 
+FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
+--  filteredComplex for p from min K to max K list inducedMap(K,p) ** C)
+new FilteredComplex from (for p from min K to max K list p=> (K_p ** C) ) | {symbol zero => image (0*id_(K_infinity ** C)), symbol cache =>  new CacheTable}
+)
+ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
+--  filteredComplex for p from min K to max K list C ** inducedMap(K,p))
+new FilteredComplex from (for p from min K to max K list p=> (C ** K_p) ) | {symbol zero => image (0*id_(C**K_infinity)), symbol cache =>  new CacheTable}
+)
+
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 -- end of partially tested code. --------------------------------------------------
@@ -548,11 +557,13 @@ Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (
   filteredComplex for p from min K to max K list Hom(C,inducedMap(K,p)))
 
 FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
-  filteredComplex for p from min K to max K list inducedMap(K,p) ** C)
-
+--  filteredComplex for p from min K to max K list inducedMap(K,p) ** C)
+new FilteredComplex from (for p from min K to max K list p=> (K_p ** C) ) | {symbol zero => image (0*id_(K_infinity ** C)), symbol cache =>  new CacheTable}
+)
 ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
-  filteredComplex for p from min K to max K list C ** inducedMap(K,p))
-
+--  filteredComplex for p from min K to max K list C ** inducedMap(K,p))
+new FilteredComplex from (for p from min K to max K list p=> (C ** K_p) ) | {symbol zero => image (0*id_(C**K_infinity)), symbol cache =>  new CacheTable}
+)
 
 
 filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
@@ -617,7 +628,92 @@ check "SpectralSequences";
 viewHelp SpectralSequences
 --------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
+-- trying to test ChainComplex ** FilteredComplex code --
 
+
+-- trying to test truncate(ChainComplex, ZZ) code. --
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+C=nonReducedChainComplex chainComplex(D)
+
+filteredComplex C
+
+
+prune (C ** filteredComplex C)
+K=(C ** filteredComplex C)
+ K_1 ==C ** truncate(C,1)
+-- so there is hope to the above.  Need to check this explicitly on 
+-- and eaiser example.
+prune ( filteredComplex C ** C)
+K=( filteredComplex C ** C)
+
+K_1 == truncate(C,1) ** C
+-- so there is hope to the above. --
+-------------------------------------
+-- let's try to balance Tor. --
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[x,y,z,w]
+
+help monomialCurveIdeal
+I= coker gens monomialCurveIdeal(A,{1,2,3})
+H=res I
+
+J= coker gens monomialCurveIdeal(A,{1,3,4})
+F=res J
+
+
+
+E= spectralSequence ((filteredComplex H) ** F)
+
+new HashTable from apply(keys support E_0, i-> i=> prune E_0 _i)
+
+new HashTable from apply(keys support E_1, i-> i=> prune E_1 _i)
+
+new HashTable from apply(keys support E_2, i-> i=> prune E_2 _i)
+
+Tor_0(J,I) == E^2 _{0,0}
+
+prune Tor_1(J,I)
+
+prune E^2 _{1,0} == prune Tor_1(J,I)
+
+Tor_1(J,I) == E^2 _{1,0} -- this resturned false for some reason.  Strange...
+
+EE=spectralSequence(H**(filteredComplex F))
+new HashTable from apply(keys support EE_0, i-> i=> prune EE_0 _i)
+
+new HashTable from apply(keys support EE_1, i-> i=> prune EE_1 _i)
+
+new HashTable from apply(keys support EE_2, i-> i=> prune EE_2 _i)
+
+Tor_0(I,J) == EE ^2 _{0,0}
+
+prune Tor_1(I,J)
+
+prune E^2 _{1,0} == prune Tor_1(I,J)
+
+Tor_1(I,J) == EE^2 _{1,0} -- this resturned false for some reason.  Strange...
+
+---------------------------------------------------------------------
+----------------------------------------------------------------------
+
+
+-------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 -- trying to test truncate(ChainComplex, ZZ) code. --
 
 restart
@@ -682,6 +778,22 @@ filteredComplex C
 
 prune (C ** filteredComplex C)
 -- so there is a bug in ChainComplex ** filteredComplex C code --
+K=filteredComplex C
+min K
+max K
+
+C ** K_(-1)
+
+prune C ** K_(0)
+C
+
+inducedMap(K,-1)
+
+
+prune new FilteredComplex from (for p from min K to max K list p=> (C ** K_p) ) | {symbol zero => image (0*id_(C**K_infinity)), symbol cache =>  new CacheTable} 
+
+new FilteredComplex from LL
+
 
 prune (C ** filteredComplex C)
 -- so there is a bug in ChainComplex ** filteredComplex C code --
