@@ -680,6 +680,16 @@ filteredComplex C
 
 -- so the existing filteredComplex code aggrees with my code on this example. --
 
+prune (C ** filteredComplex C)
+-- so there is a bug in ChainComplex ** filteredComplex C code --
+
+prune (C ** filteredComplex C)
+-- so there is a bug in ChainComplex ** filteredComplex C code --
+
+prune Hom(C,filteredComplex C)
+ -- so there is a bug in Hom(ChainComplex, filteredComplex C) code --
+prune Hom(filteredComplex C,C) 
+ -- so there is a bug in Hom(ChainComplex, filteredComplex C) code --
 
 -------------------------------------------------------------------
 -- the following is very experimental code.  Once the bugs are worked out
