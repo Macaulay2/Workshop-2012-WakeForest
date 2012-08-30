@@ -399,6 +399,11 @@ if i-1>p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
 else K.dd_i=inducedMap(C_(i-1), 0*C_i, C.dd_i) );););
 K ) 
 
+
+filteredComplex ChainComplex := C -> (
+     complete C;
+     filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))  
+
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 -- end of partially tested code. --------------------------------------------------
@@ -531,12 +536,6 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 --------------------------------------------------------------------------------
 
 
--- Gives the naive filtration on a chain complex
-
--- there is a bug in this code.  See example. ---
-filteredComplex ChainComplex := C -> (
-     complete C;
-     filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))  
 
 prune FilteredComplex := FilteredComplex => opts -> F -> 
   new FilteredComplex from 
@@ -663,21 +662,23 @@ truncate(C,-2)
 (truncate(C,-10)) _0
 truncate(C,-100)==0
 
+filteredComplex C
+truncate(C,0)
+truncate(C,1)
 
 myFilteredComplex=method()
+myFilteredComplex ChainComplex := C->(
+     H=
+     for i from min spots C to max spots C -1 list  truncate(C,i);
+filteredComplex reverse apply( #H, i-> 
+     chainComplexMap(C,H#i,apply(spots C, j-> inducedMap(C_j, H#i _j, id_(H#i _j)))))
+      )
 
+
+myFilteredComplex C
 filteredComplex C
-H=new HashTable from apply(spots C, i->i=>truncate(C,i))
-L=apply(spots C, i-> chainComplexMap(C,H#i,apply(spots C, j-> inducedMap(C_j, H#i _j, id_(C_j)))))
-L#0
-L#1
-spots C
-LL=reverse L
-LL#0
-LL#1
-LL#2
-filteredComplex LL
-filteredComplex apply(spots C, i-> chainComplexMap(C,H#i,apply(spots C, j-> inducedMap(C_j, H#i _j, id_(C_j)))))
+
+-- so the existing filteredComplex code aggrees with my code on this example. --
 
 
 -------------------------------------------------------------------
