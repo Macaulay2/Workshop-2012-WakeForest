@@ -383,6 +383,9 @@ inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filter
 
 
 --partially tested filtered complex code.--
+--------------------------------------------------------------------------------
+-- constructing filtered complexes ---------------------------------------------
+--------------------------------------------------------------------------------
 
 
 --truncate C above pth spot, i.e. set everything > homological degree p to 0
@@ -413,39 +416,20 @@ ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
 new FilteredComplex from (for p from min K to max K list p=> (C ** K_p) ) | {symbol zero => image (0*id_(C**K_infinity)), symbol cache =>  new CacheTable}
 )
 
+Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
+--  filteredComplex for p from min K to max K list Hom(project(K,p),C))
+prune new FilteredComplex from (for p from min K to max K list p=> (Hom(K_p,C)  )) | {symbol zero => image (0*id_(Hom(K_infinity,C))), symbol cache =>  new CacheTable}
+)
+Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (
+--  filteredComplex for p from min K to max K list Hom(C,inducedMap(K,p)))
+prune new FilteredComplex from (for p from min K to max K list p=> (Hom(C,K_p))  ) | {symbol zero => image (0*id_(Hom(C,K_infinity))), symbol cache =>  new CacheTable}
+
+)
+
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 -- end of partially tested code. --------------------------------------------------
 -----------------------------------------------------------------------------------
-
---------------------------------------------------------------------------------------
--- Retrieves (or lazily constructs) the inclusion map from the pth subcomplex to the top
-inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
-  if not K.cache#?inducedMaps then K.cache.inducedMaps = new MutableHashTable;
-  if not K.cache.inducedMaps#?p then K.cache.inducedMaps#p = inducedMap(K^-infinity, K^p);
-  K.cache.inducedMaps#p)
-
-project := (K,p) -> (
-     f:= i -> map(K^p_i,K^-infinity_i,1);
-     map(K^p,K^-infinity,f)
-     )
-
-
-
--- Method for looking at all of the chain subcomplexes pleasantly
-see = method();
-see FilteredComplex := K -> (
-     -- Eliminate the duplication of the homological indices
-  (minK, maxK) := (min K, max K);
-  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
-    toList(minK .. maxK), (p,i) ->
-    if i === minK then p | " : " | net prune K^p_i else
-    " <-- " | net prune K^p_i);
-  T = T | {toList(minK .. maxK)};
-  netList T)
-
-
-
 
 ------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------
@@ -540,35 +524,50 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 
 
 
---------------------------------------------------------------------------------
--- constructing filtered complexes ---------------------------------------------
---------------------------------------------------------------------------------
-
+---
+-- other untested functions
+---
 
 
 prune FilteredComplex := FilteredComplex => opts -> F -> 
   new FilteredComplex from 
   apply(keys F, p -> if class p =!= Symbol then p => prune F#p else p => F#p)
 
-Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
-  filteredComplex for p from min K to max K list Hom(project(K,p),C))
 
-Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (
-  filteredComplex for p from min K to max K list Hom(C,inducedMap(K,p)))
-
-FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
---  filteredComplex for p from min K to max K list inducedMap(K,p) ** C)
-new FilteredComplex from (for p from min K to max K list p=> (K_p ** C) ) | {symbol zero => image (0*id_(K_infinity ** C)), symbol cache =>  new CacheTable}
-)
-ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
---  filteredComplex for p from min K to max K list C ** inducedMap(K,p))
-new FilteredComplex from (for p from min K to max K list p=> (C ** K_p) ) | {symbol zero => image (0*id_(C**K_infinity)), symbol cache =>  new CacheTable}
-)
 
 
 filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
 
 chainComplex SpectralSequence := ChainComplex => E -> chainComplex filteredComplex E
+
+
+--------------------------------------------------------------------------------------
+-- Retrieves (or lazily constructs) the inclusion map from the pth subcomplex to the top
+inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
+  if not K.cache#?inducedMaps then K.cache.inducedMaps = new MutableHashTable;
+  if not K.cache.inducedMaps#?p then K.cache.inducedMaps#p = inducedMap(K^-infinity, K^p);
+  K.cache.inducedMaps#p)
+
+project := (K,p) -> (
+     f:= i -> map(K^p_i,K^-infinity_i,1);
+     map(K^p,K^-infinity,f)
+     )
+
+
+
+-- Method for looking at all of the chain subcomplexes pleasantly
+see = method();
+see FilteredComplex := K -> (
+     -- Eliminate the duplication of the homological indices
+  (minK, maxK) := (min K, max K);
+  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
+    toList(minK .. maxK), (p,i) ->
+    if i === minK then p | " : " | net prune K^p_i else
+    " <-- " | net prune K^p_i);
+  T = T | {toList(minK .. maxK)};
+  netList T)
+
+
 
 
 
@@ -627,6 +626,24 @@ installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
 --------------------------------------------------------------------------------
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+C=nonReducedChainComplex chainComplex(D)
+
+K=filteredComplex C
+prune Hom(K,C)
+prune Hom(C,K)
+
+
+
 -------------------------------------------------------------------------------
 -- trying to test ChainComplex ** FilteredComplex code --
 
@@ -691,7 +708,9 @@ prune Tor_1(J,I)
 
 prune E^2 _{1,0} == prune Tor_1(J,I)
 
-Tor_1(J,I) == E^2 _{1,0} -- this resturned false for some reason.  Strange...
+(Tor_1(J,I)) == (E^2 _{1,0}) -- this resturned false for some reason.  Strange...
+peek Tor_1(J,I)
+peek E^2 _{1,0}
 
 EE=spectralSequence(H**(filteredComplex F))
 new HashTable from apply(keys support EE_0, i-> i=> prune EE_0 _i)
