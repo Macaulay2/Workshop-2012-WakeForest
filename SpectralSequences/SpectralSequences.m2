@@ -524,9 +524,9 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 
 
 
----
--- other untested functions
----
+--------------------------------------------
+-- other untested functions-----------------
+--------------------------------------------
 
 
 prune FilteredComplex := FilteredComplex => opts -> F -> 
@@ -626,6 +626,43 @@ installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
 --------------------------------------------------------------------------------
+-- Trying to write shift of a filtered complex.  If K is a filtered complex then
+-- K[n,m] should be the filtered complex KK with the property that KK_p = K_(p+n)[m]
+-----------------------------------------
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+C=nonReducedChainComplex chainComplex(D)
+
+K=filteredComplex C
+
+shift =method()
+
+shift(FilteredComplex,ZZ,ZZ):=(K,m,n)->(
+new FilteredComplex from (for p from min K to max K list (p-m)=> ((K_(p))[n] ) ) 
+| {symbol zero => image (0*id_(K_infinity )), symbol cache =>  new CacheTable}
+)
+
+KK=shift(K,1,1)
+K
+K_1
+KK_2
+KK_1 == K_2[1]
+spots KK
+spots K
+
+-- so I think the above works... --
+
+----------------------------------------------------------------------------
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
