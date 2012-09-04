@@ -177,6 +177,7 @@ restart
 debug loadPackage("Tensors",DebuggingMode=>true)
 
 restart
+path = unique path|{"/Users/andrew/Dropbox/Macaulay2","/Users/andrew/SVN/WFU-2012/Tensors-Package/"};
 uninstallPackage"Tensors"
 installPackage"Tensors"
 viewHelp"Tensors"

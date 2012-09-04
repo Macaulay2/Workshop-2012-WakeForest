@@ -99,6 +99,7 @@ map(Module,Module,List) := Matrix => options -> (M,N,p) -> (
 	  rankN = N;
 	  )
      else (
+     	  assert instance(N,Module);
      	  k = ring N;
      	  try promote(1_k,R) else error "modules over incompatible rings";
 	  -- later, allow a ring homomorphism

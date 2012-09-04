@@ -1,0 +1,15 @@
+To run the Tensors.m2 package with Macaulay2 version 1.4, you first need to replace the file
+
+"Macaulay2-1.4/share/Macaulay2/Core/matrix1.m2"
+
+with the version of matrix1.m2 provided in the same directory as these instructions.
+
+The only change is that line 102 of the original file, 
+
+	  assert( class N === Module );
+
+needs to be replaced by
+
+	  assert instance(N,Module);
+
+This change should have no effect on the operation of other packages.  In future versions of M2, Dan Grayson has decided to exclude this assertion entirely.
