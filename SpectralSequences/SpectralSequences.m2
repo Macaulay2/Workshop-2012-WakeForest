@@ -191,7 +191,7 @@ FilteredComplex ^ ZZ := ChainComplex => (K,p) -> ( K_(-p)
 
 chainComplex FilteredComplex := ChainComplex => K -> K_infinity
 
-
+-- fix this...  
 FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
   all(min(min C,min D)..max(max C,max D),i-> C_i == D_i))
 
@@ -314,8 +314,6 @@ support SpectralSequencePage := E->(
 
 
 
-
-
 --------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------
 
@@ -347,12 +345,18 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
 	  symbol cache => CacheTable})
 
 -- In the following we are still going to want E^infinity etc. --
-
+-- Can use the rule if r> max K - min K then E^r_{p,q}=E^r'_{p,q} for all r'>=r.
+SpectralSequence ^ InfiniteNumber:=
   SpectralSequence ^ ZZ := SpectralSequencePage => (E,r) -> (
-       if E#?r then E#r else E#r= spectralSequencePage(E.filteredComplex,r);
+       if E#?r then E#r else 
+       (if r> (max E.filteredComplex) - (min E.filteredComplex) then
+	    E#r= spectralSequencePage(E.filteredComplex,(max E.filteredComplex) - (min E.filteredComplex))
+	    else
+       E#r= spectralSequencePage(E.filteredComplex,r);); 
        E#r
        )
 
+SpectralSequence _ InfiniteNumber :=
 SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r       )
 
 
@@ -418,13 +422,25 @@ new FilteredComplex from (for p from min K to max K list p=> (C ** K_p) ) | {sym
 
 Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
 --  filteredComplex for p from min K to max K list Hom(project(K,p),C))
-prune new FilteredComplex from (for p from min K to max K list p=> (Hom(K_p,C)  )) | {symbol zero => image (0*id_(Hom(K_infinity,C))), symbol cache =>  new CacheTable}
+ new FilteredComplex from (for p from min K to max K list p=> (Hom(K_p,C)  )) | {symbol zero => image (0*id_(Hom(K_infinity,C))), symbol cache =>  new CacheTable}
 )
 Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (
 --  filteredComplex for p from min K to max K list Hom(C,inducedMap(K,p)))
-prune new FilteredComplex from (for p from min K to max K list p=> (Hom(C,K_p))  ) | {symbol zero => image (0*id_(Hom(C,K_infinity))), symbol cache =>  new CacheTable}
+ new FilteredComplex from (for p from min K to max K list p=> (Hom(C,K_p))  ) | {symbol zero => image (0*id_(Hom(C,K_infinity))), symbol cache =>  new CacheTable}
 
 )
+
+
+prune FilteredComplex := FilteredComplex => opts -> F -> 
+  new FilteredComplex from 
+  apply(keys F, p -> if class p =!= Symbol then p => prune F#p else p => F#p)
+
+
+
+
+filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
+
+chainComplex SpectralSequence := ChainComplex => E -> chainComplex filteredComplex E
 
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -529,16 +545,6 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 --------------------------------------------
 
 
-prune FilteredComplex := FilteredComplex => opts -> F -> 
-  new FilteredComplex from 
-  apply(keys F, p -> if class p =!= Symbol then p => prune F#p else p => F#p)
-
-
-
-
-filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
-
-chainComplex SpectralSequence := ChainComplex => E -> chainComplex filteredComplex E
 
 
 --------------------------------------------------------------------------------------
@@ -644,6 +650,17 @@ D=simplicialComplex {a*d*c, a*b, a*c, b*c}
 C=nonReducedChainComplex chainComplex(D)
 
 K=filteredComplex C
+
+E=spectralSequence K
+E^1
+E^5
+
+support E^1
+support E^(10)
+support E^(infinity)
+support E_(infinity)
+prune E^(infinity)_{2,-2}== prune E^(10)_{2,-2}
+prune E^(infinity)_{2,-2}== prune E_(infinity)_{2,-2}
 
 shift =method()
 
@@ -911,9 +928,17 @@ support E^3
 
 apply(keys E_1 .dd, i->  rpqIsomorphism(E,i#0,i#1,1))
 
+E^1 .dd
+
 
 apply(keys E^0 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
 -- cool.
+
+apply(keys E^0 .dd, i->  inverse rpqIsomorphism(E,i#0,i#1,0))
+-- so this should let us return a spectral sequence page (with the maps) when we
+-- take homology of a spectral sequence page.
+
+peek inverse rpqIsomorphism(E,-1,1,0)
 
 apply(keys E^1 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
 -- cool.
