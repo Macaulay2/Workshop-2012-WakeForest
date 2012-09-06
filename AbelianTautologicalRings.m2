@@ -43,8 +43,8 @@ You should have received a copy of the GNU General Public License along with thi
 
 
 
-export{"modelRing","abelianTautologicalRing","polishchukD","polishchukDelta","fourierTransform","AbelianVarietyType","IndexedVariableName"}
---export{"monomialToList", "listToMonomial","monomialFourierTransform",,"listDelta"}
+export{"modelRing","abelianTautologicalRing","polishchukD","polishchukDelta","fourierTransform","AbelianVarietyType","IndexedVariableName","moonenDiamond"}
+--export{"monomialToList", "listToMonomial","polynomialToList","listToPolynomial"}
 
 
 if version#"VERSION" < "1.4" then error "This package was written for Macaulay2 Version 1.4 or higher.";
@@ -57,31 +57,50 @@ if version#"VERSION" < "1.4" then error "This package was written for Macaulay2 
 modelRing=method(TypicalValue => PolynomialRing, Options=>{AbelianVarietyType=>"Jacobian",IndexedVariableName=>"x"})
 modelRing ZZ := opts -> g -> (
        w:=null;
-       if opts#?IndexedVariableName then w=getSymbol(opts.IndexedVariableName) else w=getSymbol("x");
-       variables:=toList (w_1..w_(g-1));
-       degs:=apply(g-1,i->{i+1,i});
-       S:=QQ[variables,Degrees=>degs];
-       S#"AbelianVarietyType"=opts.AbelianVarietyType;
-       S#"Dim"=g;
-       return S
+       n:=0;
+       S:=null;
+       variables:=null;
+       degs:=null;
+       w=getSymbol(opts.IndexedVariableName);
+       if opts.AbelianVarietyType=="Prym" then (
+	    if (g % 2)==0 then n=lift(g/2,ZZ) else n=lift((g-1)/2,ZZ);
+	    variables=apply(n,i->w_(2*i+1));
+	    degs=apply(n,i->{2*i+1,2*i});
+	    S=QQ[variables,Degrees=>degs];
+	    S#"AbelianVarietyType"=opts.AbelianVarietyType;
+	    S#"Dim"=g;
+	    return S
+	    )
+       else if opts.AbelianVarietyType=="Jacobian" then (
+	    variables=toList (w_1..w_(g-1));
+	    degs=apply(g-1,i->{i+1,i});
+	    S=QQ[variables,Degrees=>degs];
+	    S#"AbelianVarietyType"=opts.AbelianVarietyType;
+	    S#"Dim"=g;
+	    return S
+	    )
+       else error("AbelianVarietyType must be either Jacobian or Prym.")
        )
 
 TEST ///
 debug AbelianTautologicalRings
 assert(modelRing(5) === QQ[x_1,x_2,x_3,x_4])
-assert(modelRing(5,AbelianVarietyType=>"Prym") === QQ[x_1,x_2,x_3,x_4])
+assert(modelRing(5,IndexedVariableName=>"y") === QQ[y_1,y_2,y_3,y_4])
+assert(modelRing(5,AbelianVarietyType=>"Prym") === QQ[x_1,x_3])
 ///
 
 abelianTautologicalRing=method(TypicalValue=>Ring, Options=>{AbelianVarietyType=>"Jacobian",IndexedVariableName=>"x"})
 abelianTautologicalRing ZZ := opts -> g -> (
      if g < 0 then error "The dimension of the abelian variety must be positive.";     
-     S:=null;
-     if opts#?IndexedVariableName then S=modelRing(g,IndexedVariableName=>opts.IndexedVariableName) else S=modelRing(g);
+     -- if AbelianVarietyType is not "Prym" or "Jacobian", modelRing will throw an error
+     S:=modelRing(g,AbelianVarietyType=>opts.AbelianVarietyType,IndexedVariableName=>opts.IndexedVariableName);
      if g < 2 then return S;
      --generate Polishchuk relations       
      trivialRels:={}; 
      Rels:={}; 
      allRels:={};
+     R:=null;
+     I:=null;
      for j from 1 to g do (
 	  --get trivial relations of degree j
 	  trivialRels=flatten entries basis({g,j},S);
@@ -91,16 +110,24 @@ abelianTautologicalRing ZZ := opts -> g -> (
 	       for k from 0 to #Rels-1 do (
 		    if Rels_k != 0 then allRels=append(allRels, Rels_k)
 		    )
-	       )
+	       )	       
 	  );
-     I:=ideal(allRels);
-     R:=S/(sub(I,S));
+     --monomial generators for relations that hold for codimension reasons
+     T:= flatten entries gens truncate(g+1, S^1); 
+     I=ideal(join(allRels,T));
+     R=S/(sub(I,S));
      R#"AbelianVarietyType"=opts.AbelianVarietyType;
      R#"Dim"=g;
-     return R
+     return R	  
      )
 
 --print part of Moonen diamond (unformatted):
+
+moonenDiamond = S -> (
+     if not S#?"Dim" then error "The ring is missing the Dim attribute.";
+     L:=apply(S#"Dim"+1, j->apply(j+1, i->hilbertFunction({i+S#"Dim"-j,S#"Dim"-j}, S)));
+     gSzPrint(L)
+     )
 
 --L=apply(S#"Dim"+1, j->apply(j+1, i->hilbertFunction({i+S#"Dim"-j,S#"Dim"-j}, S)))
 {*
@@ -126,6 +153,7 @@ abelianTautologicalRing ZZ := opts -> g -> (
 polishchukD=method(TypicalValue=>RingElement)  
 polishchukD RingElement := (f) -> (     
      S:= ring f;
+     if not S#?"AbelianVarietyType" then error "The ring of f is missing the AbelianVarietyType attribute";
      if f==0 then return 0_S;
      g:=0;
      mcpairs:={};
@@ -136,10 +164,10 @@ polishchukD RingElement := (f) -> (
      mi:=0;
      Dmi:=0;
      for i from 0 to #M-1 do (
-	  mi=monomialToList(M_i);
-	  Dmi=monomialD(mi,g);
+	  mi=monomialToList(M_i,AbelianVarietyType=>S#"AbelianVarietyType");
+	  Dmi=monomialD(mi,g,AbelianVarietyType=>S#"AbelianVarietyType");
 	  for j from 0 to #Dmi-1 do ( 
-	       ans = ans + (mcpairs_i_1)*(Dmi_j_1)*(listToMonomial(Dmi_j_0,S))
+	       ans = ans + (mcpairs_i_1)*(Dmi_j_1)*(listToMonomial(Dmi_j_0,S,AbelianVarietyType=>S#"AbelianVarietyType"))
 	       )
 	  );     
      return ans     
@@ -169,7 +197,15 @@ polishchukDelta (RingElement,ZZ) := (f,n) -> (
      return F
      )
      
-  
+fourierTransform = (f)-> (
+     S:=ring f;
+     mons:=flatten entries monomials f;
+     ans:=0_S;
+     for k from 0 to #mons-1 do (
+	  ans=ans+coefficient(mons_k,f)*monomialFourierTransform(mons_k)
+	  );
+     return ans
+     ) 
 ----------------------------------------------------------------------------------
 -- Private functions
 ----------------------------------------------------------------------------------
@@ -177,30 +213,36 @@ polishchukDelta (RingElement,ZZ) := (f,n) -> (
 -- Converts a monomial to a list. 
 -- The first variable in the ring (usually x_1) plays a special role. 
 -- Examples: x_1*x_3->{1,3}; x_2*x_3^2 -> {0,2,3,3}; x_1^2*x_2^2*x_3^3 -> {2,2,2,3,3,3}
-monomialToList = (m) -> (
+monomialToList=method(TypicalValue=>List,Options=>{AbelianVarietyType=>"Jacobian"})
+monomialToList RingElement := opts -> m -> (
      e:=flatten exponents(m);
      n:=e_0;
      e=drop(e,{0,0});
-     ans:=flatten apply(#e, i ->apply(e_i,j-> i+2));
+     ans:=null;
+     if opts.AbelianVarietyType=="Prym" then ans=flatten apply(#e, i->apply(e_i,j->2*i+3))
+     else if opts.AbelianVarietyType=="Jacobian" then ans=flatten apply(#e, i->apply(e_i,j->i+2));     
      return prepend(n,ans)
      )
 
 -- Converts a polynomial ring to a list of lists: {list representing a monomial, coefficient}  
 -- Example: 10*x_1*x_3+20*x_1^2*x_3-> {{{2, 3}, 20}, {{1, 3}, 10}}
-polynomialToList = (f) -> (
+polynomialToList=method(TypicalValue=>List,Options=>{AbelianVarietyType=>"Jacobian"})
+polynomialToList RingElement := opts -> f -> (
      M:={};
      M=flatten entries monomials f;
      ans:={};
      for i from 0 to #M-1 do (
-	  ans=append(ans, {monomialToList(M_i), coefficient(M_i,f)})     
+	  ans=append(ans, {monomialToList(M_i,AbelianVarietyType=>opts.AbelianVarietyType), coefficient(M_i,f)})     
 	  );     
      return ans        
      )
 
 -- Converts a list L to a monomial in the ring R. 
 -- The first variable in the list plays a special role.
+-- If the list contains an index that exceeds the number of generators of R, the method returns 0
 -- Examples: {1,3} -> x_1*x_3; {0,2,3,3} -> x_2*x_3^2; {2,2,2,3,3,3} -> x_1^2*x_2^2*x_3^3
-listToMonomial = (L,R) -> (
+listToMonomial=method(TypicalValue=>RingElement,Options=>{AbelianVarietyType=>"Jacobian"})
+listToMonomial (List, Ring) := opts -> (L,R) -> (
      if #L==0 then return 0;
      v:=gens R;
      ans:=(v_0)^(L_0);
@@ -209,19 +251,21 @@ listToMonomial = (L,R) -> (
      ai:=0;
      bi:=0;
      for i from 0 to #T-1 do (
-	  ai=T_i_0;
+	  if opts.AbelianVarietyType=="Prym" then ai=lift((T_i_0+1)/2,ZZ)
+	  else if opts.AbelianVarietyType=="Jacobian" then ai=T_i_0;
 	  bi=T_i_1;
-	  ans=ans*(v_(ai-1))^(bi)
+	  if ai-1 <= #v-1 then ans=ans*(v_(ai-1))^(bi) else ans=0_R
 	  );
      return ans
      )
 
 -- Converts a list of lists: {list representing a monomial, coefficient} to a polynomial in the ring R. 
 -- Examples: {{{2,3},10},{{0,2,3},20}}-> 10*x_1^2*x_3  + 20*x_2*x_3
-listToPolynomial = (M,R) -> (
+listToPolynomial=method(TypicalValue=>RingElement,Options=>{AbelianVarietyType=>"Jacobian"})
+listToPolynomial (List,Ring) := opts -> (M,R) -> (
      ans:=0;
      for i from 0 to #M-1 do (
-	  ans=ans+M_i_1*listToMonomial(M_i_0,R)
+	  ans=ans+M_i_1*listToMonomial(M_i_0,R,AbelianVarietyType=>opts.AbelianVarietyType)
 	  );
      return ans
      )
@@ -233,7 +277,8 @@ listToPolynomial = (M,R) -> (
 -- representing the coefficient in front of that monomial
 -- Example: monomialD({1,2,3},5) returns {{{0, 2, 3}, 2}, {{1, 4}, 10}} 
 -- which means: 2*x_2*x_3+10*x_1*x_4.
-monomialD = (L,g) -> (
+monomialD=method(TypicalValue=>List, Options=>{AbelianVarietyType=>"Jacobian"})
+monomialD (List, ZZ) := opts -> (L,g) -> (
      n:=L_0;
      L=drop(L,{0,0});
      k:=#L;
@@ -241,22 +286,44 @@ monomialD = (L,g) -> (
      ans:={};
      ni:=0;
      nj:=0;
-     --first term
-     if n>0 then (
-	  ans=append(ans,{prepend(n-1,L), n*(-g-1+n+k+sum L)})
-	  );
-     --second term
-     for i from 0 to #L-2 do (
-	  for j from i+1 to #L-1 do (
-	       ni=L_i;
-	       nj=L_j;
-	       Lhat=drop(drop(L,{j,j}),{i,i});
-	       Lhat=sort append(Lhat,ni+nj-1);
-	       Lhat=prepend(n,Lhat);
-	       ans=append(ans, {Lhat,binomial(ni+nj,ni)})
-	       )
-	  );
-     return ans
+     -- if AbelianVarietyType is "Prym" use the formula from [A11, Prop.3.3.4, p.31] 
+     -- else if AbelianVarietyType is "Jacobian" use the formula from [Po05, Prop.2.6, p.883]
+     if opts.AbelianVarietyType=="Prym" then (
+	  --first term
+	  if n>0 then (
+	       ans=append(ans,{prepend(n-1,L), 2*n*(-g-1+n+k+sum L)})
+	       );
+	  --second term
+	  for i from 0 to #L-2 do (
+	       for j from i+1 to #L-1 do (
+		    ni=L_i;
+		    nj=L_j;
+		    Lhat=drop(drop(L,{j,j}),{i,i});
+		    Lhat=sort append(Lhat,ni+nj-1);
+		    Lhat=prepend(n,Lhat);
+		    ans=append(ans, {Lhat,2*binomial(ni+nj,ni)})
+		    )
+	       );
+	  return ans
+	  )
+     else if opts.AbelianVarietyType=="Jacobian" then (
+	  --first term
+	  if n>0 then (
+	       ans=append(ans,{prepend(n-1,L), n*(-g-1+n+k+sum L)})
+	       );
+	  --second term
+	  for i from 0 to #L-2 do (
+	       for j from i+1 to #L-1 do (
+		    ni=L_i;
+		    nj=L_j;
+		    Lhat=drop(drop(L,{j,j}),{i,i});
+		    Lhat=sort append(Lhat,ni+nj-1);
+		    Lhat=prepend(n,Lhat);
+		    ans=append(ans, {Lhat,binomial(ni+nj,ni)})
+		    )
+	       );
+	  return ans
+	  )
      )
 
 --Computes Polishchuk's operator Delta for monomials in list form, [P05, p.883]
@@ -355,15 +422,20 @@ monomialListFourierTransform = (L,S) -> (
      )
 *}
 
-fourierTransform = (f)-> (
-     S:=ring f;
-     mons:=flatten entries monomials f;
-     ans:=0_S;
-     for k from 0 to #mons-1 do (
-	  ans=ans+coefficient(mons_k,f)*monomialFourierTransform(mons_k)
+-- Gabor's formatting function
+gSzPrint = L -> (
+     L1:=null;
+     s1:=null;
+     m:=0;
+     L1 = apply(L, s -> (
+	       s1 = "";
+               for i in s do s1 = s1 | toString i | "   ";
+               s1)
 	  );
-     return ans
+     m = max apply(L1, s -> length s);
+     for s in apply(L1, s -> concatenate { (m - length s)//2, s }) do print s;
      )
+
 ----------------------------------------------------------------------------------
 -- Documentation
 ----------------------------------------------------------------------------------
@@ -495,6 +567,28 @@ doc ///
   SeeAlso
    modelRing
 ///
+
+doc ///
+  Key
+    moonenDiamond
+  Headline
+    Print the Moonen diamond. 
+  Usage
+    moonenDiamond(S)
+  Inputs
+    S:Ring
+        a ring that is the output of either @TO modelRing@ or @TO abelianTautologicalRing@. 
+  Description
+   Text
+    Print the Hilbert function of a modelRing or an abelianTautologicalRing. The formatting is as in [M09]. 
+   Example
+     S=abelianTautologicalRing(5)
+     moonenDiamond(S)
+     R=abelianTautologicalRing(6, AbelianVarietyType=>"Prym")
+     moonenDiamond(R)
+///
+
+
 
 doc ///
   Key
@@ -644,7 +738,6 @@ doc ///
 
 doc ///
   Key
-    IndexedVariableName
     [abelianTautologicalRing, IndexedVariableName]
   Headline
     Option to specify the name of the indexed variable. 
