@@ -5,16 +5,21 @@ undocumented { (describe,SpectralSequence),
 	       (net, FilteredComplex),
 	       (net, SpectralSequence)}
 
+
 doc ///
      Key 
      	  SpectralSequences
      Headline
      	  A package for working with spectral sequences
      Description
-     	  Text
-	       "SpectralSequences" is a package to work with spectral sequences
-	       associated to a filtered complex.
+     	  Text 
+	      "SpectralSequences" is a package to work with spectral sequences
+	       associated to a filtered complex. 
 	       
+	       Here are some examples illustrating the use of this package.
+	      
+     
+      	       
     ///
 
 -------------------------
@@ -28,8 +33,11 @@ doc ///
      	  The type of all FilteredComplexes
      Description
      	  Text
-     	      A filtered complex is
+     	      A filtered complex is a nested family of chain complexes K = $\dots \supseteq $ K_n $\supseteq$ K_{n-1} $ \supseteq \dots$ such that the following holds:
 	      
+	      1.  There exists M such that K_N=K_M for all N \geq M.
+	      
+	      2.  There exists an m such that K_n =0 for all n \leq m.
     ///
     
 doc ///
@@ -39,7 +47,17 @@ doc ///
      	  The type of all spectral sequences
      Description
      	  Text
-	       A spectral sequence
+	       A spectral sequence consists of the following:
+	       
+	       1. A sequence of modules \{E^r_{p,q}\}_{p,q \in \ZZ, r \geq 0},
+	       
+	       2. A collection of homomorphisms \{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}_{p,q \in ZZ, r \geq 0} such that
+	       d^r_{p,q} d^r_{p+r,q-r+1} =0, 
+	       
+	       3. A collection of imorphisms E^{r+1}_{p,q}  $\rightarrow$ ker d^r_{p,q} / image d^r_{p+r,q-r+1}.
+	       
+	       In Macaulay 2, a spectral sequence is represented by a sequence of spectral sequence pages.
+	       
 	       
      ///
      
