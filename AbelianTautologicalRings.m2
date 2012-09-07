@@ -44,7 +44,6 @@ You should have received a copy of the GNU General Public License along with thi
 
 
 export{"modelRing","abelianTautologicalRing","polishchukD","polishchukDelta","fourierTransform","AbelianVarietyType","IndexedVariableName","moonenDiamond"}
---export{"monomialToList", "listToMonomial","polynomialToList","listToPolynomial"}
 
 
 if version#"VERSION" < "1.4" then error "This package was written for Macaulay2 Version 1.4 or higher.";
@@ -121,34 +120,11 @@ abelianTautologicalRing ZZ := opts -> g -> (
      return R	  
      )
 
---print part of Moonen diamond (unformatted):
-
 moonenDiamond = S -> (
      if not S#?"Dim" then error "The ring is missing the Dim attribute.";
      L:=apply(S#"Dim"+1, j->apply(j+1, i->hilbertFunction({i+S#"Dim"-j,S#"Dim"-j}, S)));
      gSzPrint(L)
      )
-
---L=apply(S#"Dim"+1, j->apply(j+1, i->hilbertFunction({i+S#"Dim"-j,S#"Dim"-j}, S)))
-{*
- pp := L -> (
-     L1 = apply(L, s -> toString s);
-     m = max apply(L1, s -> length s);
-     for s in apply(L1, s -> concatenate { (m - length s)//2, s }) do print s
-     )
-*}
---for j from 0 to S#"Dim" do print for i from S#"Dim"-j to S#"Dim" list hilbertFunction({i,S#"Dim"-j}, S) 
-
-{*pp := L -> (
-     L1 = apply(L, s -> (
-	       s1 = "";
-               for i in s do s1 = s1 | toString i | "   ";
-               s1)
-	  );
-     m = max apply(L1, s -> length s);
-     for s in apply(L1, s -> concatenate { (m - length s)//2, s }) do print s;
-     )
-*}
 
 polishchukD=method(TypicalValue=>RingElement)  
 polishchukD RingElement := (f) -> (     
@@ -181,6 +157,8 @@ polishchukD (RingElement,ZZ) := (f,n) -> (
      return F
      )
 
+--polishchukDelta operator for Jacobians can be reused for Pryms
+--see [A11, p.32] for the defition of polishchukDelta in the Prym case 
 polishchukDelta = method(TypicalValue=>RingElement)  
 polishchukDelta RingElement := (f) -> (     
      L:={};
@@ -196,13 +174,15 @@ polishchukDelta (RingElement,ZZ) := (f,n) -> (
      for i from 1 to n do F = polishchukDelta(F);     
      return F
      )
-     
-fourierTransform = (f)-> (
+ 
+fourierTransform = f -> (
      S:=ring f;
+     if not S#?"AbelianVarietyType" then error "The ring of f is missing the AbelianVarietyType attribute";
+
      mons:=flatten entries monomials f;
      ans:=0_S;
      for k from 0 to #mons-1 do (
-	  ans=ans+coefficient(mons_k,f)*monomialFourierTransform(mons_k)
+	  ans=ans+coefficient(mons_k,f)*monomialFourierTransform(mons_k,AbelianVarietyType=>S#"AbelianVarietyType")
 	  );
      return ans
      ) 
@@ -384,43 +364,53 @@ listDelta(List,ZZ) := (L,n) -> (
 
 --input: monomial with no x_1 term, where x_1 stands for the first
 --variable in the modelRing
-monomialFourierTransformNoFirstVariable = (m) -> (
+monomialFourierTransformNoFirstVariable=method(TypicalValue=>RingElement, Options=>{AbelianVarietyType=>"Jacobian"})
+monomialFourierTransformNoFirstVariable RingElement := opts -> m -> (
      S:=ring m;
      if S#?"Dim" then g:=S#"Dim" else error "The ring of the monomial is expected to have Dim attirbute.";
-     L:=monomialToList(m);
+     L:=monomialToList(m,AbelianVarietyType=>opts.AbelianVarietyType);
      n:=L_0;
      if n != 0 then error "Input monomial should have no first variable of the ring.";
      k:=#L-1;
      sumni:= sum(L);
      ans:=0;
      jterm:={};
-     for j from 0 to k-1 do (
-	  if j+g-k-sumni >= 0 then (
-	       jterm = listDelta({{L,1}},j);
-	       for t from 0 to #jterm-1 do (     
-		    ans=ans + (jterm_t_1)*(S_0^(j+g-k-sumni))*(1/(j+g-k-sumni)!)*(1/j!)*(listToMonomial(jterm_t_0,S)) 
+     
+     --note: the fourierTransform formula for Pryms has an additional multiplier of 2^j inside of the summation on j 
+     if opts.AbelianVarietyType=="Prym" then (
+	  for j from 0 to k-1 do (
+	       if j+g-k-sumni >= 0 then (
+		    jterm = listDelta({{L,1}},j);
+		    for t from 0 to #jterm-1 do (     
+			 ans=ans + 2^j*(jterm_t_1)*(S_0^(j+g-k-sumni))*(1/(j+g-k-sumni)!)*(1/j!)*(listToMonomial(jterm_t_0,S,AbelianVarietyType=>"Prym")) 
+			 )
 		    )
 	       )
-	  );
+	  )
+     else if opts.AbelianVarietyType=="Jacobian" then (
+	  for j from 0 to k-1 do (
+	       if j+g-k-sumni >= 0 then (
+		    jterm = listDelta({{L,1}},j);
+		    for t from 0 to #jterm-1 do (     
+			 ans=ans + (jterm_t_1)*(S_0^(j+g-k-sumni))*(1/(j+g-k-sumni)!)*(1/j!)*(listToMonomial(jterm_t_0,S)) 
+			 )
+		    )
+	       )
+	  )
+     else print("AbelianVarietyType option should be Jacobian or Prym.");
      return ans    
      )
 
-monomialFourierTransform = (m) -> (
+monomialFourierTransform=method(TypicalValue=>RingElement, Options=>{AbelianVarietyType=>"Jacobian"})
+monomialFourierTransform RingElement := opts -> m -> (
      S:=ring m;
      if S#?"Dim" then g:=S#"Dim" else error "The ring of the monomial is expected to have Dim attirbute.";
      E:=flatten exponents(m);
      n:=E_0;
-     if n==0 then return monomialFourierTransformNoFirstVariable(m);
+     if n==0 then return monomialFourierTransformNoFirstVariable(m, AbelianVarietyType=>opts.AbelianVarietyType);
      if n>0 then m=lift(m/(S_0^n),S);
-     return polishchukD(monomialFourierTransformNoFirstVariable(m),n)     
+     return polishchukD(monomialFourierTransformNoFirstVariable(m,AbelianVarietyType=>opts.AbelianVarietyType),n)     
      )
-
-{*
-monomialListFourierTransform = (L,S) -> (
-     m:=listToPolynomial(L,S);
-     return monomialFourierTransform(m)     
-     )
-*}
 
 -- Gabor's formatting function
 gSzPrint = L -> (
@@ -449,8 +439,8 @@ doc ///
     Construction of model tautological rings of Jacobian and Prym varieties and operators on them.
   Description
     Text
-      This package implements the construction of model tautological rings of Jacobian and Prym varieties and various operators on them. 
-      The model tautological ring of a Jacobian was constructed in [P05]. This model tautological ring surjects onto the so-called 
+      This package implements the construction of {\it model tautological rings} of Jacobian and Prym varieties and various operators on them. 
+      The model tautological ring of a Jacobian was constructed in [P05] and it surjects onto the so-called 
       {\it tautological ring} of a Jacobian. The surjection is conjecturally an isomorphism for the generic Jacobian. The analogous 
       construction for Prym varieties has been carried out in [A11].
       
@@ -462,14 +452,7 @@ doc ///
       gives a basis for the bi-graded pieces of the model tautological ring. Our package provides the tools for verifying these 
       conjectures experimentally. There is an analogous conjectural formula for the Hilbert function and conjectural basis of the 
       model tautological ring of a Prym. Our package provides the tools for verifying these conjectures as well.  
-          
-      
---      The Chow group of algebraic 1-cycles modulo algebraic equivalence on a generic abelian 3-fold is known to be not 
---      finite dimesional. FIXME
-            
---      We provide a general command @TO modelTautologicalRing@ for the construction of the model tautological ring of a Jacobian 
---      variety (and, with an optional argument, of a Prym variety). FIXME 
-      
+                
     
       {\bf References:}
 
@@ -486,29 +469,14 @@ doc ///
       [P05] {\it A. Polishchuk, Universal algebraic equivalences between tautological cycles on Jacobians of curves.  Math. Z. 251 (2005), 875-897}. 
 
 
---      {\bf Examples:}
-
---      @TO "Jacobian 10-fold"@  -- Model tautological ring of a Jacobian 10-fold
-
---      @TO "Prym 9-fold"@  -- Model tautological ring of a Prym 9-fold
-
-
       
-      {\bf Key user functions:} @TO abelianTautologicalRing@, @TO polishchukD@, @TO fourierTransform@
+      {\bf Key user functions:} @TO abelianTautologicalRing@, @TO polishchukD@, @TO polishchukDelta@, @TO fourierTransform@.
 
       {\it The main function of the package is:}  @TO abelianTautologicalRing@. 
 
---      @TO modelTautologicalRing@  -- The construction of the model tautological ring of a Jacobian or Prym 
-
-
       {\it An essential tool for studying tautological cycles is the function that computes the} @TO fourierTransform@.
 
-
-      {\it Other essential functions used in the construction of tautological rings are:} @TO polishchukD@, @TO polishchukDelta@
-
-
-
---      @TO vdGKbasis@  -- van der Geer-Kouvidakis basis for the bi-graded piece of the tautological ring
+      {\it Other essential functions used in the construction of tautological rings are:} @TO polishchukD@, @TO polishchukDelta@.
 
 ///
 
@@ -577,10 +545,10 @@ doc ///
     moonenDiamond(S)
   Inputs
     S:Ring
-        a ring that is the output of either @TO modelRing@ or @TO abelianTautologicalRing@. 
+        a ring that is the output of @TO abelianTautologicalRing@. 
   Description
    Text
-    Print the Hilbert function of a modelRing or an abelianTautologicalRing. The formatting is as in [M09]. 
+    Print the Hilbert function of the Beauville-Polishchuk ring. The formatting is as in [M09]. 
    Example
      S=abelianTautologicalRing(5)
      moonenDiamond(S)
@@ -630,18 +598,22 @@ doc ///
     polishchukDelta(f,n)
   Inputs
     f:RingElement
-        an element of a ring returned by modelRing or abelianTautologicalRing FIXME hyperlink the functions  
+        an element of a ring returned by @TO modelRing@ or @TO abelianTautologicalRing@.
     n:ZZ
         an integer to specify the number of iterations of the Polishchuk operator to be applied
   Outputs
     :RingElement
   Description
    Text
-    Apply the Polishchuk Delta operator, see [P05] FIXME. 
+    Apply the Polishchuk Delta operator, see [P05,p.883]. 
    Example
-     S=modelRing(5);
---     polishchukDelta(x_1^2*x_2*x_3);
---     polishchukDelta(x_1^2*x_2*x_3,2);
+     S=modelRing(5)
+     polishchukDelta(x_1^2*x_2*x_3)
+     polishchukDelta(x_1^2*x_2*x_3,2)
+     
+     S=modelRing(11,AbelianVarietyType=>"Prym")
+     polishchukDelta(x_1^2*x_3*x_5)
+     polishchukDelta(x_1^2*x_3*x_5,2)
   SeeAlso 
      polishchukD
 ///
@@ -667,6 +639,12 @@ doc ///
      
      S=abelianTautologicalRing(5)
      fourierTransform(x_1*x_2)
+     
+     S=modelRing(7,AbelianVarietyType=>"Prym")
+     fourierTransform(x_1*x_3)
+     
+     S=abelianTautologicalRing(7,AbelianVarietyType=>"Prym")
+     fourierTransform(x_1*x_3)
      
   SeeAlso
    polishchukD
