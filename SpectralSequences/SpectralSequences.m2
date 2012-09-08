@@ -101,6 +101,8 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 -- CODE
 --------------------------------------------------------------------------------
 
+---
+-- this is no longer needed.  truncate a chain complex can do this.
 --------------------------------------------------------------------------------------
 -- I need the following method in my examples. 
 --(Surely someting like it exists elsewhere.)
@@ -421,7 +423,7 @@ K )
 
 filteredComplex ChainComplex := C -> (
      complete C;
-     filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i))))  
+     filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i+1))))  
 
 FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
 --  filteredComplex for p from min K to max K list inducedMap(K,p) ** C)
@@ -693,6 +695,7 @@ D=simplicialComplex {a*d*c, a*b, a*c, b*c}
 C=nonReducedChainComplex chainComplex(D)
 
 K=filteredComplex C
+-- so there is now a bug in the method filteredComplex ChainComplex.
 
 E=spectralSequence K
 E^1

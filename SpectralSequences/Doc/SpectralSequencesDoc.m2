@@ -458,6 +458,23 @@ doc ///
      	  Text 
 	       Blah
     ///
+  
+  doc ///
+     Key
+  	  (spots, HashTable)
+     Headline
+     	  The sorted integer keys of a hash table
+     Usage
+     	  L = spots H
+     Inputs
+     	  H: HashTable
+     Outputs
+     	  L:List
+     Description
+     	  Text 
+	       Returns the sorted integer keys of a hash table
+    ///
+  
     
       doc ///
      Key
@@ -473,6 +490,23 @@ doc ///
      Description
      	  Text 
 	       Blah
+    ///
+
+  doc ///
+     Key
+     	   (support, SpectralSequencePage)
+     Headline
+     	  The modules of a SpectralSequencePage
+     Usage
+     	  H = support E
+     Inputs
+     	  E:SpectralSequencePage
+     Outputs
+     	  H:HashTable
+     Description
+     	  Text 
+	       The output is a hash table whose keys \{p,q\}  points to the module
+	      with coordinates \{p,q\}. 
     ///
 
   doc ///
