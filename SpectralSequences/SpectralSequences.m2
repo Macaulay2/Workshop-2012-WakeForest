@@ -392,20 +392,32 @@ inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filter
 --------------------------------------------------------------------------------
 
 
---truncate C above pth spot, i.e. set everything > homological degree p to 0
 
-
+-- the following method truncates a chain complex -- setting all
+-- modules in degrees >= p to zero.
 truncate (ChainComplex, ZZ) := ChainComplex => (C,p) -> (
-    if p>= max C then return C else (
-    
+    if p> max C then return C else (
      K:=new ChainComplex;
      K.ring=C.ring;
      for i from min C +1 to max C do (
-     if i <= p then K.dd_i=C.dd_i else (
-if i-1>p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+     if i < p then K.dd_i=C.dd_i else (
+if i-1>=p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
 else K.dd_i=inducedMap(C_(i-1), 0*C_i, C.dd_i) );););
 K ) 
 
+
+-- the following method truncates a chain complex -- setting all 
+-- modules in degrees <=p to zero.
+
+truncate (ZZ,ChainComplex) := ChainComplex => (p,C) -> (
+    if p< min C then return C else (
+     K:=new ChainComplex;
+     K.ring=C.ring;
+     for i from min C+1  to max C do (
+     if i-1 > p then K.dd_i=C.dd_i else (
+if i<=p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+else K.dd_i=map(0*C_(i-1), C_i, C.dd_i) );););
+K ) 
 
 filteredComplex ChainComplex := C -> (
      complete C;
@@ -631,6 +643,37 @@ restart
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
+
+-------------------------------------------------------------------------------
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+
+C=chainComplex D
+
+truncate(C,3)
+truncate(C,2)
+truncate(C,1)
+truncate(C,0)
+truncate(C,-1)
+truncate(C,-2)
+
+C
+truncate(-2,C)
+truncate(-1,C)
+truncate(0,C)
+truncate(1,C)
+truncate(2,C)
+
+
 --------------------------------------------------------------------------------
 -- Trying to write shift of a filtered complex.  If K is a filtered complex then
 -- K[n,m] should be the filtered complex KK with the property that KK_p = K_(p+n)[m]
@@ -976,6 +1019,19 @@ F1D= simplicialComplex {a*c, d}
 F0D = simplicialComplex {a,d}
 
 KK= filteredComplex {F2D, F1D, F0D}
+min KK
+max KK
+
+
+C= truncate(-1,KK_infinity)
+
+filteredComplex(reverse for i from min KK+1 to max KK-1 list inducedMap(C,truncate(-1,KK_i)))
+
+
+C
+KK
+KK_(-infinity)
+
 
 K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero, symbol cache =>  new CacheTable} 
 
@@ -1758,6 +1814,8 @@ KK=filteredComplex({D,F1D,F0D});
 
 KK_2
 nonReducedChainComplex(KK_2)
+
+KK
 nonReducedChainComplex(KK_1)
 prune oo
 prune nonReducedChainComplex(KK_0)

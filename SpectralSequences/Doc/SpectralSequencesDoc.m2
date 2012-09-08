@@ -97,14 +97,30 @@ doc ///
      	  K = filteredComplex L
      Inputs
      	  L:List
-	       A list of ChainComplexes or SimplicialComplexes
+	       A list of ChainComplexMaps or SimplicialComplexes
      Outputs
      	  K:FilteredComplex
 	       A filtered complex with a filtration of the form
-	       K=F_nK > F_(n-1)K > ... > F_0K.
+	       K=K_n $\supseteq$  K_{n-1} $\supseteq \dots  \supseteq$ K_{-1}=0.
      Description
      	  Text 
-	       Blah
+	       If the input is a list of chain complex maps, then it should be of the form
+	       {m_{n-1},m_{n-2},$\dots$, m_0} where m_i:C_i $\rightarrow$ C is a chain complex map.
+	       (All maps are required to have the same ambient chain complex.)
+	       The output is the resulting filtered complex
+	       
+	        K=C=K_n $\supseteq $ image m_{n-1} $\supseteq \dots \supseteq$ image m_0 $\supseteq$ 0.
+
+     	       If the list is a list of simplicial complexes then it should be of the form
+	       {D_n, $\dots$, D_0} where D_i is a subsimplicial complex of D_{i+1} for i=0,$\dots$, n-1.
+	       The out put is the filtered complex
+	       
+	       K= K_n $\supseteq$ K_{n-1} $\supseteq \dots \supseteq$ K_0 $\supseteq$ 0,
+	       where K_i is the chain complex assocated to the simplicial complex D_i,
+	       considered as a subcomplex of K_n.
+	       
+	         
+	    
 
      ///
      
@@ -186,6 +202,41 @@ doc ///
 -------------------------
 -----Methods
 -------------------------
+  doc ///
+     Key
+     	   (truncate, ChainComplex,ZZ)
+     Headline
+     	  Truncate a filitered complex.
+     Usage
+     	  K = truncate(C,p)
+     Inputs
+     	  C:ChainComplex
+	  p:ZZ
+     Outputs
+     	  K:ChainComplex
+     Description
+     	  Text 
+	   Returns a ChainComplex of the form K_i=C_i for i<p and K_i=0 for i $\geq$ p.
+  ///	 
+
+doc ///
+     Key
+     	   (truncate,ZZ,ChainComplex)
+     Headline
+     	  Truncate a filitered complex.
+     Usage
+     	  K = truncate(p,C)
+     Inputs
+	  p:ZZ
+	  C:ChainComplex
+     Outputs
+     	  K:ChainComplex
+     Description
+     	  Text 
+	   Returns a ChainComplex of the form K_i=C_i for i>p and K_i=0 for i $\leq$ p.
+  ///	 
+
+
   doc ///
      Key
      	   (filteredComplex, ChainComplex)
