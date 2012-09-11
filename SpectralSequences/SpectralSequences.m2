@@ -49,20 +49,22 @@ export {
   "SpectralSequence",
   "spectralSequence",
   "SpectralSequenceSheet",
-  "see", "computeErModules","computeErMaps", "spots",
-  "nonReducedChainComplex", "SpectralSequencePage", "spectralSequencePage","rpqHomology","rpqIsomorphism",
+  "see", "computeErModules","computeErMaps", 
+  "spots",
+  --"nonReducedChainComplex",
+   "SpectralSequencePage", "spectralSequencePage","rpqHomology","rpqIsomorphism",
   "lessThanOrEqual", "greaterThanOrEqual"
   }
 
 -- symbols used as keys
-protect minF
-protect maxF
-protect minH
-protect maxH
+--protect minF
+--protect maxF
+--protect minH
+--protect maxH
 protect inducedMaps
-protect pageNumber
-protect pageModules
-protect pageMaps
+--protect pageNumber
+--protect pageModules
+--protect pageMaps
 needsPackage "SimplicialComplexes"
 needsPackage "ChainComplexExtras"
 
@@ -488,12 +490,17 @@ filteredComplex apply(drop(rsort spots C,1), i ->
 -- of course can use truncate instead of lessThanOrEqual.
     )  
 
--- the following is to be rewritten above.
+-- the following is be rewritten above.
 -- it will be off by a dimension shift if we are using
 -- the primative constructor.
 --filteredComplex ChainComplex := C -> (
 --     complete C;
 --     filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i+1))))  
+---------------------------------------------------------------
+----------------------------------------------------------------
+-- the following should be rewritten to go through the primative constructor.
+-- will have to either shift or add options if we re-write.
+-- the following code is doing what it is supposed to.
 
 FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
 --  filteredComplex for p from min K to max K list inducedMap(K,p) ** C)
@@ -505,7 +512,7 @@ new FilteredComplex from (for p from min K to max K list p=> (C ** K_p) ) | {sym
 )
 
 Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
---  filteredComplex for p from min K to max K list Hom(project(K,p),C))
+-- filteredComplex for p from min K to max K list Hom(project(K,p),C)))
  new FilteredComplex from (for p from min K to max K list p=> (Hom(K_p,C)  )) | {symbol zero => image (0*id_(Hom(K_infinity,C))), symbol cache =>  new CacheTable}
 )
 Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (
@@ -636,29 +643,29 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 --------------------------------------------------------------------------------------
 
 
-project := (K,p) -> (
-     f:= i -> map(K^p_i,K^-infinity_i,1);
-     map(K^p,K^-infinity,f)
-     )
+--project := (K,p) -> (
+--     f:= i -> map(K^p_i,K^-infinity_i,1);
+--     map(K^p,K^-infinity,f)
+--     )
 
 
 
 -- Method for looking at all of the chain subcomplexes pleasantly
-see = method();
-see FilteredComplex := K -> (
+--see = method();
+--see FilteredComplex := K -> (
      -- Eliminate the duplication of the homological indices
-  (minK, maxK) := (min K, max K);
-  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
-    toList(minK .. maxK), (p,i) ->
-    if i === minK then p | " : " | net prune K^p_i else
-    " <-- " | net prune K^p_i);
-  T = T | {toList(minK .. maxK)};
-  netList T)
+--  (minK, maxK) := (min K, max K);
+--  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
+--    toList(minK .. maxK), (p,i) ->
+--    if i === minK then p | " : " | net prune K^p_i else
+--    " <-- " | net prune K^p_i);
+--  T = T | {toList(minK .. maxK)};
+--  netList T)
 
 
   
-FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
-  all(min(min C,min D)..max(max C,max D),i-> C_i == D_i))
+--FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
+--  all(min(min C,min D)..max(max C,max D),i-> C_i == D_i))
 
 
 
@@ -690,22 +697,22 @@ FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
 -----------------------------------------------------------------------
 -----------------------------------------------------------------------
 
-SpectralSequenceSheet = new Type of MutableHashTable
-SpectralSequenceSheet.synonym = "spectral sequence sheet"
+--SpectralSequenceSheet = new Type of MutableHashTable
+--SpectralSequenceSheet.synonym = "spectral sequence sheet"
 
 
-SpectralSequenceSheet ^ List := Module => (Er,L) -> if Er#?L then Er#L else Er.zero
+--SpectralSequenceSheet ^ List := Module => (Er,L) -> if Er#?L then Er#L else Er.zero
 
 
-support SpectralSequenceSheet := List => E -> 
-  apply (select(keys E,i -> class i === List), j -> j => prune E^j)
+--support SpectralSequenceSheet := List => E -> 
+--  apply (select(keys E,i -> class i === List), j -> j => prune E^j)
   
-SpectralSequenceSheet == SpectralSequenceSheet := Boolean => (E,F) -> 
-  all(keys E, i-> F#?i and E#i == F#i)
+--SpectralSequenceSheet == SpectralSequenceSheet := Boolean => (E,F) -> 
+--  all(keys E, i-> F#?i and E#i == F#i)
      
-changeofRing = method ();
-changeofRing (Module,Module):= SpectralSequence => (M,N) -> 
-     spectralSequence ((filteredComplex ((res M) ** ring N)) ** (res N))
+--changeofRing = method ();
+--changeofRing (Module,Module):= SpectralSequence => (M,N) -> 
+--     spectralSequence ((filteredComplex ((res M) ** ring N)) ** (res N))
 
 
 load "Doc/SpectralSequencesDoc.m2"
@@ -718,241 +725,10 @@ check "SpectralSequences";
 viewHelp SpectralSequences
 
 -------------------------------------------------------------------------------
-restart
-needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
-
-
-A=QQ[a,b,c,d]
-
-D=simplicialComplex {a*d*c, a*b, a*c, b*c}
--- now need to rewrite filteredComplex ChainComplex to get the degrees right.
-
-C=chainComplex D
-
-K=filteredComplex C
-
-E=spectralSequence K
-
-(E_1).degree
-
-(E^1).degree
-
-E^1 _{1,0}
-
-E_1 ^ {-1,0}
-support E_1
-
--- the following needs to be rewritten.
-myFilteredComplex = method()
-
-myFilteredComplex ChainComplex := C -> (
-     complete C;
-filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,lessThanOrEqual(C,i)))[-min C]    
-    )  
-myFilteredComplex C
-
-min C
-
-myFilteredComplex (C[-1])
-
-myFilteredComplex C
-myFilteredComplex C[1]
-
-C[1]
-
--- The following produces the chain complex C<=p.
--- i.e., this is the subchain complex of C 
--- constings of those modules in homological degree <= p and zero in
--- homological degree >p.  I oringinally thought truncate would be a good name for 
--- this but this is ambigous.  
---I tried to overload <= but computer didn't like that. --
--- try this instead.
-
-lessThanOrEqual = method()
-lessThanOrEqual(ChainComplex,ZZ):=(C,p) -> (
-    if p>= max C then return C else (
-     K:=new ChainComplex;
-     K.ring=C.ring;
-     for i from min C +1 to max C do (
-     if i <= p then K.dd_i=C.dd_i else (
-if i-1>p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-else K.dd_i=inducedMap(C_(i-1), 0*C_i, C.dd_i) );););
-K ) 
-
-
--- now want to produce the sub chain complex constiting of 
--- modules in homolocial degrees greater than 
--- or equal to n and zero in degrees less than n.
-greaterThanOrEqual = method()
-
-greaterThanOrEqual(ChainComplex,ZZ):= (C,p)->(if p<= min C then return C else (
-     K:=new ChainComplex;
-     K.ring=C.ring;
-     for i from min C+1  to max C do (
-     if i-1 >= p then K.dd_i=C.dd_i else (
-if i<p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-else K.dd_i=inducedMap(0*C_(i-1), C_i, 0*C.dd_i) );););
-K )
-
-greaterThanOrEqual(C,1)
-greaterThanOrEqual(C,0)
-greaterThanOrEqual(C,-1)
-greaterThanOrEqual(C,3)
-greaterThanOrEqual(C,2)
-
-
-
-
-C=chainComplex D
-
-truncate(C,3)
-truncate(C,2)
-truncate(C,1)
-truncate(C,0)
-truncate(C,-1)
-truncate(C,-2)
-
-C
-truncate(-2,C)
-truncate(-1,C)
-truncate(0,C)
-truncate(1,C)
-truncate(2,C)
-
-
---------------------------------------------------------------------------------
--- Trying to write shift of a filtered complex.  If K is a filtered complex then
--- K[n,m] should be the filtered complex KK with the property that KK_p = K_(p+n)[m]
------------------------------------------
-
-restart
-needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
-
-
-A=QQ[a,b,c,d]
-
-D=simplicialComplex {a*d*c, a*b, a*c, b*c}
-
-C=nonReducedChainComplex chainComplex(D)
-
-K=filteredComplex C
-
-inducedMap(K,1)
-
--- the following shifts the degrees of a filtered complex.
--- perhaps this should overload [m].  e.g. K[m] is the filtered complex
--- with the property that K[m]_n=K_(n+m).
--- on the other hand, perhaps this should be made part of the
--- original constructor as an option.
-
---filteredComplex(FilteredComplex,ZZ):=(K,m)->(new FilteredComplex from (for p from min K to max K list (p-m)=> ((K_(p)) ) ) 
---| {symbol zero => image (0*id_(K_infinity )), symbol cache =>  new CacheTable}
---)
-
-
-
-
-K[2]
-
-
-filteredComplex(K,2)
-
-filteredComplex(K,0) 
-
-filteredComplex(K,1)
-
-
-
-
-E=spectralSequence K
-E^1
-E^5
-
-support E^1
-support E^(10)
-support E^(infinity)
-support E_(infinity)
-prune E^(infinity)_{2,-2}== prune E^(10)_{2,-2}
-prune E^(infinity)_{2,-2}== prune E_(infinity)_{2,-2}
-
-shift =method()
-
-shift(FilteredComplex,ZZ,ZZ):=(K,m,n)->(
-new FilteredComplex from (for p from min K to max K list (p-m)=> ((K_(p))[n] ) ) 
-| {symbol zero => image (0*id_(K_infinity )), symbol cache =>  new CacheTable}
-)
-
-
- 
-
-KK=shift(K,1,1)
-K
-K_1
-KK_2
-KK_1 == K_2[1]
-spots KK
-spots K
-
--- so I think the above works... --
-
-----------------------------------------------------------------------------
-restart
-needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
-
-A=QQ[a,b,c,d]
-
-D=simplicialComplex {a*d*c, a*b, a*c, b*c}
-
-C=nonReducedChainComplex chainComplex(D)
-
-K=filteredComplex C
-prune Hom(K,C)
-prune Hom(C,K)
-
-
-
--------------------------------------------------------------------------------
--- trying to test ChainComplex ** FilteredComplex code --
-
-
--- trying to test truncate(ChainComplex, ZZ) code. --
-
-restart
-needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
-
-A=QQ[a,b,c,d]
-
-D=simplicialComplex {a*d*c, a*b, a*c, b*c}
-
-C=nonReducedChainComplex chainComplex(D)
-
-filteredComplex C
-
-
-prune (C ** filteredComplex C)
-K=(C ** filteredComplex C)
- K_1 ==C ** truncate(C,1)
--- so there is hope to the above.  Need to check this explicitly on 
--- and eaiser example.
-prune ( filteredComplex C ** C)
-K=( filteredComplex C ** C)
-
-K_1 == truncate(C,1) ** C
--- so there is hope to the above. --
+-- Working Examples ----------------------------------------------
+------------------------------------------------------------------
 -------------------------------------
--- let's try to balance Tor. --
+-- Balancing Tor. --
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
@@ -963,12 +739,23 @@ A=QQ[x,y,z,w]
 
 help monomialCurveIdeal
 I= coker gens monomialCurveIdeal(A,{1,2,3})
-H=res I
+H=complete res I
 
 J= coker gens monomialCurveIdeal(A,{1,3,4})
-F=res J
+F= complete res J
 
 
+H
+length H
+spots H
+filteredComplex H
+-- so the filteredComplex code is doing what it is supposed to.
+-- the filtration starts at 3 and then continues.
+-- perhaps its better to remove the 0 in degree 3?
+
+
+
+prune ((filteredComplex H)** F)
 
 E= spectralSequence ((filteredComplex H) ** F)
 
@@ -1009,100 +796,44 @@ Tor_1(I,J) == EE^2 _{1,0} -- this resturned false for some reason.  Strange...
 
 -------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
--- trying to test truncate(ChainComplex, ZZ) code. --
+--  test truncate(ChainComplex, ZZ) code. --
 
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
 needsPackage "ChainComplexExtras";
-debug SpectralSequences;
 
 A=QQ[a,b,c,d]
 
 D=simplicialComplex {a*d*c, a*b, a*c, b*c}
 
-C=nonReducedChainComplex chainComplex(D)
+C=chainComplex D
 
-
-truncate(C,2)==C
-truncate(C,1)
-keys C
-keys truncate(C,2)
-keys truncate(C,1)
-
-spots C
-F2C=truncate(C,2)
-image id_C
-filteredComplex {id_C}
-
-filteredComplex{id_C, id_C}
-filteredComplex {id_(F2C)}
-
-F1C=truncate(C,1)
-
-m1=chainComplexMap(C,F1C,apply(spots C, i-> inducedMap(C_i, F1C_i, id_(F1C_i))))
-
-
-filteredComplex {m1}
-
-
-truncate(C,10)==C
-truncate(C,0)
-truncate(C,-1)
-truncate(C,-2)
-(truncate(C,-10)) _0
-truncate(C,-100)==0
-
-filteredComplex C
-truncate(C,0)
-truncate(C,1)
-
-myFilteredComplex=method()
-myFilteredComplex ChainComplex := C->(
-     H=
-     for i from min spots C to max spots C -1 list  truncate(C,i);
-filteredComplex reverse apply( #H, i-> 
-     chainComplexMap(C,H#i,apply(spots C, j-> inducedMap(C_j, H#i _j, id_(H#i _j)))))
-      )
-
-
-myFilteredComplex C
-filteredComplex C
-
--- so the existing filteredComplex code aggrees with my code on this example. --
-
-prune (C ** filteredComplex C)
--- so there is a bug in ChainComplex ** filteredComplex C code --
-K=filteredComplex C
-min K
-max K
-
-C ** K_(-1)
-
-prune C ** K_(0)
+greaterThanOrEqual(C,0)
+truncate(-1,C)
+greaterThanOrEqual(C,3)
+greaterThanOrEqual(C,2)
+greaterThanOrEqual(C,1)
+lessThanOrEqual(C,2)
 C
+lessThanOrEqual(C,1)
+truncate(C,1)
 
-inducedMap(K,-1)
+filteredComplex {id_C}
+filteredComplex{D}
+filteredComplex{D,D}
 
 
-prune new FilteredComplex from (for p from min K to max K list p=> (C ** K_p) ) | {symbol zero => image (0*id_(C**K_infinity)), symbol cache =>  new CacheTable} 
+F1C=lessThanOrEqual(C,0)
 
-new FilteredComplex from LL
+m1=inducedMap(C,F1C)
 
 
-prune (C ** filteredComplex C)
--- so there is a bug in ChainComplex ** filteredComplex C code --
+K=filteredComplex {m1}
 
-prune Hom(C,filteredComplex C)
- -- so there is a bug in Hom(ChainComplex, filteredComplex C) code --
-prune Hom(filteredComplex C,C) 
- -- so there is a bug in Hom(ChainComplex, filteredComplex C) code --
 
--------------------------------------------------------------------
--- the following is very experimental code.  Once the bugs are worked out
--- this should be included and exported.  Basically I want to 
--- compute the "homology of a spectral sequence page" and then
--- express the isomorphism between this and the modules on the next page.
+-----------
+--- want to try to test rpqHomology and rpqIsomorphism code.
 
 
 restart
@@ -1122,10 +853,12 @@ F1D= simplicialComplex {a*c, d}
 F0D = simplicialComplex {a,d}
 
 KK= filteredComplex {F2D, F1D, F0D}
+spots KK
+K=(filteredComplex reverse apply(drop(spots KK,1), i-> inducedMap(greaterThanOrEqual(KK_infinity,0),
+	  greaterThanOrEqual(KK_i,0))))[-min KK] 
+KK
 
-K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero, symbol cache =>  new CacheTable} 
 
--- need to add zero to K to use the spectral sequence constructor.
 
 E=spectralSequence(K)
 
@@ -1168,203 +901,9 @@ apply(keys E^1 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
 apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
 -- cool.
 
--- should try this again on other examples. 
-
-
-
 -----------------------------------------------------------------
 
 -------------------------------------------------------------------
--- the following is very experimental code.  Once the bugs are worked out
--- this should be included and exported.  Basically I want to 
--- compute the "homology of a spectral sequence page" and then
--- express the isomorphism between this and the modules on the next page.
-
-
-restart
-needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
-
-A=QQ[a,b,c,d]
-
-D=simplicialComplex {a*d*c, a*b, a*c, b*c}
-
-F2D=D
-
-F1D= simplicialComplex {a*c, d}
-
-F0D = simplicialComplex {a,d}
-
-KK= filteredComplex {F2D, F1D, F0D}
-min KK
-max KK
-
-
-C= truncate(-1,KK_infinity)
-
-filteredComplex(reverse for i from min KK+1 to max KK-1 list inducedMap(C,truncate(-1,KK_i)))
-
-
-C
-KK
-KK_(-infinity)
-
-
-K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero, symbol cache =>  new CacheTable} 
-
--- need to add zero to K to use the spectral sequence constructor.
-
-E0Modules = computeErModules(K,0)
-
-new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
-
-E0Maps=computeErMaps(K,0)
-new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
-prune ker E0Maps#{2,-1}
-
-
-E=spectralSequence(K)
-
-
-E^0 .pageModules
-
-E^0 .dd.source
-
-E^0 .dd #{2,-1}.source
--- so maybe the above is the better way to do this.
-
-E^1 .pageModules
-
-
-keys E_0
-
-
--- want to compute homology of a spectral sequence page...  
--- the out put of such a function should be a hash table "isomorphic" to the 
--- modules on the next page.
-
-rpqHomology :=(p,q,r,Er) -> ( (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) )
-
-(ker (E_0).dd #{2,0}) / image (E_0).dd #{2,1}
-
-
-rpqHomology(2,0,0, E_0)
-
-K_infinity
-
-
-E_1 . filteredComplex _infinity
-keys E_1
-
-E_1 .pageModules #{2,0}
-
-inducedMap(rpqHomology(2,0,0,E_0), E_1 .pageModules #{2,0}, id_(K_infinity _2))
-
--- want to compute the isomorphism from the homology of the rth page with
--- the r+1 th page.
-
-rpqIsomorphism :=(p,q,r,page,nextPage) -> (
-inducedMap(rpqHomology(p,q,r,page), nextPage.pageModules #{p,q}, id_(nextPage.filteredComplex _infinity _(p+q)))
-  )
-
-
- 
-isIsomorphism rpqIsomorphism(2,0,0,E_0,E_1)
-
--- so the above seems to be working OK.
-
-L=keys E_0 .dd
-
-L#0 #0
-L#0 #1
-
-
-apply(keys E_0 .dd, i-> rpqIsomorphism(i#0,i#1,0,E_0,E_1))
-
--- so there is a bug in the above.
-
-rpqIsomorphism(-1,2,0,E_0,E_1)
-
--- I think the bug is in rpqHomology.  {-1,3} is not in keys E_0 .dd .
--- Need to handle this case.
-
-rpqHomology :=(p,q,r,Er) -> ( 
-     if Er.dd #?{p+r,q-r+1} then 
-     (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) 
- else (ker(Er.dd #{p,q})) / (image(0*id_(Er.filteredComplex _infinity _ (p+q)) ))
-     )
-rpqHomology(-1,2,0,E_0)
-
-rpqIsomorphism :=(p,q,r,page,nextPage) -> (
-inducedMap(rpqHomology(p,q,r,page), nextPage.pageModules #{p,q}, id_(nextPage.filteredComplex _infinity _(p+q)))
-  )
-
-
-rpqIsomorphism(-1,2,0,E_0,E_1)
-
--- so the above seemed to work better.
-
-apply(keys E_0 .dd, i-> isIsomorphism rpqIsomorphism(i#0,i#1,0,E_0,E_1))
-
--- so the above seems to work!! Cool!!
-
-apply(keys E_1 .dd, i->  rpqIsomorphism(i#0,i#1,1,E_1,E_2))
-
--- so there seems to be a problem in the above.
-
-keys E_1 .dd
-
- E_1 .pageModules
- E_2 .filteredComplex
-
-rpqIsomorphism(2,1,1,E_1,E_2)
-
- rpqHomology(1,-1,1,E_1)
-
-K_infinity _0
-
-prune E_2 .pageModules #{1,-1}
-
-inducedMap(rpqHomology(1,-1,1,E_1), E_2 .pageModules #{1,-1}, id_ (K_infinity) _0)
-
--- so the above seems to be the problem.
-
--- try instead
-inducedMap(E_2 .pageModules #{1,-1}, rpqHomology(1,-1,1,E_1), id_ (K_infinity) _0)
-
--- on the otherhand, the above seems to be ok.
-
-rpqHomology :=(p,q,r,Er) -> ( 
-     if Er.dd #?{p+r,q-r+1} then 
-     (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) 
- else (ker(Er.dd #{p,q})) / (image(0*id_(Er.filteredComplex _infinity _ (p+q)) ))
-     )
-rpqHomology(-1,2,0,E_0)
-
-rpqIsomorphism :=(p,q,r,page,nextPage) -> (
-inducedMap(nextPage.pageModules #{p,q},rpqHomology(p,q,r,page), id_(nextPage.filteredComplex _infinity _(p+q)))
-  )
-
-
-rpqIsomorphism(1,-1,1,E_1, E_2)
-
-
-isIsomorphism rpqIsomorphism(1,-1,1,E_1,E_2)
-
-apply(keys E_1 .dd, i->  rpqIsomorphism(i#0,i#1,1,E_1,E_2))
-
-apply(keys E_1 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,1,E_1,E_2))
--- cool.
-
-apply(keys E_0 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,0,E_0,E_1))
--- cool.
-
-apply(keys E_2 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,2,E_2,E_3))
---cool.
-
--- should investigate the above further.
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------

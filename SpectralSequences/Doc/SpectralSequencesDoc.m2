@@ -245,6 +245,42 @@ doc ///
 	   Returns a ChainComplex of the form K_i=C_i for i>p and K_i=0 for i $\leq$ p.
   ///	 
 
+doc ///
+     Key 
+           lessThanOrEqual
+     	   
+     Headline
+     	  Truncate a filitered complex.
+     Usage
+     	  K = lessThanOrEqual(C,p)
+     Inputs
+     	  C:ChainComplex
+	  p:ZZ
+     Outputs
+     	  K:ChainComplex
+     Description
+     	  Text 
+	   Returns a ChainComplex of the form K_i=C_i for i $\leq$ p and K_i=0 for i $>$ p.
+  ///	 
+
+doc ///
+     Key 
+           greaterThanOrEqual
+     Headline
+     	  Truncate a filitered complex.
+     Usage
+     	  K = greaterThanOrEqual(C,p)
+     Inputs
+     	  C:ChainComplex
+	  p:ZZ
+     Outputs
+     	  K:ChainComplex
+     Description
+     	  Text 
+	   Returns a ChainComplex of the form K_i=C_i for i $\geq$ p and K_i=0 for i $<$ p.
+  ///	 
+
+
 
   doc ///
      Key
