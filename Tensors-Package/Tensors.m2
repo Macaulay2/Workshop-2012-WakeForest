@@ -1,6 +1,6 @@
 newPackage(
 	"Tensors",
-    	Version => "0.1", 
+    	Version => "0.2", 
     	Date => "August 5, 2012",
     	Authors => {
 	     {Name => "Andrew Critch", Email => "critch@math.berkeley.edu", HomePage => "http://www.acritch.com/"},
@@ -418,6 +418,30 @@ TEST///
 
 
 ///
+
+-----------------------------------
+--Tensor flattenings
+-- a.c. currently only to matrices
+-----------------------------------
+
+matrix Tensor := opts -> T -> (
+     d:=tensorDimensions T;
+     if not #d == 2 then error "expected an order 2 tensor";
+     matrix rectangularNestedList(d,entries T)
+     )
+
+matrix (List,Tensor) := opts -> (rowIndices,T) -> (
+     d := tensorDimensions T;
+     L := toList (0..<#d);
+     if not #rowIndices<#d then
+        error "matrix (List,Tensor) given too many row indices";
+     if (not rowIndices==unique rowIndices) or (not all(rowIndices,i->member(i,L))) then 
+        error "matrix (List,Tensor) expected a list of unique index positions for the tensor to serve as row labels";
+     rowKeys := tensorKeys d_rowIndices;
+     h := hashTable toList apply(0..<#rowIndices,i->rowIndices#i=>i);
+     toSlicer := rowKey -> apply(L,i->if member(i,rowIndices) then rowKey#(h#i) else null);
+     matrix apply(rowKeys,k->entries T_(toSlicer k))
+     )
 
 -------------------
 --Tensor marginals
