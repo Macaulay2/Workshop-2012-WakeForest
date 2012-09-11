@@ -1112,7 +1112,7 @@ simplicialComplex({})
 -- I guess the simplicial complex code doesn't allow for the "empty simplicial complex"
 
 --------------------------------------------------
-
+--
 
 --Nathan's first example
 restart
@@ -1318,6 +1318,12 @@ installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
 --------------------------------------------------------------------------
+
+-- this example needs to be updated. --
+
+-----------------------------------------------------
+
+
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes";
@@ -1491,26 +1497,6 @@ new HashTable from apply(keys E3Maps, i-> i=> prune E3Maps#i)
 -- the E3 page appears to have been computed correctly. --------
 ----------------------------------------------------------------
 
--- there seems to be a bug in the following --
--- I don't understand why the symbol pageModules is not in the keys of the
--- E_0 page for example.
-
-E=spectralSequence(K)
-
-support E^0
--- might want the support function to prune the entries of the spectral sequence page? --
-
-
-rpqHomology :=(p,q,r,Er) -> ( 
-     if Er.dd #?{p+r,q-r+1} then 
-     (ker(Er.dd #{p,q})) / (image(Er.dd #{p+r,q-r+1}) ) 
- else (ker(Er.dd #{p,q})) / (image(0*id_(Er.filteredComplex _infinity _ (p+q)) ))
-     )
-
-
-rpqIsomorphism :=(p,q,r,page,nextPage) -> (
-inducedMap(source (nextPage.dd #{p,q}),rpqHomology(p,q,r,page), id_(nextPage.filteredComplex _infinity _(p+q)))
-  ) 
 
 
 apply(keys E^0 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,0,E^0,E^1))
