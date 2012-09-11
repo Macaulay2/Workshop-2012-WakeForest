@@ -651,21 +651,21 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 
 
 -- Method for looking at all of the chain subcomplexes pleasantly
---see = method();
---see FilteredComplex := K -> (
+see = method();
+see FilteredComplex := K -> (
      -- Eliminate the duplication of the homological indices
---  (minK, maxK) := (min K, max K);
---  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
---    toList(minK .. maxK), (p,i) ->
---    if i === minK then p | " : " | net prune K^p_i else
---    " <-- " | net prune K^p_i);
---  T = T | {toList(minK .. maxK)};
---  netList T)
+  (minK, maxK) := (min K, max K);
+  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
+    toList(minK .. maxK), (p,i) ->
+    if i === minK then p | " : " | net prune K^p_i else
+    " <-- " | net prune K^p_i);
+  T = T | {toList(minK .. maxK)};
+  netList T)
 
 
   
---FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
---  all(min(min C,min D)..max(max C,max D),i-> C_i == D_i))
+FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
+  all(min(min C,min D)..max(max C,max D),i-> C_i == D_i))
 
 
 
@@ -908,57 +908,6 @@ apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
-------------------------------------------------------------------
-needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
-
-
---try to test some aspects of SpectralSequence Code. --
-
-A=QQ[a,b,c,d]
-
-D=simplicialComplex {a*d*c, a*b, a*c, b*c}
-
-F2D=D
-
-F1D= simplicialComplex {a*c, d}
-
-F0D = simplicialComplex {a,d}
-
-K= filteredComplex {F2D, F1D, F0D}
-
-E=spectralSequence K
-
-E^infinity
-
-E0=E^0
-
-HH E0
-
-E0.dd
-
-E0 _ {2,-1}
-
-E0 ^ {-2,1}
-
-keys E
-
-E1= E_1
-
-keys E
-
-E^infinity
-
--- we might want to add "ambient spectral sequence or some such thing to a spectral
--- sequence page.
--- I think we will also want to overload HH to go from one spectral sequence page
--- to another.
-
-------------------------------------------------------------------------------------
-
-
 ------------------------------------------------------------
 -----------------------------------------------------------
 
@@ -983,7 +932,9 @@ F0D = simplicialComplex {a,d}
 
 KK= filteredComplex {F2D, F1D, F0D}
 
-K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i))|{symbol zero => KK.zero} 
+K=(filteredComplex reverse apply(drop(spots KK,1), i-> inducedMap(greaterThanOrEqual(KK_infinity,0),
+	  greaterThanOrEqual(KK_i,0))))[-min KK] 
+
 
 E=spectralSequence(K)
 
@@ -999,19 +950,31 @@ E0Modules = computeErModules(K,0)
 
 new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
 
+new HashTable from apply(keys (support E^0), i-> i=> prune (support E^0)#i)
+
+
 E0Maps=computeErMaps(K,0)
 new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
-prune ker E0Maps#{2,-1}
+prune ker E^0 .dd#{2,-1}
+
+new HashTable from apply(keys E^0 .dd, i-> i=> prune (E^0 .dd )#i)
+
+
 
 E1Modules=computeErModules(K,1)
 new HashTable from apply(keys E1Modules, i-> i=> prune E1Modules#i)
+new HashTable from apply(keys (support E^1), i-> i=> prune (support E^1)#i)
 
 E1Maps=computeErMaps(K,1)
 new HashTable from apply(keys E1Maps, i-> i=> prune E1Maps#i)
+new HashTable from apply(keys E^1 .dd, i-> i=> prune (E^1 .dd )#i)
+
 
 
 E2Modules=computeErModules(K,2)
 new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
+new HashTable from apply(keys (support E^2), i-> i=> prune (support E^2)#i)
+
 
 prune HH K_infinity
 ---------------
@@ -1021,11 +984,16 @@ prune HH K_infinity
 
 E2Maps=computeErMaps(K,2)
 new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
+new HashTable from apply(keys E^2 .dd, i-> i=> prune (E^2 .dd )#i)
+
 
 prune ker E2Maps#{2,-1}
 
 E3Modules=computeErModules(K,3)
 new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
+new HashTable from apply(keys (support E^3), i-> i=> prune (support E^3)#i)
+
+new HashTable from apply(keys (support E^infinity), i-> i=> prune (support E^infinity)#i)
 
 ---------------------------------------------------
 -- the above aggrees with my calculations by hand.
@@ -1049,58 +1017,7 @@ apply(keys E^5 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,5))
 
 
 -----------------------------------------------
-restart
-needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
-
-A=QQ[a,b,c]
-
--- another example which can be checked by hand.  Will try to test the code which
--- computes the "naive truncation" of a complex.
-
-D=simplicialComplex {a*b*c}
-
-F2D=D
-F1D=simplicialComplex {a*b,a*c,b*c}
-F0D=simplicialComplex {a,b,c}
-
-K=filteredComplex {F2D,F1D,F0D}
-
-C=K_infinity
---------------------------------------------------------------------------
--- The following shows that there is a bug in the code which is suppose to 
--- compute the naive filtration of a chain complex.
-filteredComplex C
----------------------------------------------------------------------------
-
--- Let's try to test truncate(C,p) --
-
-spots C
-(truncate(C,1)).dd
-
-spots C
-
-spots truncate(C,1)
-
--- the above shows that there is a bug in trucate as well.  -- 
-
--- truncate(C,1) needs to to shifted appropriately. --
-
--- we also need to decide if trucate(C,p) should set all homological degrees >=p 
--- to zero
--- all homological degrees > p to zero, all degrees <= p to zero or all degrees <p to
--- zero.  
-
--- This will require a moments thought.
-
-
-prune K
-
--- so prune of a filtered complex seems to be OK.
------------------------------------------------
--- Let's check the spectral sequence code on this example
+-- Let's check the spectral sequence code in an example
 --
 --
 restart
@@ -1123,45 +1040,45 @@ KK=filteredComplex {F2D,F1D,F0D}
 -- the example I did by hand was done using non-reduced homology. --
 -- should go back and try it with reduced homology later. --
 
-K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i)) |{symbol zero => KK.zero}
+K=(filteredComplex reverse apply(drop(spots KK,1), i-> inducedMap(greaterThanOrEqual(KK_infinity,0),
+	  greaterThanOrEqual(KK_i,0))))[-min KK] 
 
 
 C=K_infinity
 
 prune HH C
 
-E0Modules=computeErModules(K,0)
+E=spectralSequence K
+
+E0Modules= support E^0
 
 new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
 
-E0Maps=computeErMaps(K,0)
+E0Maps= E^0 .dd
 new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
 
 
-E1Modules=computeErModules(K,1)
+E1Modules=support E^1
 new HashTable from apply(keys E1Modules, i-> i=> prune E1Modules#i)
 
-E1Maps=computeErMaps(K,1)
+E1Maps= E^1 .dd
 new HashTable from apply(keys E1Maps, i-> i=> prune E1Maps#i)
 C.dd
 
-E2Modules=computeErModules(K,2)
+E2Modules= support E^2
 new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
 
-E2Maps=computeErMaps(K,2)
+E2Maps= E^2 .dd
 new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
 
-E3Modules=computeErModules(K,3)
+E3Modules= support E^3
 new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
 
+prune HH K_infinity
 ----------------------------------------------------
 -- the above agrees with my caclulations by hand. --
 ----------------------------------------------------
 
-E=spectralSequence(K)
-E_0
-E_1
-E_2
 
 apply(keys E^0 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
 -- cool.
@@ -1194,25 +1111,7 @@ filteredComplex({F3})
 simplicialComplex({})
 -- I guess the simplicial complex code doesn't allow for the "empty simplicial complex"
 
-F2=simplicialComplex {y*z, x}
-
-filteredComplex({F3,F2})
-
-K=filteredComplex({F3,F2})
-
-C=chainComplex F3
-
-m=chainComplexMap(C,C,apply(spots C, i->id_(C_i)))
-
-L=filteredComplex({m})
-
-K_1==K^(-1)
-
-L_1==L^1
-
 --------------------------------------------------
-
-
 
 
 --Nathan's first example
