@@ -307,7 +307,7 @@ spectralSequencePage = method ()
 spectralSequencePage(FilteredComplex, ZZ):= (K,r) ->( 
 new SpectralSequencePage from 
  {symbol filteredComplex=> K, 
-     symbol pageNumber =>r, 
+     symbol degree =>{-r,r-1}, 
      -- maybe instead of page number we should use degree??  symbol degree = (-r,r-1).  This is the 
      -- bidegree of the differential.
    --we don't need a key with
@@ -325,7 +325,7 @@ new SpectralSequencePage from
 SpectralSequencePage _ List := Module => (E,i)-> if (E.dd)#?i then 
 source(E.dd #i) else image(0*id_((E.filteredComplex_infinity)_(sum i)))  
 
-SpectralSequencePage ^ List := Module => (E,i)-> E_(apply(i, j-> -j))    
+SpectralSequencePage ^ List := Module => (E,i)-> (E_(-i))    
 
 -- view the modules on a Spectral Sequence Page.  We are refering to these
 -- as the support of the page.
@@ -480,10 +480,20 @@ if i<=p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
 else K.dd_i=inducedMap(0*C_(i-1), C_i, 0*C.dd_i) );););
 K ) 
 
--- the following needs to be rewritten.  The resulting filtered complex will be off by degrees. --
+
 filteredComplex ChainComplex := C -> (
      complete C;
-     filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i+1))))  
+filteredComplex apply(drop(rsort spots C,1), i -> 
+     inducedMap(C,lessThanOrEqual(C,i)))[- min C]    -- need to account for shift
+-- of course can use truncate instead of lessThanOrEqual.
+    )  
+
+-- the following is to be rewritten above.
+-- it will be off by a dimension shift if we are using
+-- the primative constructor.
+--filteredComplex ChainComplex := C -> (
+--     complete C;
+--     filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i+1))))  
 
 FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
 --  filteredComplex for p from min K to max K list inducedMap(K,p) ** C)
@@ -718,6 +728,40 @@ debug SpectralSequences;
 A=QQ[a,b,c,d]
 
 D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+-- now need to rewrite filteredComplex ChainComplex to get the degrees right.
+
+C=chainComplex D
+
+K=filteredComplex C
+
+E=spectralSequence K
+
+(E_1).degree
+
+(E^1).degree
+
+E^1 _{1,0}
+
+E_1 ^ {-1,0}
+support E_1
+
+-- the following needs to be rewritten.
+myFilteredComplex = method()
+
+myFilteredComplex ChainComplex := C -> (
+     complete C;
+filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,lessThanOrEqual(C,i)))[-min C]    
+    )  
+myFilteredComplex C
+
+min C
+
+myFilteredComplex (C[-1])
+
+myFilteredComplex C
+myFilteredComplex C[1]
+
+C[1]
 
 -- The following produces the chain complex C<=p.
 -- i.e., this is the subchain complex of C 
