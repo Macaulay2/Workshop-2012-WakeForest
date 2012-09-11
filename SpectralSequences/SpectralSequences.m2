@@ -50,7 +50,8 @@ export {
   "spectralSequence",
   "SpectralSequenceSheet",
   "see", "computeErModules","computeErMaps", "spots",
-  "nonReducedChainComplex", "SpectralSequencePage", "spectralSequencePage","rpqHomology","rpqIsomorphism"
+  "nonReducedChainComplex", "SpectralSequencePage", "spectralSequencePage","rpqHomology","rpqIsomorphism",
+  "lessThanOrEqual", "greaterThanOrEqual"
   }
 
 -- symbols used as keys
@@ -103,6 +104,7 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 
 ---
 -- this is no longer needed.  truncate a chain complex can do this.
+---
 --------------------------------------------------------------------------------------
 -- I need the following method in my examples. 
 --(Surely someting like it exists elsewhere.)
@@ -185,17 +187,32 @@ FilteredComplex ^ InfiniteNumber :=
 FilteredComplex ^ ZZ := ChainComplex => (K,p) -> ( K_(-p)
   )
 
-----------------------------------------------------
---- I think we are going to want "shift of a filtered complex."  I'm suggesting
--- that it should look like  K[a,b] and 
--- have the property that K_p _ q [a,b] = K_(p+q)  _(q+b)
------------------------------------------------------------
+
+-- the following shifts the (filtration) degrees of a filtered complex.
+-- At the moment it overloads [m].  e.g. K[m] is the filtered complex
+-- with the property that K[m]_n=K_(n+m).
+-- on the other hand, perhaps this should be made part of the
+-- original constructor as an option.
+-- or it could be a contructor on its on of the form
+--filteredComplex(FilteredComplex,ZZ):=(K,m)->(new FilteredComplex from (for p from min K to max K list (p-m)=> ((K_(p)) ) ) 
+--| {symbol zero => image (0*id_(K_infinity )), symbol cache =>  new CacheTable}
+--)
+
+FilteredComplex Array := (K,A)->(
+     new FilteredComplex from (for p from min K to max K list (p-A#0)=> ((K_(p)) ) ) 
+| {symbol zero => image (0*id_(K_infinity )), symbol cache =>  new CacheTable}
+)
+
 
 chainComplex FilteredComplex := ChainComplex => K -> K_infinity
 
--- fix this...  
-FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
-  all(min(min C,min D)..max(max C,max D),i-> C_i == D_i))
+
+-- Retrieves (or lazily constructs) the inclusion map from the pth subcomplex to the top
+inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
+  if not K.cache#?inducedMaps then K.cache.inducedMaps = new MutableHashTable;
+  if not K.cache.inducedMaps#?p then K.cache.inducedMaps#p = inducedMap(K_infinity, K_p);
+  K.cache.inducedMaps#p)
+
 
 net FilteredComplex := K -> (
   v := between("", apply(sort spots K, p -> p | " : " | net K_p));
@@ -291,6 +308,8 @@ spectralSequencePage(FilteredComplex, ZZ):= (K,r) ->(
 new SpectralSequencePage from 
  {symbol filteredComplex=> K, 
      symbol pageNumber =>r, 
+     -- maybe instead of page number we should use degree??  symbol degree = (-r,r-1).  This is the 
+     -- bidegree of the differential.
    --we don't need a key with
    -- pageModules.  We can get this by
    -- looking at the source of the differential at the pq spot
@@ -346,8 +365,8 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
 	  symbol zero => K.zero,
 	  symbol cache => CacheTable})
 
--- In the following we are still going to want E^infinity etc. --
--- Can use the rule if r> max K - min K then E^r_{p,q}=E^r'_{p,q} for all r'>=r.
+-- In the following we are using the rule 
+-- if r> max K - min K then E^r_{p,q}=E^r'_{p,q} for all r'>=r.
 SpectralSequence ^ InfiniteNumber:=
   SpectralSequence ^ ZZ := SpectralSequencePage => (E,r) -> (
        if E#?r then E#r else 
@@ -393,6 +412,46 @@ inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filter
 -- constructing filtered complexes ---------------------------------------------
 --------------------------------------------------------------------------------
 
+-- The following is basically the same as truncate, except that I've
+-- used different names because I think it is ambigous to use truncate.
+-- also we have a choice whether to use lessThanOrEqual or simply lessThan.
+-- to construct the filtraions C**C properly using Weibel's conventions
+-- on p. 141 Defn 5.6.1 then I think we want to use lessThanOrEqual.
+
+-- The following produces the chain complex C<=p.
+-- i.e., this is the subchain complex of C 
+-- constings of those modules in homological degree <= p and zero in
+-- homological degree >p.  I oringinally thought truncate would be a good name for 
+-- this but this is ambigous.  
+--I tried to overload <= but computer didn't like that. --
+-- try this instead.
+
+lessThanOrEqual = method()
+lessThanOrEqual(ChainComplex,ZZ):=(C,p) -> (
+    if p>= max C then return C else (
+     K:=new ChainComplex;
+     K.ring=C.ring;
+     for i from min C +1 to max C do (
+     if i <= p then K.dd_i=C.dd_i else (
+if i-1>p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+else K.dd_i=inducedMap(C_(i-1), 0*C_i, C.dd_i) );););
+K ) 
+
+
+-- now want to produce the sub chain complex constiting of 
+-- modules in homolocial degrees greater than 
+-- or equal to n and zero in degrees less than n.
+greaterThanOrEqual = method()
+
+greaterThanOrEqual(ChainComplex,ZZ):= (C,p)->(if p<= min C then return C else (
+     K:=new ChainComplex;
+     K.ring=C.ring;
+     for i from min C+1  to max C do (
+     if i-1 >= p then K.dd_i=C.dd_i else (
+if i<p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+else K.dd_i=inducedMap(0*C_(i-1), C_i, 0*C.dd_i) );););
+K )
+
 
 
 -- the following method truncates a chain complex -- setting all
@@ -418,9 +477,10 @@ truncate (ZZ,ChainComplex) := ChainComplex => (p,C) -> (
      for i from min C+1  to max C do (
      if i-1 > p then K.dd_i=C.dd_i else (
 if i<=p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-else K.dd_i=map(0*C_(i-1), C_i, C.dd_i) );););
+else K.dd_i=inducedMap(0*C_(i-1), C_i, 0*C.dd_i) );););
 K ) 
 
+-- the following needs to be rewritten.  The resulting filtered complex will be off by degrees. --
 filteredComplex ChainComplex := C -> (
      complete C;
      filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i+1))))  
@@ -532,6 +592,7 @@ Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,C) -> (
         (j,k) -> map(G#i.cache.components#(G#i.cache.indexComponents#j), 
 	  F#i.cache.components#(F#i.cache.indexComponents#k),
 	  if j === k then Hom(f_(j#0), C_(j#1)) 
+
 	  else 0)))))
   
 ChainComplexMap ** ChainComplex := ChainComplexMap => (f,C) -> (
@@ -561,12 +622,9 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 
 
 
+
 --------------------------------------------------------------------------------------
--- Retrieves (or lazily constructs) the inclusion map from the pth subcomplex to the top
-inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
-  if not K.cache#?inducedMaps then K.cache.inducedMaps = new MutableHashTable;
-  if not K.cache.inducedMaps#?p then K.cache.inducedMaps#p = inducedMap(K^-infinity, K^p);
-  K.cache.inducedMaps#p)
+
 
 project := (K,p) -> (
      f:= i -> map(K^p_i,K^-infinity_i,1);
@@ -588,6 +646,9 @@ see FilteredComplex := K -> (
   netList T)
 
 
+  
+FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
+  all(min(min C,min D)..max(max C,max D),i-> C_i == D_i))
 
 
 
@@ -658,6 +719,48 @@ A=QQ[a,b,c,d]
 
 D=simplicialComplex {a*d*c, a*b, a*c, b*c}
 
+-- The following produces the chain complex C<=p.
+-- i.e., this is the subchain complex of C 
+-- constings of those modules in homological degree <= p and zero in
+-- homological degree >p.  I oringinally thought truncate would be a good name for 
+-- this but this is ambigous.  
+--I tried to overload <= but computer didn't like that. --
+-- try this instead.
+
+lessThanOrEqual = method()
+lessThanOrEqual(ChainComplex,ZZ):=(C,p) -> (
+    if p>= max C then return C else (
+     K:=new ChainComplex;
+     K.ring=C.ring;
+     for i from min C +1 to max C do (
+     if i <= p then K.dd_i=C.dd_i else (
+if i-1>p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+else K.dd_i=inducedMap(C_(i-1), 0*C_i, C.dd_i) );););
+K ) 
+
+
+-- now want to produce the sub chain complex constiting of 
+-- modules in homolocial degrees greater than 
+-- or equal to n and zero in degrees less than n.
+greaterThanOrEqual = method()
+
+greaterThanOrEqual(ChainComplex,ZZ):= (C,p)->(if p<= min C then return C else (
+     K:=new ChainComplex;
+     K.ring=C.ring;
+     for i from min C+1  to max C do (
+     if i-1 >= p then K.dd_i=C.dd_i else (
+if i<p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+else K.dd_i=inducedMap(0*C_(i-1), C_i, 0*C.dd_i) );););
+K )
+
+greaterThanOrEqual(C,1)
+greaterThanOrEqual(C,0)
+greaterThanOrEqual(C,-1)
+greaterThanOrEqual(C,3)
+greaterThanOrEqual(C,2)
+
+
+
 
 C=chainComplex D
 
@@ -695,7 +798,33 @@ D=simplicialComplex {a*d*c, a*b, a*c, b*c}
 C=nonReducedChainComplex chainComplex(D)
 
 K=filteredComplex C
--- so there is now a bug in the method filteredComplex ChainComplex.
+
+inducedMap(K,1)
+
+-- the following shifts the degrees of a filtered complex.
+-- perhaps this should overload [m].  e.g. K[m] is the filtered complex
+-- with the property that K[m]_n=K_(n+m).
+-- on the other hand, perhaps this should be made part of the
+-- original constructor as an option.
+
+--filteredComplex(FilteredComplex,ZZ):=(K,m)->(new FilteredComplex from (for p from min K to max K list (p-m)=> ((K_(p)) ) ) 
+--| {symbol zero => image (0*id_(K_infinity )), symbol cache =>  new CacheTable}
+--)
+
+
+
+
+K[2]
+
+
+filteredComplex(K,2)
+
+filteredComplex(K,0) 
+
+filteredComplex(K,1)
+
+
+
 
 E=spectralSequence K
 E^1
@@ -714,6 +843,9 @@ shift(FilteredComplex,ZZ,ZZ):=(K,m,n)->(
 new FilteredComplex from (for p from min K to max K list (p-m)=> ((K_(p))[n] ) ) 
 | {symbol zero => image (0*id_(K_infinity )), symbol cache =>  new CacheTable}
 )
+
+
+ 
 
 KK=shift(K,1,1)
 K
