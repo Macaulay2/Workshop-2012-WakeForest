@@ -452,6 +452,7 @@ doc ///
 doc ///
      Key
      	  (symbol _, SpectralSequencePage, List)
+	  
      Headline
      	  The module in the i,j position on the page
      Usage
@@ -590,23 +591,7 @@ doc ///
 	       Blah
     ///
 
-  doc ///
-     Key
-     	   (symbol == , FilteredComplex, FilteredComplex)
-     Headline
-     	  Equality of filtered complexes
-     Usage
-     	  a = K == L
-     Inputs
-     	  K:FilteredComplex
-	  L:FilteredComplex
-     Outputs
-     	  a:Boolean
-     Description
-     	  Text 
-	       Blah
-    ///
-
+  
   doc ///
      Key
           (symbol _, FilteredComplex, ZZ)

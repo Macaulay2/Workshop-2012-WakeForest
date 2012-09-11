@@ -664,8 +664,8 @@ see FilteredComplex := K -> (
 
 
   
-FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
-  all(min(min C,min D)..max(max C,max D),i-> C_i == D_i))
+--FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
+--  all(min(min C,min D)..max(max C,max D),i-> C_i == D_i))
 
 
 
