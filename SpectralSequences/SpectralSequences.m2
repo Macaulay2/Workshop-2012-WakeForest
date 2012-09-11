@@ -795,6 +795,8 @@ Tor_1(I,J) == EE^2 _{1,0} -- this resturned false for some reason.  Strange...
 
 
 -------------------------------------------------------------------------------
+-- some more examples to test code. --
+-- these are more "scratch examples" than anything else. --
 ------------------------------------------------------------------------------
 --  test truncate(ChainComplex, ZZ) code. --
 
@@ -853,12 +855,39 @@ F1D= simplicialComplex {a*c, d}
 F0D = simplicialComplex {a,d}
 
 KK= filteredComplex {F2D, F1D, F0D}
+
+
+
 spots KK
-K=(filteredComplex reverse apply(drop(spots KK,1), i-> inducedMap(greaterThanOrEqual(KK_infinity,0),
-	  greaterThanOrEqual(KK_i,0))))[-min KK] 
+
+-- I think that it would be better to have a separate
+-- method which computes a chain complex map
+-- making the chain complex of a sub simplicial complex 
+-- a sub chain complex of the chain complex of an ambient simplicial complex
+-- instead of having the existing constructor compute a filtered complex
+-- assocaited to a chain of simplicial complexes.
+
+-- For example, suppose I want (and I do) to produce the same
+-- filtration, except that I want all of the chain complexes 
+-- to be zero in homological degree -1.  
+
+--Using the current constructors, the way to do this 
+-- is the following very awarked way.
+
+
+K=(filteredComplex drop(reverse apply(drop(spots KK,1), i-> 
+	  inducedMap(greaterThanOrEqual(KK_infinity,0),
+	  greaterThanOrEqual(KK_i,0))),1))[-min KK-1] 
+
+-- Perhaps a better way to get around this is to 
+-- allow one to "truncate a filtered complex".  But
+-- then this is also ambigous:  Does this mean kill
+-- certain filtration pieces, or keep the filtration pieces
+-- and kill all complexes??  In the application I want to do
+-- I want to truncate the complexes first before filtering them.
+
 KK
-
-
+K
 
 E=spectralSequence(K)
 
@@ -902,7 +931,7 @@ apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
 -- cool.
 
 -----------------------------------------------------------------
-
+-- end of "scratch examples"
 -------------------------------------------------------------------
 
 -------------------------------------------------------------------------------
@@ -913,6 +942,7 @@ apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
 
 -------------------------------------------------------------
 -- another example to try and which can be computed by hand.
+-- this is example 2 in my notes.
 --------------------------------------------------------------
 restart
 needsPackage "SpectralSequences";
@@ -932,21 +962,18 @@ F0D = simplicialComplex {a,d}
 
 KK= filteredComplex {F2D, F1D, F0D}
 
-K=(filteredComplex reverse apply(drop(spots KK,1), i-> inducedMap(greaterThanOrEqual(KK_infinity,0),
-	  greaterThanOrEqual(KK_i,0))))[-min KK] 
+-- again we are in the same very awkward situation as before.
+K=(filteredComplex drop(reverse apply(drop(spots KK,1), i-> 
+	  inducedMap(greaterThanOrEqual(KK_infinity,0),
+	  greaterThanOrEqual(KK_i,0))),1))[-min KK-1] 
 
 
 E=spectralSequence(K)
 
-E0=E_0
-
-E1=E_1
-
-E2=E_2
-
-
 
 E0Modules = computeErModules(K,0)
+
+support E_0
 
 new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
 
@@ -954,27 +981,32 @@ new HashTable from apply(keys (support E^0), i-> i=> prune (support E^0)#i)
 
 
 E0Maps=computeErMaps(K,0)
+
+E^0 .dd
+
 new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
 prune ker E^0 .dd#{2,-1}
+
+prune ker E^0 .dd#{2,0}
+
 
 new HashTable from apply(keys E^0 .dd, i-> i=> prune (E^0 .dd )#i)
 
 
-
+support E^1
 E1Modules=computeErModules(K,1)
 new HashTable from apply(keys E1Modules, i-> i=> prune E1Modules#i)
 new HashTable from apply(keys (support E^1), i-> i=> prune (support E^1)#i)
 
+E^1 .dd
 E1Maps=computeErMaps(K,1)
 new HashTable from apply(keys E1Maps, i-> i=> prune E1Maps#i)
 new HashTable from apply(keys E^1 .dd, i-> i=> prune (E^1 .dd )#i)
 
-
-
+support E^2
 E2Modules=computeErModules(K,2)
 new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
 new HashTable from apply(keys (support E^2), i-> i=> prune (support E^2)#i)
-
 
 prune HH K_infinity
 ---------------
@@ -982,6 +1014,7 @@ prune HH K_infinity
 -- must have a 1-diml image and 1-diml kernel.
 -------------
 
+E^2 .dd
 E2Maps=computeErMaps(K,2)
 new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
 new HashTable from apply(keys E^2 .dd, i-> i=> prune (E^2 .dd )#i)
@@ -1014,11 +1047,95 @@ apply(keys E^5 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,5))
 -- cool.
 ----------------------------------------------------------
 
+--------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------
+-- New example to try.  Everything in this example can be computed easily by hand. ---
+-- This is example 1 in my notes.-----------------------------------------------------
+--------------------------------------------------------------------------------------
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes";
+
+B=QQ[a,b,c];
+
+D=simplicialComplex({a*b*c})
+
+F3D=D;
+
+F2D=simplicialComplex({a*b,a*c,b*c})
+F1D=simplicialComplex({a*b,c})
+F0D=simplicialComplex({a,b})
+
+chainComplex F3D
+
+-- the order for the filtration is given by
+--  F3D>F2D>F1D>F0D >F(-1)D = 0
+
+KK=filteredComplex {F3D,F2D,F1D,F0D}
+
+-- in order to get the example I did by hand want to remove the
+-- contribution of the empty face from these
+-- chain complexes.
+
+-- again we are in the same very awkward situation as before.
+K=(filteredComplex drop(reverse apply(drop(spots KK,1), i-> 
+	  inducedMap(greaterThanOrEqual(KK_infinity,0),
+	  greaterThanOrEqual(KK_i,0))),1))[-min KK-1] 
+
+K
+prune HH K_3
+
+E=spectralSequence K
+E0Modules= support E^0;
 
 
------------------------------------------------
--- Let's check the spectral sequence code in an example
---
+new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
+
+E0Maps= E^0 .dd;
+new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
+
+E1Modules= support E^1;
+new HashTable from apply(keys E1Modules, i-> i=> prune E1Modules#i)
+
+E1Maps= E^1 .dd;
+new HashTable from apply(keys E1Maps, i-> i=> prune E1Maps#i)
+prune ker E1Maps#{1,0}
+prune ker E1Maps#{2,-1}
+
+prune ker E1Maps#{3,-1}
+
+E2Modules= support E^2;
+new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
+
+E2Maps=E^2 .dd;
+new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
+
+prune HH K_3
+K_3
+
+new HashTable from apply(keys support E^infinity, i->i=> prune (support E^infinity)#i) 
+
+----------------------------------------------------------------
+-- All of the above agrees with what I've calculated by hand. --
+----------------------------------------------------------------
+
+-- I think that the betti table of the modules on the rth page would
+-- be something meaningfull to output to user.
+
+prune E3Modules#{0,0}
+
+betti E3Modules#{0,0}
+betti prune E3Modules#{0,0}
+
+help betti
+
+betti prune E3Modules#{1,0}
+
+------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------
+-- Let's check the spectral sequence code in another example
+--  This is example 3 in my notes.
 --
 restart
 needsPackage "SpectralSequences";
@@ -1040,8 +1157,10 @@ KK=filteredComplex {F2D,F1D,F0D}
 -- the example I did by hand was done using non-reduced homology. --
 -- should go back and try it with reduced homology later. --
 
-K=(filteredComplex reverse apply(drop(spots KK,1), i-> inducedMap(greaterThanOrEqual(KK_infinity,0),
-	  greaterThanOrEqual(KK_i,0))))[-min KK] 
+-- again we are in the same very awkward situation as before.
+K=(filteredComplex drop(reverse apply(drop(spots KK,1), i-> 
+	  inducedMap(greaterThanOrEqual(KK_infinity,0),
+	  greaterThanOrEqual(KK_i,0))),1))[-min KK-1] 
 
 
 C=K_infinity
@@ -1093,6 +1212,9 @@ apply(keys E^5 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,5))
 -- cool.
 
 
+--------------------------------
+-- End of updated examples. --
+-------------------------------
 --------------------------------------------------------
 --------------------------------------------------------
 restart
@@ -1113,8 +1235,10 @@ simplicialComplex({})
 
 --------------------------------------------------
 --
-
+-------------------------------------
 --Nathan's first example
+-- this is example 0 in my notes.
+-------------------------------------
 restart
 needsPackage "SpectralSequences";
 needsPackage "ChainComplexExtras";
@@ -1510,87 +1634,6 @@ apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,2,E^2,E^3))
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
-
---------------------------------------------------------------------------------------
--- New example to try.  Everything in this example can be computed easily by hand. --
-------------------------------
-restart
-needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes";
-
-B=QQ[a,b,c];
-
-D=simplicialComplex({a*b*c})
-
-F3D=D;
-
-F2D=simplicialComplex({a*b,a*c,b*c})
-F1D=simplicialComplex({a*b,c})
-F0D=simplicialComplex({a,b})
-
-chainComplex F3D
-
--- the order for the filtration is given by
---  F3D>F2D>F1D>F0D >F(-1)D = 0
-
-KK=filteredComplex {F3D,F2D,F1D,F0D}
-
--- in order to get the example I did by hand want to remove the
--- contribution of the empty face from these
--- chain complexes.
-
-K=new FilteredComplex from apply(spots KK, i-> i=> nonReducedChainComplex(KK_i)) 
-
-K
-prune HH K_3
-
-E0Modules=computeErModules(K,0);
-
-new HashTable from apply(keys E0Modules, i-> i=> prune E0Modules#i)
-
-E0Maps=computeErMaps(K,0);
-new HashTable from apply(keys E0Maps, i-> i=> prune E0Maps#i)
-
-E1Modules=computeErModules(K,1);
-new HashTable from apply(keys E1Modules, i-> i=> prune E1Modules#i)
-
-E1Maps=computeErMaps(K,1);
-new HashTable from apply(keys E1Maps, i-> i=> prune E1Maps#i)
-E1Maps#{1,0}
-prune ker E1Maps#{2,-1}
-
-prune ker E1Maps#{3,-1}
-
-E2Modules=computeErModules(K,2);
-new HashTable from apply(keys E2Modules, i-> i=> prune E2Modules#i)
-
-E2Maps=computeErMaps(K,2);
-new HashTable from apply(keys E2Maps, i-> i=> prune E2Maps#i)
-
-E3Modules=computeErModules(K,3);
-new HashTable from apply(keys E3Modules, i-> i=> prune E3Modules#i)
-
-E3Maps=computeErMaps(K,3);
-new HashTable from apply(keys E3Maps, i-> i=> prune E3Maps#i)
-
-prune HH K_3
-K_3
-
-----------------------------------------------------------------
--- All of the above agrees with what I've calculated by hand. --
-----------------------------------------------------------------
-
--- I think that the betti table of the modules on the rth page would
--- be something meaningfull to output to user.
-
-prune E3Modules#{0,0}
-
-betti E3Modules#{0,0}
-betti prune E3Modules#{0,0}
-
-help betti
-
-betti prune E3Modules#{1,0}
 
 
 -----------------------------------------------------------------------------------
