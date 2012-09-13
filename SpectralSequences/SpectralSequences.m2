@@ -723,6 +723,74 @@ restart
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
+--------------------------------
+-- some scratch code --
+-- trying to compute the differential on the "homology spectral sequence page"
+-- the function/method we want is the following.  
+rpqHomologyDifferential = method()
+
+rpqHomologyDifferential(SpectralSequence,ZZ,ZZ,ZZ):= (E,p,q,r) ->(
+(inverse rpqIsomorphism(E,p-r-1,q+r) ) * (E^(r+1) .dd#{p,q}) * rpqIsomorphism(E,p,q,r)
+)
+
+-- try to test this in an example. --
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+F2D=D
+
+F1D= simplicialComplex {a*c, d}
+
+F0D = simplicialComplex {a,d}
+
+KK= filteredComplex {F2D, F1D, F0D}
+
+
+
+spots KK
+
+
+K=(filteredComplex drop(reverse apply(drop(spots KK,1), i-> 
+	  inducedMap(greaterThanOrEqual(KK_infinity,0),
+	  greaterThanOrEqual(KK_i,0))),1))[-min KK-1] 
+E=spectralSequence K
+
+E^1 .dd#{0,0}
+rpqIsomorphism(E,0,0,1)
+
+rpqHomologyDifferential = method()
+
+rpqHomologyDifferential(SpectralSequence,ZZ,ZZ,ZZ):= (E,p,q,r) ->(
+(inverse rpqIsomorphism(E,p-r-1,q+r,r) ) * ((E^(r+1)) .dd#({p,q})) * rpqIsomorphism(E,p,q,r)
+)
+
+rpqHomologyDifferential(E,0,0,1)
+
+rpqIsomorphism(E,-2,1,1)
+-- so the above shows that there is a bug in rpqIsomomorphism.  Need to be more careful
+-- to account for what should happen if the key is not in the HashTable.
+
+E^2 .dd#{0,0}
+
+
+keys E^1 .dd
+
+rpqHomologyDifferential(E,2,0,1)
+
+rpqHomologyDifferential(E,2,-1,1) 
+
+prune rpqHomologyDifferential(E,2,-1,1) == prune E^2 .dd #{2,-1}
+
+-- so maybe there is hope to this.
+
 
 -------------------------------------------------------------------------------
 -- Working Examples ----------------------------------------------
