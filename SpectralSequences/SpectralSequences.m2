@@ -59,6 +59,7 @@ export {
   "rpqHomology",
   "rpqIsomorphism",
   "lessThanOrEqual", 
+  "Shift",
   "greaterThanOrEqual"
   }
 
@@ -136,8 +137,10 @@ FilteredComplex.synonym = "filtered chain complex"
 -- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
 -- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
 
-filteredComplex = method()
-filteredComplex List := FilteredComplex => L -> (
+filteredComplex = method(Options => {
+    Shift => 0,
+    HH => false})
+filteredComplex List := FilteredComplex => opts -> L -> (
   local maps;
   local C;
   if #L === 0 
