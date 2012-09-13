@@ -17,8 +17,8 @@
 --------------------------------------------------------------------------------
 newPackage(
   "SpectralSequences",
-  Version => "0.3",
-  Date => "8 August 2012",
+  Version => "0.4",
+  Date => "13 September 2012",
   Authors => {
        {
       Name => "David Berlekamp", 
@@ -49,11 +49,17 @@ export {
   "SpectralSequence",
   "spectralSequence",
   "SpectralSequenceSheet",
-  "see", "computeErModules","computeErMaps", 
+  "see", 
+  "computeErModules",
+  "computeErMaps", 
   "spots",
   --"nonReducedChainComplex",
-   "SpectralSequencePage", "spectralSequencePage","rpqHomology","rpqIsomorphism",
-  "lessThanOrEqual", "greaterThanOrEqual"
+  "SpectralSequencePage", 
+  "spectralSequencePage",
+  "rpqHomology",
+  "rpqIsomorphism",
+  "lessThanOrEqual", 
+  "greaterThanOrEqual"
   }
 
 -- symbols used as keys
@@ -68,17 +74,9 @@ protect inducedMaps
 needsPackage "SimplicialComplexes"
 needsPackage "ChainComplexExtras"
 
-------------------------------------------------------
--- Hash table functions--
-------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Retrieves the sorted integer keys of a hash table. 
-spots =method ()
-spots HashTable := K -> sort select(keys K, i -> class i === ZZ)
 
--- selects the largest integer value in the key of a hash table
-max HashTable := K -> max spots K
---selects the least integer vaule in the key of a hash table
-min HashTable := K -> min spots K
 
 ------------------------------------------------------
 ------------------------------------------------------
@@ -104,10 +102,7 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 -- CODE
 --------------------------------------------------------------------------------
 
----
--- this is no longer needed.  truncate a chain complex can do this.
----
---------------------------------------------------------------------------------------
+--
 -- I need the following method in my examples. 
 --(Surely someting like it exists elsewhere.)
 -- Many of the examples I computed by
@@ -117,31 +112,19 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 -- 
 -----------------------------------------------------------------------------------
 nonReducedChainComplex=method()
-nonReducedChainComplex(ChainComplex):= K->(l:=apply(drop(sort spots K,1),i-> i);
-    p:= (for i from 1 to #l-1 list K.dd_i);
+nonReducedChainComplex(ChainComplex):= K->(
+  l:=apply(drop(sort spots K,1),i-> i);
+  p:= (for i from 1 to #l-1 list K.dd_i);
 chainComplex(p)
  )
 
----
--- The sections  '"Core" filtered complex code' and '"Core spectral sequence code'
--- all are based on homological indexing conventions and have been tested on 
--- Nathan's examples.
---
--------------------------------------------------------------------------------------
--- "Core" filtered complex code. --
--------------------------------------------------------------------------------------
--- We want to use homological indexing for the filtration.  
---THE CONVENTION WE WANT TO FOLLOW IS IF C IS A COMPLEX WHOSE DIFFERENTIAL HAS
--- DEGREE -1 THEN THE FILTRATION SHOULD HAVE THE SHAPE
--- F_nC > F_(n-1)C. (See section 5.4 of Weibel.) 
--- Q:  IS THIS ASSCENDING OR DESCENDING?? (I always forget the terminology.)
- 
 
+-------------------------------------------------------------------------------------
+-- filtered complexes
+-------------------------------------------------------------------------------------
 FilteredComplex = new Type of HashTable
 FilteredComplex.synonym = "filtered chain complex"
 
-
-filteredComplex = method(TypicalValue => FilteredComplex)
 
 -- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
 -- defining inclusion maps C=F_(n+1)C > F_(n-1)C > ... > F_0 C 
@@ -153,8 +136,8 @@ filteredComplex = method(TypicalValue => FilteredComplex)
 -- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
 -- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
 
-
-filteredComplex List := L -> (
+filteredComplex = method()
+filteredComplex List := FilteredComplex => L -> (
   local maps;
   local C;
   if #L === 0 
@@ -177,17 +160,24 @@ filteredComplex List := L -> (
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
 
+spots = method()
+spots ChainComplex := List => (cacheValue symbol spots)(
+  C -> sort select(keys C,i -> class i === ZZ))
+spots FilteredComplex := List => (cacheValue symbol spots)(
+  K -> sort select(keys K, class i == ZZ))
+max HashTable := K -> max spots K
+min HashTable := K -> min spots K
+
 FilteredComplex _ InfiniteNumber :=
 FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
-  if K#?p then K#p else if p < min K then K#(min K) else if p > max K then K#(max K)
-  )
-
--- since we are using "homologicial indexing" by default the relationship
--- we want to preserve is F_p C_q = F^(-p)C^(-q) for all p and q.
+  if K#?p then K#p 
+  else if p < min K then K#(min K) 
+  else if p > max K then K#(max K))
 
 FilteredComplex ^ InfiniteNumber :=
-FilteredComplex ^ ZZ := ChainComplex => (K,p) -> ( K_(-p)
-  )
+FilteredComplex ^ ZZ := ChainComplex => (K,p) -> K_(-p)
+
+chainComplex FilteredComplex := ChainComplex => K -> K_infinity
 
 
 -- the following shifts the (filtration) degrees of a filtered complex.
@@ -205,10 +195,6 @@ FilteredComplex Array := (K,A)->(
 | {symbol zero => image (0*id_(K_infinity )), symbol cache =>  new CacheTable}
 )
 
-
-chainComplex FilteredComplex := ChainComplex => K -> K_infinity
-
-
 -- Retrieves (or lazily constructs) the inclusion map from the pth subcomplex to the top
 inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
   if not K.cache#?inducedMaps then K.cache.inducedMaps = new MutableHashTable;
@@ -219,12 +205,8 @@ inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
 net FilteredComplex := K -> (
   v := between("", apply(sort spots K, p -> p | " : " | net K_p));
   if #v === 0 then "0" else stack v)
--------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------
--------------------------------------------------------------------------
--------------------------------------------------------------------------
--- "Core" spectral sequence code. --------------------------------------
-------------------------------------------------------------------------
+
+
 
 ------------------------------------------------------------------------
 -- below are the methods which compute the
@@ -294,16 +276,10 @@ computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
 --------------------------------------------------------------------------------
 -- spectral sequence pages
 --------------------------------------------------------------------------------
--- Following Hatcher's terminology and the terminology I first learned,
--- I prefer to use spectral sequence page rather than spectral sequence sheet.
--------------------------------------------------------------------------------
--- I also wanted to add certain keys to a spectral sequence page / sheet
--- might want to make this a hash table instead of a mutable hash table.
 SpectralSequencePage = new Type of MutableHashTable
 SpectralSequencePage.synonym = "spectral sequence page"
 SpectralSequencePage.GlobalAssignHook = globalAssignFunction
 SpectralSequencePage.GlobalReleaseHook = globalReleaseFunction
-
 
 spectralSequencePage = method ()
 spectralSequencePage(FilteredComplex, ZZ):= (K,r) ->( 
@@ -337,12 +313,8 @@ support SpectralSequencePage := E->(
 
 
 
---------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------
-
-
 --------------------------------------------------------------------------------
--- spectral sequences ----------------------------------------------------------
+-- spectral sequences 
 --------------------------------------------------------------------------------
 SpectralSequence = new Type of MutableHashTable
 SpectralSequence.synonym = "spectral sequence"
@@ -397,19 +369,7 @@ rpqIsomorphism = method()
 rpqIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) :=(E,p,q,r) -> (
 inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filteredComplex _infinity _(p+q)))
   ) 
--------------------------------------------------------------------
--------------------------------------------------------------------
--------------------------------------------------------------------------------------
--- End of tested code ---
--------------------------------------------------------------------------------------
 
-
-----------------------------------------------------------------------------------
--- begining of partially tested code. ---------
----------------------------------------------------------------------------------
-
-
---partially tested filtered complex code.--
 --------------------------------------------------------------------------------
 -- constructing filtered complexes ---------------------------------------------
 --------------------------------------------------------------------------------
@@ -533,16 +493,8 @@ filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
 
 chainComplex SpectralSequence := ChainComplex => E -> chainComplex filteredComplex E
 
------------------------------------------------------------------------------------
------------------------------------------------------------------------------------
--- end of partially tested code. --------------------------------------------------
------------------------------------------------------------------------------------
-
 ------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------
--- ChainComplexExtraExtras  --------------------------------------------------------
-
+-- ChainComplexExtraExtras 
 --------------------------------------------------------------------------------------
 
   
@@ -628,19 +580,6 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 	  if j === k then C_(j#0) ** f_(j#1) 
 	  else 0)))))
 
-
-
-
-
---------------------------------------------
--- other untested functions-----------------
---------------------------------------------
-
-
-
-
-
---------------------------------------------------------------------------------------
 
 
 --project := (K,p) -> (
