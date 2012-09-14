@@ -44,7 +44,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 
 export{"modelRing","abelianTautologicalRing","polishchukD","polishchukDelta","fourierTransform","AbelianVarietyType","IndexedVariableName","moonenDiamond"}
-
+export{"monomialToList","listToMonomial"}
 
 if version#"VERSION" < "1.4" then error "This package was written for Macaulay2 Version 1.4 or higher.";
 
@@ -83,9 +83,9 @@ modelRing ZZ := opts -> g -> (
 
 TEST ///
 debug AbelianTautologicalRings
-assert(modelRing(5) === QQ[x_1,x_2,x_3,x_4])
-assert(modelRing(5,IndexedVariableName=>"y") === QQ[y_1,y_2,y_3,y_4])
-assert(modelRing(5,AbelianVarietyType=>"Prym") === QQ[x_1,x_3])
+assert(describe(modelRing(5)) === describe(QQ[x_1,x_2,x_3,x_4, Degrees=>{{1,0},{2,1},{3,2},{4,3}}]))
+assert(describe(modelRing(5,IndexedVariableName=>"y")) === describe(QQ[y_1,y_2,y_3,y_4,Degrees=>{{1,0},{2,1},{3,2},{4,3}}]))
+assert(describe(modelRing(5,AbelianVarietyType=>"Prym")) === describe(QQ[x_1,x_3,Degrees=>{{1,0},{3,2}}]))
 ///
 
 abelianTautologicalRing=method(TypicalValue=>Ring, Options=>{AbelianVarietyType=>"Jacobian",IndexedVariableName=>"x"})
@@ -120,6 +120,12 @@ abelianTautologicalRing ZZ := opts -> g -> (
      return R	  
      )
 
+TEST ///
+debug AbelianTautologicalRings
+assert(describe(abelianTautologicalRing(3)) === describe(QQ[x_1,x_2,Degrees=>{{1,0},{2,1}}]/ideal(x_1*x_2,x_1^4,x_1^3*x_2,x_1^2*x_2,x_1*x_2^2,x_2^2)))
+assert(describe(abelianTautologicalRing(5, AbelianVarietyType=>"Prym", IndexedVariableName=>"z")) === describe(QQ[z_1,z_3,Degrees=>{{1,0},{3,2}}]/ideal(z_1^2*z_3,z_1^6,z_1^5*z_3,z_1^4*z_3,z_1^3*z_3,z_1^2*z_3^2,z_1*z_3^2,z_3^2)))
+///
+
 moonenDiamond = S -> (
      if not S#?"Dim" then error "The ring is missing the Dim attribute.";
      L:=apply(S#"Dim"+1, j->apply(j+1, i->hilbertFunction({i+S#"Dim"-j,S#"Dim"-j}, S)));
@@ -149,6 +155,15 @@ polishchukD RingElement := (f) -> (
      return ans     
      )  
 
+TEST ///
+debug AbelianTautologicalRings
+R=abelianTautologicalRing(7)
+assert(polishchukD(x_1^2*x_3+10*x_1*x_4) == -4*x_1*x_3-20*x_4)
+S=abelianTautologicalRing(7,AbelianVarietyType=>"Prym",IndexedVariableName=>"z")
+assert(polishchukD(z_1*z_3+5*z_1*z_5)==-10*z_5-6*z_3)
+///
+
+
 polishchukD (RingElement,ZZ) := (f,n) -> (       
      if n < 0 then error "The power of Polishchuk D operator must be a non-negative integer";
      if n==0 then return f;
@@ -156,6 +171,15 @@ polishchukD (RingElement,ZZ) := (f,n) -> (
      for i from 1 to n do F = polishchukD(F);     
      return F
      )
+
+TEST ///
+debug AbelianTautologicalRings
+R=abelianTautologicalRing(12)
+assert(polishchukD(x_1^2*x_3+10*x_1*x_4,2) == 112*x_3)
+S=abelianTautologicalRing(10,AbelianVarietyType=>"Prym",IndexedVariableName=>"z")
+assert(polishchukD(z_1*z_3^2+5*z_1*z_5,2)==-480*z_5)
+///
+
 
 --polishchukDelta operator for Jacobians can be reused for Pryms
 --see [A11, p.32] for the defition of polishchukDelta in the Prym case 
@@ -167,6 +191,15 @@ polishchukDelta RingElement := (f) -> (
      return listToPolynomial(L, ring f)     
      )
 
+TEST ///
+debug AbelianTautologicalRings
+R=abelianTautologicalRing(9)
+assert(polishchukDelta(x_2*x_3+10*x_3*x_4)==10*x_4)
+S=abelianTautologicalRing(10,AbelianVarietyType=>"Prym",IndexedVariableName=>"z")
+assert(polishchukDelta(z_1*z_3^2+5*z_3*z_5)==6*z_1*z_5)
+///
+
+
 polishchukDelta (RingElement,ZZ) := (f,n) -> (       
      if n < 0 then error "The power of Polishchuk Delta operator must be a non-negative integer";
      if n==0 then return f;
@@ -174,8 +207,18 @@ polishchukDelta (RingElement,ZZ) := (f,n) -> (
      for i from 1 to n do F = polishchukDelta(F);     
      return F
      )
- 
-fourierTransform = f -> (
+
+TEST ///
+debug AbelianTautologicalRings
+R=abelianTautologicalRing(12)
+assert(polishchukDelta(x_2^3,2)==180*x_4)
+S=abelianTautologicalRing(13,AbelianVarietyType=>"Prym",IndexedVariableName=>"z")
+assert(polishchukDelta(z_3^3,2)==180*z_7)
+///
+
+
+fourierTransform = method(TypicalValue=>RingElement)  
+fourierTransform RingElement := f -> (      
      S:=ring f;
      if not S#?"AbelianVarietyType" then error "The ring of f is missing the AbelianVarietyType attribute";
 
@@ -186,6 +229,16 @@ fourierTransform = f -> (
 	  );
      return ans
      ) 
+
+TEST ///
+debug AbelianTautologicalRings
+R=abelianTautologicalRing(10)
+assert(fourierTransform(x_2^3+x_3*x_4-x_5^2)==-(7/3)*x_1*x_2*x_5+x_1*x_2^3+9*x_1^2*x_2*x_3+15*x_1^3*x_4)
+S=abelianTautologicalRing(12,AbelianVarietyType=>"Prym",IndexedVariableName=>"z")
+assert(fourierTransform(z_3^3)==z_3^3+120*z_1*z_3*z_5+3360*z_1^2*z_7)
+///
+
+
 ----------------------------------------------------------------------------------
 -- Private functions
 ----------------------------------------------------------------------------------
