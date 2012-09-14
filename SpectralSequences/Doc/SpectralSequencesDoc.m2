@@ -525,13 +525,14 @@ doc ///
   
   doc ///
      Key
-  	  (spots, HashTable)
+  	  (spots, FilteredComplex)
+	  (spots, ChainComplex)
      Headline
      	  The sorted integer keys of a hash table
      Usage
      	  L = spots H
      Inputs
-     	  H: HashTable
+     	  H: FilteredComplex
      Outputs
      	  L:List
      Description

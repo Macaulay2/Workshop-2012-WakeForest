@@ -60,7 +60,7 @@ export {
   "rpqIsomorphism",
   "lessThanOrEqual", 
   "Shift",
-  "greaterThanOrEqual"
+  "greaterThanOrEqual", "ReducedHomology"
   }
 
 -- symbols used as keys
@@ -139,7 +139,7 @@ FilteredComplex.synonym = "filtered chain complex"
 
 filteredComplex = method(Options => {
     Shift => 0,
-    HH => false})
+    ReducedHomology => true})
 filteredComplex List := FilteredComplex => opts -> L -> (
   local maps;
   local C;
@@ -158,8 +158,8 @@ filteredComplex List := FilteredComplex => opts -> L -> (
     if any(#maps, p-> target maps#p != C) then (
       error "expected all map to have the same target"));     
   Z := image map(C, C, i -> 0*id_(C#i)); -- make zero subcomplex as a subcomplex of ambient complex 
- P := {(#maps) => C} | apply (#maps,  p -> #maps - (p+1) => image maps#p);
-  if (last P)#1 != Z then P = P | {(-1) => Z};
+ P := {(#maps-opts.Shift) => C} | apply (#maps,  p -> #maps - (p+1) -opts.Shift => image maps#p);
+  if (last P)#1 != Z then P = P | {(-1-opts.Shift) => Z};
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
 
@@ -167,7 +167,7 @@ spots = method()
 spots ChainComplex := List => (cacheValue symbol spots)(
   C -> sort select(keys C,i -> class i === ZZ))
 spots FilteredComplex := List => (cacheValue symbol spots)(
-  K -> sort select(keys K, class i == ZZ))
+  K -> sort select(keys K, i -> class i === ZZ))
 max HashTable := K -> max spots K
 min HashTable := K -> min spots K
 
@@ -183,20 +183,6 @@ FilteredComplex ^ ZZ := ChainComplex => (K,p) -> K_(-p)
 chainComplex FilteredComplex := ChainComplex => K -> K_infinity
 
 
--- the following shifts the (filtration) degrees of a filtered complex.
--- At the moment it overloads [m].  e.g. K[m] is the filtered complex
--- with the property that K[m]_n=K_(n+m).
--- on the other hand, perhaps this should be made part of the
--- original constructor as an option.
--- or it could be a contructor on its on of the form
---filteredComplex(FilteredComplex,ZZ):=(K,m)->(new FilteredComplex from (for p from min K to max K list (p-m)=> ((K_(p)) ) ) 
---| {symbol zero => image (0*id_(K_infinity )), symbol cache =>  new CacheTable}
---)
-
-FilteredComplex Array := (K,A)->(
-     new FilteredComplex from (for p from min K to max K list (p-A#0)=> ((K_(p)) ) ) 
-| {symbol zero => image (0*id_(K_infinity )), symbol cache =>  new CacheTable}
-)
 
 -- Retrieves (or lazily constructs) the inclusion map from the pth subcomplex to the top
 inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
@@ -206,7 +192,7 @@ inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
 
 
 net FilteredComplex := K -> (
-  v := between("", apply(sort spots K, p -> p | " : " | net K_p));
+  v := between("", apply(spots K, p -> p | " : " | net K_p));
   if #v === 0 then "0" else stack v)
 
 
@@ -377,6 +363,7 @@ inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filter
 -- constructing filtered complexes ---------------------------------------------
 --------------------------------------------------------------------------------
 
+-- Nathan's comments.
 -- The following is basically the same as truncate, except that I've
 -- used different names because I think it is ambigous to use truncate.
 -- also we have a choice whether to use lessThanOrEqual or simply lessThan.
@@ -703,7 +690,7 @@ spots KK
 K=(filteredComplex drop(reverse apply(drop(spots KK,1), i-> 
 	  inducedMap(greaterThanOrEqual(KK_infinity,0),
 	  greaterThanOrEqual(KK_i,0))),1))[-min KK-1] 
-E=spectralSequence K
+exE=spectralSequence K
 
 E^1 .dd#{0,0}
 rpqIsomorphism(E,0,0,1)
@@ -821,6 +808,7 @@ D=simplicialComplex {a*d*c, a*b, a*c, b*c}
 
 C=chainComplex D
 
+
 greaterThanOrEqual(C,0)
 truncate(-1,C)
 greaterThanOrEqual(C,3)
@@ -831,7 +819,10 @@ C
 lessThanOrEqual(C,1)
 truncate(C,1)
 
-filteredComplex {id_C}
+K= filteredComplex {id_C}
+K[-1]
+filteredComplex ({id_C}, Shift=>-1)
+
 filteredComplex{D}
 filteredComplex{D,D}
 
@@ -942,6 +933,7 @@ apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
 
 -----------------------------------------------------------------
 -- end of "scratch examples"
+
 -------------------------------------------------------------------
 
 -------------------------------------------------------------------------------
