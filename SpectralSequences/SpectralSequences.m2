@@ -147,9 +147,16 @@ filteredComplex List := FilteredComplex => opts -> L -> (
   then error "expected at least one chain complex map or simplicial complex";
   if all(#L, p -> class L#p === SimplicialComplex) then (
     kk := coefficientRing L#0;
+    
+    if opts.ReducedHomology == true then (
     C = chainComplex L#0; -- By default the ambient simplicial complex is the first element of the list
     maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
         i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
+else (C = greaterThanOrEqual(chainComplex L#0,0); -- By default the ambient simplicial complex is the first element of the list
+    maps = apply(#L-1, p -> map(C, greaterThanOrEqual(chainComplex L#(p+1),0), 
+        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
+   
+ )
   else (
     maps = L;
     if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
@@ -371,7 +378,7 @@ inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filter
 -- on p. 141 Defn 5.6.1 then I think we want to use lessThanOrEqual.
 
 -- The following produces the chain complex C<=p.
--- i.e., this is the subchain complex of C 
+-- i.e., this is the chain complex  
 -- constings of those modules in homological degree <= p and zero in
 -- homological degree >p.  I oringinally thought truncate would be a good name for 
 -- this but this is ambigous.  
@@ -390,7 +397,7 @@ else K.dd_i=inducedMap(C_(i-1), 0*C_i, C.dd_i) );););
 K ) 
 
 
--- now want to produce the sub chain complex constiting of 
+-- now want to produce the chain complex constiting of 
 -- modules in homolocial degrees greater than 
 -- or equal to n and zero in degrees less than n.
 greaterThanOrEqual = method()
@@ -433,10 +440,11 @@ else K.dd_i=inducedMap(0*C_(i-1), C_i, 0*C.dd_i) );););
 K ) 
 
 
-filteredComplex ChainComplex := C -> (
+
+filteredComplex ChainComplex := FilteredComplex =>opts-> C -> (
      complete C;
-filteredComplex apply(drop(rsort spots C,1), i -> 
-     inducedMap(C,lessThanOrEqual(C,i)))[- min C]    -- need to account for shift
+filteredComplex (apply(drop(rsort spots C,1), i -> 
+     inducedMap(C,lessThanOrEqual(C,i))), Shift => (- min C) )    -- need to account for shift
 -- of course can use truncate instead of lessThanOrEqual.
     )  
 
@@ -686,11 +694,11 @@ KK= filteredComplex {F2D, F1D, F0D}
 
 spots KK
 
+KK
 
-K=(filteredComplex drop(reverse apply(drop(spots KK,1), i-> 
-	  inducedMap(greaterThanOrEqual(KK_infinity,0),
-	  greaterThanOrEqual(KK_i,0))),1))[-min KK-1] 
-exE=spectralSequence K
+K=filteredComplex({F2D,F1D,F0D},ReducedHomology => false)
+
+E=spectralSequence K
 
 E^1 .dd#{0,0}
 rpqIsomorphism(E,0,0,1)
@@ -806,6 +814,10 @@ A=QQ[a,b,c,d]
 
 D=simplicialComplex {a*d*c, a*b, a*c, b*c}
 
+filteredComplex {D}
+
+filteredComplex({D}, ReducedHomology => false)
+
 C=chainComplex D
 
 
@@ -820,7 +832,6 @@ lessThanOrEqual(C,1)
 truncate(C,1)
 
 K= filteredComplex {id_C}
-K[-1]
 filteredComplex ({id_C}, Shift=>-1)
 
 filteredComplex{D}
@@ -858,37 +869,7 @@ F0D = simplicialComplex {a,d}
 KK= filteredComplex {F2D, F1D, F0D}
 
 
-
-spots KK
-
--- I think that it would be better to have a separate
--- method which computes a chain complex map
--- making the chain complex of a sub simplicial complex 
--- a sub chain complex of the chain complex of an ambient simplicial complex
--- instead of having the existing constructor compute a filtered complex
--- assocaited to a chain of simplicial complexes.
-
--- For example, suppose I want (and I do) to produce the same
--- filtration, except that I want all of the chain complexes 
--- to be zero in homological degree -1.  
-
---Using the current constructors, the way to do this 
--- is the following very awarked way.
-
-
-K=(filteredComplex drop(reverse apply(drop(spots KK,1), i-> 
-	  inducedMap(greaterThanOrEqual(KK_infinity,0),
-	  greaterThanOrEqual(KK_i,0))),1))[-min KK-1] 
-
--- Perhaps a better way to get around this is to 
--- allow one to "truncate a filtered complex".  But
--- then this is also ambigous:  Does this mean kill
--- certain filtration pieces, or keep the filtration pieces
--- and kill all complexes??  In the application I want to do
--- I want to truncate the complexes first before filtering them.
-
-KK
-K
+K=filteredComplex({F2D, F1D, F0D}, ReducedHomology => false)
 
 E=spectralSequence(K)
 
@@ -964,11 +945,7 @@ F0D = simplicialComplex {a,d}
 
 KK= filteredComplex {F2D, F1D, F0D}
 
--- again we are in the same very awkward situation as before.
-K=(filteredComplex drop(reverse apply(drop(spots KK,1), i-> 
-	  inducedMap(greaterThanOrEqual(KK_infinity,0),
-	  greaterThanOrEqual(KK_i,0))),1))[-min KK-1] 
-
+K= filteredComplex({F2D, F1D, F0D},ReducedHomology => false)
 
 E=spectralSequence(K)
 
@@ -1079,10 +1056,8 @@ KK=filteredComplex {F3D,F2D,F1D,F0D}
 -- contribution of the empty face from these
 -- chain complexes.
 
--- again we are in the same very awkward situation as before.
-K=(filteredComplex drop(reverse apply(drop(spots KK,1), i-> 
-	  inducedMap(greaterThanOrEqual(KK_infinity,0),
-	  greaterThanOrEqual(KK_i,0))),1))[-min KK-1] 
+
+K=filteredComplex({F3D,F2D,F1D,F0D}, ReducedHomology => false)
 
 K
 prune HH K_3
@@ -1159,10 +1134,7 @@ KK=filteredComplex {F2D,F1D,F0D}
 -- the example I did by hand was done using non-reduced homology. --
 -- should go back and try it with reduced homology later. --
 
--- again we are in the same very awkward situation as before.
-K=(filteredComplex drop(reverse apply(drop(spots KK,1), i-> 
-	  inducedMap(greaterThanOrEqual(KK_infinity,0),
-	  greaterThanOrEqual(KK_i,0))),1))[-min KK-1] 
+K=filteredComplex({F2D,F1D,F0D}, ReducedHomology => false)
 
 
 C=K_infinity
