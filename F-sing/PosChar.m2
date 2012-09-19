@@ -1134,21 +1134,25 @@ estFPT={FinalCheck=> true, Verbose=> false, MultiThread=>false, DiagonalCheck=>t
 	   if (o.MultiThread==false ) then (ak=threshInt(ff,ee,(nn-1)/pp^ee,fSig(ff,nn-1,ee),nn) ) else(
 		if (o.Verbose==true) then print "Beginning multithreaded F-signature";
 		allowableThreads = 4;
+		numVars := rank source vars (ring ff);
+		YY := local YY;
+		myMon := monoid[  toList(YY_1..YY_numVars), MonomialOrder=>RevLex,Global=>false];
+		--print myMon;
+     		R1:=(coefficientRing ring ff) myMon;
+		rMap := map(R1, ring ff, vars myMon);
+		gg := rMap(ff);
+		
+		
 		H := (fff,aaa,eee) -> () -> fSig(fff,aaa,eee);
-		newSig1 := H(ff,nn-1,ee);
+		newSig1 := H(gg,nn-1,ee);
 		t1 := schedule newSig1;
-	--	newSig2 := H(ff,nn-2,ee);
-	--	t2 := schedule newSig2;
 	     	s2 := fSig(ff,nn,ee);	
 		if (o.Verbose==true) then print "One signature down";
---		while ((not isReady t1) or (not isReady t2)) do sleep 1;
 		while ((not isReady t1)) do sleep 1;
 		s1 := taskResult t1;
-	--	s2 := taskResult t2;
-
-		ak = {s2,xInt( (nn-1)/pp^ee, s1, (nn-2)/pp^ee,s2)};
---		cancelTask t1;
---		cancelTask t2
+     	      --  print s1; print s2;
+		ak = {s2,xInt( (nn-1)/pp^ee, s1, (nn)/pp^ee,s2)};
+		--print nn;		
 	   );
 	   if  (o.Verbose==true) then print "Computed F-signatures.";
 	   --now check to see if we cross at (nu+1)/p^e, if that's the case, then that's the fpt.
