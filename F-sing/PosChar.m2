@@ -31,6 +31,7 @@ export{"basePExp",
      "isSharplyFPurePoly",
      "FinalCheck",
      "DiagonalCheck", 
+     "MultiThread",
      "BinomialCheck", 
      "NuPEMinus1Check",
      "aPower",
@@ -55,7 +56,7 @@ export{"basePExp",
      "tauQGor", 
      "tauGor",
      "upperBoundFSig", --needs documentation / help entry
-     "isFRegularQGor", --needs documentation / help entry
+     "isRegularQGor", --needs documentation / help entry
      "guessFSig",  --needs documentation / help entry
      "findNumberBetween"  --needs documentation / help entry
 }
@@ -683,7 +684,23 @@ isBinomial = f ->
 --Computes I^{[1/p^e]}, we must be over a perfect field. and working with a polynomial ring
 --This is a slightly stripped down function due to Moty Katzman, with some changes to avoid the
 --use(Rm) which is commented out below.
+
+--the real meat of the function is ethRootInternal, this function just looks for a certain error and calls 
+--the other function depending on that error.
 ethRoot = (Im,e) -> (
+     J := Im;
+     success := false;
+     count := 0;
+     try J = ethRootInternal(J,e) then success = true else (
+	 while(count < e) do (
+	      J = ethRootInternal(J, 1);
+	      count = count + 1
+	 )
+     );
+     J
+)
+
+ethRootInternal = (Im,e) -> (
      if (isIdeal(Im) != true) then (
      	  error "ethRoot: Expted a nonnegative integer."; 
      );
@@ -696,6 +713,7 @@ ethRoot = (Im,e) -> (
      vv:=first entries vars(Rm); --the variables
      YY:=local YY; -- this is an attempt to avoid the ring overwriting
                          -- the ring in the users terminal
+			 -- MonomialOrder=>ProductOrder{n,n}
      myMon := monoid[ (vv | toList(YY_1..YY_n)), MonomialOrder=>ProductOrder{n,n},MonomialSize=>64];
      R1:=Sm myMon; -- a new ring with new variables
      vv2 := first entries vars R1;
@@ -726,7 +744,6 @@ eR = (I1,e1)-> (ethRoot(I1,e1) )
 --trace by to give phi.  phi(_) = Tr^(ek)(hk._)
 --this is based on ideas of Moty Katzman, and his star closure
 ascendIdeal = (Jk, hk, ek) -> (
-     print ".";
      Sk := ring Jk;
      pp := char Sk;
      IN := Jk;
@@ -1059,7 +1076,8 @@ guessFPT ={OutputRange=>false}>>o -> (ff, e1, maxDenom) ->(
 ---f-pure threshold estimation, at the origin
 ---e is the max depth to search in
 ---FinalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
-estFPT={FinalCheck=> true, Verbose=> false, DiagonalCheck=>true, BinomialCheck=>true, NuPEMinus1Check=>true} >> o -> (ff,ee)->(
+-- if MultiThread is set to true, it will compute the two F-signatures simultaneously
+estFPT={FinalCheck=> true, Verbose=> false, MultiThread=>false, DiagonalCheck=>true, BinomialCheck=>true, NuPEMinus1Check=>true} >> o -> (ff,ee)->(
      print "starting estFPT";
      
      maxIdeal := ideal( first entries vars( ring ff) );   --the maximal ideal we are computing the fpt at  
@@ -1110,37 +1128,59 @@ estFPT={FinalCheck=> true, Verbose=> false, DiagonalCheck=>true, BinomialCheck=>
 	   )
       );
 
-     --do the F-signature computation, and the FinalCheck
+     --do the F-signature computation
      if (foundAnswer == false) then (
-	   ak:=threshInt(ff,ee,(nn-1)/pp^ee,fSig(ff,nn-1,ee),nn); 
+	   ak := 0;
+	   if (o.MultiThread==false ) then (ak=threshInt(ff,ee,(nn-1)/pp^ee,fSig(ff,nn-1,ee),nn) ) else(
+		if (o.Verbose==true) then print "Beginning multithreaded F-signature";
+		allowableThreads = 4;
+		H := (fff,aaa,eee) -> () -> fSig(fff,aaa,eee);
+		newSig1 := H(ff,nn-1,ee);
+		t1 := schedule newSig1;
+	--	newSig2 := H(ff,nn-2,ee);
+	--	t2 := schedule newSig2;
+	     	s2 := fSig(ff,nn,ee);	
+		if (o.Verbose==true) then print "One signature down";
+--		while ((not isReady t1) or (not isReady t2)) do sleep 1;
+		while ((not isReady t1)) do sleep 1;
+		s1 := taskResult t1;
+	--	s2 := taskResult t2;
+
+		ak = {s2,xInt( (nn-1)/pp^ee, s1, (nn-2)/pp^ee,s2)};
+--		cancelTask t1;
+--		cancelTask t2
+	   );
 	   if  (o.Verbose==true) then print "Computed F-signatures.";
 	   --now check to see if we cross at (nu+1)/p^e, if that's the case, then that's the fpt.
 	   if ( (nn+1)/pp^ee == (ak#1) ) then (
 		if  (o.Verbose==true) then print "F-signature line crosses at (nu+1)/p^e."; 
 		answer = ak#1;
 		foundAnswer = true
-	   );	  
-      	   --if we run the final check, do the following
-	   if ( (foundAnswer == false) and (o.FinalCheck == true)) then ( 
-	       if  (o.Verbose==true) then print "Starting FinalCheck.";
-	       if ((isFRegularPoly(ff,(ak#1),maxIdeal)) ==false ) then ( 
-		    if  (o.Verbose==true) then print "FinalCheck successful"; 
-		    answer = (ak#1);
-		    foundAnswer = true 
-	       )
-	       else ( 
-		    if  (o.Verbose==true) then print "FinalCheck didn't find the fpt."; 
-		    answer = {(ak#1),(nn+1)/pp^ee};
-		    foundAnswer = true
-	       )
-	   );
-           --if we don't run the final check, do the following
-	   if ((foundAnswer == false) and (o.FinalCheck == false) ) then (
-	       if  (o.Verbose==true) then print "FinalCheck not run.";
-	       answer = {(ak#1),(nn+1)/pp^ee};
-      	       foundAnswer = true
 	   )
-     );
+      );	  
+      	
+      --if we run the final check, do the following
+      if ( (foundAnswer == false) and (o.FinalCheck == true)) then ( 
+	  if  (o.Verbose==true) then print "Starting FinalCheck.";
+          if ((isFRegularPoly(ff,(ak#1),maxIdeal)) ==false ) then (	
+	      if  (o.Verbose==true) then print "FinalCheck successful"; 
+	      answer = (ak#1);
+	      foundAnswer = true 
+	  )
+	  else ( 
+	      if  (o.Verbose==true) then print "FinalCheck didn't find the fpt."; 
+	      answer = {(ak#1),(nn+1)/pp^ee};
+	      foundAnswer = true
+	  )
+       );
+       
+       --if we don't run the final check, do the following
+       if ((foundAnswer == false) and (o.FinalCheck == false) ) then (
+	  if  (o.Verbose==true) then print "FinalCheck not run.";
+	  answer = {(ak#1),(nn+1)/pp^ee};
+      	  foundAnswer = true
+       );
+     
      --return the answer
      answer
 )
