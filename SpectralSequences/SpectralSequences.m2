@@ -30,7 +30,8 @@ newPackage(
       HomePage => "http://www.math.berkeley.edu/~aboocher"},
        {
       Name => "Nathan Grieve", 
-      Email => "nathangrieve@mast.queensu.ca"},             
+      Email => "nathangrieve@mast.queensu.ca",
+      HomePage => "http://www.mast.queensu.ca/~nathangrieve"},             
     {
       Name => "Gregory G. Smith", 
       Email => "ggsmith@mast.queensu.ca", 
@@ -60,7 +61,7 @@ export {
   "rpqIsomorphism",
   "lessThanOrEqual", 
   "Shift",
-  "greaterThanOrEqual", "ReducedHomology"
+  "greaterThanOrEqual", "ReducedHomology","project"
   }
 
 -- symbols used as keys
@@ -133,7 +134,7 @@ FilteredComplex.synonym = "filtered chain complex"
 -- and produces a filtered complex with integer keys the
 -- corresponing chain complex.
 -- If F_0C is not zero then by default F_(-1)C is added and is 0.
--- I THINK THIS IS THE CONVENTION WE WANT BY DEFAULT.  SEE 
+-- THIS IS THE CONVENTION WE WANT BY DEFAULT.  SEE 
 -- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
 -- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
 
@@ -212,8 +213,7 @@ net FilteredComplex := K -> (
 -- By default of the primitative homological constructor above, 
 --the maximum integer key
 -- of the filtered complex corresponds to the ambient complex.
--- This is used in the formula's below but should be made more "fool proof" in 
--- what follows.
+-- This is used in the formula's below.
 
 -- the formula's below are the homological versions of the ones in I.2.4 of Danilov's 
 -- treatment of spectral sequences in Shafarevich's Encyolpaedia of 
@@ -408,7 +408,7 @@ greaterThanOrEqual(ChainComplex,ZZ):= (C,p)->(if p<= min C then return C else (
      for i from min C+1  to max C do (
      if i-1 >= p then K.dd_i=C.dd_i else (
 if i<p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-else K.dd_i=inducedMap(0*C_(i-1), C_i, 0*C.dd_i) );););
+else K.dd_i=map(0*C_(i-1), C_i, 0*C.dd_i) );););
 K )
 
 
@@ -461,20 +461,23 @@ filteredComplex (apply(drop(rsort spots C,1), i ->
 -- the following code is doing what it is supposed to.
 
 FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
---  filteredComplex for p from min K to max K list inducedMap(K,p) ** C)
-new FilteredComplex from (for p from min K to max K list p=> (K_p ** C) ) | {symbol zero => image (0*id_(K_infinity ** C)), symbol cache =>  new CacheTable}
+  filteredComplex (reverse (for p from min K to (max K)-1 list inducedMap(K,p) ** C),Shift =>(- min K) )
+--new FilteredComplex from (for p from min K to max K list p=> (K_p ** C) ) | {symbol zero => image (0*id_(K_infinity ** C)), symbol cache =>  new CacheTable}
 )
 ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
---  filteredComplex for p from min K to max K list C ** inducedMap(K,p))
-new FilteredComplex from (for p from min K to max K list p=> (C ** K_p) ) | {symbol zero => image (0*id_(C**K_infinity)), symbol cache =>  new CacheTable}
+  filteredComplex(reverse( for p from min K to (max K)-1 list C ** inducedMap(K,p)), Shift =>(-min K) )
+--new FilteredComplex from (for p from min K to max K list p=> (C ** K_p) ) | {symbol zero => image (0*id_(C**K_infinity)), symbol cache =>  new CacheTable}
 )
 
+-- this one needs to be rewritten.
 Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
--- filteredComplex for p from min K to max K list Hom(project(K,p),C)))
+--filteredComplex for p from min K to max K list Hom(project(K,p),C)
  new FilteredComplex from (for p from min K to max K list p=> (Hom(K_p,C)  )) | {symbol zero => image (0*id_(Hom(K_infinity,C))), symbol cache =>  new CacheTable}
 )
-Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (
---  filteredComplex for p from min K to max K list Hom(C,inducedMap(K,p)))
+
+-- there is a bug in this one.
+Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) ->(
+--  filteredComplex for p from min K to max K list Hom(C,inducedMap(K,p))
  new FilteredComplex from (for p from min K to max K list p=> (Hom(C,K_p))  ) | {symbol zero => image (0*id_(Hom(C,K_infinity))), symbol cache =>  new CacheTable}
 
 )
@@ -580,10 +583,10 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 
 
 
---project := (K,p) -> (
---     f:= i -> map(K^p_i,K^-infinity_i,1);
---     map(K^p,K^-infinity,f)
---     )
+project := (K,p) -> (
+     f:= i -> map(K_p_i,K_infinity_i,1);
+     map(K_p,K_infinity,f)
+     )
 
 
 
@@ -661,72 +664,6 @@ installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
 --------------------------------
--- some scratch code --
--- trying to compute the differential on the "homology spectral sequence page"
--- the function/method we want is the following.  
-rpqHomologyDifferential = method()
-
-rpqHomologyDifferential(SpectralSequence,ZZ,ZZ,ZZ):= (E,p,q,r) ->(
-(inverse rpqIsomorphism(E,p-r-1,q+r) ) * (E^(r+1) .dd#{p,q}) * rpqIsomorphism(E,p,q,r)
-)
-
--- try to test this in an example. --
-
-restart
-needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
-
-A=QQ[a,b,c,d]
-
-D=simplicialComplex {a*d*c, a*b, a*c, b*c}
-
-F2D=D
-
-F1D= simplicialComplex {a*c, d}
-
-F0D = simplicialComplex {a,d}
-
-KK= filteredComplex {F2D, F1D, F0D}
-
-
-
-spots KK
-
-KK
-
-K=filteredComplex({F2D,F1D,F0D},ReducedHomology => false)
-
-E=spectralSequence K
-
-E^1 .dd#{0,0}
-rpqIsomorphism(E,0,0,1)
-
-rpqHomologyDifferential = method()
-
-rpqHomologyDifferential(SpectralSequence,ZZ,ZZ,ZZ):= (E,p,q,r) ->(
-(inverse rpqIsomorphism(E,p-r-1,q+r,r) ) * ((E^(r+1)) .dd#({p,q})) * rpqIsomorphism(E,p,q,r)
-)
-
-rpqHomologyDifferential(E,0,0,1)
-
-rpqIsomorphism(E,-2,1,1)
--- so the above shows that there is a bug in rpqIsomomorphism.  Need to be more careful
--- to account for what should happen if the key is not in the HashTable.
-
-E^2 .dd#{0,0}
-
-
-keys E^1 .dd
-
-rpqHomologyDifferential(E,2,0,1)
-
-rpqHomologyDifferential(E,2,-1,1) 
-
-prune rpqHomologyDifferential(E,2,-1,1) == prune E^2 .dd #{2,-1}
-
--- so maybe there is hope to this.
 
 
 -------------------------------------------------------------------------------
@@ -756,11 +693,18 @@ spots H
 filteredComplex H
 -- so the filteredComplex code is doing what it is supposed to.
 -- the filtration starts at 3 and then continues.
--- perhaps its better to remove the 0 in degree 3?
 
-
+H ** (filteredComplex H) 
 
 prune ((filteredComplex H)** F)
+
+
+prune(F** (filteredComplex H))
+
+
+
+max H
+max F
 
 E= spectralSequence ((filteredComplex H) ** F)
 
@@ -847,7 +791,6 @@ K=filteredComplex {m1}
 
 
 -----------
---- want to try to test rpqHomology and rpqIsomorphism code.
 
 
 restart
@@ -912,10 +855,11 @@ apply(keys E^1 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
 apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
 -- cool.
 
------------------------------------------------------------------
--- end of "scratch examples"
-
--------------------------------------------------------------------
+-- there seems to be a bug in Hom(ChainComplex,ChainComplex) --
+Hom(K_infinity, K_1)
+---------------------------------------------------------------
+Hom(K_1, K_infinity)
+---------------------------------------------------------------
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
@@ -1608,6 +1552,85 @@ apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(i#0,i#1,2,E^2,E^3))
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
+-- some scratch code --
+-- trying to compute the differential on the "homology spectral sequence page"
+-- the function/method we want is the following.  
+rpqHomologyDifferential = method()
+
+rpqHomologyDifferential(SpectralSequence,ZZ,ZZ,ZZ):= (E,p,q,r) ->(
+(inverse rpqIsomorphism(E,p-r-1,q+r) ) * (E^(r+1) .dd#{p,q}) * rpqIsomorphism(E,p,q,r)
+)
+
+-- try to test this in an example. --
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[a,b,c,d]
+
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+
+F2D=D
+
+F1D= simplicialComplex {a*c, d}
+
+F0D = simplicialComplex {a,d}
+
+KK= filteredComplex {F2D, F1D, F0D}
+
+max KK
+
+
+spots KK
+
+KK
+
+K=filteredComplex({F2D,F1D,F0D},ReducedHomology => false)
+
+C=chainComplex F2D
+prune (KK**C)
+
+prune (C**KK)
+max KK
+max C
+max K
+
+Hom(C,K)
+-- so there is a bug in Hom(C,K)
+prune Hom(K,C)
+
+E=spectralSequence K
+
+E^1 .dd#{0,0}
+rpqIsomorphism(E,0,0,1)
+
+rpqHomologyDifferential = method()
+
+rpqHomologyDifferential(SpectralSequence,ZZ,ZZ,ZZ):= (E,p,q,r) ->(
+(inverse rpqIsomorphism(E,p-r-1,q+r,r) ) * ((E^(r+1)) .dd#({p,q})) * rpqIsomorphism(E,p,q,r)
+)
+
+rpqHomologyDifferential(E,0,0,1)
+
+rpqIsomorphism(E,-2,1,1)
+-- so the above shows that there is a bug in rpqIsomomorphism.  Need to be more careful
+-- to account for what should happen if the key is not in the HashTable.
+
+E^2 .dd#{0,0}
+
+
+keys E^1 .dd
+
+rpqHomologyDifferential(E,2,0,1)
+
+rpqHomologyDifferential(E,2,-1,1) 
+
+prune rpqHomologyDifferential(E,2,-1,1) == prune E^2 .dd #{2,-1}
+
+-- so maybe there is hope to this.
 
 
 -----------------------------------------------------------------------------------
