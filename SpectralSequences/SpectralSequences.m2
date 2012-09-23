@@ -59,9 +59,9 @@ export {
   "spectralSequencePage",
   "rpqHomology",
   "rpqIsomorphism",
-  "lessThanOrEqual", 
+  
   "Shift",
-  "greaterThanOrEqual", "ReducedHomology","project"
+  "ReducedHomology","project"
   }
 
 -- symbols used as keys
@@ -77,7 +77,6 @@ needsPackage "SimplicialComplexes"
 needsPackage "ChainComplexExtras"
 
 --------------------------------------------------------------------------------
--- Retrieves the sorted integer keys of a hash table. 
 
 
 ------------------------------------------------------
@@ -103,23 +102,6 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 --------------------------------------------------------------------------------
 -- CODE
 --------------------------------------------------------------------------------
-
---
--- I need the following method in my examples. 
---(Surely someting like it exists elsewhere.)
--- Many of the examples I computed by
--- hand arose from "simplicial complexes without the empty face."
--- the out of the box chain complex code for simplicial complexes produces chain complexes
--- which include the empty face.
--- 
------------------------------------------------------------------------------------
-nonReducedChainComplex=method()
-nonReducedChainComplex(ChainComplex):= K->(
-  l:=apply(drop(sort spots K,1),i-> i);
-  p:= (for i from 1 to #l-1 list K.dd_i);
-chainComplex(p)
- )
-
 
 -------------------------------------------------------------------------------------
 -- filtered complexes
@@ -153,8 +135,8 @@ filteredComplex List := FilteredComplex => opts -> L -> (
     C = chainComplex L#0; -- By default the ambient simplicial complex is the first element of the list
     maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
         i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
-else (C = greaterThanOrEqual(chainComplex L#0,0); -- By default the ambient simplicial complex is the first element of the list
-    maps = apply(#L-1, p -> map(C, greaterThanOrEqual(chainComplex L#(p+1),0), 
+else (C = truncate(chainComplex L#0,1); -- By default the ambient simplicial complex is the first element of the list
+    maps = apply(#L-1, p -> map(C, truncate(chainComplex L#(p+1),1), 
         i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
    
  )
@@ -370,103 +352,54 @@ inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filter
 -- constructing filtered complexes ---------------------------------------------
 --------------------------------------------------------------------------------
 
--- Nathan's comments.
--- The following is basically the same as truncate, except that I've
--- used different names because I think it is ambigous to use truncate.
--- also we have a choice whether to use lessThanOrEqual or simply lessThan.
--- to construct the filtraions C**C properly using Weibel's conventions
--- on p. 141 Defn 5.6.1 then I think we want to use lessThanOrEqual.
 
--- The following produces the chain complex C<=p.
--- i.e., this is the chain complex  
--- constings of those modules in homological degree <= p and zero in
--- homological degree >p.  I oringinally thought truncate would be a good name for 
--- this but this is ambigous.  
---I tried to overload <= but computer didn't like that. --
--- try this instead.
 
-lessThanOrEqual = method()
-lessThanOrEqual(ChainComplex,ZZ):=(C,p) -> (
-    if p>= max C then return C else (
-     K:=new ChainComplex;
+-- the following method truncates a chain complex 
+truncate (ChainComplex,ZZ):= (C,n) ->( 
+     if n==0 then return C else (
+	  K:=new ChainComplex;
      K.ring=C.ring;
+	  if n< 0 then  (       
      for i from min C +1 to max C do (
-     if i <= p then K.dd_i=C.dd_i else (
-if i-1>p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-else K.dd_i=inducedMap(C_(i-1), 0*C_i, C.dd_i) );););
-K ) 
-
-
--- now want to produce the chain complex constiting of 
--- modules in homolocial degrees greater than 
--- or equal to n and zero in degrees less than n.
-greaterThanOrEqual = method()
-
-greaterThanOrEqual(ChainComplex,ZZ):= (C,p)->(if p<= min C then return C else (
-     K:=new ChainComplex;
-     K.ring=C.ring;
+     if i <= max C + n then K.dd_i=C.dd_i else (
+if i-1>max C + n then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+else K.dd_i=inducedMap(C_(i-1), 0*C_i, C.dd_i) ););
+)	    
+	   else ( 
      for i from min C+1  to max C do (
-     if i-1 >= p then K.dd_i=C.dd_i else (
-if i<p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-else K.dd_i=map(0*C_(i-1), C_i, 0*C.dd_i) );););
-K )
+     if i-1 >= n+min C then K.dd_i=C.dd_i else (
+if i< n+min C then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+else K.dd_i=map(0*C_(i-1), C_i, 0*C.dd_i) ););
+  );); 
+K)
 
 
+-- the following method makes filtered complex by successively truncating from the end. --
 
--- the following method truncates a chain complex -- setting all
--- modules in degrees >= p to zero.
-truncate (ChainComplex, ZZ) := ChainComplex => (C,p) -> (
-    if p> max C then return C else (
-     K:=new ChainComplex;
-     K.ring=C.ring;
-     for i from min C +1 to max C do (
-     if i < p then K.dd_i=C.dd_i else (
-if i-1>=p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-else K.dd_i=inducedMap(C_(i-1), 0*C_i, C.dd_i) );););
-K ) 
+filteredComplex ChainComplex := FilteredComplex =>opts-> C->( complete C; 
+     n:= max select(spots C,i-> C_i!=0);
+     m:= min select(spots C,i-> C_i !=0);
+    L:= for i from 1 to length C list inducedMap(C,truncate(C,-i-(max C -n)));
+    filteredComplex(L,Shift => -m)
+     )
 
 
--- the following method truncates a chain complex -- setting all 
--- modules in degrees <=p to zero.
-
-truncate (ZZ,ChainComplex) := ChainComplex => (p,C) -> (
-    if p< min C then return C else (
-     K:=new ChainComplex;
-     K.ring=C.ring;
-     for i from min C+1  to max C do (
-     if i-1 > p then K.dd_i=C.dd_i else (
-if i<=p then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-else K.dd_i=inducedMap(0*C_(i-1), C_i, 0*C.dd_i) );););
-K ) 
-
-
-
-filteredComplex ChainComplex := FilteredComplex =>opts-> C -> (
-     complete C;
-filteredComplex (apply(drop(rsort spots C,1), i -> 
-     inducedMap(C,lessThanOrEqual(C,i))), Shift => (- min C) )    -- need to account for shift
--- of course can use truncate instead of lessThanOrEqual.
-    )  
-
--- the following is be rewritten above.
--- it will be off by a dimension shift if we are using
--- the primative constructor.
---filteredComplex ChainComplex := C -> (
+--filteredComplex ChainComplex := FilteredComplex =>opts-> C -> (
 --     complete C;
---     filteredComplex apply(drop(rsort spots C,1), i -> inducedMap(C,truncate(C,i+1))))  
+--filteredComplex (apply(drop(rsort spots C,1), i -> 
+--     inducedMap(C,truncate(C,-i))), Shift => (- min C) )    -- need to account for shift
+-- of course can use truncate instead of lessThanOrEqual.
+--    )  
+
 ---------------------------------------------------------------
 ----------------------------------------------------------------
--- the following should be rewritten to go through the primative constructor.
--- will have to either shift or add options if we re-write.
--- the following code is doing what it is supposed to.
+-- the following has been rewritten to go through the primative constructor.
 
 FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
   filteredComplex (reverse (for p from min K to (max K)-1 list inducedMap(K,p) ** C),Shift =>(- min K) )
---new FilteredComplex from (for p from min K to max K list p=> (K_p ** C) ) | {symbol zero => image (0*id_(K_infinity ** C)), symbol cache =>  new CacheTable}
 )
 ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
   filteredComplex(reverse( for p from min K to (max K)-1 list C ** inducedMap(K,p)), Shift =>(-min K) )
---new FilteredComplex from (for p from min K to max K list p=> (C ** K_p) ) | {symbol zero => image (0*id_(C**K_infinity)), symbol cache =>  new CacheTable}
 )
 
 -- this one needs to be rewritten.
@@ -665,6 +598,39 @@ check "SpectralSequences";
 viewHelp SpectralSequences
 --------------------------------
 
+---
+-- trying to test truncate and filteredComplex ChainComplex Code. --
+---
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A=QQ[x,y,z,w]
+
+C=koszul vars A
+
+filteredComplex C
+filteredComplex (C[-1])
+filteredComplex (C[1])
+
+
+
+
+D= res ideal vars A
+filteredComplex D
+filteredComplex(D[1])
+filteredComplex(D[-1])
+
+filteredComplex(truncate(C,1))
+
+filteredComplex(truncate(D,2))
+
+
+E = filteredComplex ({simplicialComplex ({x*y*z})},ReducedHomology => false)
+  
+-- All of the above seem to work properly. --
 
 -------------------------------------------------------------------------------
 -- Working Examples ----------------------------------------------
@@ -691,8 +657,9 @@ H
 length H
 spots H
 filteredComplex H
--- so the filteredComplex code is doing what it is supposed to.
--- the filtration starts at 3 and then continues.
+-- so filteredComplex needs to be rewritten. --
+
+
 
 H ** (filteredComplex H) 
 
@@ -766,13 +733,7 @@ C=chainComplex D
 
 
 greaterThanOrEqual(C,0)
-truncate(-1,C)
-greaterThanOrEqual(C,3)
-greaterThanOrEqual(C,2)
-greaterThanOrEqual(C,1)
-lessThanOrEqual(C,2)
-C
-lessThanOrEqual(C,1)
+truncate(C,-1)
 truncate(C,1)
 
 K= filteredComplex {id_C}
@@ -782,12 +743,6 @@ filteredComplex{D}
 filteredComplex{D,D}
 
 
-F1C=lessThanOrEqual(C,0)
-
-m1=inducedMap(C,F1C)
-
-
-K=filteredComplex {m1}
 
 
 -----------
@@ -854,9 +809,11 @@ apply(keys E^1 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
 
 apply(keys E^2 .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
 -- cool.
-
+------------------------------------------------------
+---------------------------------------------------------------
 -- there seems to be a bug in Hom(ChainComplex,ChainComplex) --
 Hom(K_infinity, K_1)
+--------------------------------------------------------------
 ---------------------------------------------------------------
 Hom(K_1, K_infinity)
 ---------------------------------------------------------------
