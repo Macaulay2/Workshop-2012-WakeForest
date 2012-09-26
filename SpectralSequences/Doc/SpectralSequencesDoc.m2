@@ -5,22 +5,28 @@ undocumented { (describe,SpectralSequence),
 	       (net, FilteredComplex),
 	       (net, SpectralSequence)}
 
+ document {
+     Key => {SpectralSequences},
+     Headline => "A package for working with spectral sequences",
+    PARA { "SpectralSequences is a package to work with spectral sequences
+	 associated to a filterd complex." },
+     }
 
-doc ///
-     Key 
-     	  SpectralSequences
-     Headline
-     	  A package for working with spectral sequences
-     Description
-     	  Text 
-	      "SpectralSequences" is a package to work with spectral sequences
-	       associated to a filtered complex. 
+--doc ///
+--     Key 
+--     	  SpectralSequences
+--     Headline
+--     	  A package for working with spectral sequences
+--     Description
+--     	  Text 
+--	      "SpectralSequences" is a package to work with spectral sequences
+--	       associated to a filtered complex. 
 	       
-	       Here are some examples illustrating the use of this package.
+--	       Here are some examples illustrating the use of this package.
 	      
      
       	       
-    ///
+  ---  ///
 
 -------------------------
 -----Types
@@ -35,9 +41,9 @@ doc ///
      	  Text
      	      A filtered complex is a nested family of chain complexes K = $\dots \supseteq $ K_n $\supseteq$ K_{n-1} $ \supseteq \dots$ such that the following holds:
 	      
-	      1.  There exists M such that K_N=K_M for all N \geq M.
+	      1.  There exists an integer max such that K_n=K_{max} for all n \geq max.
 	      
-	      2.  There exists an m such that K_n =0 for all n \leq m.
+	      2.  There exists an integer min such that K_n =0 for all n \leq min.
     ///
     
 doc ///
@@ -61,16 +67,16 @@ doc ///
 	       
      ///
      
-doc ///
-     Key
-     	  SpectralSequenceSheet
-     Headline
-     	  The type of all spectral sequence sheets
-     Description
-     	  Text
-	       A spectral sequence sheet (or page) is the 
+--doc ///
+--     Key
+--     	  SpectralSequenceSheet
+--     Headline
+--     	  The type of all spectral sequence sheets
+--     Description
+--     	  Text
+	     --  A spectral sequence sheet (or page) is the 
 	       
-     ///	       
+  --   ///	       
      
 doc ///
      Key
@@ -207,7 +213,7 @@ doc ///
      ///
  
  
-     
+    
 -------------------------
 -----Methods
 -------------------------
@@ -222,10 +228,31 @@ doc ///
      	  C:ChainComplex
 	  p:ZZ
      Outputs
-     	  K:ChainComplex
+     	  K:ChainComplex  
      Description
      	  Text 
-	   blah..
+	   If p=0 then the method returns the complex C, that is K=C.  
+	   
+	   If p<0 then the method returns the 
+	   complex K given by K_i=C_i, K.dd_i = C.dd_i for i $\leq$ max C+p 
+	   and K_i =0, K.dd_i=0 for i > max C +p.
+	   
+	   In otherwords, if p<0, the method kills all modules and maps in homological degree 
+	   greater than p+max C, and leaves all other modules and maps unchanged.
+	   
+	   If p>0 then the method returns the complex K given by K_i=0
+	    for i < min C + p,  K_i=C_i for i $\geq$ min C +p, K.dd_i =0 
+	    for i $\leq$ min C +p, and K.dd_i = C.dd_i, for 
+	    i>min C+p.
+	    
+	    In otherwords, if p>0 the method kills all modules in homological degree
+	    less than p+min C, kills all maps in homological degree less than or equal to 
+	    p+min C, and leaves all other modules and maps unchanged. 
+	    
+	  
+	   
+	   
+	   
   ///	 
 
 
@@ -257,24 +284,39 @@ doc ///
      	  K = filteredComplex(L)
      Inputs
      	  L:List
+	  ReducedHomology => Boolean 
+	  Shift=> ZZ  
      Outputs
      	  K:FilteredComplex
      Description
      	  Text 
-	 	  If the input is a list of chain complex maps, then it should be of the form
+	       If the input is a list of chain complex maps, then it should be of the form
 	       {m_{n-1},m_{n-2},$\dots$, m_0} where m_i:C_i $\rightarrow$ C is a chain complex map.
 	       (All maps are required to have the same ambient chain complex.)
 	       The output is the resulting filtered complex
 	       
-	        K=C=K_n $\supseteq $ image m_{n-1} $\supseteq \dots \supseteq$ image m_0 $\supseteq$ 0.
+	        C=K_n $\supseteq $ image m_{n-1} $\supseteq \dots \supseteq$ image m_0 $\supseteq$ 0.
+		
+		If the Shift option is used, for example Shift =>p, then the output is the
+		resulting filtered complex  
+		
+		C=K_{n-p} $\supseteq $ image m_{n-1-p} $\supseteq \dots \supseteq$ image m_{0-p} $\supseteq$ 0.
 
      	       If the list is a list of simplicial complexes then it should be of the form
 	       {D_n, $\dots$, D_0} where D_i is a subsimplicial complex of D_{i+1} for i=0,$\dots$, n-1.
 	       The out put is the filtered complex
 	       
-	       K= K_n $\supseteq$ K_{n-1} $\supseteq \dots \supseteq$ K_0 $\supseteq$ 0,
+	        K_n $\supseteq$ K_{n-1} $\supseteq \dots \supseteq$ K_0 $\supseteq$ 0,
 	       where K_i is the chain complex assocated to the simplicial complex D_i,
 	       considered as a subcomplex of K_n.
+	       
+	       By default, when the list is a list of simplicial complexes, all of the
+	       chain complexes appearing in the resulting filtered complex are the reduced 
+	       chain complexes associated to the simplicial complexes.  
+	       
+	       If the option ReducedHomology
+	       is set to false, then the resulting filtered complex will consist of the
+	       non-reduced chain complexes associated to the filtered complexes.
 	       
 	       
   ///	 
@@ -479,16 +521,17 @@ doc ///
   	  (spots, FilteredComplex)
 	  (spots, ChainComplex)
      Headline
-     	  The sorted integer keys of a hash table
+     	  The sorted filtration/homological degrees of a filtered complex / chain complex 
      Usage
      	  L = spots H
      Inputs
      	  H: FilteredComplex
+	  
      Outputs
      	  L:List
      Description
      	  Text 
-	       Returns the sorted integer keys of a hash table
+	       Returns the sorted filtration/homological degrees of a filtered complex / chain complex 
     ///
   
     
@@ -584,5 +627,4 @@ doc ///
 
 
      end
-     
      

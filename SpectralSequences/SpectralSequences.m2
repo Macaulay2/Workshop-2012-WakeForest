@@ -353,6 +353,11 @@ inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filter
 --------------------------------------------------------------------------------
 
 
+-- Can we add options??  e.g. ker and image to return
+-- the truncated complex with ker d_p in degree 0 and zero in degrees > p 
+-- or the truncated complex with image d_{p+1} in degree p and zero in degrees <p ??
+
+
 
 -- the following method truncates a chain complex 
 truncate (ChainComplex,ZZ):= (C,n) ->( 
