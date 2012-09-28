@@ -10,14 +10,12 @@ debug needsPackage("Tensors")
 R=QQ[a..z]
 T=genericTensor(R,{3,2,2})
 T_(0,1,1)--entry
-T_{0,,}--slice
-scan(a..z,makeSymbol)--make symbols
-tensor T_(0,i,j)--symbolic slice
-matrix({0,1},T)--flattenings
-matrix({0,2},T)
-matrix({1,2},T)
+T_{,0,}--slice
+marginalize(T,{0})--marginals
+matrix({1,2},T)--flattenings
 U=R**randomTensor(ZZ,{2,2},Height=>30)
 T**U
+scan(a..z,makeSymbol)--make symbols
 tensor (T_(i,j,k) * U_(l,m))--symbolic tensor product
 tensor sum(k,T_(i,j,k) * U_(k,l))--symbolic contractions
 V=tensor sum({j1,j2,j3},
