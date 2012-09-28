@@ -23,18 +23,18 @@ R=QQ[a..z]
 genericTensor(R,{3,4})
 ///
 
-randomTensor=method(TypicalValue=>Tensor)
-randomTensor (Ring,List) := (R,dims) -> (
-     try random(R) else error "no method for random(Ring)";
+randomTensor=method(TypicalValue=>Tensor,Options=>{Height=>10})
+randomTensor (Ring,List) := opts -> (R,dims) -> (
+     try random(R,opts) else error "no method for random(Ring)";
      n:=product dims;
-     ents := for i in 0..<n list random(R);
+     ents := for i in 0..<n list random(R,opts);
      M:=tensorModule(R,dims);
      new M from vector ents
      )
-randomTensor (Ring,Thing,List) := (R,deg,dims) -> (
+randomTensor (Thing,Ring,List) := opts -> (deg,R,dims) -> (
      if not(instance(deg,ZZ) or instance(deg,List)) then error "randomTensor (Ring,Thing,List) expected Thing to be a ZZ or List";
      n:=product dims;
-     ents := for i in 0..<n list random(deg,R);
+     ents := for i in 0..<n list random(deg,R,opts);
      M:=tensorModule(R,dims);
      new M from vector ents
      )

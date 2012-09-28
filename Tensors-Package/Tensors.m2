@@ -35,6 +35,8 @@ cs String := nam -> (
 
 isSymbolic = x -> instance(x,Symbol) or instance(x,IndexedVariable)
 
+makeSymbol = x -> (getSymbol toString x) <- (getSymbol toString x)
+
 --these are currently used for einstein summation,
 --which needs to be rewritten
 
@@ -193,6 +195,7 @@ tensorModule (Module,List) := (M,dims) -> (
 --     return classes#(position(classes,i->class i===TensorModule))
 --     )
 
+
 fm=--[INTERNAL]
 factorModules=method()
 factorModules TensorModule := T -> T#(gs"factors")
@@ -229,6 +232,11 @@ TensorModule == TensorModule := (M,N) -> (M#(gs"factors") / module)==(N#(gs"fact
 ----------------------------
 TensorModule^ZZ := (M,n) -> tensorModuleProduct (n:M)
 TensorModule**TensorModule := (M,N) -> tensorModuleProduct(M,N)
+
+Ring**TensorModule := (R,M) -> (
+     tensorModuleProduct apply(M#(gs"factors"),i->R**i)
+     )
+TensorModule**Ring := (M,R) -> R**M
 
 --permute the factors of a tensor module:
 TensorModule @ List := (M,l) -> tensorModuleProduct M#(gs"factors")_l
@@ -285,7 +293,8 @@ makeTensor (VisibleList,Function):=(dims,f)->(
      ents:=apply(tensorKeys dims,f);
      makeTensor(dims,ents))
 
-Ring**Tensor := (r,t) -> error "not implemented yet"
+--a.c.
+Ring**Tensor := (R,v) -> new R**(class v) from vector apply(entries v,i->promote(i,R))
 
 Tensor/Function := (t,f) -> tensor(class t,apply(entries t,f))
 

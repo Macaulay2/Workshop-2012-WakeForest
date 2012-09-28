@@ -1,6 +1,28 @@
 restart
-path = path|{"/Users/andrew/Dropbox/Macaulay2","/Users/andrew/SVN/WFU-2012/"};
+path = unique {
+     "/Users/andrew/SVN/WFU-2012/Tensors-Package",
+     "/Users/andrew/Dropbox/Macaulay2"}|path
 debug needsPackage("Tensors")
+
+{{*------------
+--Short demo --
+------------*}};
+R=QQ[a..z]
+T=genericTensor(R,{3,2,2})
+T_(0,1,1)--entry
+T_{0,,}--slice
+scan(a..z,makeSymbol)--make symbols
+tensor T_(0,i,j)--symbolic slice
+matrix({0,1},T)--flattenings
+matrix({0,2},T)
+matrix({1,2},T)
+U=R**randomTensor(ZZ,{2,2},Height=>30)
+T**U
+tensor (T_(i,j,k) * U_(l,m))--symbolic tensor product
+tensor sum(k,T_(i,j,k) * U_(k,l))--symbolic contractions
+V=tensor sum({j1,j2,j3},
+ T_(i1,j1,j2) * T_(i2,j2,j3) * T_(i3,j3,j1))
+vector V
 
 {{*------------------
 -- Making a tensor --
