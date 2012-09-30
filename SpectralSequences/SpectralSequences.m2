@@ -161,6 +161,10 @@ spots FilteredComplex := List => (cacheValue symbol spots)(
 max HashTable := K -> max spots K
 min HashTable := K -> min spots K
 
+support ChainComplex := List =>(cacheValue symbol support)(
+     C -> sort select (spots C, i-> C_i != 0))
+
+
 FilteredComplex _ InfiniteNumber :=
 FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
   if K#?p then K#p 
@@ -360,32 +364,48 @@ inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filter
 
 
 -- the following method truncates a chain complex 
-truncate (ChainComplex,ZZ):= (C,n) ->( 
-     if n==0 then return C else (
-	  K:=new ChainComplex;
-     K.ring=C.ring;
-	  if n< 0 then  (       
-     for i from min C +1 to max C do (
-     if i <= max C + n then K.dd_i=C.dd_i else (
-if i-1>max C + n then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-else K.dd_i=inducedMap(C_(i-1), 0*C_i, C.dd_i) ););
-)	    
-	   else ( 
-     for i from min C+1  to max C do (
-     if i-1 >= n+min C then K.dd_i=C.dd_i else (
-if i< n+min C then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-else K.dd_i=map(0*C_(i-1), C_i, 0*C.dd_i) ););
-  );); 
-K)
+truncate (ChainComplex,ZZ):= (C,q) ->( 
+     if q == 0 then return C 
+     else (
+	  m:= min support C;
+	  n:=max support C;
+	  l:=length C;
+	  if q < -l or q > l then return image(0*id_C)
+	  else  K:=new ChainComplex;
+	        K.ring=C.ring;
+	  	if q < 0 then for i from min C + 1 to max C do (
+	             if i <= n + q then K.dd_i=C.dd_i 
+	       	     else if i-1 > n + q then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+	       	     else K.dd_i = inducedMap(C_(i-1), 0*C_i, C.dd_i) ) 
+	  	else for i from min C+1  to max C do (
+	       	     if i-1 >= q + m then K.dd_i=C.dd_i 
+	       	     else if i < q + m then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+	       	     else K.dd_i=map(0*C_(i-1), C_i, 0*C.dd_i) )); 
+     K)
+
+--truncate (ChainComplex,ZZ):= (C,n) ->( 
+--     if n==0 then return C 
+--     else (
+--	  K:=new ChainComplex;
+--     	  K.ring=C.ring;
+--	  if n< 0 then for i from min C +1 to max C do (
+--	       if i <= max C + n then K.dd_i=C.dd_i 
+--	       else if i-1 > max C + n then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+--	       else K.dd_i = inducedMap(C_(i-1), 0*C_i, C.dd_i) ) 
+--	  else for i from min C+1  to max C do (
+--	       if i-1 >= n+min C then K.dd_i=C.dd_i 
+--	       else if i < n+min C then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+--	       else K.dd_i=map(0*C_(i-1), C_i, 0*C.dd_i) )); 
+--     K)
 
 
--- the following method makes filtered complex by successively truncating from the end. --
+-- the following method makes a filtered complex by successively truncating from the end. --
 
 filteredComplex ChainComplex := FilteredComplex =>opts-> C->( complete C; 
-     n:= max select(spots C,i-> C_i!=0);
-     m:= min select(spots C,i-> C_i !=0);
-    L:= for i from 1 to length C list inducedMap(C,truncate(C,-i-(max C -n)));
-    filteredComplex(L,Shift => -m)
+     n:= max support C;
+     m:= min support C;
+    H:= for i from 1 to length C list inducedMap(C,truncate(C,-i));
+    filteredComplex(H,Shift => -m)
      )
 
 
@@ -615,7 +635,10 @@ debug SpectralSequences;
 A=QQ[x,y,z,w]
 
 C=koszul vars A
-
+truncate(C,-5)
+truncate(C,5)
+truncate(C,20)
+truncate(C,-20)
 filteredComplex C
 filteredComplex (C[-1])
 filteredComplex (C[1])
@@ -626,12 +649,15 @@ filteredComplex (C[1])
 D= res ideal vars A
 filteredComplex D
 filteredComplex(D[1])
+
+truncate(D[1],-2)
+D[1]
+
 filteredComplex(D[-1])
 
 filteredComplex(truncate(C,1))
 
 filteredComplex(truncate(D,2))
-
 
 E = filteredComplex ({simplicialComplex ({x*y*z})},ReducedHomology => false)
   
