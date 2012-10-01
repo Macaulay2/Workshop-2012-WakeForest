@@ -613,16 +613,332 @@ see FilteredComplex := K -> (
 --     spectralSequence ((filteredComplex ((res M) ** ring N)) ** (res N))
 
 
-load "Doc/SpectralSequencesDoc.m2"
+--load "Doc/SpectralSequencesDoc.m2"
+--load "Doc/TestSpectralSequencesDoc.m2"
+
+beginDocumentation()
+
+document {
+     Key => {SpectralSequences},
+     Headline => "A package for working with spectral sequences",
+    PARA { "SpectralSequences is a package to work with spectral sequences
+	 associated to a filterd complex." },
+     }
+
+-- truncate a filtered complex documentation --
+doc ///
+     Key
+     	   (truncate, ChainComplex,ZZ)
+     Headline
+     	  Truncate a filitered complex.
+     Usage
+     	  K = truncate(C,p)
+     Inputs
+     	  C:ChainComplex
+	  p:ZZ
+     Outputs
+     	  K:ChainComplex  
+     Description
+     	  Text 
+	   If p=0 then the method returns the complex C, that is K=C.  
+	   
+	   If p<0 then the method returns the 
+	   complex K given by K_i=C_i, K.dd_i = C.dd_i for i $\leq$ max C+p 
+	   and K_i =0, K.dd_i=0 for i > max C +p.
+	   
+	   In otherwords, if p<0, the method kills all modules and maps in homological degree 
+	   greater than p+max C, and leaves all other modules and maps unchanged.
+	   
+	   If p>0 then the method returns the complex K given by K_i=0
+	    for i < min C + p,  K_i=C_i for i $\geq$ min C +p, K.dd_i =0 
+	    for i $\leq$ min C +p, and K.dd_i = C.dd_i, for 
+	    i>min C+p.
+	    
+	    In otherwords, if p>0 the method kills all modules in homological degree
+	    less than p+min C, kills all maps in homological degree less than or equal to 
+	    p+min C, and leaves all other modules and maps unchanged. 
+	 Example
+	  A=QQ[x,y]  
+	  I=ideal vars A 
+	  C=res I
+	  truncate(C,0)
+	  truncate(C,-1)
+	  truncate(C,-2)
+	  truncate(C,-3)
+	  truncate(C,1)
+	  truncate(C,2)
+	  truncate(C,3)
+	  truncate(C,10)
+	  truncate(C,-10)
+	  	  
+  ///
+  
+----
+--- FilteredComplex documentation
+---
+
+doc ///
+     Key
+     	  FilteredComplex
+     Headline
+     	  The type of all FilteredComplexes
+     Description
+     	  Text
+     	      A filtered complex is a nested family of chain complexes K = $\dots \supseteq $ K_n $\supseteq$ K_{n-1} $ \supseteq \dots$ such that the following holds:
+	      
+	      1.  There exists an integer max such that K_n=K_{max} for all n \geq max.
+	      
+	      2.  There exists an integer min such that K_n =0 for all n \leq min.
+    ///
+  doc ///
+          Key
+       	    filteredComplex
+          Headline
+	       make a filtered complex
+     	  Usage
+	       K=filteredComplex L
+	  Inputs
+	       L:List       	  
+		    	 or 
+	       L:ChainComplex 
+	       	    	 or
+     	       L:SpectralSequence			 
+	       ReducedHomology =>Boolean	       	  	    
+	       Shift => ZZ
+	  Outputs 
+	       K: FilteredComplex
+	  Description
+	       Text
+	       	    This is the primative filteredComplex constructor.
+	       
+///	       
+  doc ///
+     Key 
+      (filteredComplex,List)
+     Headline 
+      obtain a filtered complex from a list of chain complex maps or a nested list of simplicial complexes
+     Usage 
+       K = filteredComplex L 
+     Inputs 
+	  L: List
+	  ReducedHomology =>Boolean
+	  Shift => ZZ
+     Outputs 
+       K: FilteredComplex
+     Description
+     	  Text  
+       	    We can make a filtered complex from a list of ChainComplexMaps as follows
+          Example
+	       needsPackage "SpectralSequences"	    
+	       needsPackage "ChainComplexExtras"
+	       R=QQ[x,y,z,w]
+	       d2=matrix(R,{{1},{0}})
+	       d1=matrix(R,{{0,1}})
+	       C=chainComplex({d1,d2}) 
+	  Text
+	      First make a the modules of the another chain complex which we will label D.
+	  Example      
+	       D_2= image matrix(R,{{1}})
+	       D_1=image matrix(R,{{1,0},{0,0}})
+	       D_0=image matrix(R,{{1}})
+	       D=chainComplex({inducedMap(D_0,D_1,C.dd_1),inducedMap(D_1,D_2,C.dd_2)})
+     	  Text
+	       Now make a chain complex map.
+     	  Example	       	     
+	       d=chainComplexMap(C,D,apply(spots C, i-> inducedMap(C_i,D_i,id_C _i)))
+	       isChainComplexMap d
+	       d==chainComplexMap(C,D,{inducedMap(C_0,D_0,id_(C_0)),inducedMap(C_1,D_1,id_(C_1)),inducedMap(C_2,D_2,id_(C_2))})
+     	  Text
+	       Now make the modules of another chain complex which we will label E.	     
+     	  Example	      
+               E_2=image matrix(R,{{0}})
+	       E_1= image matrix(R,{{1,0},{0,0}})
+	       E_0 = image matrix(R,{{1}})
+	       E = chainComplex({inducedMap(E_0,E_1,C.dd_1),inducedMap(E_1,E_2,C.dd_2)})
+     	  Text
+	       Now make a chain complex map.
+     	  Example	      	       
+	       e=chainComplexMap(C,E,apply(spots C, i->inducedMap(C_i,D_i, id_C _i)))
+     	  Text 
+	       Now make a filtered complex from a list of chain complex maps.
+     	  Example	       	       
+	       K=filteredComplex({d,e})
+	  Text
+	     We can make a filtered complex, with a specified minimum filtration degree
+             from a list of ChainComplexMaps by using the Shift option.
+      	  Example	       	     
+	       L=filteredComplex({d,e},Shift =>1)
+	       M=filteredComplex({d,e},Shift =>-1)	      	    
+	  Text
+	    We can make a filtered complex from a nested list of simplicial 
+     	    complexes as follows
+     	  Example
+	      needsPackage "SimplicialComplexes"; 	     
+	      D=simplicialComplex {x*y*z, x*y, y*z, w*z}
+	      E= simplicialComplex {x*y, w}
+	      F = simplicialComplex {x,w}
+	      K=filteredComplex{D,E,F}
+	  Text
+     	     If we want the resulting complexes to correspond to the non-redueced homology
+     	     of the simpicial complexes we can do the following",
+     	  Example 
+	     filteredComplex({D,E,F}, ReducedHomology => false)
+      
+    ///
+
+document {
+     Key => {(filteredComplex,ChainComplex)},
+     Headline => "obtain a filtered complex from a chain complex",
+     Usage => "K = filteredComplex C ",
+     Inputs => {
+	  "C" => ChainComplex,
+	  
+	  },
+     Consequences => {
+	  {"The value ", TT "n", " is added to the result"}
+	  },
+     "Any more description can go ", BOLD "here", ".",
+     EXAMPLE {
+	  "A=QQ[x,y]"
+	  },
+     SeeAlso => {
+	  "firstFunction"
+	  }
+     }
+
+    doc ///
+     Key
+  	  (spots, FilteredComplex)
+     Headline
+     	  The sorted filtration degrees of a filtered complex 
+     Usage
+     	  L = spots H
+     Inputs
+     	  H: FilteredComplex 
+	       
+     Outputs
+     	  L:List
+     Description
+     	  Text 
+	       Returns the sorted filtration degrees of a filtered complex / chain complex
+	       which the compute explicitly remembers. 	    	      
+    ///
+  
+  doc ///
+     Key
+  	  (spots, ChainComplex)
+     Headline
+     	  The sorted filtration degrees of a chain complex 
+     Usage
+     	  L = spots H
+     Inputs
+     	  H: ChainComplex 
+	       
+     Outputs
+     	  L:List
+     Description
+     	  Text 
+	       Returns the sorted filtration degrees of a chain complex / chain complex
+	       which the compute explicitly remembers. 	    	      
+    ///
+  doc ///
+     Key
+  	  spots
+     Headline
+     	  The sorted integer keys of a hash table.
+     Usage
+     	  L = spots H
+     Inputs
+     	  H: HashTable
+	       
+     Outputs
+     	  L:List
+     Description
+     	  Text 
+	       Returns the sorted integer keys of a hash table.	      
+    ///
+    
+    
+doc ///
+     Key
+     	  SpectralSequence
+     Headline
+     	  The type of all spectral sequences
+     Description
+     	  Text
+	       A spectral sequence consists of the following:
+	       
+	       1. A sequence of modules \{E^r_{p,q}\}_{p,q \in \ZZ, r \geq 0},
+	       
+	       2. A collection of homomorphisms \{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}_{p,q \in ZZ, r \geq 0} such that
+	       d^r_{p,q} d^r_{p+r,q-r+1} =0, 
+	       
+	       3. A collection of isomorphisms E^{r+1}_{p,q}  $\rightarrow$ ker d^r_{p,q} / image d^r_{p+r,q-r+1}.
+	       
+	       In Macaulay 2, a spectral sequence is represented by a sequence of spectral sequence pages.
+	       
+	       
+     ///
+     
+doc ///
+     Key
+     	  SpectralSequencePage
+     Headline
+     	  The type of all spectral sequence pages
+     Description
+     	  Text
+	       A spectral sequence page (or sheet) with page number r (for a 
+		    fixed integer r $\geq$ 0) is 
+	       collection E^r:=\{E^r_{p,q}, d^r_{p,q}\}_{p,q\in \ZZ} such that:
+	       
+	       1. E^r_{p,q} are
+	       modules,
+	       
+	       2. d^r_{p,q}:E^r_{p,q}$\rightarrow$ E^r_{p-r,q+r-1} are homomorphisms,
+	       
+	       3. and d^r_{p,q} d^r_{p+r,q-r+1}=0.
+	       
+     ///	       
+
+  
 end
 
 --------------------------------------------------------------------------------
 restart
+installPackage"SpectralSequences"
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
 --------------------------------
+-- the following is an example for filteredComplex constructor.  
+-- for this example to work need to load package ChainComplexExtras
+ -- need to load package ChainComplexExtras and later SimplicialComplexes
+	  -- for this to work.
+R=QQ[a,b,c,d]
+d2=matrix(R,{{1},{0}})
+d1=matrix(R,{{0,1}})
+C=chainComplex({d1,d2})
+D_2= image matrix(R,{{1}})
+D_1=image matrix(R,{{1,0},{0,0}})
+D_0=image matrix(R,{{1}})
 
+D=chainComplex({inducedMap(D_0,D_1,C.dd_1),inducedMap(D_1,D_2,C.dd_2)})
+
+d=chainComplexMap(C,D,apply(spots C, i-> inducedMap(C_i,D_i,id_C _i)))
+isChainComplexMap d
+d==chainComplexMap(C,D,{inducedMap(C_0,D_0,id_(C_0)),
+	   inducedMap(C_1,D_1,id_(C_1)),
+	   inducedMap(C_2,D_2,id_(C_2))})
+E_2=image matrix(R,{{0}})
+E_1= image matrix(R,{{1,0},{0,0}})
+E_0 = image matrix(R,{{1}})
+E = chainComplex({inducedMap(E_0,E_1,C.dd_1),inducedMap(E_1,E_2,C.dd_2)})
+e=chainComplexMap(C,E,apply(spots C, i->inducedMap(C_i,D_i, id_C _i)))
+K=filteredComplex({d,e})
+L=filteredComplex({d,e},Shift =>1)
+M=filteredComplex({d,e},Shift =>-1) 
+--------------------------
+--------------------------
 ---
 -- trying to test truncate and filteredComplex ChainComplex Code. --
 ---
@@ -658,6 +974,7 @@ filteredComplex(D[-1])
 filteredComplex(truncate(C,1))
 
 filteredComplex(truncate(D,2))
+
 
 E = filteredComplex ({simplicialComplex ({x*y*z})},ReducedHomology => false)
   

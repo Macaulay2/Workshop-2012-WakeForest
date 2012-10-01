@@ -514,6 +514,7 @@ doc ///
      Description
      	  Text 
 	       Blah
+	       
     ///
   
   doc ///
@@ -531,10 +532,12 @@ doc ///
      	  L:List
      Description
      	  Text 
-	       Returns the sorted filtration/homological degrees of a filtered complex / chain complex 
+	       Returns the sorted filtration/homological degrees of a filtered complex / chain complex 	 
+     	      
     ///
   
     
+      
       doc ///
      Key
      	   (chainComplex, SpectralSequence)
