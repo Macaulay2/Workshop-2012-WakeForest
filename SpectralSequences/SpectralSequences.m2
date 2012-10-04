@@ -620,9 +620,14 @@ beginDocumentation()
 
 document {
      Key => {SpectralSequences},
-     Headline => "A package for working with spectral sequences",
+     Headline => "a package for working with spectral sequences",
     PARA { "SpectralSequences is a package to work with spectral sequences
 	 associated to a filterd complex." },
+     UL {
+	  {TO "Computing the Serre Spectral Sequence associated to a Hopf Fibration"},
+	  {TO "Balancing Tor"}
+	  }
+     
      }
 
 -- truncate a filtered complex documentation --
@@ -630,7 +635,7 @@ doc ///
      Key
      	   (truncate, ChainComplex,ZZ)
      Headline
-     	  Truncate a filitered complex.
+     	  truncate a filitered complex.
      Usage
      	  K = truncate(C,p)
      Inputs
@@ -640,23 +645,7 @@ doc ///
      	  K:ChainComplex  
      Description
      	  Text 
-	   If p=0 then the method returns the complex C, that is K=C.  
-	   
-	   If p<0 then the method returns the 
-	   complex K given by K_i=C_i, K.dd_i = C.dd_i for i $\leq$ max C+p 
-	   and K_i =0, K.dd_i=0 for i > max C +p.
-	   
-	   In otherwords, if p<0, the method kills all modules and maps in homological degree 
-	   greater than p+max C, and leaves all other modules and maps unchanged.
-	   
-	   If p>0 then the method returns the complex K given by K_i=0
-	    for i < min C + p,  K_i=C_i for i $\geq$ min C +p, K.dd_i =0 
-	    for i $\leq$ min C +p, and K.dd_i = C.dd_i, for 
-	    i>min C+p.
 	    
-	    In otherwords, if p>0 the method kills all modules in homological degree
-	    less than p+min C, kills all maps in homological degree less than or equal to 
-	    p+min C, and leaves all other modules and maps unchanged. 
 	 Example
 	  A=QQ[x,y]  
 	  I=ideal vars A 
@@ -681,15 +670,37 @@ doc ///
      Key
      	  FilteredComplex
      Headline
-     	  The type of all FilteredComplexes
+     	  the type of all FilteredComplexes
      Description
      	  Text
-     	      A filtered complex is a nested family of chain complexes K = $\dots \supseteq $ K_n $\supseteq$ K_{n-1} $ \supseteq \dots$ such that the following holds:
+     	      A filtered complex is a nested family of chain complexes 
+	      K : $\dots \supseteq$ K_n $\supseteq$ K_{n-1} $\supseteq  
+	      \dots$ such that the following holds:
 	      
-	      1.  There exists an integer max such that K_n=K_{max} for all n \geq max.
+	      1.  There exists an integer m such that K_n = K_m for all n \geq m.
 	      
-	      2.  There exists an integer min such that K_n =0 for all n \leq min.
+	      2.  There exists an integer l such that K_n = 0 for all n \leq l.
     ///
+     doc ///
+          Key
+       	    "Computing the Serre Spectral Sequence associated to a Hopf Fibration"
+         
+	  Description
+	       Text
+	       	    The purpose of this example is to compute 
+		    the Serre Spectral Sequence
+		    associated to the Hopf Fibration 
+		    S^1 $\rightarrow$ S^3 $\rightarrow$ S^2.  	       
+///	       
+ 
+ doc ///
+      Key
+      	   "Balancing Tor"
+     Description
+     	  Text
+	       The purpose of this example is to balance Tor.
+///	       	 
+ 
   doc ///
           Key
        	    filteredComplex
@@ -712,6 +723,7 @@ doc ///
 	       	    This is the primative filteredComplex constructor.
 	       
 ///	       
+
   doc ///
      Key 
       (filteredComplex,List)
@@ -727,29 +739,33 @@ doc ///
        K: FilteredComplex
      Description
      	  Text  
-       	    We can make a filtered complex from a list of ChainComplexMaps as follows
+       	    We can make a filtered complex from a list of chain complex maps as follows.
+	    We first need to load the relavent packages.
           Example
 	       needsPackage "SpectralSequences"	    
 	       needsPackage "ChainComplexExtras"
+     	  Text
+	       We then make a chain complex.
+     	  Example	       	 
 	       R=QQ[x,y,z,w]
 	       d2=matrix(R,{{1},{0}})
 	       d1=matrix(R,{{0,1}})
 	       C=chainComplex({d1,d2}) 
 	  Text
-	      First make a the modules of the another chain complex which we will label D.
+	      We now make the modules of the another chain complex which we will label D.
 	  Example      
-	       D_2= image matrix(R,{{1}})
-	       D_1=image matrix(R,{{1,0},{0,0}})
-	       D_0=image matrix(R,{{1}})
-	       D=chainComplex({inducedMap(D_0,D_1,C.dd_1),inducedMap(D_1,D_2,C.dd_2)})
+	       D_2 = image matrix(R,{{1}})
+	       D_1 = image matrix(R,{{1,0},{0,0}})
+	       D_0 = image matrix(R,{{1}})
+	       D = chainComplex({inducedMap(D_0,D_1,C.dd_1),inducedMap(D_1,D_2,C.dd_2)})
      	  Text
 	       Now make a chain complex map.
      	  Example	       	     
-	       d=chainComplexMap(C,D,apply(spots C, i-> inducedMap(C_i,D_i,id_C _i)))
+	       d = chainComplexMap(C,D,apply(spots C, i-> inducedMap(C_i,D_i,id_C _i)))
 	       isChainComplexMap d
-	       d==chainComplexMap(C,D,{inducedMap(C_0,D_0,id_(C_0)),inducedMap(C_1,D_1,id_(C_1)),inducedMap(C_2,D_2,id_(C_2))})
+	       d == chainComplexMap(C,D,{inducedMap(C_0,D_0,id_(C_0)),inducedMap(C_1,D_1,id_(C_1)),inducedMap(C_2,D_2,id_(C_2))})
      	  Text
-	       Now make the modules of another chain complex which we will label E.	     
+	       We now make the modules of another chain complex which we will label E.	     
      	  Example	      
                E_2=image matrix(R,{{0}})
 	       E_1= image matrix(R,{{1,0},{0,0}})
@@ -779,38 +795,219 @@ doc ///
 	      F = simplicialComplex {x,w}
 	      K=filteredComplex{D,E,F}
 	  Text
-     	     If we want the resulting complexes to correspond to the non-redueced homology
-     	     of the simpicial complexes we can do the following",
+     	     If we want the resulting complexes to correspond to the non-reduced homology
+     	     of the simpicial complexes we can do the following.
      	  Example 
 	     filteredComplex({D,E,F}, ReducedHomology => false)
-      
+     SeeAlso
+     	  "maps between chain complexes"
+///
+
+doc ///
+     Key 
+          (filteredComplex,ChainComplex)
+     Headline 
+         obtain a filtered complex from a chain complex
+     Usage 
+         K = filteredComplex C 
+     Inputs 
+	  C: ChainComplex
+-- these options don't do anything for this constructor.
+	  ReducedHomology =>Boolean	       	  	    
+	  Shift => ZZ
+     Outputs
+          K: FilteredComplex
+     Description	  
+     	  Text
+	     Produces the filtered complex obtained by succesively truncating the complex.
+	  Example 
+	    needsPackage "SpectralSequences"
+	    A = QQ[x,y]
+	    C = koszul vars A
+	    K = filteredComplex C
+     SeeAlso 
+	  (truncate, ChainComplex,ZZ)
+	  
+    /// 
+
+doc ///
+     Key 
+          (support,ChainComplex)
+     Headline 
+         compute the support of a chain complex
+     Usage 
+         L = support C 
+     Inputs 
+	  C: ChainComplex
+     Outputs
+          L: List
+     Description	  
+     	  Text
+	     Produces a list consisting of those the homological degrees for which 
+	     the corresponding module is non-zero.
+	  Example 
+	    needsPackage "SpectralSequences"
+	    A = QQ[x,y]
+	    C = res ideal vars A
+	    L = support C
+	    D = koszul vars A
+	    M = support D
+     SeeAlso
+      	  (spots, ChainComplex) 
+--	  (max, ChainComplex)
+--	  (min, ChainComplex)	    	  
+    /// 
+
+-- doc ///
+--     Key 
+--          (max,ChainComplex)
+--     Headline 
+--         compute maximum of the spots of a chain complex
+--     Usage 
+--        N = max C 
+--     Inputs 
+--	  C: ChainComplex
+--     Outputs
+--          N: ZZ
+--     Description	  
+ --    	  Text
+--	     Produces the largest homological degree which
+--	     computer explicitly remembers.
+	     
+--	  Example 
+--	    needsPackage "SpectralSequences"
+--	    A = QQ[x,y]
+--	    C = res ideal vars A
+--	    spots C
+--	    N = max C
+--     	    support C
+--	    D = truncate(C,-1)
+--	    spots D
+--	    max D
+--	    support D
+--     SeeAlso
+--      	  (spots, ChainComplex)
+--	  (support, ChainComplex)
+--	  (min, ChainComplex)	   " 	  
+   -- /// 
+
+--" doc ///
+--     Key 
+--          (min,ChainComplex)
+--     Headline 
+--         compute minimum of the spots of a chain complex
+--     Usage 
+--        N = min C 
+--     Inputs 
+--	  C: ChainComplex
+--     Outputs
+--          N: ZZ
+--     Description	  
+--     	  Text
+--	     Produces the smallest homological degree which
+--	     computer explicitly remembers.
+	     
+--	  Example 
+--	    needsPackage "SpectralSequences"
+--	    A = QQ[x,y]
+--	    C = res ideal vars A
+--	    spots C
+--	    N = min C
+--     	    support C
+--     SeeAlso
+--      	  (spots, ChainComplex) 
+--	  (support, ChainComplex)
+--	  (max, ChainComplex) "	    	  
+    --/// "
+
+doc ///
+     Key
+     	   (symbol **, ChainComplex, FilteredComplex)
+	   (symbol **, FilteredComplex, ChainComplex)
+     Headline
+     	  filtered Tensor product of complexes
+     Usage
+     	  KK = C ** K
+	  KK = K ** C
+     Inputs
+     	  C:ChainComplex
+	  K:FilteredComplex
+     Outputs
+     	  KK:FilteredComplex
+     Description
+     	  Text 
+	       Blah
+    ///
+ doc ///
+     Key
+     	  (inducedMap, FilteredComplex, ZZ)
+     Headline
+     	  the ith inclusion map in a filtered complex
+     Usage
+     	  f = inducedMap(K,i)
+     Inputs
+     	  K:FilteredComplex
+	  i:ZZ
+     Outputs
+     	  f:ChainComplexMap
+     Description
+     	  Text 
+	       Returns the chain complex map specifying the inclusion of the i piece 
+	       of the filtered
+	       complex to the ambeint chain complex.
+    ///
+doc ///
+     Key
+          (symbol _, FilteredComplex, ZZ)
+	  (symbol _, FilteredComplex, InfiniteNumber)
+     Headline
+     	  The filtered pieces
+     Usage
+     	  C = K _ j
+     Inputs
+     	  K:FilteredComplex
+	  j:ZZ 
+	       an integer, infinity, or -infinity
+     Outputs
+     	  C:ChainComplex
+     Description
+     	  Text 
+	       Returns the chain complex in (homological) filtration degree j.  
+	       The relationship	K _ j = K ^{(-j)} holds.
+	       
+     SeeAlso    
+     	  (symbol ^, FilteredComplex, ZZ)           
     ///
 
-document {
-     Key => {(filteredComplex,ChainComplex)},
-     Headline => "obtain a filtered complex from a chain complex",
-     Usage => "K = filteredComplex C ",
-     Inputs => {
-	  "C" => ChainComplex,
-	  
-	  },
-     Consequences => {
-	  {"The value ", TT "n", " is added to the result"}
-	  },
-     "Any more description can go ", BOLD "here", ".",
-     EXAMPLE {
-	  "A=QQ[x,y]"
-	  },
-     SeeAlso => {
-	  "firstFunction"
-	  }
-     }
+doc ///
+     Key
+          (symbol ^, FilteredComplex, ZZ)
+	  (symbol ^, FilteredComplex, InfiniteNumber)
+     Headline
+     	  The filtered pieces
+     Usage
+     	  C = K ^  j
+     Inputs
+     	  K:FilteredComplex
+	  j:ZZ 
+	       an integer, infinity, or -infinity
+     Outputs
+     	  C:ChainComplex
+     Description
+     	  Text 
+	       Returns the chain complex in (cohomological) filtration degree j.
+	       The relationship K ^ j = K _{(-j)} holds.
+     SeeAlso
+     	  (symbol _, FilteredComplex, ZZ)	       
+    ///
+
+
 
     doc ///
      Key
   	  (spots, FilteredComplex)
      Headline
-     	  The sorted filtration degrees of a filtered complex 
+     	  the sorted filtration degrees of a filtered complex 
      Usage
      	  L = spots H
      Inputs
@@ -820,15 +1017,15 @@ document {
      	  L:List
      Description
      	  Text 
-	       Returns the sorted filtration degrees of a filtered complex / chain complex
-	       which the compute explicitly remembers. 	    	      
+	       Returns the sorted filtration degrees of a filtered complex
+	       which the computer explicitly remembers. 	    	      
     ///
   
   doc ///
      Key
   	  (spots, ChainComplex)
      Headline
-     	  The sorted filtration degrees of a chain complex 
+     	  the sorted filtration degrees of a chain complex 
      Usage
      	  L = spots H
      Inputs
@@ -838,14 +1035,14 @@ document {
      	  L:List
      Description
      	  Text 
-	       Returns the sorted filtration degrees of a chain complex / chain complex
-	       which the compute explicitly remembers. 	    	      
+	       Returns the sorted homological degrees of a chain complex 
+	       which the computer explicitly remembers. 	    	      
     ///
   doc ///
      Key
   	  spots
      Headline
-     	  The sorted integer keys of a hash table.
+     	  the sorted integer keys of a hash table.
      Usage
      	  L = spots H
      Inputs
@@ -863,7 +1060,7 @@ doc ///
      Key
      	  SpectralSequence
      Headline
-     	  The type of all spectral sequences
+     	  the type of all spectral sequences
      Description
      	  Text
 	       A spectral sequence consists of the following:
@@ -884,7 +1081,7 @@ doc ///
      Key
      	  SpectralSequencePage
      Headline
-     	  The type of all spectral sequence pages
+     	  the type of all spectral sequence pages
      Description
      	  Text
 	       A spectral sequence page (or sheet) with page number r (for a 

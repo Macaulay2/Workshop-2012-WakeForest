@@ -98,6 +98,67 @@ doc ///
 	       
      ///	       
 
+doc ///
+     Key 
+          (max,ChainComplex)
+     Headline 
+         compute maximum of the spots of a chain complex
+     Usage 
+        N = max C 
+     Inputs 
+	  C: ChainComplex
+     Outputs
+          N: ZZ
+     Description	  
+     	  Text
+	     Produces the largest homological degree which
+	     computer explicitly remembers.
+	     
+	  Example 
+	    needsPackage "SpectralSequences"
+	    A = QQ[x,y]
+	    C = res ideal vars A
+	    spots C
+	    N = max C
+     	    support C
+	    D = truncate(C,-1)
+	    spots D
+	    max D
+	    support D
+     SeeAlso
+      	  (spots, ChainComplex) 
+	  (support, ChainComplex)
+	  (min, ChainComplex)	    	  
+    /// 
+
+doc ///
+     Key 
+          (min,ChainComplex)
+     Headline 
+         compute minimum of the spots of a chain complex
+     Usage 
+        N = min C 
+     Inputs 
+	  C: ChainComplex
+     Outputs
+          N: ZZ
+     Description	  
+     	  Text
+	     Produces the smallest homological degree which
+	     computer explicitly remembers.
+	     
+	  Example 
+	    needsPackage "SpectralSequences"
+	    A = QQ[x,y]
+	    C = res ideal vars A
+	    spots C
+	    N = min C
+     	    support C
+     SeeAlso
+      	  (spots, ChainComplex) 
+	  (support, ChainComplex)
+	  (max, ChainComplex)	    	  
+    /// 
 
 -------------------------
 -----Functions
