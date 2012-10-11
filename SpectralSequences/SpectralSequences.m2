@@ -49,30 +49,20 @@ export {
   "filteredComplex",
   "SpectralSequence",
   "spectralSequence",
-  "SpectralSequenceSheet",
   "see", 
   "computeErModules",
   "computeErMaps", 
   "spots",
-  --"nonReducedChainComplex",
   "SpectralSequencePage", 
   "spectralSequencePage",
   "rpqHomology",
   "rpqIsomorphism",
-  
   "Shift",
   "ReducedHomology","project"
   }
 
--- symbols used as keys
---protect minF
---protect maxF
---protect minH
---protect maxH
+
 protect inducedMaps
---protect pageNumber
---protect pageModules
---protect pageMaps
 needsPackage "SimplicialComplexes"
 needsPackage "ChainComplexExtras"
 
@@ -648,12 +638,13 @@ doc ///
 	            We now construct filtrations of $D$ corresponding to $p$-
 		    sketeltons of the fibration.
 		    Again we describe these in pieces.
-		    For example, if $p:S^3 \rightarrow S^2$  denotes the map, 
+		    For example, if $p:S^3 \rightarrow S^2$  denotes the map defined
+		    by $a_i\mapsto a$, $b_i\mapsto b$, and $c_i \mapsto c$, 
 		    then to compute
 		    $f1l1$ below, we observe that 
 		    the inverse image of $ab$ under $p$ is
 		    $a_0b_0b_1, a_0a_1b_1$ etc.
-		    I computed these all by hand previously. 
+		    I have computed these all by hand previously. 
 	       Example
 	            f1l1 = {a_0*b_0*b_1,a_0*a_1*b_1,a_0*c_0*c_1,a_0*a_1*c_1,a_0*a_1*d_2,d_1*d_2,b_0*b_1*c_1,b_0*c_0*c_1,b_0*b_1*d_1,b_0*d_1*d_2,c_1*d_1*d_2,c_0*c_1*d_2};
 		    f1l2 = {b_1*a_1*a_2,b_1*b_2*a_2,c_1*c_2*a_2,c_1*a_1*a_2,a_1*a_2*d_2,a_2*d_1*d_2,b_1*c_1*c_2,b_1*b_2*c_2,b_1*b_2*d_2,d_1*d_2,c_1*d_1*d_2,c_1*c_2*d_1};
@@ -679,7 +670,7 @@ doc ///
 	            So $F0D$ corresponds to the filtration of $D$ by considering 
 		    the inverse images of the 
 		    $0$-dimensional faces of the triangulation of $S^2$.
-		    To compute the serre spectral sequence of the hopf fibration 
+		    To compute the Serre spectral sequence of the Hopf fibration 
 		    $S^1 \rightarrow S^3 \rightarrow S^2$ 
 		    correctly meaning that we get the $E_2$ page as 
 		    asserted in the usual theorem we need to
@@ -777,7 +768,7 @@ doc ///
 	       see @TO"filtered complexes"@.	  
 	       For an overview of how to create and manipulate spectral sequences see
 	       @TO"spectral sequences"@.	    
-	       For an overview of how to create and manipulative spectral sequence pages see
+	       For an overview of how to create and manipulate spectral sequence pages see
 	       @TO"spectral sequence page"@.
 	     
 	  --     The type FilteredComplex is a data type for storing information associated
@@ -949,7 +940,7 @@ doc ///
 	       see @TO"filtered complexes"@.	  
 	       For an overview of how to create and manipulate spectral sequences see
 	       @TO"spectral sequences"@.	    
-	       For an overview of how to create and manipulative spectral sequence pages see
+	       For an overview of how to create and manipulate spectral sequence pages see
 	       @TO"spectral sequence page"@.
 	    
 	    --   A spectral sequence consists of the following:	      
@@ -980,7 +971,7 @@ doc ///
 	       see @TO"filtered complexes"@.	  
 	       For an overview of how to create and manipulate spectral sequences see
 	       @TO"spectral sequences"@.	    
-	       For an overview of how to create and manipulative spectral sequence pages see
+	       For an overview of how to create and manipulate spectral sequence pages see
 	       @TO"spectral sequence page"@.
 	    
 	       
@@ -1075,7 +1066,7 @@ doc ///
      Outputs 
        K: FilteredComplex
      Description
-     	  Text  
+      	  Text  
        	    We can make a filtered complex from a list of chain complex maps as follows.
 	    We first need to load the relavent packages.
           Example
@@ -1084,10 +1075,10 @@ doc ///
      	  Text
 	       We then make a chain complex.
      	  Example	       	 
-	       R=QQ[x,y,z,w]
-	       d2=matrix(R,{{1},{0}})
-	       d1=matrix(R,{{0,1}})
-	       C=chainComplex({d1,d2}) 
+	       R = QQ[x,y,z,w]
+	       d2 = matrix(R,{{1},{0}})
+	       d1 = matrix(R,{{0,1}})
+	       C = chainComplex({d1,d2}) 
 	  Text
 	      We now make the modules of the another chain complex which we will label D.
 	  Example      
@@ -1104,33 +1095,33 @@ doc ///
      	  Text
 	       We now make the modules of another chain complex which we will label E.	     
      	  Example	      
-               E_2=image matrix(R,{{0}})
-	       E_1= image matrix(R,{{1,0},{0,0}})
+               E_2 = image matrix(R,{{0}})
+	       E_1 = image matrix(R,{{1,0},{0,0}})
 	       E_0 = image matrix(R,{{1}})
 	       E = chainComplex({inducedMap(E_0,E_1,C.dd_1),inducedMap(E_1,E_2,C.dd_2)})
      	  Text
 	       Now make a chain complex map.
      	  Example	      	       
-	       e=chainComplexMap(C,E,apply(spots C, i->inducedMap(C_i,D_i, id_C _i)))
+	       e = chainComplexMap(C,E,apply(spots C, i->inducedMap(C_i,D_i, id_C _i)))
      	  Text 
 	       Now make a filtered complex from a list of chain complex maps.
      	  Example	       	       
-	       K=filteredComplex({d,e})
+	       K = filteredComplex({d,e})
 	  Text
 	     We can make a filtered complex, with a specified minimum filtration degree
              from a list of ChainComplexMaps by using the Shift option.
       	  Example	       	     
-	       L=filteredComplex({d,e},Shift =>1)
-	       M=filteredComplex({d,e},Shift =>-1)	      	    
+	       L = filteredComplex({d,e},Shift =>1)
+	       M = filteredComplex({d,e},Shift =>-1)	      	    
 	  Text
 	    We can make a filtered complex from a nested list of simplicial 
      	    complexes as follows
      	  Example
 	      needsPackage "SimplicialComplexes"; 	     
-	      D=simplicialComplex {x*y*z, x*y, y*z, w*z}
-	      E= simplicialComplex {x*y, w}
+	      D = simplicialComplex {x*y*z, x*y, y*z, w*z}
+	      E = simplicialComplex {x*y, w}
 	      F = simplicialComplex {x,w}
-	      K=filteredComplex{D,E,F}
+	      K = filteredComplex{D,E,F}
 	  Text
      	     If we want the resulting complexes to correspond to the non-reduced homology
      	     of the simpicial complexes we can do the following.
@@ -1168,6 +1159,92 @@ doc ///
     /// 
 
 doc ///
+     Key
+  	  (chainComplex, FilteredComplex)
+     Headline
+     	  The ambient chain complex of a filtered complex
+     Usage
+     	  C = chainComplex K
+     Inputs
+     	  K:FilteredComplex
+     Outputs
+     	  C:ChainComplex
+     Description
+     	  Text 
+	       Returns the ambient chain complex of the filtered complex.
+	       
+    ///
+  
+doc ///
+     Key
+     	  (spectralSequence, FilteredComplex)
+	  spectralSequence
+     Headline
+     	  Construct a spectralSequence from a filtered complex
+     Usage
+     	  E = spectralSequence K
+     Inputs
+     	  K:FilteredComplex
+	       A filtered complex
+     Outputs
+     	  E:SpectralSequence
+     Description
+     	  Text 
+	       Returns the spectral sequence associated to the filtered complex.
+    ///
+    doc ///
+     Key
+     	   (Hom, FilteredComplex, ChainComplex)
+	   (Hom, ChainComplex, FilteredComplex)
+     Headline
+     	  The ith inclusion map in a filtered complex
+     Usage
+     	  f = Hom(K,C)
+     Inputs
+     	  K:FilteredComplex
+	  C:ChainComplex
+     Outputs
+     	  f:FilteredComplex
+     Description
+     	  Text 
+	       Blah
+    ///
+    doc ///
+     Key
+     	   (chainComplex, SpectralSequence)
+     Headline
+     	  The underlying chain complex of a Spectral Sequence
+     Usage
+     	  K = chainComplex E
+     Inputs
+     	  E:SpectralSequence
+     Outputs
+     	  K:ChainComplex
+     Description
+     	  Text 
+	       Returns the underlying chain complex of a spectral sequence.
+    ///
+
+ doc ///
+     Key
+     	  (spectralSequencePage, FilteredComplex, ZZ)
+	  spectralSequencePage
+     Headline
+     	  Construct a SpectralPage from a filtered complex
+     Usage
+     	  E = spectralSequencePage(K,r)
+     Inputs
+     	  K:FilteredComplex
+	       A filtered complex
+	  r:ZZ
+     Outputs
+     	  E:SpectralSequencePage
+     Description
+     	  Text 
+	       Blah
+     ///
+ 
+doc ///
      Key 
           (support,ChainComplex)
      Headline 
@@ -1196,6 +1273,7 @@ doc ///
      doc ///
      Key
      	  (symbol _, SpectralSequence, ZZ)
+	  (symbol _, SpectralSequence, InfiniteNumber)
      Headline
      	  The kth page of a spectral sequence
      Usage
@@ -1213,6 +1291,7 @@ doc ///
 doc ///
      Key
      	  (symbol ^, SpectralSequence, ZZ)
+	  (symbol ^, SpectralSequence, InfiniteNumber)
      Headline
      	  The kth page of a spectral sequence
      Usage
