@@ -269,6 +269,7 @@ splitEquidimFactors = (I) -> (
      )
 -- needs test
 
+-- not truly functional - not carrying through indep and ISF through after a call to splitUsingQuotientsBy...
 splitEquidimFactorsNEWER = (I,indep,ISF) -> (
      -- idea: loop through the gens of I.
      --   if any factors, then try to split the ideal.

@@ -14,18 +14,18 @@ debug loadPackage("PD", Reload=>true)
   equis/codim
   equis/degree  
 
-  equis = first splitViaIndepsNEWER I;
-  equis/first/codim
-  equis/first/degree  
-
-  leaves = flatten(equis/splitEquidimFactorsNEWER)
   leaves = flatten(equis/splitEquidimFactors)
   intersect leaves == I
 
   leaves = drop(leaves, 1)
   
   gbTrace = 3
+  -- old way
   splitLeaves = leaves / extendIdeal / purePowerCoordinateChange // flatten / contractToPolynomialRing
+
+  -- new way
+  netList leaves
+ 
 
   radI = trim intersect apply(splitLeaves, C -> sub(C,R));
   apply(#(radI_*), i -> radicalContainment(radI_i,I))
