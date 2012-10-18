@@ -167,7 +167,7 @@ FilteredComplex _ InfiniteNumber :=
 FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
   if K#?p then K#p 
   else if p < min K then K#(min K) 
-  else if p > max K then K#(max K))
+  else if p > max K then image id_(K#(max K)))
 
 FilteredComplex ^ InfiniteNumber :=
 FilteredComplex ^ ZZ := ChainComplex => (K,p) -> K_(-p)
@@ -225,7 +225,7 @@ epq:=(K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)) )
 
 -- the following computes all modules on the r-th page.
 
-computeErModules=method()
+computeErModules = method()
 
 computeErModules(FilteredComplex,ZZ):= (K,r) -> (myList:={};
      for p from min K to max K do (
@@ -236,11 +236,38 @@ computeErModules(FilteredComplex,ZZ):= (K,r) -> (myList:={};
       )
 
 -- the following will compute the pq maps on the rth page explicitly.
-epqrMaps:=(K,p,q,r)-> (
+epqrMaps := (K,p,q,r) -> (
      inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),K_(max K).dd_(p+q)))
 
+-- the following will prune the pq maps on the rth page explicitly. --
+-- it needs to be tested further. --
+pruneEpqrMaps := (K,p,q,r) -> ( 
+     d := epqrMaps(K,p,q,r);
+     N := minimalPresentation(source d);
+     M := minimalPresentation(target d);
+    inverse(M.cache.pruningMap)* d * (N.cache.pruningMap) 
+     )
+---
 
---Compute all maps on the Er page as we did above for the modules.
+-- the following computes the homology at the pq spot on the rth page.
+rpqHomology = method()
+
+rpqHomology(HashTable,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
+--     r:= E.number;
+      (ker(E^r .dd_{p,q})) / (image(E^r .dd_{p+r,q-r+1}) )
+      )
+--     if (E^r).dd #?{p+r,q-r+1} then 
+--     (ker(E^ r.dd #{p,q})) / (image(E^ r.dd #{p+r,q-r+1}) ) 
+--     else (ker(E^ r.dd #{p,q})) / (image(0*id_(E^ r.filteredComplex _infinity _ (p+q)) ))
+--     )
+
+-- the following computes the isomorphism of the homology at the pq spot
+-- on the r-th page and the module on at the pq spot on the r+1-th page.
+rpqIsomorphism = method()
+rpqIsomorphism(HashTable,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
+inducedMap(source (E^(r+1) .dd_{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filteredComplex _infinity _(p+q)))
+  ) 
+
 
 ----
 -- Starting to write code for SpectralSequencePageMap
@@ -282,9 +309,8 @@ net SpectralSequencePageMap := f -> (
 )
 
 
-SpectralSequencePageMap _ List := Matrix => (d,i)-> (if (d)#?i then 
-d #i else --image(0*id_((E.filteredComplex_infinity)_(sum i)))  
-     	       	    epqrMaps(d.filteredComplex,i#0,i#1,- d.degree #1) 
+SpectralSequencePageMap _ List := Matrix => (d,i)-> (if (d)#?i then d#i 
+     	  else  epqrMaps(d.filteredComplex,i#0,i#1,- d.degree #1) 
 		    )
 
 SpectralSequencePageMap ^ List := Module => (d,i)-> (d_(-i))    
@@ -331,7 +357,7 @@ SpectralSequencePage ^ List := Module => (E,i)-> (E_(-i))
 -- as the support of the page.
 
 support SpectralSequencePage := E->(
-     new HashTable from apply(keys E.dd, i-> i=> source E.dd #i) )
+     new HashTable from apply(spots E.dd, i-> i=> source E.dd #i) )
 
 -- the following two methods are used to view the modules 
 -- on the r th page in grid form.  
@@ -399,20 +425,6 @@ SpectralSequence _ InfiniteNumber :=
 SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r       )
 
 
--- the following computes the homology at the pq spot on the rth page.
-rpqHomology = method()
-rpqHomology(SpectralSequence,ZZ,ZZ,ZZ) :=(E,p,q,r) -> ( 
-     if E^r .dd #?{p+r,q-r+1} then 
-     (ker(E^ r.dd #{p,q})) / (image(E^ r.dd #{p+r,q-r+1}) ) 
- else (ker(E^ r.dd #{p,q})) / (image(0*id_(E^ r.filteredComplex _infinity _ (p+q)) ))
-     )
-
--- the following computes the isomorphism of the homology at the pq spot
--- on the r-th page and the module on at the pq spot on the r+1-th page.
-rpqIsomorphism = method()
-rpqIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) :=(E,p,q,r) -> (
-inducedMap(source (E^(r+1) .dd #{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filteredComplex _infinity _(p+q)))
-  ) 
 
 --------------------------------------------------------------------------------
 -- constructing filtered complexes ---------------------------------------------
@@ -1555,7 +1567,7 @@ installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
 --------------------------------------------------------------------------------
--- some scratch code trying to write net of a spectralSequencePageMap --
+-- some scratch code related to  spectralSequencePageMap --
 
 A=QQ[x,y,z]
 C = koszul vars A
@@ -1568,6 +1580,14 @@ E^0 _{10,25}
 
 E^0 .dd
 myMaps = E^1 .dd
+myMaps_{-2,3}
+myMaps_{1,0}
+spots myMaps
+myMaps_{3,-2}
+myMaps_{3,0}
+myMaps_{10,10}
+myMaps^{-1,1}
+myMaps_{1,-1}
 E^0 .number
 E^0 .filteredComplex
 E^2
