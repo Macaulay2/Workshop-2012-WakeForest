@@ -60,7 +60,8 @@ export {
   "Shift",
   "ReducedHomology","project",
   "SpectralSequencePageMap",
-  "spectralSequencePageMap"
+  "spectralSequencePageMap",
+  "pprune"
   }
 
 
@@ -241,6 +242,7 @@ epqrMaps := (K,p,q,r) -> (
 
 -- the following will prune the pq maps on the rth page explicitly. --
 -- it needs to be tested further. --
+
 pruneEpqrMaps := (K,p,q,r) -> ( 
      d := epqrMaps(K,p,q,r);
      N := minimalPresentation(source d);
@@ -280,17 +282,33 @@ spots SpectralSequencePageMap := List => (cacheValue symbol spots)(
   K ->  select(keys K, i -> class i === List))
 
 
-spectralSequencePageMap=method()
+--spectralSequencePage = method (Options =>{pprune => false})
 
-spectralSequencePageMap(FilteredComplex,ZZ):= (K,r) -> (myList:={};
-     for p from min K to max K do (
-	  for q from -p to length K_(max K) do (
-	       myList=append(myList, {p,q}=> epqrMaps(K,p,q,r)); )
-	       	    );
+--spectralSequencePage(FilteredComplex, ZZ) := SpectralSequencePage => opts ->  (K,r) ->( 
+
+spectralSequencePageMap=method(Options =>{Prune => false})
+
+spectralSequencePageMap(FilteredComplex,ZZ):= SpectralSequencePageMap => opts ->
+ (K,r) -> (myList:={};
+      if opts.Prune == false then ( 
+           for p from min K to max K do (
+	  	for q from -p to length K_(max K) do (
+	       	     myList=append(myList, {p,q}=> epqrMaps(K,p,q,r)); )
+		     ))
+     	  else (
+     	       for p from min K to max K do (
+	  	for q from -p to length K_(max K) do (
+	       	     myList=append(myList, {p,q}=> pruneEpqrMaps(K,p,q,r)); )
+		     )
+		);	       	       
 	       new SpectralSequencePageMap from 
 	       join (myList, {symbol cache =>  new CacheTable,
-		    symbol degree =>{-r,r-1}, symbol filteredComplex => K})
+		    symbol degree =>{-r,r-1}, symbol filteredComplex => K, 
+		    symbol Prune => opts.Prune})
       )
+
+
+
 
 -- the code for net of a SpectralSequencePageMap is based
 -- off the code for net of a ChainComplexMap
@@ -310,7 +328,12 @@ net SpectralSequencePageMap := f -> (
 
 
 SpectralSequencePageMap _ List := Matrix => (d,i)-> (if (d)#?i then d#i 
-     	  else  epqrMaps(d.filteredComplex,i#0,i#1,- d.degree #1) 
+     	  else  
+	       if d.Prune == false then 
+	            epqrMaps(d.filteredComplex,i#0,i#1,- d.degree #1) 
+     	       else
+	       	    pruneEpqrMaps(d.filteredComplex,i#0,i#1,- d.degree #1) 
+	       	    		    
 		    )
 
 SpectralSequencePageMap ^ List := Module => (d,i)-> (d_(-i))    
@@ -323,32 +346,42 @@ SpectralSequencePage.synonym = "spectral sequence page"
 SpectralSequencePage.GlobalAssignHook = globalAssignFunction
 SpectralSequencePage.GlobalReleaseHook = globalReleaseFunction
 
-spectralSequencePage = method ()
-spectralSequencePage(FilteredComplex, ZZ):= (K,r) ->( 
+--filteredComplex = method(Options => {
+--    Shift => 0,
+--    ReducedHomology => true})
+--filteredComplex List := FilteredComplex => opts -> L -> (
+
+
+spectralSequencePage = method (Options =>{Prune => false})
+
+spectralSequencePage(FilteredComplex, ZZ) := SpectralSequencePage => opts ->  (K,r) ->( 
 new SpectralSequencePage from 
  {symbol filteredComplex=> K, 
   -- the degree is now remembered in SpectralSequencePageMap.
   --   symbol degree =>{-r,r-1}, 
   -- perhaps this is redundant
+       symbol Prune => opts.Prune,
        symbol number => r,
      -- maybe instead of page number we should use degree??  symbol degree = (-r,r-1).  This is the 
      -- bidegree of the differential.
    --we don't need a key with
    -- pageModules.  We can get this by
    -- looking at the source of the differential at the pq spot
-      symbol dd => spectralSequencePageMap(K,r), 
+      symbol dd => spectralSequencePageMap(K,r, Prune => opts.Prune), 
      symbol zero => (ring K_infinity)^0})
 
-
-
+--minimalPresentation ChainComplex := prune ChainComplex := ChainComplex => opts -> (C) -> (
+minimalPresentation SpectralSequencePage := prune SpectralSequencePage := SpectralSequencePage  => opts -> (E) -> (
+     spectralSequencePage(E.filteredComplex, E.number, Prune =>true)
+     )
 -- in the following we are assuming that user is inputing a list of 
 -- pairs of integers.
 -- should return an error message if this isn't the case.
 --  If the key is not in the hash table then
 -- we compute epq explicitly.
 SpectralSequencePage _ List := Module => (E,i)-> (if (E.dd)#?i then 
-source(E.dd #i) else --image(0*id_((E.filteredComplex_infinity)_(sum i)))  
-     	       	    epq(E.filteredComplex,i#0,i#1,E.number) 
+source(E.dd _i) --else --image(0*id_((E.filteredComplex_infinity)_(sum i)))  
+     	     --  	    epq(E.filteredComplex,i#0,i#1,E.number) 
 		    )
 
 SpectralSequencePage ^ List := Module => (E,i)-> (E_(-i))    
@@ -378,7 +411,7 @@ netList K)
 testRow=method()
 testRow(ZZ,ZZ,ZZ,SpectralSequencePage):=(maxP,minP,q,E)->(L:={};
       apply(minP .. maxP, i-> 
-	   if (E.dd) #?{i,q} then L=append(L, stack(net prune E_{i,q}, "  ", net {i,q}))
+	   if (E.dd) #?{i,q} then L=append(L, stack(net E_{i,q}, "  ", net {i,q}))
 	   else L=append(L, stack(net 0, " ", net {i,q})));
        L)
 
@@ -400,10 +433,10 @@ expression SpectralSequence := E -> stack(
   "  \\   \\  ", "   `~~~` ")
 
 ----------------------------------------------------------------------------
--- I'm also not sure if we need or want a degree option.
 
-spectralSequence = method(Options => {Degree => 1})
-spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
+
+spectralSequence = method()
+spectralSequence FilteredComplex := SpectralSequence => K -> (
      new SpectralSequence from {
 	  symbol filteredComplex => K,
 	  symbol zero => K.zero,
@@ -741,21 +774,55 @@ doc ///
      	       	    K=filteredComplex({D,F1D,F0D},ReducedHomology => false)
      	       Text		    
 		    Now try to compute the various pages of the spectral sequence.
-		    I have not made any serious attempt to compute the $E_0$ 
-		    and $E_1$ page by hand. 
+		    I have not made any serious attempt to compute the $E^0$ 
+		    and $E^1$ pages by hand. 
      	       Example		     
      	       	    E = spectralSequence K
+     	       Text 
+	       	    When we compute the $E^0$ page the output will be unintelliagable. 
+		    We will want to prune the page afterwards.
+     	       Example		    		    
 		    E0page = E^0
 		    --new HashTable from apply(keys E0page.dd, i-> i=> E0page.dd #i)
-     	       	    E0page.dd  
+     	       Text
+	       	    Here are the maps.
+     	       Example		    		    
+     	       	    E0page.dd
+     	       Text 
+	       	    Compare with the pruned version.
+     	       Example		    		    
+		    minimalE0page = minimalPresentation(E0page)  
+		    minimalE0page.dd
 		    apply(spots E0page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
-     	       	    E1page = E^1
+     	       Text
+	       	    Now try the $E^1$ page.  
+     	       Example		       	       	    
+		    E1page = E^1
 		    --new HashTable from apply(keys E1page.dd, i-> i=>  E1page.dd #i)
+     	       Text 
+	       	    Here are the maps.
+     	       Example		    		    
 		    E1page.dd 
+     	       Text
+	       	    Compare with the pruned version.
+     	       Example		    		    
+		    minimalE1page = minimalPresentation(E1page)  
+		    minimalE1page.dd
 		    apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
+     	       Text
+	       	    Now try the $E^2$ page.
+     	       Example		    		    
 		    E2page = E^2
 		    --new HashTable from apply(keys E2page.dd, i-> i=> E2page.dd #i)
+     	       Text
+	       	    Here are the maps.
+     	       Example		    		    
 		    E2page.dd
+     	       Text
+	       	    Here is the pruned version.
+     	       Example		    		    
+		    minimalE2page = minimalPresentation(E2page)  
+		    minimalE2page.dd
 		    apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
      	       Text		    
 		    Note that the modules on the E_2 page appear to have been computed correctly.  
@@ -768,6 +835,8 @@ doc ///
      	       Example		    
 		    E3page = E^3
 		    E3page.dd
+		    minimalE3page = minimalPresentation(E3page)  
+		    minimalE3page.dd
 		    --new HashTable from apply(keys E3page.dd, i-> i=> E3page.dd #i)
 		    apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,3))
      	       Text		    
