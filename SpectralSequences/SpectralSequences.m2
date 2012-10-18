@@ -262,7 +262,7 @@ spectralSequencePageMap(FilteredComplex,ZZ):= (K,r) -> (myList:={};
 	       	    );
 	       new SpectralSequencePageMap from 
 	       join (myList, {symbol cache =>  new CacheTable,
-		    symbol degree =>{-r,r-1}})
+		    symbol degree =>{-r,r-1}, symbol filteredComplex => K})
       )
 
 -- the code for net of a SpectralSequencePageMap is based
@@ -282,6 +282,13 @@ net SpectralSequencePageMap := f -> (
 )
 
 
+SpectralSequencePageMap _ List := Matrix => (d,i)-> (if (d)#?i then 
+d #i else --image(0*id_((E.filteredComplex_infinity)_(sum i)))  
+     	       	    epqrMaps(d.filteredComplex,i#0,i#1,- d.degree #1) 
+		    )
+
+SpectralSequencePageMap ^ List := Module => (d,i)-> (d_(-i))    
+
 --------------------------------------------------------------------------------
 -- spectral sequence pages
 --------------------------------------------------------------------------------
@@ -296,6 +303,8 @@ new SpectralSequencePage from
  {symbol filteredComplex=> K, 
   -- the degree is now remembered in SpectralSequencePageMap.
   --   symbol degree =>{-r,r-1}, 
+  -- perhaps this is redundant
+       symbol number => r,
      -- maybe instead of page number we should use degree??  symbol degree = (-r,r-1).  This is the 
      -- bidegree of the differential.
    --we don't need a key with
@@ -309,10 +318,12 @@ new SpectralSequencePage from
 -- in the following we are assuming that user is inputing a list of 
 -- pairs of integers.
 -- should return an error message if this isn't the case.
--- this should be rewritten.  If the key is not in the hash table then
--- should compute epqr explicitly.
-SpectralSequencePage _ List := Module => (E,i)-> if (E.dd)#?i then 
-source(E.dd #i) else image(0*id_((E.filteredComplex_infinity)_(sum i)))  
+--  If the key is not in the hash table then
+-- we compute epq explicitly.
+SpectralSequencePage _ List := Module => (E,i)-> (if (E.dd)#?i then 
+source(E.dd #i) else --image(0*id_((E.filteredComplex_infinity)_(sum i)))  
+     	       	    epq(E.filteredComplex,i#0,i#1,E.number) 
+		    )
 
 SpectralSequencePage ^ List := Module => (E,i)-> (E_(-i))    
 
@@ -1551,9 +1562,16 @@ C = koszul vars A
 K = filteredComplex C
 E = spectralSequence K
 
+E^0
+E^0 _{0,0}
+E^0 _{10,25}
+
 E^0 .dd
 myMaps = E^1 .dd
-
+E^0 .number
+E^0 .filteredComplex
+E^2
+E^2_{-25,1}
 E^2 .dd
 spots myMaps
 
