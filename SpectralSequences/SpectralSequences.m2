@@ -17,8 +17,8 @@
 --------------------------------------------------------------------------------
 newPackage(
   "SpectralSequences",
-  Version => "0.4",
-  Date => "13 September 2012",
+  Version => "0.5",
+  Date => "11 October 2012",
   Authors => {
        {
       Name => "David Berlekamp", 
@@ -50,15 +50,17 @@ export {
   "SpectralSequence",
   "spectralSequence",
   "see", 
-  "computeErModules",
-  "computeErMaps", 
+ -- "computeErModules",
+ -- "computeErMaps", 
   "spots",
   "SpectralSequencePage", 
   "spectralSequencePage",
   "rpqHomology",
   "rpqIsomorphism",
   "Shift",
-  "ReducedHomology","project"
+  "ReducedHomology","project",
+  "SpectralSequencePageMap",
+  "spectralSequencePageMap"
   }
 
 
@@ -142,6 +144,12 @@ else (C = truncate(chainComplex L#0,1); -- By default the ambient simplicial com
   if (last P)#1 != Z then P = P | {(-1-opts.Shift) => Z};
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
+-- we need to be careful with spots here!!  
+-- ChainComplexes are new types of GradedModules, which are new types of MutableHashTables.
+-- As such the keys of a ChainComplex are mutable.  So we probably do not
+-- want to cache spots of a chain complex.
+-- The keys of a FilteredComplex are not mutable, so it is OK to cache them.
+-- Similarly, the support of a chain complex should not be cached, as the keys of the chain complex are not mutable.
 
 spots = method()
 spots ChainComplex := List => (cacheValue symbol spots)(
@@ -178,6 +186,8 @@ inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
 net FilteredComplex := K -> (
   v := between("", apply(spots K, p -> p | " : " | net K_p));
   if #v === 0 then "0" else stack v)
+
+
 
 
 
@@ -232,17 +242,44 @@ epqrMaps:=(K,p,q,r)-> (
 
 --Compute all maps on the Er page as we did above for the modules.
 
-computeErMaps=method()
+----
+-- Starting to write code for SpectralSequencePageMap
 
-computeErMaps(FilteredComplex,ZZ):= (K,r) -> (myList:={};
+SpectralSequencePageMap = new Type of HashTable
+SpectralSequencePageMap.synonym = "spectral sequence page map"
+
+-- spots needs to be improved.  This will work for now.
+spots SpectralSequencePageMap := List => (cacheValue symbol spots)(
+  K ->  select(keys K, i -> class i === List))
+
+
+spectralSequencePageMap=method()
+
+spectralSequencePageMap(FilteredComplex,ZZ):= (K,r) -> (myList:={};
      for p from min K to max K do (
 	  for q from -p to length K_(max K) do (
 	       myList=append(myList, {p,q}=> epqrMaps(K,p,q,r)); )
 	       	    );
-	       new HashTable from myList
+	       new SpectralSequencePageMap from 
+	       join (myList, {symbol cache =>  new CacheTable,
+		    symbol degree =>{-r,r-1}})
       )
 
-
+-- the code for net of a SpectralSequencePageMap is based
+-- off the code for net of a ChainComplexMap
+lineOnTop := (s) -> concatenate(width s : "-") || s
+net SpectralSequencePageMap := f -> (
+     v := between("",
+	  apply(spots f, 
+     	       i -> horizontalJoin(
+		         net (i + f.degree), " : " , net (target f#i), " <--",
+		         lineOnTop net f#i,
+		         "-- ", net source f#i, " : ", net i
+		    )
+	       )
+	       );
+	  stack v
+)
 
 
 --------------------------------------------------------------------------------
@@ -257,13 +294,14 @@ spectralSequencePage = method ()
 spectralSequencePage(FilteredComplex, ZZ):= (K,r) ->( 
 new SpectralSequencePage from 
  {symbol filteredComplex=> K, 
-     symbol degree =>{-r,r-1}, 
+  -- the degree is now remembered in SpectralSequencePageMap.
+  --   symbol degree =>{-r,r-1}, 
      -- maybe instead of page number we should use degree??  symbol degree = (-r,r-1).  This is the 
      -- bidegree of the differential.
    --we don't need a key with
    -- pageModules.  We can get this by
    -- looking at the source of the differential at the pq spot
-      symbol dd => computeErMaps(K,r), 
+      symbol dd => spectralSequencePageMap(K,r), 
      symbol zero => (ring K_infinity)^0})
 
 
@@ -271,7 +309,8 @@ new SpectralSequencePage from
 -- in the following we are assuming that user is inputing a list of 
 -- pairs of integers.
 -- should return an error message if this isn't the case.
-
+-- this should be rewritten.  If the key is not in the hash table then
+-- should compute epqr explicitly.
 SpectralSequencePage _ List := Module => (E,i)-> if (E.dd)#?i then 
 source(E.dd #i) else image(0*id_((E.filteredComplex_infinity)_(sum i)))  
 
@@ -402,8 +441,8 @@ truncate (ChainComplex,ZZ):= (C,q) ->(
 filteredComplex ChainComplex := FilteredComplex =>opts-> C->( complete C; 
      n:= max support C;
      m:= min support C;
-    H:= for i from 1 to length C list inducedMap(C,truncate(C,-i));
-    filteredComplex(H,Shift => -m)
+     H:= for i from 1 to length C list inducedMap(C,truncate(C,-i));
+     filteredComplex(H,Shift => -m)
      )
 
 
@@ -634,7 +673,7 @@ doc ///
 		    l4={a_0*b_0*b_1*d_1,a_0*b_1*d_0*d_1,b_1*c_1*c_2*d_1,b_1*c_2*d_0*d_1,a_0*a_2*c_2*d_1,a_0*c_2*d_0*d_1};
 		    l5={a_0*b_1*d_0*d_2,a_0*a_1*b_1*d_2,b_1*c_2*d_0*d_2,b_1*b_2*c_2*d_2,a_0*c_2*d_0*d_2,a_0*c_0*c_2*d_2};
 		    D=simplicialComplex(join(l1,l2,l3,l4,l5));
-	       Text
+	       Text 
 	            We now construct filtrations of $D$ corresponding to $p$-
 		    sketeltons of the fibration.
 		    Again we describe these in pieces.
@@ -684,14 +723,17 @@ doc ///
      	       Example		     
      	       	    E = spectralSequence K
 		    E0page = E^0
-		    new HashTable from apply(keys E0page.dd, i-> i=> E0page.dd #i)
-     	       	    apply(keys E0page .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
+		    --new HashTable from apply(keys E0page.dd, i-> i=> E0page.dd #i)
+     	       	    E0page.dd  
+		    apply(spots E0page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
      	       	    E1page = E^1
-		    new HashTable from apply(keys E1page.dd, i-> i=>  E1page.dd #i)
-		    apply(keys E1page .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
+		    --new HashTable from apply(keys E1page.dd, i-> i=>  E1page.dd #i)
+		    E1page.dd 
+		    apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
 		    E2page = E^2
-		    new HashTable from apply(keys E2page.dd, i-> i=> E2page.dd #i)
-		    apply(keys E1page .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
+		    --new HashTable from apply(keys E2page.dd, i-> i=> E2page.dd #i)
+		    E2page.dd
+		    apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
      	       Text		    
 		    Note that the modules on the E_2 page appear to have been computed correctly.  
 		    The statement of the Serre spectral sequence, see for example Theorem 1.3 p. 8 of 
@@ -702,8 +744,9 @@ doc ///
 		    will abut to the homology of $S^3$.
      	       Example		    
 		    E3page = E^3
-		    new HashTable from apply(keys E3page.dd, i-> i=> E3page.dd #i)
-		    apply(keys E1page .dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,3))
+		    E3page.dd
+		    --new HashTable from apply(keys E3page.dd, i-> i=> E3page.dd #i)
+		    apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,3))
      	       Text		    
 		   The E_3 page appears to have been computed correctly.		
 ///	       
@@ -735,14 +778,20 @@ doc ///
      	  Example
 	       F = spectralSequence( (K ** (filteredComplex J)))	       
 	  Text
-	       Let's compute some pages of these spectral sequences.
+	       Let's compute some pages and maps of these spectral sequences.
 	  Example
 	       E^0
+	       E^0 .dd 
 	       E^1
+	       E^0 .dd
 	       E^2
+	       E^2 .dd
 	       F^0
+	       F^0 .dd
 	       F^1
-	       F^2          	       
+	       F^1 .dd
+	       F^2    
+	       F^2 .dd      	       
 	        	       
 	    
 ///	       	 
@@ -825,12 +874,16 @@ doc ///
      	  Example
 	       E = spectralSequence K
      	  Text
-	       Let's view some pages. 
+	       Let's view some pages and maps of these pages. 
      	  Example
-	       E^0
+	       E^0 
+	       E^0 .dd
 	       E^1
+	       E^1 .dd
 	       E^2
-	       E^infinity	            	  	       	          
+	       E^2 .dd
+	       E^infinity
+	       E^infinity .dd	            	  	       	          
 	  Text
      	     If we want the resulting complexes to correspond to the non-reduced homology
      	     of the simpicial complexes we set the ReducedHomology option
@@ -1490,11 +1543,42 @@ installPackage"SpectralSequences"
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
+--------------------------------------------------------------------------------
+-- some scratch code trying to write net of a spectralSequencePageMap --
+
+A=QQ[x,y,z]
+C = koszul vars A
+K = filteredComplex C
+E = spectralSequence K
+
+E^0 .dd
+myMaps = E^1 .dd
+
+E^2 .dd
+spots myMaps
+
+lineOnTop := (s) -> concatenate(width s : "-") || s
+testNet = method( )
+testNet SpectralSequencePageMap := f -> (
+     v := between("",
+	  apply(spots f, 
+     	       i -> horizontalJoin(
+		         net (i + f.degree), " : " , net (target f#i), " <--",
+		         lineOnTop net f#i,
+		         "-- ", net source f#i, " : ", net i
+		    )
+	       )
+	       );
+	  stack v
+)
+
+
 --------------------------------
 -- the following is an example for filteredComplex constructor.  
 -- for this example to work need to load package ChainComplexExtras
  -- need to load package ChainComplexExtras and later SimplicialComplexes
 	  -- for this to work.
+needsPackage"ChainComplexExtras"
 R=QQ[a,b,c,d]
 d2=matrix(R,{{1},{0}})
 d1=matrix(R,{{0,1}})
