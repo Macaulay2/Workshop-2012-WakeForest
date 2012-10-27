@@ -250,6 +250,12 @@ pruneEpqrMaps := (K,p,q,r) -> (
     inverse(M.cache.pruningMap)* d * (N.cache.pruningMap) 
      )
 ---
+ErMaps = method(Options =>{Prune => false})
+
+
+ErMaps(FilteredComplex,ZZ,ZZ,ZZ):= Matrix => opts -> (K,p,q,r) -> (if opts.Prune == false then
+     epqrMaps(K,p,q,r)
+     else   pruneEpqrMaps(K,p,q,r))
 
 -- the following computes the homology at the pq spot on the rth page.
 rpqHomology = method()
@@ -273,7 +279,7 @@ inducedMap(source (E^(r+1) .dd_{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filtere
 
 ----
 -- Starting to write code for SpectralSequencePageMap
-
+---
 SpectralSequencePageMap = new Type of HashTable
 SpectralSequencePageMap.synonym = "spectral sequence page map"
 
@@ -282,28 +288,26 @@ spots SpectralSequencePageMap := List => (cacheValue symbol spots)(
   K ->  select(keys K, i -> class i === List))
 
 
---spectralSequencePage = method (Options =>{pprune => false})
-
---spectralSequencePage(FilteredComplex, ZZ) := SpectralSequencePage => opts ->  (K,r) ->( 
-
-spectralSequencePageMap=method(Options =>{Prune => false})
+spectralSequencePageMap = method(Options =>{Prune => false})
 
 spectralSequencePageMap(FilteredComplex,ZZ):= SpectralSequencePageMap => opts ->
  (K,r) -> (myList:={};
-      if opts.Prune == false then ( 
+      --if opts.Prune == false then ( 
            for p from min K to max K do (
 	  	for q from -p to length K_(max K) do (
-	       	     myList=append(myList, {p,q}=> epqrMaps(K,p,q,r)); )
-		     ))
-     	  else (
-     	       for p from min K to max K do (
-	  	for q from -p to length K_(max K) do (
-	       	     myList=append(myList, {p,q}=> pruneEpqrMaps(K,p,q,r)); )
-		     )
-		);	       	       
+	       	     myList = 
+		     append(myList, {p,q} => ErMaps(K,p,q,r, Prune => opts.Prune)) ));
+	--	     ))
+     	 -- else (
+     	  --     for p from min K to max K do (
+	  --	for q from -p to length K_(max K) do (
+	   --    	     myList=append(myList, {p,q}=> pruneEpqrMaps(K,p,q,r)); )
+--		     )
+--		);	       	       
 	       new SpectralSequencePageMap from 
 	       join (myList, {symbol cache =>  new CacheTable,
-		    symbol degree =>{-r,r-1}, symbol filteredComplex => K, 
+		    symbol degree => {-r,r-1}, 
+		    symbol filteredComplex => K, 
 		    symbol Prune => opts.Prune})
       )
 
@@ -346,10 +350,6 @@ SpectralSequencePage.synonym = "spectral sequence page"
 SpectralSequencePage.GlobalAssignHook = globalAssignFunction
 SpectralSequencePage.GlobalReleaseHook = globalReleaseFunction
 
---filteredComplex = method(Options => {
---    Shift => 0,
---    ReducedHomology => true})
---filteredComplex List := FilteredComplex => opts -> L -> (
 
 
 spectralSequencePage = method (Options =>{Prune => false})
@@ -379,7 +379,7 @@ minimalPresentation SpectralSequencePage := prune SpectralSequencePage := Spectr
 -- should return an error message if this isn't the case.
 --  If the key is not in the hash table then
 -- we compute epq explicitly.
-SpectralSequencePage _ List := Module => (E,i)-> (if (E.dd)#?i then 
+SpectralSequencePage _ List := Module => (E,i)-> (--if (E.dd)#?i then 
 source(E.dd _i) --else --image(0*id_((E.filteredComplex_infinity)_(sum i)))  
      	     --  	    epq(E.filteredComplex,i#0,i#1,E.number) 
 		    )
@@ -434,13 +434,16 @@ expression SpectralSequence := E -> stack(
 
 ----------------------------------------------------------------------------
 
-
-spectralSequence = method()
-spectralSequence FilteredComplex := SpectralSequence => K -> (
+--method (Options =>{Prune => false})
+--SpectralSequencePage => opts ->  (K,r)
+spectralSequence = method (Options =>{Prune => false})
+spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
      new SpectralSequence from {
 	  symbol filteredComplex => K,
 	  symbol zero => K.zero,
-	  symbol cache => CacheTable})
+	  symbol cache => CacheTable,
+     	  symbol Prune => opts.Prune}
+     )
 
 -- In the following we are using the rule 
 -- if r> max K - min K then E^r_{p,q}=E^r'_{p,q} for all r'>=r.
@@ -450,13 +453,15 @@ SpectralSequence ^ InfiniteNumber:=
        (if r> (max E.filteredComplex) - (min E.filteredComplex) then
 	    E#r= spectralSequencePage(E.filteredComplex,(max E.filteredComplex) - (min E.filteredComplex))
 	    else
-       E#r= spectralSequencePage(E.filteredComplex,r);); 
+       E#r = spectralSequencePage(E.filteredComplex,r, Prune => E.Prune);); 
        E#r
        )
 
 SpectralSequence _ InfiniteNumber :=
-SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r       )
-
+SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r )
+minimalPresentation SpectralSequence := prune SpectralSequence := SpectralSequence  => opts -> (E) -> (
+	  spectralSequence(E.filteredComplex, Prune => true)
+	  )
 
 
 --------------------------------------------------------------------------------
@@ -566,6 +571,7 @@ Hom(Matrix, Module) := Matrix => (f,N) -> (
      g:= (f * map(source f,cover source f,1)) // map(target f,cover target f,1);
      inducedMap(Hom(source f, N),Hom(target f, N), transpose g ** N))
 
+-- there seems to be a bug in this one.
 Hom(Module, Matrix) := Matrix => (N,f) -> (inducedMap(Hom(N,target f),Hom(N,source f), (dual cover N) ** f))
      
 cover ChainComplex := ChainComplex => C -> (
@@ -873,17 +879,29 @@ doc ///
 	       Let's compute some pages and maps of these spectral sequences.
 	  Example
 	       E^0
+	       e0 = minimalPresentation(E^0)
 	       E^0 .dd 
+	       e0.dd
 	       E^1
-	       E^0 .dd
+	       e1 = minimalPresentation(E^1)
+	       E^1 .dd
+	       e1.dd
 	       E^2
+	       e2 = minimalPresentation(E^2)
 	       E^2 .dd
+	       e2.dd
 	       F^0
+	       f0 = minimalPresentation(F^0)
 	       F^0 .dd
+	       f0.dd
 	       F^1
+	       f1 = minimalPresentation(F^1)
 	       F^1 .dd
-	       F^2    
+	       f1.dd
+	       F^2  
+	       f2 = minimalPresentation(F^2)  
 	       F^2 .dd      	       
+	       f2.dd
 	        	       
 	    
 ///	       	 
@@ -968,14 +986,22 @@ doc ///
      	  Text
 	       Let's view some pages and maps of these pages. 
      	  Example
-	       E^0 
+	       E^0
+	       F0 = minimalPresentation(E^0) 
 	       E^0 .dd
+	       F0.dd 	      
 	       E^1
+	       F1 = minimalPresentation(E^1)
 	       E^1 .dd
+	       F1.dd
 	       E^2
+	       F2 = minimalPresentation(E^2) 
 	       E^2 .dd
+	       F2.dd
 	       E^infinity
-	       E^infinity .dd	            	  	       	          
+	       F = minimalPresentation(E^infinity)
+	       E^infinity .dd	            
+	       F.dd
 	  Text
      	     If we want the resulting complexes to correspond to the non-reduced homology
      	     of the simpicial complexes we set the ReducedHomology option
@@ -987,8 +1013,14 @@ doc ///
      	  Example
 	       D = spectralSequence J
 	       D^0
+	       G0 = minimalPresentation(D^0)
+	       G0.dd
 	       D^1
+	       G1 = minimalPresentation(D^1)
+	       G1.dd
 	       D^2
+	       G2 = minimalPresentation(D^2)
+	       G2.dd
 	       D^infinity 	             	          
   ///	  	 
 doc ///
@@ -1635,6 +1667,35 @@ installPackage"SpectralSequences"
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
+-------------------------------------------------------------------------------
+-- some scratch code trying to test some functions
+---------------------------------------------------------------------------
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A = QQ[a,b,c,d]
+D = simplicialComplex {a*d*c, a*b, a*c, b*c}
+F2D = D
+F1D = simplicialComplex {a*c, d}
+F0D = simplicialComplex {a,d}
+K = filteredComplex({F2D, F1D, F0D}, ReducedHomology => false)
+E = spectralSequence K
+F = minimalPresentation E
+F^0
+E^0
+G = minimalPresentation spectralSequence K
+E^0_{100,100}
+E^0
+F = spectralSequence(K,Prune => true)
+F^0
+F^1
+E^0_{-100,100}
+prune E^0_{100,-100}
+
+
 --------------------------------------------------------------------------------
 -- some scratch code related to  spectralSequencePageMap --
 
