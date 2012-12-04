@@ -50,8 +50,8 @@ export {
   "SpectralSequence",
   "spectralSequence",
   "see", 
- -- "computeErModules",
- -- "computeErMaps", 
+  "computeErModules",
+  "computeErMaps", 
   "spots",
   "SpectralSequencePage", 
   "spectralSequencePage",
@@ -61,7 +61,10 @@ export {
   "ReducedHomology","project",
   "SpectralSequencePageMap",
   "spectralSequencePageMap",
-  "pprune"
+  "pprune",
+  "epqrMaps",
+  "pruneEpqrMaps",
+  "epq"
   }
 
 
@@ -115,23 +118,22 @@ FilteredComplex.synonym = "filtered chain complex"
 
 filteredComplex = method(Options => {
     Shift => 0,
-    ReducedHomology => true})
-filteredComplex List := FilteredComplex => opts -> L -> (
+    ReducedHomology => true, Left => false, Right => false, symbol Hom => false})
+
+filteredComplex(List) := FilteredComplex => opts -> L -> (
   local maps;
   local C;
   if #L === 0 
   then error "expected at least one chain complex map or simplicial complex";
   if all(#L, p -> class L#p === SimplicialComplex) then (
     kk := coefficientRing L#0;
-    
     if opts.ReducedHomology == true then (
     C = chainComplex L#0; -- By default the ambient simplicial complex is the first element of the list
     maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
         i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
-else (C = truncate(chainComplex L#0,1); -- By default the ambient simplicial complex is the first element of the list
+    else (C = truncate(chainComplex L#0,1); -- By default the ambient simplicial complex is the first element of the list
     maps = apply(#L-1, p -> map(C, truncate(chainComplex L#(p+1),1), 
-        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
-   
+        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))   
  )
   else (
     maps = L;
@@ -168,14 +170,14 @@ FilteredComplex _ InfiniteNumber :=
 FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
   if K#?p then K#p 
   else if p < min K then K#(min K) 
-  else if p > max K then image id_(K#(max K)))
+  --else if p > max K then image id_(K#(max K)))
+  else if p > max K then K#(max K)
+  )
 
 FilteredComplex ^ InfiniteNumber :=
 FilteredComplex ^ ZZ := ChainComplex => (K,p) -> K_(-p)
 
 chainComplex FilteredComplex := ChainComplex => K -> K_infinity
-
-
 
 -- Retrieves (or lazily constructs) the inclusion map from the pth subcomplex to the top
 inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
@@ -187,10 +189,6 @@ inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
 net FilteredComplex := K -> (
   v := between("", apply(spots K, p -> p | " : " | net K_p));
   if #v === 0 then "0" else stack v)
-
-
-
-
 
 ------------------------------------------------------------------------
 -- below are the methods which compute the
@@ -220,8 +218,8 @@ bpq:= (K,p,q,r) ->(
       )
 
 -- the following will compute the pq modules on the rth page explicitly.
-
-epq:=(K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)) )
+epq = method()
+epq(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)) )
 
 
 -- the following computes all modules on the r-th page.
@@ -230,20 +228,20 @@ computeErModules = method()
 
 computeErModules(FilteredComplex,ZZ):= (K,r) -> (myList:={};
      for p from min K to max K do (
-	  for q from -p to length K_(max K) do (
+	  for q from -p + min K_(infinity) to max K_(infinity) do (--length K_(max K) do (
 	       myList=append(myList, {p,q}=> epq(K,p,q,r)); )
 	       	    );
 	       new HashTable from myList
       )
 
 -- the following will compute the pq maps on the rth page explicitly.
-epqrMaps := (K,p,q,r) -> (
-     inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),K_(max K).dd_(p+q)))
+epqrMaps = method()
+epqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
+     inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),(K_infinity).dd_(p+q)))
 
 -- the following will prune the pq maps on the rth page explicitly. --
--- it needs to be tested further. --
-
-pruneEpqrMaps := (K,p,q,r) -> ( 
+pruneEpqrMaps = method()
+pruneEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> ( 
      d := epqrMaps(K,p,q,r);
      N := minimalPresentation(source d);
      M := minimalPresentation(target d);
@@ -261,13 +259,8 @@ ErMaps(FilteredComplex,ZZ,ZZ,ZZ):= Matrix => opts -> (K,p,q,r) -> (if opts.Prune
 rpqHomology = method()
 
 rpqHomology(HashTable,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
---     r:= E.number;
       (ker(E^r .dd_{p,q})) / (image(E^r .dd_{p+r,q-r+1}) )
       )
---     if (E^r).dd #?{p+r,q-r+1} then 
---     (ker(E^ r.dd #{p,q})) / (image(E^ r.dd #{p+r,q-r+1}) ) 
---     else (ker(E^ r.dd #{p,q})) / (image(0*id_(E^ r.filteredComplex _infinity _ (p+q)) ))
---     )
 
 -- the following computes the isomorphism of the homology at the pq spot
 -- on the r-th page and the module on at the pq spot on the r+1-th page.
@@ -277,13 +270,10 @@ inducedMap(source (E^(r+1) .dd_{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filtere
   ) 
 
 
-----
--- Starting to write code for SpectralSequencePageMap
----
 SpectralSequencePageMap = new Type of HashTable
 SpectralSequencePageMap.synonym = "spectral sequence page map"
 
--- spots needs to be improved.  This will work for now.
+-- spots might need to be improved.  This will work for now.
 spots SpectralSequencePageMap := List => (cacheValue symbol spots)(
   K ->  select(keys K, i -> class i === List))
 
@@ -292,26 +282,16 @@ spectralSequencePageMap = method(Options =>{Prune => false})
 
 spectralSequencePageMap(FilteredComplex,ZZ):= SpectralSequencePageMap => opts ->
  (K,r) -> (myList:={};
-      --if opts.Prune == false then ( 
            for p from min K to max K do (
-	  	for q from -p to length K_(max K) do (
+		for q from -p + min K_(infinity) to max K_(infinity) -p do (
 	       	     myList = 
 		     append(myList, {p,q} => ErMaps(K,p,q,r, Prune => opts.Prune)) ));
-	--	     ))
-     	 -- else (
-     	  --     for p from min K to max K do (
-	  --	for q from -p to length K_(max K) do (
-	   --    	     myList=append(myList, {p,q}=> pruneEpqrMaps(K,p,q,r)); )
---		     )
---		);	       	       
 	       new SpectralSequencePageMap from 
 	       join (myList, {symbol cache =>  new CacheTable,
 		    symbol degree => {-r,r-1}, 
 		    symbol filteredComplex => K, 
 		    symbol Prune => opts.Prune})
       )
-
-
 
 
 -- the code for net of a SpectralSequencePageMap is based
@@ -336,8 +316,7 @@ SpectralSequencePageMap _ List := Matrix => (d,i)-> (if (d)#?i then d#i
 	       if d.Prune == false then 
 	            epqrMaps(d.filteredComplex,i#0,i#1,- d.degree #1) 
      	       else
-	       	    pruneEpqrMaps(d.filteredComplex,i#0,i#1,- d.degree #1) 
-	       	    		    
+	       	    pruneEpqrMaps(d.filteredComplex,i#0,i#1,- d.degree #1) 	       	    		    
 		    )
 
 SpectralSequencePageMap ^ List := Module => (d,i)-> (d_(-i))    
@@ -351,37 +330,21 @@ SpectralSequencePage.GlobalAssignHook = globalAssignFunction
 SpectralSequencePage.GlobalReleaseHook = globalReleaseFunction
 
 
-
 spectralSequencePage = method (Options =>{Prune => false})
 
 spectralSequencePage(FilteredComplex, ZZ) := SpectralSequencePage => opts ->  (K,r) ->( 
 new SpectralSequencePage from 
  {symbol filteredComplex=> K, 
-  -- the degree is now remembered in SpectralSequencePageMap.
-  --   symbol degree =>{-r,r-1}, 
-  -- perhaps this is redundant
        symbol Prune => opts.Prune,
        symbol number => r,
-     -- maybe instead of page number we should use degree??  symbol degree = (-r,r-1).  This is the 
-     -- bidegree of the differential.
-   --we don't need a key with
-   -- pageModules.  We can get this by
-   -- looking at the source of the differential at the pq spot
-      symbol dd => spectralSequencePageMap(K,r, Prune => opts.Prune), 
-     symbol zero => (ring K_infinity)^0})
+       symbol dd => spectralSequencePageMap(K,r, Prune => opts.Prune), 
+      symbol zero => (ring K_infinity)^0})
 
---minimalPresentation ChainComplex := prune ChainComplex := ChainComplex => opts -> (C) -> (
 minimalPresentation SpectralSequencePage := prune SpectralSequencePage := SpectralSequencePage  => opts -> (E) -> (
      spectralSequencePage(E.filteredComplex, E.number, Prune =>true)
      )
--- in the following we are assuming that user is inputing a list of 
--- pairs of integers.
--- should return an error message if this isn't the case.
---  If the key is not in the hash table then
--- we compute epq explicitly.
-SpectralSequencePage _ List := Module => (E,i)-> (--if (E.dd)#?i then 
-source(E.dd _i) --else --image(0*id_((E.filteredComplex_infinity)_(sum i)))  
-     	     --  	    epq(E.filteredComplex,i#0,i#1,E.number) 
+
+SpectralSequencePage _ List := Module => (E,i)-> ( source(E.dd _i) 
 		    )
 
 SpectralSequencePage ^ List := Module => (E,i)-> (E_(-i))    
@@ -451,7 +414,8 @@ SpectralSequence ^ InfiniteNumber:=
   SpectralSequence ^ ZZ := SpectralSequencePage => (E,r) -> (
        if E#?r then E#r else 
        (if r> (max E.filteredComplex) - (min E.filteredComplex) then
-	    E#r= spectralSequencePage(E.filteredComplex,(max E.filteredComplex) - (min E.filteredComplex))
+	    E#r= spectralSequencePage(E.filteredComplex,(max E.filteredComplex) 
+		 - (min E.filteredComplex), Prune => E.Prune)
 	    else
        E#r = spectralSequencePage(E.filteredComplex,r, Prune => E.Prune);); 
        E#r
@@ -469,11 +433,9 @@ minimalPresentation SpectralSequence := prune SpectralSequence := SpectralSequen
 --------------------------------------------------------------------------------
 
 
--- Can we add options??  e.g. ker and image to return
+-- Can/Should we add options??  e.g. ker and image to return
 -- the truncated complex with ker d_p in degree 0 and zero in degrees > p 
 -- or the truncated complex with image d_{p+1} in degree p and zero in degrees <p ??
-
-
 
 -- the following method truncates a chain complex 
 truncate (ChainComplex,ZZ):= (C,q) ->( 
@@ -497,47 +459,104 @@ truncate (ChainComplex,ZZ):= (C,q) ->(
 
 
 
--- the following method makes a filtered complex by successively truncating from the end. --
+-- make the filtered complex associated to the "naive truncation of a chain complex"
+filteredComplex ChainComplex := FilteredComplex => opts-> C->( complete C; 
+     	       n := max support C;
+     	       m := min support C;
+     	       H := for i from 1 to length C list inducedMap(C,truncate(C,-i));
+     	      filteredComplex(H,Shift => -m))
 
-filteredComplex ChainComplex := FilteredComplex =>opts-> C->( complete C; 
-     n:= max support C;
-     m:= min support C;
-     H:= for i from 1 to length C list inducedMap(C,truncate(C,-i));
-     filteredComplex(H,Shift => -m)
+
+--produce the "x-filtration" of the tensor product complex.
+
+FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> ( 
+     xTensormodules := (p,q,T)->(apply( (T#q).cache.indices,
+     i-> if (i#0) <=p then  
+     image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+
+     xTensorComplex := (T,p) ->(K := new ChainComplex;
+		    K.ring = T.ring;
+		    for i from min T to max T do (
+		    if T#?(i-1) then
+		    K.dd_i = inducedMap(
+			 directSum(xTensormodules(p,i-1,T)
+			      ),
+			 directSum(xTensormodules(p,i,T)),T.dd_i));
+       	       K
+		    );
+
+     	  N := max support K_infinity;
+	  P := min support K_infinity;
+	  T := K_infinity ** C;
+filteredComplex(reverse for i from P to (N-1) list 
+     inducedMap(T, xTensorComplex(T,i)), Shift => -P)
+	  )
+
+ 
+--produce the "y-filtration" of the tensor product complex.
+ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> ( 
+     yTensorModules := (p,q,T)->(apply( (T#q).cache.indices,
+     i-> if (i#1) <=p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+    yTensorComplex := (T,p) -> (K := new ChainComplex;
+		    K.ring = T.ring;
+		    for i from min T to max T do (
+		    if T#?(i-1) then
+	     	    K.dd_i = inducedMap(directSum(yTensorModules(p,i-1,T)),
+			 directSum(yTensorModules(p,i,T)),T.dd_i));
+	       K
+	       );
+    	  N := max support K_infinity;
+	  P := min support K_infinity;
+	  T := C ** K_infinity;
+	   filteredComplex(reverse for i from P to (N -1) list 
+	       inducedMap(T, yTensorComplex(T,i)), Shift => -P)
      )
 
-
-
----------------------------------------------------------------
-----------------------------------------------------------------
--- the following has been rewritten to go through the primative constructor.
-
-FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
-  filteredComplex (reverse (for p from min K to (max K)-1 list inducedMap(K,p) ** C),Shift =>(- min K) )
-)
-ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> (
-  filteredComplex(reverse( for p from min K to (max K)-1 list C ** inducedMap(K,p)), Shift =>(-min K) )
-)
-
--- this one needs to be rewritten.
+-- produce the "x-filtration" of the Hom complex.
 Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
---filteredComplex for p from min K to max K list Hom(project(K,p),C)
- new FilteredComplex from (for p from min K to max K list p=> (Hom(K_p,C)  )) | {symbol zero => image (0*id_(Hom(K_infinity,C))), symbol cache =>  new CacheTable}
-)
+modules := (p,q,T)->(apply( (T#q).cache.indices,
+     i-> if (i#0) <= p - q then  
+     image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+     complex := (T,p) -> 
+     	       (K := new ChainComplex;
+		    K.ring = T.ring;
+		    for i from min T to max T do (
+		    if T#?(i-1) then
+		    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
+	       K
+	       );
+     N := max support K_infinity;
+     P := min support K_infinity;
+     H := Hom(K_infinity,C);
+     filteredComplex(reverse for i from P to (N-1) list inducedMap(H, complex(H,i)), Shift => -P)	 
+      )
 
--- there is a bug in this one.
-Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) ->(
---  filteredComplex for p from min K to max K list Hom(C,inducedMap(K,p))
- new FilteredComplex from (for p from min K to max K list p=> (Hom(C,K_p))  ) | {symbol zero => image (0*id_(Hom(C,K_infinity))), symbol cache =>  new CacheTable}
-
-)
-
+-- produce the "y-filtration" of the Hom complex.
+Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (    
+modules := (p,q,T)->(apply( (T#q).cache.indices,
+     i-> if (i#1) <= p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+complex := (T,p) ->
+     (K := new ChainComplex;
+		    K.ring = T.ring;
+		    for i from min T to max T do (
+		    if T#?(i-1) then
+	     	    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
+	       K
+	       );
+     N := max support K_infinity;
+     P := min support K_infinity;
+     H:= Hom(C,K_infinity);
+     filteredComplex(reverse for i from P to (N -1) list 
+	       inducedMap(H, complex(H,i)), Shift => -P)
+     )
 
 prune FilteredComplex := FilteredComplex => opts -> F -> 
   new FilteredComplex from 
   apply(keys F, p -> if class p =!= Symbol then p => prune F#p else p => F#p)
-
-
 
 
 filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
@@ -548,8 +567,7 @@ chainComplex SpectralSequence := ChainComplex => E -> chainComplex filteredCompl
 -- ChainComplexExtraExtras 
 --------------------------------------------------------------------------------------
 
-  
--- Computes the graded pieces of the total complex of a Hom double complex 
+  -- Computes the graded pieces of the total complex of a Hom double complex 
 -- (just as a graded module, so no maps!)
 Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
   R := C.ring;  if R =!= D.ring then error "expected graded modules over the same ring";
@@ -567,13 +585,23 @@ Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
       E#k = directSum(apply(p, v -> v => Hom(C_(v#0), D_(v#1) )));));
   E)
 
+-- the following method seems to work ok, although need to test more
+-- carefully.
 Hom(Matrix, Module) := Matrix => (f,N) -> (
-     g:= (f * map(source f,cover source f,1)) // map(target f,cover target f,1);
-     inducedMap(Hom(source f, N),Hom(target f, N), transpose g ** N))
+     g := (f * id_(source f)) // id_(target f);
+     inducedMap(image id_(Hom(source f, N)),image id_(Hom(target f, N)), 
+	       cover((transpose cover g) ** (id_(N))))
+)
 
--- there seems to be a bug in this one.
-Hom(Module, Matrix) := Matrix => (N,f) -> (inducedMap(Hom(N,target f),Hom(N,source f), (dual cover N) ** f))
-     
+
+-- the following method seems to work ok, athough need to test
+-- more carefully.
+Hom(Module, Matrix) := Matrix => (N,f) -> (inducedMap(Hom(N,target f),
+	  Hom(N,source f),   dual id_(cover N) ** f))
+
+
+-- there is/was a bug in cover chain complex -- 
+-- need to test more carefully. --     
 cover ChainComplex := ChainComplex => C -> (
      minC := min spots C;
      maxC := max spots C;
@@ -597,7 +625,8 @@ Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
 	  if j#0 === k#0 and j#1 === k#1-1 then (-1)^(k#0)*Hom(C_(k#0),D.dd_(k#1))
 	  else if j#0 === k#0 + 1 and j#1 === k#1 then Hom(C.dd_(j#0),D_(k#1))
 	  else 0))));
-  E)	    		    
+  E    	    		    
+)
 
 Hom (ChainComplex, ChainComplexMap) := ChainComplexMap => (C,f) -> (
   (F,G) := (Hom(C,source f),Hom(C,target f)); 
@@ -613,7 +642,6 @@ Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,C) -> (
         (j,k) -> map(G#i.cache.components#(G#i.cache.indexComponents#j), 
 	  F#i.cache.components#(F#i.cache.indexComponents#k),
 	  if j === k then Hom(f_(j#0), C_(j#1)) 
-
 	  else 0)))))
   
 ChainComplexMap ** ChainComplex := ChainComplexMap => (f,C) -> (
@@ -1661,15 +1689,976 @@ doc ///
       
 end
 
+
 --------------------------------------------------------------------------------
 restart
 installPackage"SpectralSequences"
 installPackage("SpectralSequences",RemakeAllDocumentation=>true)
 check "SpectralSequences";
 viewHelp SpectralSequences
+------------------------------------------
+--------------
+
+-- trying to do an example from the paper "A case study in 
+-- bigraded commutative algebra" by C-D-S.
+-- an appropriate term on the E2 page will correspond to non-koszul syzygies.
+
+---
+--
+restart
+needsPackage "SpectralSequences"
+R = QQ[x,y,z,w, Degrees => {{1,0},{1,0},{1,1},{1,1}}]
+S =QQ[a,b,c,d, Degrees => {{1,0},{1,0},{0,1},{0,1}}]
+B = ideal(x*z, x*w, y*z, y*w)
+
+help basis
+basis({1,1},R)
+
+p_0 = x^2*z
+p_1 = y^2*w
+p_2 = y^2*z+x^2*w
+
+
+I = ideal(p_0,p_1,p_2)
+
+m := n -> matrix(R,{{(x*z)^n,(x* w)^n,(y*z)^n,(y*w)^n}})
+-- in the following we will need to take n large enough.  An
+-- actual value seems to be contained in theorem 0.2 p. 585 of E-M-S.
+
+-- the following complex is the cech like complex that we want to use.
+K = truncate(Hom(koszul m 6, R^1),-1)
+Hom(koszul m 6, R^1)
+
+K
+
+K.dd
+-- so things seem to be multigraded correctly.
+C = koszul matrix(R,{{p_0,p_1,p_2}})
+C^(-3)
+Hom(C,R^1)
+Hom(K,C)
+Hom(C,K)
+C.dd
+-- so things seems to be mutigraded correctly.
+
+prune HH K
+prune ker K.dd_(-1)
+prune ker K.dd_(-1)
+
+T = K ** (C);
+
+F = K ** filteredComplex C
+e = prune spectralSequence F
+e^0
+e^1
+e^2
+K
+C
+
+F = filteredComplex K
+
+e = prune spectralSequence(F ** C)
+e^0
+e^1
+e^2
+f = filteredComplex C
+K
+
+ee = prune spectralSequence(K ** f)
+ee^0
+ee^1
+ee^2
+
+image id_C
+
+
+E = prune spectralSequence (filteredComplex K ** C)
+E^0
+E^1
+E^2
+
+E = prune spectralSequence (K ** filteredComplex(C))
+E^0
+E^1
+E^2
+
+prune HH T
+-- to get the term on the E2 page which has the non-koszul syzygies
+-- need to use the "right filtration" -- that is the filtration with respect to 
+-- y coordinate.
+
+filteredComplex complete C
+complete C
+K
+
+
+myFilt = K ** (filteredComplex (image id_C))
+
+eee = prune spectralSequence myFilt
+eee^0
+eee^1
+eee^2
+
+Filt = filteredComplex K ** ((image id_C))
+eeee = prune spectralSequence Filt
+eeee^0
+eeee^1
+eeee^2
+K
+
+K.dd
+
+E = prune spectralSequence myFilt
+
+E^0
+E^1
+K
+
+-- check out the top row of the E^1 page.  this looks like it is suppose too.
+
+-- E^1_{p,q} module is supposed to equal HH_q(K ** C_p).
+-- we can check this explicitly as 
+--follows.
+
+all(keys (support E^1), i -> E^1 _{i#0,i#1} == (prune HH_(i#1)(K ** C_(i#0))))
+-- so this looks promising.
+
+E^2
+
+time E^3
+-- The E^2_{3,-2} term is what we want to find the non-koszul syzygies.
+
+E^2_{3,-2}
+
+D = res I
+D_2
+-- so the non-koszul szygies are generated in degrees {5,3} and {7,1} --
+E^2 .dd_{3,-2}
+-- note that this map is an isomorphism.
+prune ker E^2 .dd_{3,-2}
+prune image E^2 .dd_{3,-2}
+
+image E^2 .dd_{3,-2} == E^2_{1,-1}
+E^3
+
+-- in the above, we might want to twist the complex and take the degree zero pieces.
+
+-- so I think that the above is working as it should.
+
+-- note that we used m 6 in the above.
+
+-- let's see what happens if we try to use smaller values.
+
+
+(prune spectralSequence(filteredComplex(truncate(Hom(koszul m 6, R^1),-1) ** C,
+	   Right => true)))^2 _{3,-2}
+
+for i from 1 to 6 list (prune spectralSequence(filteredComplex(truncate(Hom(koszul m i, R^1),-1) ** C,
+	   Right => true)))^2 _{3,-2}
+-- so it appears that l >= 2 works in this example.
+
+for i from 1 to 6 list (prune spectralSequence(filteredComplex(truncate(Hom(koszul m i, R^1),-1) ** C,
+	   Right => true)))^3 _{3,-2}
+-- it also appears that l = 1 works to compute the corresponding term on the E_3 page
+-- correctly.
+
+myFilt = filteredComplex(truncate(Hom(koszul m 2, R^1),-1) ** C, Right => true);
+
+prune epq(myFilt,3,-2,2)
+
+-- lets compare the various ways we have to filtered the tensor product complex.
+
+mygens = m 2
+
+benchmark "filteredComplex(truncate(Hom(koszul mygens, R^1),-1) ** C, Right => true)"
+-- returned .454884454545454
+benchmark "truncate(Hom(koszul mygens, R^1),-1) ** (filteredComplex C)"
+-- returned .658425714285715
+benchmark "filteredComplex(truncate(Hom(koszul mygens, R^1),-1) ** C, Left => true)"
+-- returned .446655599999997
+benchmark "filteredComplex truncate(Hom(koszul mygens, R^1),-1) **  C"
+-- returned .880638000000005
+
+
+---
+--trying to see which way of filtering the total complex
+-- associated to tensor product of two complexes is faster.
+---
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+--needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A = QQ[x,y,z,w]
+
+C = koszul vars A
+D = complete res monomialCurveIdeal(A,{1,3,4})
+
+K = C ** D;
+
+benchmark "filteredComplex(K,Left => true)"
+-- returned .262378818181818
+
+benchmark "filteredComplex(K,Right => true)"
+-- returned .197785133333333
+
+benchmark "(filteredComplex(C) ** D)"
+-- returned .790209333333335
+
+benchmark "(C ** filteredComplex(D))"
+-- returned .641419750000001
+
+-- so I think that the above examples show that we might want to filter
+-- using the components directly...
+
+---------
+---------
+-- try to test the tensor product code.
+-- perhaps the bugs are now out.  need to try the hom filtrations again later.
+--
+------------
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+--needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A = QQ[x,y,z]
+B = A^1 / ideal(x^3+y^3+z^3)
+-- B is the homogeneous coordinate ring of an elliptic curve
+
+m := n -> image matrix(A,{{x^n,y^n,z^n}})
+
+I := n -> res (m n)
+
+
+F = complete res B
+G = complete I 1
+prune Hom(G,A^1)
+C = Hom(G,A^1) ** F
+
+K = filteredComplex(C,Left => true)
+KK = filteredComplex(Hom(G,A^1)) ** F
+
+E = prune spectralSequence K
+EE = prune spectralSequence KK
+
+E^0
+EE^0
+E^1
+EE^1
+E^2
+EE^2
+
+E^3
+EE^3
+
+K = filteredComplex(C,Right => true)
+KK = Hom(G,A^1) ** filteredComplex F
+E = prune spectralSequence K
+EE = prune spectralSequence KK
+E^0
+EE^0
+E^1
+EE^1
+E^2
+EE^2
+E^infinity
+EE^infinity
+
+prune HH C
+-- so the above seem to be working OK.
+
+C = Hom(G,F)
+
+--K = filteredComplex(C, symbol Hom => true, Left => true)
+
+K = Hom(filteredComplex G,F)
+prune K
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+
+--k = filteredComplex(C, symbol Hom => true, Right => true)
+
+k = Hom(G,filteredComplex F)
+prune k
+E = prune spectralSequence k
+E^0
+E^1
+E^2
+
+
+C = Hom(G,Hom(G,G))
+--K = filteredComplex(C, symbol Hom => true, Left => true);
+
+K = Hom(G,filteredComplex Hom(G,G))
+prune K
+--kk = filteredComplex(C, symbol Hom => true, Right => true);
+
+kk = Hom(filteredComplex G,Hom(G,G));
+
+
+prune kk
+prune K
+E = prune spectralSequence K
+E^0
+E^0 _{3,-2}
+E^1
+E^2
+E^3
+E^infinity
+ee = prune spectralSequence kk
+ee^0
+ee^1
+ee^2
+ee^infinity
+-- so this seems to suggest that both filtrations are implemented.
+
+
+---------------
+
+
+-- since important code has changed, let's make sure we can still compute
+-- the hopf fibration correctly.
+
+restart
+installPackage"SpectralSequences"
+needsPackage "SpectralSequences"
+needsPackage "SimplicialComplexes"
+B=QQ[a_0..a_2,b_0..b_2,c_0..c_2,d_0..d_2]
+		    l1={a_0*b_0*b_1*c_1,a_0*b_0*c_0*c_1,a_0*a_1*b_1*c_1,b_0*b_1*c_1*d_1,b_0*c_0*c_1*d_2,a_0*a_1*c_1*d_2,a_0*c_0*c_1*d_2,b_0*c_1*d_1*d_2};
+		    l2={b_1*c_1*c_2*a_2,b_1*c_1*a_1*a_2,b_1*b_2*c_2*a_2,c_1*c_2*a_2*d_1,c_1*a_1*a_2*d_2,b_1*b_2*a_2*d_2,b_1*a_1*a_2*d_2,c_1*a_2*d_1*d_2};
+		    l3={c_2*a_2*a_0*b_0,c_2*a_2*b_2*b_0,c_2*c_0*a_0*b_0,a_2*a_0*b_0*d_1,a_2*b_2*b_0*d_2,c_2*c_0*b_0*d_2,c_2*b_2*b_0*d_2,a_2*b_0*d_1*d_2};
+		    l4={a_0*b_0*b_1*d_1,a_0*b_1*d_0*d_1,b_1*c_1*c_2*d_1,b_1*c_2*d_0*d_1,a_0*a_2*c_2*d_1,a_0*c_2*d_0*d_1};
+		    l5={a_0*b_1*d_0*d_2,a_0*a_1*b_1*d_2,b_1*c_2*d_0*d_2,b_1*b_2*c_2*d_2,a_0*c_2*d_0*d_2,a_0*c_0*c_2*d_2};
+		    D=simplicialComplex(join(l1,l2,l3,l4,l5));
+		    
+		    f1l1 = {a_0*b_0*b_1,a_0*a_1*b_1,a_0*c_0*c_1,a_0*a_1*c_1,a_0*a_1*d_2,d_1*d_2,b_0*b_1*c_1,b_0*c_0*c_1,b_0*b_1*d_1,b_0*d_1*d_2,c_1*d_1*d_2,c_0*c_1*d_2};
+		    f1l2 = {b_1*a_1*a_2,b_1*b_2*a_2,c_1*c_2*a_2,c_1*a_1*a_2,a_1*a_2*d_2,a_2*d_1*d_2,b_1*c_1*c_2,b_1*b_2*c_2,b_1*b_2*d_2,d_1*d_2,c_1*d_1*d_2,c_1*c_2*d_1};
+		    f1l3 = {a_2*a_0*b_0,a_2*b_2*b_0, c_2*a_2*a_0,c_2*c_0*a_0,a_2*a_0*d_1,a_2*d_1*d_2,b_2*b_0*c_2,c_2*c_0*b_0,b_2*b_0*d_2,b_0*d_1*d_2,c_2*c_0*d_2,d_1*d_2};
+		    f1l4 = {a_0*b_0*b_1,a_0*a_2,a_0*a_2*c_2,c_1*c_2,a_0*d_0*d_1,a_0*a_2*d_1,b_1*c_1*c_2,b_0*b_1,b_0*b_1*d_1,b_1*d_0*d_1,c_1*c_2*d_1,c_2*d_0*d_1}
+		    f1l5 = {a_0*a_1*b_1,b_1*b_2,a_0*c_0*c_2,a_0*a_1,a_0*d_0*d_2,a_0*a_1*d_2,b_1*b_2*c_2,c_0*c_2,b_1*d_0*d_2,b_1*b_2*d_2,c_2*d_0*d_2,c_0*c_2*d_2};
+		    F1D = simplicialComplex(join(f1l1,f1l2,f1l3,f1l4,f1l5));
+		    
+		     f0l1={a_0*a_1,b_0*b_1,c_0*c_1,d_1*d_2};
+		    f0l2={a_1*a_2,b_1*b_2,c_1*c_2,d_1*d_2};
+		    f0l3={a_0*a_2,b_0*b_2,c_0*c_2,d_1*d_2};
+		    f0l4={a_0*a_2,b_0*b_1,c_1*c_2,d_0*d_1};
+		    f0l5={a_0*a_1,b_1*b_2,c_0*c_2,d_0*d_2};
+		    F0D=simplicialComplex(join(f0l1,f0l2,f0l3,f0l4,f0l5)); 
+		    
+		    K=filteredComplex({D,F1D,F0D},ReducedHomology => false)
+E = spectralSequence K		    
+E^0		    
+E^1
+E^2
+
+E = prune spectralSequence K		    
+E^0
+E^1
+E^2
+E^3
+
+-- so at least the Hopf Fibration example shows that the present code is working
+
+
+
+-------------------------------------------------------------------
+-- The bugs in computing the following example seem
+-- to be fixed.  
+-- the apparent fix for this example caused errors elsewhere.
+-- need to check that other previously computed examples still work.
+-- (At least the example runs OK.)
+-- (Still needs to check the hom filtrations more carefully.  
+-- at the very least they are producing examples of filtered
+-- complexes which seem to have exposed some bugs.)
+
+-----
+-- this next example shows that there is a bug in the code.
+-- I think it has to do with zero...
+--
+
+installPackage"SpectralSequences"
+installPackage("SpectralSequences",RemakeAllDocumentation=>true)
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+--needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A = QQ[x,y,z]
+B = A^1 / ideal(x^3+y^3+z^3)
+-- B is the homogeneous coordinate ring of an elliptic curve
+
+m := n -> image matrix(A,{{x^n,y^n,z^n}})
+
+I := n -> res (m n)
+
+
+F = complete res B
+G = complete I 1
+
+C = Hom(G,F)
+
+Hom(I 1, res B)
+-- OK, so we need to complete the complexes first...
+
+
+D = filteredComplex(C,symbol Hom => true, Left => true);
+
+E = prune spectralSequence D
+E^0
+E^1
+E^2
+
+prune filteredComplex(C,symbol Hom => true, Right => true)
+prune D
+-- now I have doubts about the Hom filtrations...
+-- need to check this more carefully
+-- there appears to be a bug in the spectral sequence code.  It's also
+-- possible that it is in the Hom filtration code...
+E^0
+E^1
+E^2
+E^3
+E^infinity
+
+pruneEpqrMaps(D,0,-2,1)
+pruneEpqrMaps(D,1,-2,1)
+pruneEpqrMaps(D,1,-1,1)
+pruneEpqrMaps(D,0,-1,1)
+pruneEpqrMaps(D,1,0,1)
+pruneEpqrMaps(D,0,0,1)
+maps = method()
+
+maps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
+inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r), cover id_(K_(p-r) _(p+q-1)) * cover (K_infinity).dd_(p+q))
+)
+
+cover id_(D_(0) _(-2))
+D
+prune D
+id_(D_(0) _(-2)) * D_infinity .dd_(-1)
+
+maps(D,1,-2,1)
+
+E^0
+pruneEpqrMaps(D,0,-2,2)
+pruneEpqrMaps(D,1,-2,2)
+pruneEpqrMaps(D,1,-1,2)
+pruneEpqrMaps(D,0,-1,2)
+pruneEpqrMaps(D,1,0,2)
+pruneEpqrMaps(D,0,0,2)
+
+ epqrMaps(D,i#0,i#1,2)
+
+#(keys computeErModules(D,2))
+L = (keys computeErModules(D,2))
+epqrMaps(D,(L#0)#0,(L#0)#1,2)
+epqrMaps(D,3,-3,2)
+epq(D,3,-3,2)
+epq(D,1,-2,2)
+
+inducedMap(epq(D,1,-2,2),epq(D,3,-3,2), D_1 .dd_0)
+-- note that this worked.
+
+apply(keys computeErModules(D,2), i -> epqrMaps(D,i#0,i#1,2))
+
+
+
+max D_infinity
+help epqrMaps
+epqrMaps(D,0,0,0)
+pruneEpqrMaps(D,0,0,0)
+pruneEpqrMaps(D,1,0,0)
+pruneEpqrMaps(D,0,-1,0)
+pruneEpqrMaps(D,1,-1,0)
+prune source epqrMaps(D,1,-1,0)
+prune target epqrMaps(D,1,-1,0)
+prune epq(D,1,0,0)
+prune epq(D,0,-2,0)
+E^0_{1,0}
+E^0_{0,-2}
+
+prune source epqrMaps(D,1,0,0)
+C_0
+C_(-1)
+
+
+f = inducedMap(epq(D,1,-2,0), epq(D,1,-1,0),(D_infinity).dd_0)
+prune source f
+prune target f
+D_infinity
+
+computeErModules(D,0)
+apply(keys computeErModules(D,0), i-> (prune (computeErModules(D,0))#i))
+apply(keys computeErModules(D,0), i -> prune source epqrMaps(D,i#0,i#1,0))
+
+apply(keys computeErModules(D,0), i -> prune target epqrMaps(D,i#0,i#1,0))
+
+apply(keys computeErModules(D,0), i-> (prune (computeErModules(D,1))#i))
+keys computeErModules(D,1)
+(prune E)^0
+
+apply(keys computeErModules(D,0), i-> (prune (computeErModules(D,2))#i))
+apply(keys computeErModules(D,2), i -> prune source epqrMaps(D,i#0,i#1,2))
+
+-- The following shows that there 
+-- is a problem somewhere... 
+-- note there seems to be a bug somewhere...  the bug seems to
+-- be in eprMaps.
+
+epqrMaps(D,1,-2,1)
+
+epq(D,1,-2,1)
+
+epq(D,0,-2,1)
+
+cover C.dd_(-1)
+inducedMap(epq(D,0,-2,2),epq(D,1,-2,2),cover K_(1).dd_(-1))
+-- note that this seemed to work ok. --
+-- need to investigate this further.
+epqrMaps(D,0,-2,1)
+epqrMaps(D,1,-1,1)
+epqrMaps(D,0,-1,1)
+epqrMaps(D,1,0,1)
+epqrMaps(D,0,0,1)
+
+EE = spectralSequence D
+EE^0
+EE^1
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+--needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+
+
+A = QQ[x,y,z]
+B = A^1 / ideal(x^3+y^3+z^3)
+-- B is the homogeneous coordinate ring of an elliptic curve
+
+m := n -> image matrix(A,{{x^n,y^n,z^n}})
+
+I := n -> res (m n)
+
+K =  Hom(I 1, B)
+
+prune HH K
+
+H1B = HH_(-1) K
+H0B = HH_0 K
+H2B = HH_(-2) K
+
+basis(0,H0B)
+basis(0,H1B)
+basis(0,H2B)
+
+basis(0, Ext^0(m 1, B))
+basis(0, Ext^1(m 1, B))
+basis(0, Ext^2(m 1, B))
+
+-- observe that the above agrees with the cohomology of the structure sheaf
+-- of an elliptic curve as it should.  Also observe that we needed k = 1 here.
+-- the resolution of the structure sheaf has the shape 
+--  0 --> OO(-3) --> OO --> OO_X -->0 which gives at least one explanation.
+
+F = complete res B
+G = complete I 1
+
+C = Hom(G,F)
+
+Hom(I 1, res B)
+-- OK, so we need to complete the complexes first...
+
+prune HH C
+-- note this aggrees with earlier stuff.
+
+E = prune spectralSequence(filteredComplex(C,symbol Hom => true, Left => true))
+
+D = filteredComplex(C,symbol Hom => true, Left => true);
+E = prune spectralSequence D
+max D
+min D
+prune filteredComplex(C,symbol Hom => true, Right => true)
+prune D
+-- now I have doubts about the Hom filtrations...
+
+E^0
+E^1
+help epqrMaps
+epqrMaps(D,0,0,0)
+pruneEpqrMaps(D,0,0,0)
+pruneEpqrMaps(D,1,0,0)
+pruneEpqrMaps(D,0,-1,0)
+pruneEpqrMaps(D,1,-1,0)
+prune source epqrMaps(D,1,-1,0)
+prune target epqrMaps(D,1,-1,0)
+epqr(D,1,0,0)
+-- note there seems to be a bug somewhere...  perhaps in the net??
+computeErModules(D,0)
+apply(keys computeErModules(D,0), i-> (prune (computeErModules(D,0))#i))
+apply(keys computeErModules(D,0), i -> prune source epqrMaps(D,i#0,i#1,0))
+apply(keys computeErModules(D,0), i -> prune target epqrMaps(D,i#0,i#1,0))
+-- so this shows that one of the induced maps is not working correctly!! --
+
+EE = spectralSequence D
+EE^0
+EE^1
+
+
+
+E^1
+-- note that the above shows that there is a bug in the above.
+epqrMaps(D,0,0,1)
+epqrMaps(D,1,0,1)
+epqrMaps(D,0,-1,1)
+epqrMaps(D,1,-1,1)
+-- note that the target of this map 
+
+
+computeErModules(filteredComplex(C,symbol Hom => true, Left => true),1)
+
+-- note there is a bug ...
+-- need to investigate this more.
+computeErModules(filteredComplex(C,symbol Hom => true, Left => true),1)
+
+-- observe that there are lots of zero modules which are not explicitly sub-quotients
+-- of anything...  Presumably this is what's causing the problem.
+--------------
+---
+-- some examples to try and test the filtratins of tensor product and hom implementation
+
+A = QQ[a,b,c,d]
+
+C = koszul vars A
+
+D = res monomialCurveIdeal(A,{1,3,4})
+
+T = C ** D;
+
+-- filter with respect to x coord
+filteredComplex(T, Left => true)
+-- filter with respect to y coord
+filteredComplex(T, Right => true)
+
+K = Hom(C,D)
+-- filter with respect to x coord
+filteredComplex(K, symbol Hom => true, Left => true)
+-- filter with respect to y coord
+filteredComplex(K, symbol Hom => true, Right => true)
+
+-- need to test the above further
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A = QQ[a,b,c,d]
+D = simplicialComplex {a*d*c, a*b, a*c, b*c}
+F2D = D
+F1D = simplicialComplex {a*c, d}
+F0D = simplicialComplex {a,d}
+K = filteredComplex({F2D, F1D, F0D}, ReducedHomology => false)
+
+prune Hom(K_infinity,K_1)
+prune Hom(K_1,K_infinity)
+prune Hom(K_infinity, K_(-2))
+prune Hom(K_1,K_infinity)
+
+
+Hom(K,K_1)
+
+C = K_1
+Hom(filteredComplex C, C)
+K ** K_1
+K_1 ** K
+Hom(K,K_1)
+Hom(K_1,K)
+min K
+max K
+
+
+
+
+
+-- so there still seems to be a bug.
+myHom = method()
+myHom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
+--filteredComplex for p from min K to max K list Hom(project(K,p),C)
+ new FilteredComplex from (for p from min K to max K list p => (Hom(K_p,C)  )) | {symbol zero => image (0*id_(Hom(K_infinity,C))), symbol cache =>  new CacheTable}
+--filteredComplex ( (for p from min K to (max K)-1 list 
+--	  inducedMap (Hom(K_(-infinity),C), Hom(K_p,C))
+--	  	       )),Shift =>(- min K) 
+)
+
+myHom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
+     F := (f,D) -> inducedMap(Hom(target f,D), Hom(image f, D));
+filteredComplex (reverse (for p from min K to (max K)-1 list 
+	  F(inducedMap(K,p),C)),Shift =>(- min K) )
+)
+
+KK = myHom(K,K_1)
+apply(spots KK, i-> inducedMap(KK,i))
+inducedMap(KK,2)
+inducedMap(KK,1)
+
+image inducedMap(K,1)
+c = Hom(image inducedMap(K,1),C)
+d = Hom(image inducedMap(K,2),C)
+inducedMap(d,c)
+apply (spots d, i-> inducedMap(d_i,c_i, id_(d_i)))
+spots d
+inducedMap(d_(-3),c_(-3), id_(d_(-3)))
+d_(-3)
+c_(-3)
+cover c_(-3)
+prune d_(-3)
+-- so there is at least one source of trouble.
+-- is this a problem with inducedMap(Module,Module)??  or with
+-- chain complexes??  is c_(-3) supposed to be a subquotient of QQ^1??
+inducedMap(d_(-2),c_(-2), id_(d_(-2)))
+d_(-2)
+c_(-2)
+prune K
+prune C
+-- need to think about this example more carefully.
+
+
+spots Hom(image inducedMap(K,2),C)
+image myHom(inducedMap(K,2),C)
+K_1
+K_2
+C
+
+
+KK_1
+KK_2
+help inducedMap
+KK = myHom(filteredComplex C, C)
+inducedMap(KK,0)
+inducedMap(KK,2)
+inducedMap(KK,1)
+inducedMap(KK,-1)
+KK
+prune KK
+project(K,1)
+inducedMap(Hom(K_(-infinity),C),Hom(K_2,C))
+C
+prune image Hom(inducedMap(K,2),C)
+prune image Hom(inducedMap(K,1),C)
+
+
+inducedMap(Hom(K_2,C),Hom(K_2,C))
+Hom(K_(-1),C)
+C = K_1
+
+ for p from min K to (max K) list 
+	   (prune image Hom(inducedMap(K,p),C))
+target inducedMap(K,1)
+Hom(K_1,C) == target Hom(inducedMap(K,1),C)
+
+prune Hom(K_(-infinity),C)
+inducedMap(Hom(K_(-infinity), C), Hom(K_1,C))
+
+
+Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,C) -> (
+  (F,G) := (Hom(target f, C),Hom(source f, C));
+  map(G,F, i -> map (G_i,F_i, matrix table(G_i.cache.indices,F_i.cache.indices,
+        (j,k) -> map(G#i.cache.components#(G#i.cache.indexComponents#j), 
+	  F#i.cache.components#(F#i.cache.indexComponents#k),
+	  if j === k then Hom(f_(j#0), C_(j#1)) 
+	  else 0)))))
+
+
+Hom(K_1,K)
+
+Hom(K_(-3),K)
+-- this one needs to be rewritten.  There is a bug in it.
+
+-- there is a bug in this one.
+Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) ->(
+--  filteredComplex for p from min K to max K list Hom(C,inducedMap(K,p))
+-- new FilteredComplex from (for p from min K to max K list p=> (Hom(C,K_p))  ) | {symbol zero => image (0*id_(Hom(C,K_infinity))), symbol cache =>  new CacheTable}
+filteredComplex (reverse (for p from min K to (max K)-1 list 
+	  Hom(C,inducedMap(K,p))),Shift =>(- min K) )
+
+)
+
+---------------------------------
+-- some examples to show Greg.
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+A = QQ[a,b,c,d]
+D = simplicialComplex {a*d*c, a*b, a*c, b*c}
+F2D = D
+F1D = simplicialComplex {a*c, d}
+F0D = simplicialComplex {a,d}
+K = filteredComplex({F2D, F1D, F0D}, ReducedHomology => false)
+E = spectralSequence K
+F = minimalPresentation E
+F^0
+E^0
+G = minimalPresentation spectralSequence K
+E^0_{100,100}
+E^0
+F = spectralSequence(K,Prune => true)
+F^0
+F^1
+E^0_{-100,100}
+prune E^0_{100,-100}
+F^0_{100,-100}
+
+E^0_{-1000,100}
+F^0_{-1000,100}
+F^1
+F^2
+F^infinity
+E^infinity
+prune F^infinity
+prune E^infinity
+F^3
+
+F^2 .dd_{2,-1}
+prune ker F^2 .dd_{2,-1}
+
+prune Hom(K_infinity,K_1)
+prune Hom(K_1,K_infinity)
+prune Hom(K_infinity, K_(-2))
+prune Hom(K_1,K_infinity)
+
+
+Hom(K,K_1)
+-- so there still seems to be a bug.
+Hom(K_1,K)
+
+Hom (ChainComplexMap, ChainComplex) := ChainComplexMap => (f,C) -> (
+  (F,G) := (Hom(target f, C),Hom(source f, C));
+  map(G,F, i -> map (G_i,F_i, matrix table(G_i.cache.indices,F_i.cache.indices,
+        (j,k) -> map(G#i.cache.components#(G#i.cache.indexComponents#j), 
+	  F#i.cache.components#(F#i.cache.indexComponents#k),
+	  if j === k then Hom(f_(j#0), C_(j#1)) 
+	  else 0)))))
+
+
+for p from min K to (max K)-1 list 
+	 prune target Hom(inducedMap(K,p),K_1)
+
+
+filteredComplex reverse for p from min K to (max K)-1 list 
+	  Hom(inducedMap(K,p),K_1)
+	  
+-- so there is still a bug somewhere.
+-- should try myHom and see what happens...
+for p from min K to (max K)-1 list Hom(K_1, inducedMap(K,p))
+
+filteredComplex reverse for p from min K to (max K)-1 list Hom(K_1, inducedMap(K,p))
+
+----
+----
+
+
+
+
+
+-- some scratch code trying to get Hom(FilteredComplex,ChainComplex) working.
+-- Hom(ChainComplex, FilteredComplex). )
+A = QQ[x,y,z]
+C = koszul matrix(A,{{x^2, x*y,z}})
+
+D = koszul vars A
+
+myHom = method()
+myHom(ChainComplexMap, ChainComplex) := ChainComplexMap => (f,C) -> (
+     inducedMap(Hom(target f, C), Hom(image f, C)) 
+     )
+
+myHom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
+     F := (f,D) -> inducedMap(Hom(target f,D), Hom(image f, D));
+filteredComplex (reverse (for p from min K to (max K)-1 list 
+	  F(inducedMap(K,p),C)),Shift =>(- min K) )
+)
+
+Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
+     F := (f,D) -> inducedMap(Hom(target f,D), Hom(image f, D));
+     filteredComplex (reverse (for p from min K to (max K)-1 list 
+     F(inducedMap(K,p),C)),Shift =>(- min K) )
+)
+
+Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C, K) -> (
+     F := (D,f) -> inducedMap(Hom(D, target f), Hom(D, image f));
+filteredComplex (reverse (for p from min K to (max K)-1 list 
+	  F(C,inducedMap(K,p))),Shift =>(- min K) )
+)
+
+
+
+K = filteredComplex C
+Hom(K,C)
+Hom(K,K_1)
+K
+
+-- I think that something like this will work.
+
+myHom(ChainComplex, ChainComplexMap) := ChainComplexMap =>(C,f) -> (
+      inducedMap(Hom(C, target f), Hom(C, image f))
+     )
+
+myHom (ChainComplex, FilteredComplex):= FilteredComplex => (C, K) -> (
+     F := (D,f) -> inducedMap(Hom(D, target f), Hom(D, image f));
+filteredComplex (reverse (for p from min K to (max K)-1 list 
+	  F(C,inducedMap(K,p))),Shift =>(- min K) )
+)
+
+myHom(C,K)
+
+
+
+-- so perhaps the above work ok.
+
+-----
+-- some scratch code trying to test Hom(ChainComplex,ChainComplex)
+----
+restart
+installPackage"SpectralSequences"
+installPackage("SpectralSequences",RemakeAllDocumentation=>true)
+
+A = QQ[x,y,z]
+C = koszul matrix(A,{{x^2, x*y,z}})
+
+D = koszul vars A
+
+Hom(C,D)
+Hom(D,C)
+Hom(truncate(C,-1),C)
+Hom(C,truncate(C,-1))
+prune Hom(C,truncate(C,-10))
+prune Hom(truncate(C,-10),C)
+prune Hom(truncate(C,10),C)
+prune Hom(C,truncate(C,10))
+
+-- so maybe things are OK now... 
 -------------------------------------------------------------------------------
 -- some scratch code trying to test some functions
 ---------------------------------------------------------------------------
+
+
+
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
@@ -1695,6 +2684,8 @@ F^1
 E^0_{-100,100}
 prune E^0_{100,-100}
 
+Hom(K_infinity,K_1)
+Hom(K_1,K_infinity)
 
 --------------------------------------------------------------------------------
 -- some scratch code related to  spectralSequencePageMap --
