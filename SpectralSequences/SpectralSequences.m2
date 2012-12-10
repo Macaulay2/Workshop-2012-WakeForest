@@ -170,7 +170,7 @@ FilteredComplex _ InfiniteNumber :=
 FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
   if K#?p then K#p 
   else if p < min K then K#(min K) 
-  --else if p > max K then image id_(K#(max K)))
+--  else if p > max K then image id_(K#(max K))
   else if p > max K then K#(max K)
   )
 
@@ -1688,6 +1688,146 @@ doc ///
     
       
 end
+
+--
+--
+-- The following two examples are filtrations arising from topological fibrations.
+restart
+installPackage"SpectralSequences"
+needsPackage"SpectralSequences"
+needsPackage"SimplicialComplexes"
+
+
+-- trying to compute spectral sequences associated to the fibration
+-- Klien Bottle --> SS^1 with fiber SS^1.
+-- This fibration was trianulated by hand.
+
+S = ZZ[a00,a10,a20,a01,a11,a21,a02,a12,a22]
+
+-- there will be 18 facets of Klein Bottle
+f1 = a00*a10*a02
+f2 = a02*a12*a10
+f3 = a01*a02*a12
+f4 = a01*a12*a11
+f5 = a00*a01*a11
+f6 = a00*a11*a10
+f7 = a10*a12*a20
+f8 = a12*a20*a22
+f9 = a11*a12*a22
+f10 = a11*a22*a21
+f11 = a10*a11*a21
+f12 = a10*a21*a20
+f13 = a20*a22*a00
+f14 = a22*a00*a01
+f15 = a21*a22*a01
+f16 = a21*a02*a01
+f17 = a20*a21*a02
+f18 = a20*a02*a00
+
+Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9,
+     f10,f11,f12,f13,f14,f15,f16,f17,f18}
+C = truncate(chainComplex Delta,1)
+prune HH C
+-- so the homology of C aggrees with the homology of the Klien Bottle.
+
+F1Delta = Delta
+
+-- now want to make subsimplicial complex arising from the filtrations of the
+-- inverse image of the verticies
+
+F0Delta = simplicialComplex {a00*a01,a01*a02
+     ,a00*a02,a10*a11,a10*a12,a11*a12,a21*a20,a20*a22,a21*a22}
+
+K = filteredComplex({F1Delta, F0Delta}, ReducedHomology => false)
+
+E = prune spectralSequence K
+E^0
+E^0 .dd
+E^1
+E^1 .dd
+E^2
+prune HH C
+E^2 .dd
+
+-- A key feature of this example (as illustrated by the E^2 page of the spectral
+-- sequence) is that the fundamental group of the base (in this case SS^1) does
+-- not act trivially on the fiber.  If it did, then the E^2 page
+-- would have E^2_{p,q} = HH_p(F,HH_q(B;ZZ).
+
+-- Now let's try the trivial fibration SS^1 x SS^1 --> SS^1, where
+-- the map is given by one of the projections.
+-- This fibration was also trianulated by hand.
+ restart
+needsPackage"SpectralSequences"
+needsPackage"SimplicialComplexes"
+
+S = ZZ[a00,a10,a20,a01,a11,a21,a02,a12,a22]
+
+-- there will be 18 facets of SS^1 x SS^1
+f1 = a00*a02*a10
+f2 = a02*a12*a10
+f3 = a01*a02*a12
+f4 = a01*a11*a12
+f5 = a00*a01*a11
+f6 = a00*a10*a11
+f7 = a12*a10*a20
+f8 = a12*a20*a22
+f9 = a11*a12*a22
+f10 = a11*a22*a21
+f11 = a10*a11*a21
+f12 = a10*a21*a20
+f13 = a20*a22*a00
+f14 = a22*a00*a02
+f15 = a21*a22*a02
+f16 = a21*a02*a01
+f17 = a20*a21*a01
+f18 = a20*a01*a00
+
+Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9,
+     f10,f11,f12,f13,f14,f15,f16,f17,f18}
+C = truncate(chainComplex Delta,1)
+prune HH C
+-- so the homology of C aggrees with the homology of the torus SS^1 x SS^1.
+
+F1Delta = Delta
+
+-- now want to make subsimplicial complex arising from the filtrations of the
+-- inverse image of the verticies
+
+F0Delta = simplicialComplex {a00*a01, a01*a02, a00*a02,
+     a10*a11,a11*a12,a10*a12,
+     a21*a20,a21*a22,a20*a22}
+-- note it is important to use the reduced homology option!! 
+K = filteredComplex({F1Delta, F0Delta}, ReducedHomology => false) 
+K_infinity == C
+needsPackage "ChainComplexExtras"
+isChainComplexMap(inducedMap(K_infinity, K_0))
+
+E = prune spectralSequence K
+E^0
+prune coker E^0 .dd_{0,0}
+prune coker E^0 .dd_{0,0}
+prune image E^0 .dd_{0,1}
+prune ker E^0 .dd_{0,0}
+
+prune ker E^0 .dd_{1,0}
+prune coker E^0 .dd_{1,1}
+E^1
+
+E^0_{-1,1}
+E^0 .dd
+E^1
+E^1 .dd
+
+prune coker E^1 .dd_{1,0} 
+pruneEpqrMaps(K,1,0,1)
+prune ker epqrMaps(K,1,0,1)
+
+E^2
+E^2 _{-1,1}
+E^2 _{1,-1}
+prune E^2 _{0,0}
+E^2 .dd
 
 
 --------------------------------------------------------------------------------
