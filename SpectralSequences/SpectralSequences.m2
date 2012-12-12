@@ -438,7 +438,7 @@ minimalPresentation SpectralSequence := prune SpectralSequence := SpectralSequen
 -- or the truncated complex with image d_{p+1} in degree p and zero in degrees <p ??
 
 -- the following method truncates a chain complex 
-truncate (ChainComplex,ZZ):= (C,q) ->( 
+truncate(ChainComplex,ZZ):= (C,q) ->( 
      if q == 0 then return C 
      else (
 	  m:= min support C;
@@ -1744,7 +1744,7 @@ faces(1,realProjectivePlane)
 -- a = v3 ~ v1, b = v6 ~ v5, d = v36 ~ v15, c = v4 ~ v2, e = v34 ~ v12, f = v46 ~ v25
 
 -- the fibers over the vertices of RRPP^2 are as follows.
-F0twoSphere = simplicialComplex {v1*v3,v5*v6, v4*v2, v36*v15, v34*v12, v46*v25}
+F0twoSphere = simplicialComplex {v1,v3,v5,v6, v4,v2, v36,v15, v34,v12, v46,v25}
 
 -- the fibers over the edges of RRPP^2 are as follows (hopefully computed correctly!)
 F1twoSphere = simplicialComplex {
@@ -1769,62 +1769,21 @@ F2twoSphere = twoSphere
 -- the resulting filtered complex is as follows.
 K = filteredComplex({F2twoSphere, F1twoSphere, F0twoSphere}, ReducedHomology => false) 
 -- compute the resulting spectral sequence.
+
+prune image (image inducedMap(K_infinity,K_0)).dd_1
+
+chainComplex F0twoSphere
+prune K_0
+
+help inducedMap
 E = prune spectralSequence K
 E^0
 E^0 .dd
-ker E^0 .dd_{0,0}
-E^0
-E^1
-E^0 .dd
-prune ker E^0 .dd_{0,0}
-image E^0 .dd_{0,1}
-help epq
-prune epq(K,0,0,1)
-
--- note that there seems to be an error.  There is no way that E^1_{0,0} should be
--- ZZ^6.
 E^1 .dd
 E^2
 E^2 .dd
 
--- try to investigate the bug.
--- this is the source code.
 
-zpq:= (K,p,q,r)->(
-ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1), 
-     K_p _ (p+q), K_(infinity).dd_(p+q))
-     )
-
-bpq:= (K,p,q,r) ->(
-    ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q))
-      )
-
-
--- the following will compute the pq modules on the rth page explicitly.
-Myepq = method()
-Myepq(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)) )
-
-prune zpq(K,0,0,1)
-
-prune bpq(K,0,0,1)
--- the problem seems to be bpq.
--- investigate more.
-prune image(K_0 .dd_(1))
-
-K_0
-K
-
-(K_0).dd
-
-source (K_0).dd_1
-target (K_0).dd_1
-prune image (K_0).dd_1
--- so here's a question:  How can a map with zero source have a non-zero image?!
--- so there seems to be a bug somewhere.
-ker (K_0).dd_1
-
-needsPackage "ChainComplexExtras"
-isChainComplex K_0
 
 -----
 ------
