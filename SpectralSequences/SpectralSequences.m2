@@ -207,8 +207,8 @@ net FilteredComplex := K -> (
 -- for a spectral sequence.
 
 zpq:= (K,p,q,r)->(
-ker inducedMap((K_(max K))_(p+q-1) / K_(p-r) _ (p+q-1), 
-     K_p _ (p+q), K_(max K).dd_(p+q))
+ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1), 
+     K_p _ (p+q), K_(infinity).dd_(p+q))
      )
 
 
@@ -1688,6 +1688,146 @@ doc ///
     
       
 end
+
+--- here is another topological example.
+restart
+installPackage"SpectralSequences"
+needsPackage"SpectralSequences"
+needsPackage"SimplicialComplexes"
+
+
+-- trying to give a combinatorial picture of the quotient map
+-- SS^2 --> RR PP^2, given by indentifying anti-podal points.
+
+-- first make an appropriate simplicial realization of SS^2.
+
+A = ZZ[v1,v2,v3,v4,v5,v6,v15,v12,v36,v34,v46,v25]
+
+topHalf = {v3*v4*v5, v5*v4*v15, v15*v34*v4, 
+     v15*v34*v1, v34*v1*v6, v34*v46*v6, 
+     v36*v46*v6, v3*v4*v46, v4*v46*v34, v3*v46*v36
+      }
+botHalf = {v1*v6*v2, v6*v2*v36, v2*v36*v12,v36*v12*v3,
+     v12*v3*v5, v12*v5*v25, v25*v5*v15, 
+     v2*v12*v25, v1*v2*v25, v1*v25*v15
+     }
+
+-- the following is a simplicial complex whose topological realiztion is SS^2
+-- note that we have added a few barycentric coordinates
+twoSphere = simplicialComplex join(topHalf, botHalf)
+
+facets twoSphere
+
+C = truncate(chainComplex twoSphere,1)
+prune HH C
+-- so at least we've entered a simplicial complex whose homology agrees with that of
+-- SS^2.
+
+-- now write down our simplicial complex whose topological realization is RRPP^2.
+R = ZZ[a,b,c,d,e,f]
+
+realProjectivePlane = simplicialComplex {
+     a*b*c, b*c*d, c*d*e, a*e*d, e*b*a, e*f*b, d*f*b, a*f*d, c*f*e,a*f*c}
+
+C = truncate(chainComplex realProjectivePlane,1)
+prune HH C
+-- again, at least we've entered a simplical complex whose homology aggrees with that
+-- of the real projective plane.
+faces(twoSphere, 1)
+help faces
+faces(1,twoSphere)
+faces(1,realProjectivePlane)
+
+-- now compute the fibers over the anti-podal quotient map
+-- SS^2 --> RRPP^2.
+-- the way this works for example is as follows.
+-- a = v3 ~ v1, b = v6 ~ v5, d = v36 ~ v15, c = v4 ~ v2, e = v34 ~ v12, f = v46 ~ v25
+
+-- the fibers over the vertices of RRPP^2 are as follows.
+F0twoSphere = simplicialComplex {v1*v3,v5*v6, v4*v2, v36*v15, v34*v12, v46*v25}
+
+-- the fibers over the edges of RRPP^2 are as follows (hopefully computed correctly!)
+F1twoSphere = simplicialComplex {
+     v3*v4, v1*v2,
+     v3*v5, v1*v6,
+     v4*v5, v2*v6,
+     v5*v15, v6*v36,
+     v4*v34, v2*v12,
+     v15*v34, v36*v12,
+     v1*v15, v3*v36,
+     v46*v34, v25*v12,
+     v6*v34, v5*v12,
+     v6*v46, v5*v25,
+     v36*v46, v15*v25,
+     v3*v46, v1*v25,
+     v4*v15, v2*v36,
+     v1*v34, v3*v12,
+     v4*v46, v25*v2   
+     }
+-- the fibers over the faces is all of SS^2.
+F2twoSphere = twoSphere
+-- the resulting filtered complex is as follows.
+K = filteredComplex({F2twoSphere, F1twoSphere, F0twoSphere}, ReducedHomology => false) 
+-- compute the resulting spectral sequence.
+E = prune spectralSequence K
+E^0
+E^0 .dd
+ker E^0 .dd_{0,0}
+E^0
+E^1
+E^0 .dd
+prune ker E^0 .dd_{0,0}
+image E^0 .dd_{0,1}
+help epq
+prune epq(K,0,0,1)
+
+-- note that there seems to be an error.  There is no way that E^1_{0,0} should be
+-- ZZ^6.
+E^1 .dd
+E^2
+E^2 .dd
+
+-- try to investigate the bug.
+-- this is the source code.
+
+zpq:= (K,p,q,r)->(
+ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1), 
+     K_p _ (p+q), K_(infinity).dd_(p+q))
+     )
+
+bpq:= (K,p,q,r) ->(
+    ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q))
+      )
+
+
+-- the following will compute the pq modules on the rth page explicitly.
+Myepq = method()
+Myepq(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)) )
+
+prune zpq(K,0,0,1)
+
+prune bpq(K,0,0,1)
+-- the problem seems to be bpq.
+-- investigate more.
+prune image(K_0 .dd_(1))
+
+K_0
+K
+
+(K_0).dd
+
+source (K_0).dd_1
+target (K_0).dd_1
+prune image (K_0).dd_1
+-- so here's a question:  How can a map with zero source have a non-zero image?!
+-- so there seems to be a bug somewhere.
+ker (K_0).dd_1
+
+needsPackage "ChainComplexExtras"
+isChainComplex K_0
+
+-----
+------
 
 --
 --
