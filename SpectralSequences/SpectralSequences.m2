@@ -64,7 +64,8 @@ export {
   "pprune",
   "epqrMaps",
   "pruneEpqrMaps",
-  "epq"
+  "epq",
+  "isSubSimplicialComplex"
   }
 
 
@@ -448,13 +449,13 @@ truncate(ChainComplex,ZZ):= (C,q) ->(
 	  else  K:=new ChainComplex;
 	        K.ring=C.ring;
 	  	if q < 0 then for i from min C + 1 to max C do (
-	             if i <= n + q then K.dd_i=C.dd_i 
-	       	     else if i-1 > n + q then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+	             if i <= n + q then K.dd_i = C.dd_i 
+	       	     else if i-1 > n + q then K.dd_i = inducedMap(0*C_(i-1),0*C_i,C.dd_i)
 	       	     else K.dd_i = inducedMap(C_(i-1), 0*C_i, C.dd_i) ) 
 	  	else for i from min C+1  to max C do (
-	       	     if i-1 >= q + m then K.dd_i=C.dd_i 
-	       	     else if i < q + m then K.dd_i=inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-	       	     else K.dd_i=map(0*C_(i-1), C_i, 0*C.dd_i) )); 
+	       	     if i-1 >= q + m then K.dd_i = C.dd_i 
+	       	     else if i < q + m then K.dd_i = inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+	       	     else K.dd_i = map(0*C_(i-1), C_i, 0*C.dd_i) )); 		
      K)
 
 
@@ -562,6 +563,28 @@ prune FilteredComplex := FilteredComplex => opts -> F ->
 filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
 
 chainComplex SpectralSequence := ChainComplex => E -> chainComplex filteredComplex E
+
+-----------------------------------------------------------------------------------
+-- Simplicial Complex Extras
+-----------------------------------------------------------------------------------
+-- the next method checks if a simplical complex is a subsimplicial complex
+-- first we need to list all faces.
+---
+
+
+isSubSimplicialComplex = method()
+-- the following method checks if the simplicial complex E is a sub complex of D
+isSubSimplicialComplex(SimplicialComplex,SimplicialComplex):=(E,D)->(
+     allFaces := D->(set flatten apply((dim D)+1,i-> flatten entries faces(i,D)));
+     L:=allFaces(D);
+     K:= flatten entries facets E;
+     flag:=true;
+     for i from 0 to #K-1 do (
+      if member(K#i,L) and flag== true then flag=true else flag=false);
+           flag
+      )
+
+
 
 ------------------------------------------------------------------------------------
 -- ChainComplexExtraExtras 
@@ -1692,6 +1715,8 @@ end
 
 -- The following are 11 examples which illustrate the current state of the code.
 -- All examples seem to work correctly.
+
+---------------------------------------------------------------
 --- Easy examples of spectral sequences arising from filtrations 
 --   of simplicial complexes.
 -- All of these examples are small enough that they can be
@@ -2031,6 +2056,7 @@ prune K_0
 help inducedMap
 E = prune spectralSequence K
 E^0
+E^1
 E^0 .dd
 E^1 .dd
 E^2
@@ -2075,11 +2101,22 @@ f16 = a21*a02*a01
 f17 = a20*a21*a02
 f18 = a20*a02*a00
 
-Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9,
-     f10,f11,f12,f13,f14,f15,f16,f17,f18}
+-- the following simplicial complex is suppose to be
+-- a triangulation of the Klien Bottle.
+
+Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16,f17,f18}
+
 C = truncate(chainComplex Delta,1)
 prune HH C
--- so the homology of C aggrees with the homology of the Klien Bottle.
+C.dd
+prune (ker C.dd_1 / image C.dd_2)
+
+--
+-- so the homology of C DOES NOT agree with the homology of the Klein Bottle.
+-- the Klein Bottle has homology H_0 = ZZ, H_1 = ZZ+Z/2, H_i = 0 for i>=2.
+-- need to fix/explain this bug!
+-- 
+-- Let's continue with this example further.
 
 F1Delta = Delta
 
@@ -2089,21 +2126,140 @@ F1Delta = Delta
 F0Delta = simplicialComplex {a00*a01,a01*a02
      ,a00*a02,a10*a11,a10*a12,a11*a12,a21*a20,a20*a22,a21*a22}
 
+isSubSimplicialComplex(F0Delta,F1Delta)
+
+-- so at least we've produced a sub-simplicial complex of F1Delta.
+
 K = filteredComplex({F1Delta, F0Delta}, ReducedHomology => false)
 
 E = prune spectralSequence K
 E^0
-E^0 .dd
 E^1
-E^1 .dd
 E^2
-prune HH C
-E^2 .dd
+E^3
 
--- A key feature of this example (as illustrated by the E^2 page of the spectral
--- sequence) is that the fundamental group of the base (in this case SS^1) does
--- not act trivially on the fiber.  If it did, then the E^2 page
--- would have E^2_{p,q} = HH_p(F,HH_q(B;ZZ).
+-- Note that the spectral sequence is abutting to what it should -- the integral
+-- homology of the Klien bottle, but that this does not equal the homology of 
+-- K!!
+
+-- I wonder what happens if we use rational of coefficients?!
+
+restart
+needsPackage"SpectralSequences"
+needsPackage"SimplicialComplexes"
+
+
+S = QQ[a00,a10,a20,a01,a11,a21,a02,a12,a22]
+
+-- there will be 18 facets of Klein Bottle
+f1 = a00*a10*a02
+f2 = a02*a12*a10
+f3 = a01*a02*a12
+f4 = a01*a12*a11
+f5 = a00*a01*a11
+f6 = a00*a11*a10
+f7 = a10*a12*a20
+f8 = a12*a20*a22
+f9 = a11*a12*a22
+f10 = a11*a22*a21
+f11 = a10*a11*a21
+f12 = a10*a21*a20
+f13 = a20*a22*a00
+f14 = a22*a00*a01
+f15 = a21*a22*a01
+f16 = a21*a02*a01
+f17 = a20*a21*a02
+f18 = a20*a02*a00
+
+-- the following simplicial complex is a triangulation of the Klien Bottle.
+
+Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16,f17,f18}
+
+C = truncate(chainComplex Delta,1)
+prune HH C
+-- so this seems to be OK?!
+-- Now let's try to run the spectral sequence.
+
+F1Delta = Delta
+
+-- now want to make subsimplicial complex arising from the filtrations of the
+-- inverse image of the verticies
+
+F0Delta = simplicialComplex {a00*a01,a01*a02
+     ,a00*a02,a10*a11,a10*a12,a11*a12,a21*a20,a20*a22,a21*a22}
+
+isSubSimplicialComplex(F0Delta,F1Delta)
+
+-- so at least we've produced a sub-simplicial complex of F1Delta.
+
+K = filteredComplex({F1Delta, F0Delta}, ReducedHomology => false)
+
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^3
+prune HH K_infinity
+-- so things seem to be working OK.
+
+-- I wonder what happens if we use Z/2 coefs??
+
+restart
+needsPackage"SpectralSequences"
+needsPackage"SimplicialComplexes"
+
+S = ZZ/2[a00,a10,a20,a01,a11,a21,a02,a12,a22]
+
+-- there will be 18 facets of Klein Bottle
+f1 = a00*a10*a02
+f2 = a02*a12*a10
+f3 = a01*a02*a12
+f4 = a01*a12*a11
+f5 = a00*a01*a11
+f6 = a00*a11*a10
+f7 = a10*a12*a20
+f8 = a12*a20*a22
+f9 = a11*a12*a22
+f10 = a11*a22*a21
+f11 = a10*a11*a21
+f12 = a10*a21*a20
+f13 = a20*a22*a00
+f14 = a22*a00*a01
+f15 = a21*a22*a01
+f16 = a21*a02*a01
+f17 = a20*a21*a02
+f18 = a20*a02*a00
+
+-- the following simplicial complex is a triangulation of the Klien Bottle.
+
+Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16,f17,f18}
+
+C = truncate(chainComplex Delta,1)
+prune HH C
+-- so this seems to be OK?!
+
+F1Delta = Delta
+
+-- now want to make subsimplicial complex arising from the filtrations of the
+-- inverse image of the verticies
+
+F0Delta = simplicialComplex {a00*a01,a01*a02
+     ,a00*a02,a10*a11,a10*a12,a11*a12,a21*a20,a20*a22,a21*a22}
+
+isSubSimplicialComplex(F0Delta,F1Delta)
+
+-- so at least we've produced a sub-simplicial complex of F1Delta.
+
+K = filteredComplex({F1Delta, F0Delta}, ReducedHomology => false)
+
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^3
+prune HH K_infinity
+-- so things seem to be working OK.
+
 
 -- Example 7 --
 --------------------------------------------------------------------
@@ -2156,6 +2312,7 @@ F0Delta = simplicialComplex {a00*a01, a01*a02, a00*a02,
 
 K = filteredComplex({F1Delta, F0Delta}, ReducedHomology => false) 
 K_infinity == C
+prune HH K_infinity
 
 E = prune spectralSequence K
 E^0
