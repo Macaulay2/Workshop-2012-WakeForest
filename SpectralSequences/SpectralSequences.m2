@@ -585,6 +585,50 @@ isSubSimplicialComplex(SimplicialComplex,SimplicialComplex):=(E,D)->(
       )
 
 
+-- the following makes an m x n matrix using the "first" nm variables in the ring.
+-- the "first" variable is in the top left hand corner, the m variable is in the 
+-- top right hand corner, and the mn variable is in the bottom righthand corner.
+-- etc.
+matrix(Ring,ZZ,ZZ) := Matrix => opts ->(R,n,m) -> (
+     L := flatten entries vars R;
+     myMatrix := {};
+     for i from 0 to m -1 do (
+	  J := {};
+	       for j from 0 to n -1 do (
+		    J = append(J,L#(j));
+		    );
+	  L = drop(L,n);     
+	  myMatrix = append(myMatrix,J);
+	  );
+     matrix(R,myMatrix)
+     )
+
+-- the following creates a simplicial complex from the minors of a matrix
+simplicialComplex(Matrix,InfiniteNumber) :=
+simplicialComplex (Matrix,ZZ) := SimplicialComplex => (M,n) -> ( 
+     simplicialComplex flatten(apply(flatten entries gens minors(n,M), i-> terms i))
+     )
+
+-- return the size e.g. {# rows, # columns} of a matrix.
+size Matrix := (M) -> ({length flatten entries M^{0}, length flatten entries M_{0}})
+
+-- compute the maximal minors of a matrix.
+minors(InfiniteNumber,Matrix) := Ideal => opts ->(j,M) -> ( 
+     if j < 0 then ideal(1) else minors(min size M, M)
+     )
+
+-- produce the filtered complex assoicated to filtered simplical complex
+-- formed by taking maximal minors of a filtered matrix.
+-- here we are filtering a matrix by its columns.
+-- by taking the tranpose of the matrix, we obtain the
+-- filtration by rows.
+filteredComplex(Matrix) := FilteredComplex => opts -> (M) -> (
+     numberOfColumns := (size M)#0;
+     myList := reverse apply(numberOfColumns, i-> 
+	  simplicialComplex(M_{0..i},infinity)); 
+     filteredComplex(myList, ReducedHomology => opts.ReducedHomology)       
+)
+
 
 ------------------------------------------------------------------------------------
 -- ChainComplexExtraExtras 
@@ -1712,10 +1756,77 @@ doc ///
       
 end
 
+--------------------------------------------------------------------------------
+restart
+installPackage"SpectralSequences"
+installPackage("SpectralSequences",RemakeAllDocumentation=>true)
+check "SpectralSequences";
+viewHelp SpectralSequences
+------------------------------------------
 
--- The following are 11 examples which illustrate the current state of the code.
+-- The following are some examples which illustrate the current state of the code.
 -- All examples seem to work correctly.
+--
 
+
+---
+-- The following illustrates examples arising from simplicial complexes
+-- associated to matrices.
+-- Nathan got this idea by reading the paper "Minimal Resolutions and the Homology 
+-- of Matching and Chessboard Complexes" by V.REINER and J. Roberts
+--  the simplicial complexes produced here are surely related
+-- to the chessboard complexes of that paper.  the precise relationship
+-- needs to be clariefied.  
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+R = ZZ/2[x_1..x_36]
+P = matrix(R,6,4)
+K = filteredComplex(P, ReducedHomology => false);
+prune K
+
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^3
+E^3 .dd
+E^4 .dd
+E^infinity
+prune HH K_infinity
+
+k = filteredComplex(transpose(P), ReducedHomology => false);
+e = prune spectralSequence k
+e^0
+e^1
+e^2
+prune HH k_infinity
+
+P = matrix(R,5,2)
+K = filteredComplex(P, ReducedHomology => false);
+prune K
+
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^3
+E^3 .dd
+E^4 .dd
+E^infinity
+prune HH K_infinity
+
+k = filteredComplex(transpose(P), ReducedHomology => false);
+e = prune spectralSequence k
+e^0
+e^1
+e^2
+prune HH k_infinity
+
+------
 ---------------------------------------------------------------
 --- Easy examples of spectral sequences arising from filtrations 
 --   of simplicial complexes.
