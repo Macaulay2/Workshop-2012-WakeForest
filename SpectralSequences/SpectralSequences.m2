@@ -64,8 +64,7 @@ export {
   "pprune",
   "epqrMaps",
   "pruneEpqrMaps",
-  "epq",
-  "isSubSimplicialComplex"
+  "epq"
   }
 
 
@@ -563,71 +562,6 @@ prune FilteredComplex := FilteredComplex => opts -> F ->
 filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
 
 chainComplex SpectralSequence := ChainComplex => E -> chainComplex filteredComplex E
-
------------------------------------------------------------------------------------
--- Simplicial Complex Extras
------------------------------------------------------------------------------------
--- the next method checks if a simplical complex is a subsimplicial complex
--- first we need to list all faces.
----
-
-
-isSubSimplicialComplex = method()
--- the following method checks if the simplicial complex E is a sub complex of D
-isSubSimplicialComplex(SimplicialComplex,SimplicialComplex):=(E,D)->(
-     allFaces := D->(set flatten apply((dim D)+1,i-> flatten entries faces(i,D)));
-     L:=allFaces(D);
-     K:= flatten entries facets E;
-     flag:=true;
-     for i from 0 to #K-1 do (
-      if member(K#i,L) and flag== true then flag=true else flag=false);
-           flag
-      )
-
-
--- the following makes an m x n matrix using the "first" nm variables in the ring.
--- the "first" variable is in the top left hand corner, the m variable is in the 
--- top right hand corner, and the mn variable is in the bottom righthand corner.
--- etc.
-matrix(Ring,ZZ,ZZ) := Matrix => opts ->(R,n,m) -> (
-     L := flatten entries vars R;
-     myMatrix := {};
-     for i from 0 to m -1 do (
-	  J := {};
-	       for j from 0 to n -1 do (
-		    J = append(J,L#(j));
-		    );
-	  L = drop(L,n);     
-	  myMatrix = append(myMatrix,J);
-	  );
-     matrix(R,myMatrix)
-     )
-
--- the following creates a simplicial complex from the minors of a matrix
-simplicialComplex(Matrix,InfiniteNumber) :=
-simplicialComplex (Matrix,ZZ) := SimplicialComplex => (M,n) -> ( 
-     simplicialComplex flatten(apply(flatten entries gens minors(n,M), i-> terms i))
-     )
-
--- return the size e.g. {# rows, # columns} of a matrix.
-size Matrix := (M) -> ({length flatten entries M^{0}, length flatten entries M_{0}})
-
--- compute the maximal minors of a matrix.
-minors(InfiniteNumber,Matrix) := Ideal => opts ->(j,M) -> ( 
-     if j < 0 then ideal(1) else minors(min size M, M)
-     )
-
--- produce the filtered complex assoicated to filtered simplical complex
--- formed by taking maximal minors of a filtered matrix.
--- here we are filtering a matrix by its columns.
--- by taking the tranpose of the matrix, we obtain the
--- filtration by rows.
-filteredComplex(Matrix) := FilteredComplex => opts -> (M) -> (
-     numberOfColumns := (size M)#0;
-     myList := reverse apply(numberOfColumns, i-> 
-	  simplicialComplex(M_{0..i},infinity)); 
-     filteredComplex(myList, ReducedHomology => opts.ReducedHomology)       
-)
 
 
 ------------------------------------------------------------------------------------
@@ -1768,7 +1702,6 @@ viewHelp SpectralSequences
 -- All examples seem to work correctly.
 --
 
-
 ---
 -- The following illustrates examples arising from simplicial complexes
 -- associated to matrices.
@@ -1776,55 +1709,259 @@ viewHelp SpectralSequences
 -- of Matching and Chessboard Complexes" by V.REINER and J. Roberts
 --  the simplicial complexes produced here are surely related
 -- to the chessboard complexes of that paper.  the precise relationship
--- needs to be clariefied.  
+-- needs to be clarified.  
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
 needsPackage "ChainComplexExtras";
 debug SpectralSequences;
+-- the following scripts are used in this example.
 
-R = ZZ/2[x_1..x_36]
-P = matrix(R,6,4)
-K = filteredComplex(P, ReducedHomology => false);
-prune K
 
+-- the following produces a simplicial complex 
+-- by considering the terms of appropriate
+-- minors of a generic matrix.
+
+matrixSimplicialComplex = method()
+matrixSimplicialComplex(Matrix,InfiniteNumber) :=
+matrixSimplicialComplex (Matrix,ZZ) := SimplicialComplex => (M,n) -> ( 
+     simplicialComplex flatten(apply(flatten entries gens minors(n,M), i-> terms i))
+     )
+
+-- return the size e.g. {# rows, # columns} of a matrix.
+size Matrix := (M) -> ({length flatten entries M_{0}, length flatten entries M^{0}})
+
+-- compute the maximal minors of a matrix.
+minors(InfiniteNumber,Matrix) := Ideal => opts ->(j,M) -> ( 
+     if j < 0 then ideal(1) else minors(min size M, M)
+     )
+
+-- the following produces a list of nested simplicial complexes.
+-- the first element of the list is the simplicial
+-- complex corresponding to the maximal minmors of a generic
+-- m x n matrix.  This is the m x n chessboard complex.
+-- the other simplicial complexes in the filtration correspond to the
+-- maximal minors of the submatrix obtained by deleting successive columns.
+-- there will be another filteration obtained by successive rows.
+-- to get this one, interchange m and n in the constructor.
+-- strictly speaking, the simplicial complexes created by the
+-- constructor are different, but they will be what we want
+-- up to relabeling.   
+
+filteredMatrixSimplicialComplex = method( )
+
+filteredMatrixSimplicialComplex(ZZ,ZZ,Ring) := (m,n,R) -> (
+     M := genericMatrix(R,m,n);
+     numberOfColumns := length flatten entries M^{0};
+     myList := reverse apply(numberOfColumns, i -> 
+	  matrixSimplicialComplex(M_{0..i},infinity))
+)
+
+-- the following method checks if the simplicial complex E is a sub complex of D.
+isSubSimplicialComplex = method()
+isSubSimplicialComplex(SimplicialComplex,SimplicialComplex):=(E,D)->(
+     allFaces := D -> (set flatten apply((dim D)+1,i-> flatten entries faces(i,D)));
+     L := allFaces(D);
+     K := flatten entries facets E;
+     all(apply(#K, i -> member(K#i,L)), i -> i == true)
+      )
+--
+-- now try some examples.
+
+L = filteredMatrixSimplicialComplex(3,3,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(4,2,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(2,4,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^3
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(3,4,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^3
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(4,3,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^3
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(3,5,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^2 .dd
+E^3
+E^3 .dd
+E^4
+E^4 .dd
+E^infinity
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(5,3,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^2 .dd
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(4,5,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^2 .dd
+E^3 
+E^3 .dd
+E^4
+E^infinity
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(5,4,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^2 .dd
+E^3 
+E^3 .dd
+E^infinity
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(2,5,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
 E = prune spectralSequence K
 E^0
 E^1
 E^2
 E^3
 E^3 .dd
+E^4
 E^4 .dd
+E^5
+E^5 .dd
 E^infinity
 prune HH K_infinity
 
-k = filteredComplex(transpose(P), ReducedHomology => false);
-e = prune spectralSequence k
-e^0
-e^1
-e^2
-prune HH k_infinity
-
-P = matrix(R,5,2)
-K = filteredComplex(P, ReducedHomology => false);
-prune K
-
+L = filteredMatrixSimplicialComplex(5,2,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
 E = prune spectralSequence K
 E^0
 E^1
 E^2
+E^infinity
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(2,6,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2 .dd
+E^3 .dd 
+E^4
+E^4 .dd
+E^5
+E^5 .dd
+E^6
+E^6 .dd
+E^infinity
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(6,2,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(3,6,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^2 .dd
 E^3
 E^3 .dd
+E^4 
+E^4 .dd
+E^5
+E^5 .dd
+E^infinity
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(6,3,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false)
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+prune HH K_infinity
+
+L = filteredMatrixSimplicialComplex(4,6,R)
+all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
+K = filteredComplex(L, ReducedHomology => false);
+prune K_infinity
+E = prune spectralSequence K
+E^0
+E^1
+E^2
+E^2 .dd
+E^3
+E^3 .dd
+E^4
 E^4 .dd
 E^infinity
 prune HH K_infinity
 
-k = filteredComplex(transpose(P), ReducedHomology => false);
-e = prune spectralSequence k
-e^0
-e^1
-e^2
-prune HH k_infinity
 
 ------
 ---------------------------------------------------------------
@@ -2221,18 +2358,18 @@ C = truncate(chainComplex Delta,1)
 prune HH C
 C.dd
 prune (ker C.dd_1 / image C.dd_2)
-
+--  Note:  this is ZZ + ZZ/2ZZ.  So this is OK. --
 --
--- so the homology of C DOES NOT agree with the homology of the Klein Bottle.
+-- so the homology of C agrees with the homology of the Klein Bottle.
 -- the Klein Bottle has homology H_0 = ZZ, H_1 = ZZ+Z/2, H_i = 0 for i>=2.
--- need to fix/explain this bug!
+
 -- 
 -- Let's continue with this example further.
 
 F1Delta = Delta
 
 -- now want to make subsimplicial complex arising from the filtrations of the
--- inverse image of the verticies
+-- inverse image of the verticies.
 
 F0Delta = simplicialComplex {a00*a01,a01*a02
      ,a00*a02,a10*a11,a10*a12,a11*a12,a21*a20,a20*a22,a21*a22}
@@ -2250,8 +2387,7 @@ E^2
 E^3
 
 -- Note that the spectral sequence is abutting to what it should -- the integral
--- homology of the Klien bottle, but that this does not equal the homology of 
--- K!!
+-- homology of the Klien bottle
 
 -- I wonder what happens if we use rational of coefficients?!
 
