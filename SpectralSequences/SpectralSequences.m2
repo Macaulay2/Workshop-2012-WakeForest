@@ -1701,6 +1701,91 @@ viewHelp SpectralSequences
 -- The following are some examples which illustrate the current state of the code.
 -- All examples seem to work correctly.
 --
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+-- The following example is taken from p. 127, Fig 7.2 of 
+-- Zomorodian's "Topology for computing"
+
+
+A = ZZ [s,t,u,v,w]
+
+d0 = simplicialComplex {s}
+d1 = simplicialComplex {s,t}
+d2 = simplicialComplex {s,t,u}
+d3 = simplicialComplex {s*t, u}
+d4 = simplicialComplex {s*t, u, v}
+d5 = simplicialComplex {s*t, u, v, w}
+d6 = simplicialComplex {s*t, s*w ,u, v}
+d7 = simplicialComplex {s*t, s*w ,t * w, u, v}
+d8 = simplicialComplex {s*t, s*w ,t * w, u * v}
+d9 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v}
+d10 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u}
+d11 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w}
+d12 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u}
+d13 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w}
+d14 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w}
+d15 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u}
+d16 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v}
+d17 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v, s*t*w}
+
+L = reverse {d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17}
+K = filteredComplex (L, ReducedHomology => false)
+
+E = prune spectralSequence K
+E^0
+E^0 .dd
+E^1
+E^1 .dd
+E^2
+E^2 .dd
+E^3
+E^3 .dd
+E^4
+E^4 .dd
+E^5
+E^5 .dd
+E^6
+E^6 .dd
+E^7
+E^7 .dd
+E^8
+E^8 .dd
+E^9
+E^9 .dd
+E^infinity
+prune HH K_infinity
+
+-- let's try the one on page 138, figure 7.11.
+
+S = ZZ[a,b,c,d]
+d0 = simplicialComplex {a,b}
+d1 = simplicialComplex {a,b,c,d, a* b, b* c}
+d2 = simplicialComplex {a,b,c,d, a* b, b* c,c*d, a* d }
+d3 = simplicialComplex {a,b,c,d, a* b, b* c,c*d, a* d , a* c}
+d4 = simplicialComplex {a,b,c,d, a* b, b* c,c*d, a* d , a* c, a*b*c}
+d5 = simplicialComplex {a,b,c,d, a* b, b* c,c*d, a* d , a* c, a*b*c, a* c* d}
+
+l = {d0,d1,d2,d3,d4,d5}
+k = filteredComplex (reverse l, ReducedHomology => false)
+e = prune spectralSequence k
+e^0
+e^0 .dd
+e^1
+e^1 .dd
+
+e^2
+e^2 .dd
+
+e^3
+e^3 .dd
+
+e^4
+
+prune HH k_infinity
 
 ---
 -- The following illustrates examples arising from simplicial complexes
