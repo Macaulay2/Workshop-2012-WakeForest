@@ -14,6 +14,7 @@ export { NCRing, generatorSymbols, -- can I get away with not exporting this som
          NCGroebnerBasis, ncGroebnerBasis,
          NCIdeal, NCLeftIdeal, NCRightIdeal,
          ncIdeal, ncLeftIdeal, ncRightIdeal,
+         twoSidedNCGroebnerBasisBergman,
          NCMatrix, ncMatrix,
          NCMonomial,
          isCentral
@@ -33,7 +34,7 @@ emptyMon := new NCMonomial from {}
 
 removeZeroes := myHash -> select(myHash, c -> c != 0)
 
---- NCRing methods -----------------------
+--- NCRing methods --------------
 new NCRing from List := (NCRing, inits) -> new NCRing of NCRingElement from new HashTable from inits
 
 Ring List := (R, varList) -> (
@@ -118,7 +119,7 @@ generators NCRing := opts -> A -> (
 net NCRing := A -> net A.CoefficientRing | net A.generators
 
 use NCRing := A -> (scan(A.generatorSymbols, A.generators, (sym,val) -> sym <- val); A)
--------------------------------------------
+---------------------------------
 
 ------------- NCIdeal ---------------------
 ncIdeal = method()
@@ -203,6 +204,7 @@ use NCQuotientRing := B -> (scan(B.generatorSymbols, B.generators, (sym,val) -> 
 
 -------------------------------------------
 
+
 --- NCMonomial functions -----------
 net NCMonomial := mon -> (
    if mon === emptyMon then return net "";
@@ -218,6 +220,22 @@ net NCMonomial := mon -> (
       );
    );
    myNet | (net tempVar) | if curDegree == 1 then (net "") else ((net curDegree)^1)
+)
+
+toString NCMonomial := mon -> (
+   if mon === emptyMon then return "";
+   myNet := "";
+   tempVar := first mon;
+   curDegree := 0;
+   for v in mon do (
+      if v == tempVar then curDegree = curDegree + 1
+      else (
+          myNet = myNet | (toString tempVar) | if curDegree == 1 then "*" else "^" | curDegree | "*";
+          tempVar = v;
+          curDegree = 1;
+      );
+   );
+   myNet | (toString tempVar) | if curDegree == 1 then "" else "^" | curDegree
 )
 
 NCMonomial _ List := (mon,substr) -> new NCMonomial from (toList mon)_substr
@@ -267,6 +285,31 @@ net NCRingElement := f -> (
    )
 )
 
+toString NCRingElement := f -> (
+   if #(f.terms) == 0 then "0" else (
+      firstTerm := true;
+      myNet := "";
+      for t in sort pairs f.terms do (
+         tempNet := toString t#1;
+         printParens := ring t#1 =!= QQ and ring t#1 =!= ZZ and size t#1 > 1;
+         myNet = myNet |
+                 (if not firstTerm and t#1 > 0 then
+                    "+"
+                 else 
+                    "") |
+                 (if printParens then "(" else "") | 
+                 (if t#1 != 1 and t#1 != -1 then
+                    tempNet
+                  else if t#1 == -1 then "-"
+                  else "") |
+                 (if printParens then ")" else "") |
+                 (if t#0 === emptyMon and t#1 == 1 then "1" else toString t#0);
+         firstTerm = false;
+      );
+      myNet
+   )
+)
+
 leadTerm NCRingElement := f -> new (f.ring) from {(symbol ring) => f.ring,
                                                   (symbol terms) => new HashTable from {last sort (pairs f.terms)}};
 leadMonomial NCRingElement := f -> first last sort (pairs f.terms);
@@ -293,9 +336,55 @@ ncRingElement (NCMonomial,NCRing) := (mon,A) -> (
 
 ------- NCGroebnerBasis methods --------
 
+--- Bergman related functions
+
+runCommand := cmd -> (
+   stderr << "--running: " << cmd << endl;
+   r := run cmd;
+   if r != 0 then error("--command failed, error return code ",r);
+)
+
+writeGBInputFile = method()
+writeGBInputFile (List, String, ZZ) := (genList, tempInput, maxDeg) -> (
+   fil := openOut tempInput;
+   -- print the setup of the computation
+   fil << "(noncommify)" << endl;
+   fil << "(setmaxdeg " << maxDeg << ")" << endl;
+   fil << "(setalgoutmode macaulay)" << endl;
+   fil << "(algforminput)" << endl;
+   
+   -- print out the list of variables we are using
+   fil << "vars ";
+   gensR := gens (first genList).ring;
+   lastVar := last gensR;
+   scan(drop(gensR,-1), x -> fil << toString x << ",");
+   fil << toString lastVar << ";" << endl;
+   
+   --- print out the generators of ideal
+   lastGen := last genList;
+   scan(drop(genList,-1), f -> fil << toString f << ",");
+   fil << toString lastGen << ";" << endl << close;
+)
+
+writeGBInitFile = method()
+writeGBInitFile (String, String, String) := (tempInit, tempInput, tempOutput) -> (
+   fil := openOut tempInit;
+   fil << "(simple \"" << tempInput << "\" \"" << tempOutput << "\")" << endl;
+   fil << "(quit)" << endl << close;   
+)
+
+gbFromOutputFile = method()
+gbFromOutputFile String := tempOutput -> (
+   fil := openIn tempOutput;
+   myFile := select(lines get fil, s -> s#0#0 != "%");
+   gensList := select(apply(myFile, l -> value l), f -> class f === Sequence) / first;
+   ncIdeal gensList
+)
+------------------------------------------------------------------
+
+
 -- For now, one must create this with a program that can compute noncommutative GBs, like Bergman.
 -- The code assumes that the list is a GB in the deglex order
-
 leftNCGroebnerBasis = method()
 leftNCGroebnerBasis List := genList -> (
 )
@@ -304,8 +393,20 @@ rightNCGroebnerBasis = method()
 rightNCGroebnerBasis List := genList -> (
 )
 
-twoSidedNCGroebnerBasis = method()
-twoSidedNCGroebnerBasis List := genList -> (
+twoSidedNCGroebnerBasisBergman = method(Options=>{DegreeLimit=>10})
+twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
+  coeffRing := coefficientRing I.ring;
+  if coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing) then
+     error << "Can only handle coefficients over QQ or ZZ/p at the present time." << endl;
+  -- call Bergman for this, at the moment
+  tempInit := temporaryFileName() | ".init";
+  tempInput := temporaryFileName() | ".bi";
+  tempOutput := temporaryFileName() | ".bo";
+  gensI := gens I;
+  writeGBInputFile(gensI,tempInput, opts#DegreeLimit);
+  writeGBInitFile(tempInit,tempInput,tempOutput);
+  runCommand("bergman -i " | tempInit | " --silent");
+  gbFromOutputFile(tempOutput)
 )
 
 ncGroebnerBasis = method()
@@ -319,6 +420,7 @@ ncGroebnerBasis NCIdeal := I -> (
    I.cache#gb = ncgb;
    ncgb   
 )
+
 
 net NCGroebnerBasis := ncgb -> (
    stack apply(ncgb, (pol,lt) -> (net pol) | net "; Lead Term = " | (net lt))
@@ -334,10 +436,6 @@ basis(ZZ,NCRing,NCGroebnerBasis) := opts -> (n,A,ncgb) -> (
    leadTerms := ncgb / last;
    select(basisList, b -> all(leadTerms, mon -> findSubstring(mon,b) === null))
 )
-
-basis(ZZ,NCRing) := opts -> (n,A) -> basis(n,A,ncGroebnerBasis {})
-
-basis(ZZ,NCQuotientRing) := opts -> (n,B) -> basis(n,B.ambient, ncGroebnerBasis B.ideal)
 
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
    if #ncgb == 0 then return f;
@@ -448,7 +546,7 @@ expression NCMatrix := M -> MatrixExpression applyTable(M.matrix, expression)
 end
 
 --- other things too maybe:
---- ask Bergman to compute GB (up to a certain limit) and import it?
+--- ask Bergman to compute GB and import it?
 --- compute kernels and images of graded maps over graded algebra (even if just a k-basis in each degree...)
 --- factor one map through another
 
@@ -466,6 +564,9 @@ I = ncIdeal {f1,f2,f3,f4,f5}
 ncgb = ncGroebnerBasis I
 --- skip the next line if you want to work in the tensor algebra
 B = A/I
+h = x^2 + y^2 + z^2
+isCentral h
+isCentral g
 M3 = ncMatrix {{x,y,z,0},
                {-y*z-2*x^2,-y*x,z*x-x*z,x},
                {x*y-2*y*x,x*z,-x^2,y},
@@ -477,6 +578,7 @@ M4 = ncMatrix {{-z*y,-x,z,y},
 --- can now work in quotient ring!
 M3*M4
 M4*M3
+time M3^4
 
 --- or can work over free algebra and reduce later
 M4*M3 % ncgb
@@ -504,7 +606,7 @@ I = ncIdeal {y*x - q*x*y, z*y - q*y*z, z*x - q*x*z}
 B = A / I
 
 -- get a basis of the degree n piece of A over the base ring
-basis(3,B)
+basis(3,A,ncgb)
 
 --- we can verify that f is central in this ring, for example
 f = x^5 + y^5 + z^5
@@ -514,3 +616,14 @@ isCentral g
 
 -- example computation
 h = f^3
+------------------------------------------------------
+
+--- testing out Bergman interface
+restart
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+f1 = y*z + z*y - x^2
+f2 = x*z + z*x - y^2
+f3 = z^2 - x*y - y*x
+I = ncIdeal {f1,f2,f3}
+twoSidedNCGroebnerBasisBergman I
