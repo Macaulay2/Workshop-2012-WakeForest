@@ -33,7 +33,7 @@ emptyMon := new NCMonomial from {}
 
 removeZeroes := myHash -> select(myHash, c -> c != 0)
 
---- NCRing methods --------------
+--- NCRing methods -----------------------
 new NCRing from List := (NCRing, inits) -> new NCRing of NCRingElement from new HashTable from inits
 
 Ring List := (R, varList) -> (
@@ -118,7 +118,7 @@ generators NCRing := opts -> A -> (
 net NCRing := A -> net A.CoefficientRing | net A.generators
 
 use NCRing := A -> (scan(A.generatorSymbols, A.generators, (sym,val) -> sym <- val); A)
----------------------------------
+-------------------------------------------
 
 ------------- NCIdeal ---------------------
 ncIdeal = method()
@@ -202,7 +202,6 @@ net NCQuotientRing := B -> net (B.ambient) | " / " | net (B.ideal.generators)
 use NCQuotientRing := B -> (scan(B.generatorSymbols, B.generators, (sym,val) -> sym <- val); B)
 
 -------------------------------------------
-
 
 --- NCMonomial functions -----------
 net NCMonomial := mon -> (
@@ -321,7 +320,6 @@ ncGroebnerBasis NCIdeal := I -> (
    ncgb   
 )
 
-
 net NCGroebnerBasis := ncgb -> (
    stack apply(ncgb, (pol,lt) -> (net pol) | net "; Lead Term = " | (net lt))
 )
@@ -336,6 +334,10 @@ basis(ZZ,NCRing,NCGroebnerBasis) := opts -> (n,A,ncgb) -> (
    leadTerms := ncgb / last;
    select(basisList, b -> all(leadTerms, mon -> findSubstring(mon,b) === null))
 )
+
+basis(ZZ,NCRing) := opts -> (n,A) -> basis(n,A,ncGroebnerBasis {})
+
+basis(ZZ,NCQuotientRing) := opts -> (n,B) -> basis(n,B.ambient, ncGroebnerBasis B.ideal)
 
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
    if #ncgb == 0 then return f;
@@ -446,8 +448,7 @@ expression NCMatrix := M -> MatrixExpression applyTable(M.matrix, expression)
 end
 
 --- other things too maybe:
---- compute GB (up to a certain limit) in free algebra
---- ask Bergman to compute GB and import it?
+--- ask Bergman to compute GB (up to a certain limit) and import it?
 --- compute kernels and images of graded maps over graded algebra (even if just a k-basis in each degree...)
 --- factor one map through another
 
@@ -503,7 +504,7 @@ I = ncIdeal {y*x - q*x*y, z*y - q*y*z, z*x - q*x*z}
 B = A / I
 
 -- get a basis of the degree n piece of A over the base ring
-basis(3,A,ncgb)
+basis(3,B)
 
 --- we can verify that f is central in this ring, for example
 f = x^5 + y^5 + z^5
