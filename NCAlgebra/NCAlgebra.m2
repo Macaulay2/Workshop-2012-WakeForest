@@ -15,6 +15,8 @@ export { NCRing, generatorSymbols, -- can I get away with not exporting this som
          NCIdeal, NCLeftIdeal, NCRightIdeal,
          ncIdeal, ncLeftIdeal, ncRightIdeal,
          twoSidedNCGroebnerBasisBergman,
+         normalFormBergman,
+         ComputeNCGB,
          NCMatrix, ncMatrix,
          NCMonomial,
          isCentral
@@ -140,6 +142,7 @@ net NCIdeal := I -> "Two-sided ideal " | net (I.generators);
 new NCQuotientRing from List := (NCQuotientRing, inits) -> new NCQuotientRing of NCRingElement from new HashTable from inits
 
 NCRing / NCIdeal := (A, I) -> (
+   ncgb := ncGroebnerBasis I;
    B := new NCQuotientRing from {(symbol generators) => {},
                                  (symbol generatorSymbols) => A.generatorSymbols,
                                  CoefficientRing => A.CoefficientRing,
@@ -149,7 +152,6 @@ NCRing / NCIdeal := (A, I) -> (
                                                               (symbol terms) => new HashTable from {(new NCMonomial from {v},1)}});
    B#(symbol generators) = newGens;
    
-   ncgb := ncGroebnerBasis I;
    R := A.CoefficientRing;
    
    lift B := opts -> f -> new A from {(symbol ring) => A,
@@ -179,11 +181,11 @@ NCRing / NCIdeal := (A, I) -> (
    QQ + B := (r,f) -> f + r;
 
    B == B := (f,g) -> (lift(f - g) % ncgb) == 0;
-   B == ZZ := (f,n) -> (f = (lift f) % ncgb; (#(f.terms) == 0 and n == 0) or (#(f.terms) == 1 and ((first pairs f.terms)#0 === emptyMon) and ((first pairs f.terms)#1 == n)));
+   B == ZZ := (f,n) -> (f = push(lift f); (#(f.terms) == 0 and n == 0) or (#(f.terms) == 1 and ((first pairs f.terms)#0 === emptyMon) and ((first pairs f.terms)#1 == n)));
    ZZ == B := (n,f) -> f == n;
-   B == QQ := (f,n) -> (f = (lift f) % ncgb; (#(f.terms) == 0 and n == 0) or (#(f.terms) == 1 and ((first pairs f.terms)#0 === emptyMon) and ((first pairs f.terms)#1 == n)));
+   B == QQ := (f,n) -> (f = push(lift f); (#(f.terms) == 0 and n == 0) or (#(f.terms) == 1 and ((first pairs f.terms)#0 === emptyMon) and ((first pairs f.terms)#1 == n)));
    QQ == B := (n,f) -> f == n;
-   B == R := (f,n) -> (f = (lift f) % ncgb; (#(f.terms) == 0 and n == 0) or (#(f.terms) == 1 and ((first pairs f.terms)#0 === emptyMon) and ((first pairs f.terms)#1 == n)));
+   B == R := (f,n) -> (f = push(lift f); (#(f.terms) == 0 and n == 0) or (#(f.terms) == 1 and ((first pairs f.terms)#0 === emptyMon) and ((first pairs f.terms)#1 == n)));
    R == B := (n,f) -> f == n;
    B
 )
@@ -339,18 +341,21 @@ ncRingElement (NCMonomial,NCRing) := (mon,A) -> (
 --- Bergman related functions
 
 runCommand := cmd -> (
-   stderr << "--running: " << cmd << endl;
+   --stderr << "--running: " << cmd << endl;
    r := run cmd;
    if r != 0 then error("--command failed, error return code ",r);
 )
 
-writeGBInputFile = method()
-writeGBInputFile (List, String, ZZ) := (genList, tempInput, maxDeg) -> (
+writeGBInputFile = method(Options => {ComputeNCGB => true})
+writeGBInputFile (List, String, ZZ) := opts -> (genList, tempInput, maxDeg) -> (
+   R := (first genList).ring;
+   charR := char coefficientRing R;
+   
    fil := openOut tempInput;
    -- print the setup of the computation
    fil << "(noncommify)" << endl;
+   fil << "(setmodulus " << charR << ")" << endl;
    fil << "(setmaxdeg " << maxDeg << ")" << endl;
-   fil << "(setalgoutmode macaulay)" << endl;
    fil << "(algforminput)" << endl;
    
    -- print out the list of variables we are using
@@ -363,7 +368,8 @@ writeGBInputFile (List, String, ZZ) := (genList, tempInput, maxDeg) -> (
    --- print out the generators of ideal
    lastGen := last genList;
    scan(drop(genList,-1), f -> fil << toString f << ",");
-   fil << toString lastGen << ";" << endl << close;
+   fil << toString lastGen << ";" << endl;
+   fil << close;
 )
 
 writeGBInitFile = method()
@@ -378,7 +384,42 @@ gbFromOutputFile String := tempOutput -> (
    fil := openIn tempOutput;
    myFile := select(lines get fil, s -> s#0#0 != "%");
    gensList := select(apply(myFile, l -> value l), f -> class f === Sequence) / first;
-   ncIdeal gensList
+   gensList = apply(gensList, f -> 1/(leadCoefficient f)*f);
+   new NCGroebnerBasis from apply(gensList, f -> (f, leadMonomial f))
+)
+
+writeNFInputFile = method()
+writeNFInputFile (List,NCGroebnerBasis, List, ZZ) := (fList,ncgb, inputFileList, maxDeg) -> (
+   genList := (toList ncgb) / first;
+   --- set up gb computation
+   -- need to also test if ncgb is in fact a gb, and if so, tell Bergman not to do the computation
+   writeGBInputFile(genList,inputFileList#0,maxDeg);
+   --- now set up the normal form computation
+   fil := openOut inputFileList#1;
+   for f in fList do (
+      fil << "(readtonormalform)" << endl;
+      fil << toString f << ";" << endl;
+   );
+   fil << close;
+)
+writeNFInputFile (NCRingElement, NCGroebnerBasis,List,ZZ) := (f, ncgb, inputFileList, maxDeg) ->
+   writeNFInputFile({f},ncgb,inputFileList,maxDeg)
+
+
+writeNFInitFile = method()
+writeNFInitFile (String, String, String, String) := (tempInit, tempGBInput, tempNFInput, tempGBOutput) -> (
+   fil := openOut tempInit;
+   fil << "(simple \"" << tempGBInput << "\" \"" << tempGBOutput << "\")" << endl;
+   fil << "(simple \"" << tempNFInput << "\")" << endl;
+   fil << "(quit)" << endl << close;   
+)
+
+nfFromTerminalFile = method()
+nfFromTerminalFile String := tempTerminal -> (
+   fil := openIn tempTerminal;
+   outputLines := lines get fil;
+   eltPositions := positions(outputLines, l -> l == "is reduced to");
+   outputLines_(apply(eltPositions, i -> i + 1)) / value / first
 )
 ------------------------------------------------------------------
 
@@ -393,19 +434,20 @@ rightNCGroebnerBasis = method()
 rightNCGroebnerBasis List := genList -> (
 )
 
-twoSidedNCGroebnerBasisBergman = method(Options=>{DegreeLimit=>10})
+twoSidedNCGroebnerBasisBergman = method(Options=>{DegreeLimit=>100})
 twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
   coeffRing := coefficientRing I.ring;
   if coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing) then
      error << "Can only handle coefficients over QQ or ZZ/p at the present time." << endl;
   -- call Bergman for this, at the moment
-  tempInit := temporaryFileName() | ".init";
-  tempInput := temporaryFileName() | ".bi";
-  tempOutput := temporaryFileName() | ".bo";
+  tempInit := temporaryFileName() | ".init";      -- init file
+  tempInput := temporaryFileName() | ".bi";       -- gb input file
+  tempOutput := temporaryFileName() | ".bo";      -- gb output goes here
+  tempTerminal := temporaryFileName() | ".ter";   -- terminal output goes here
   gensI := gens I;
   writeGBInputFile(gensI,tempInput, opts#DegreeLimit);
   writeGBInitFile(tempInit,tempInput,tempOutput);
-  runCommand("bergman -i " | tempInit | " --silent");
+  runCommand("bergman -i " | tempInit | " --silent > " | tempTerminal);
   gbFromOutputFile(tempOutput)
 )
 
@@ -416,7 +458,7 @@ ncGroebnerBasis List := gbList -> (
 
 ncGroebnerBasis NCIdeal := I -> (
    if I.cache#?gb then return I.cache#gb;
-   ncgb := new NCGroebnerBasis from apply(gens I, f -> (f,leadMonomial f));
+   ncgb := twoSidedNCGroebnerBasisBergman I;
    I.cache#gb = ncgb;
    ncgb   
 )
@@ -437,7 +479,30 @@ basis(ZZ,NCRing,NCGroebnerBasis) := opts -> (n,A,ncgb) -> (
    select(basisList, b -> all(leadTerms, mon -> findSubstring(mon,b) === null))
 )
 
-NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
+normalFormBergman = method(Options => options twoSidedNCGroebnerBasisBergman)
+normalFormBergman (List, NCGroebnerBasis) := opts -> (fList, ncgb) -> (
+   coeffRing := coefficientRing (first fList).ring;
+   if coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing) then
+      error << "Can only handle coefficients over QQ or ZZ/p at the present time." << endl;
+   -- call Bergman for this, at the moment
+   tempInit := temporaryFileName() | ".init";      -- init file
+   tempGBInput := temporaryFileName() | ".bigb";   -- gb input file
+   tempOutput := temporaryFileName() | ".bo";      -- gb output goes here
+   tempTerminal := temporaryFileName() | ".ter";   -- terminal output goes here
+   tempNFInput := temporaryFileName() | ".binf";   -- nf input file
+   writeNFInputFile(fList,ncgb,{tempGBInput,tempNFInput},opts#DegreeLimit);
+   writeNFInitFile(tempInit,tempGBInput,tempNFInput,tempOutput);
+   runCommand("bergman -i " | tempInit | " --silent > " | tempTerminal);
+   nfFromTerminalFile(tempTerminal)
+)
+normalFormBergman (NCRingElement, NCGroebnerBasis) := opts -> (f,ncgb) ->
+   first normalFormBergman({f},ncgb,opts)
+
+--NCRingElement % NCGroebnerBasis := (f,ncgb) -> first normalFormBergman({f},ncgb)
+NCRingElement % NCGroebnerBasis := (f,ncgb) -> oldRemainderFunction(f,ncgb)
+
+--- this function is deprecated, but may be useful to keep around.
+oldRemainderFunction = (f,ncgb) -> (
    if #ncgb == 0 then return f;
    if (ncgb#0#0).ring =!= f.ring then error "Expected GB over the same ring.";
    newf := f;
@@ -546,7 +611,6 @@ expression NCMatrix := M -> MatrixExpression applyTable(M.matrix, expression)
 end
 
 --- other things too maybe:
---- ask Bergman to compute GB and import it?
 --- compute kernels and images of graded maps over graded algebra (even if just a k-basis in each degree...)
 --- factor one map through another
 
@@ -557,13 +621,12 @@ A = QQ{x,y,z}
 f1 = y*z + z*y - x^2
 f2 = x*z + z*x - y^2
 f3 = z^2 - x*y - y*x
-f4 = y*x^2 - x^2*y
-f5 = y^2*x - x*y^2
-g = -y^3-x*y*z+y*x*z+x^3
-I = ncIdeal {f1,f2,f3,f4,f5}
-ncgb = ncGroebnerBasis I
---- skip the next line if you want to work in the tensor algebra
+I = ncIdeal {f1,f2,f3}
+Igb = ncGroebnerBasis I
+normalFormBergman(-y^3-x*y*z+y*x*z+x^3,Igb)
 B = A/I
+g = -y^3-x*y*z+y*x*z+x^3
+--- skip the next line if you want to work in the tensor algebra
 h = x^2 + y^2 + z^2
 isCentral h
 isCentral g
@@ -626,4 +689,17 @@ f1 = y*z + z*y - x^2
 f2 = x*z + z*x - y^2
 f3 = z^2 - x*y - y*x
 I = ncIdeal {f1,f2,f3}
-twoSidedNCGroebnerBasisBergman I
+Igb = twoSidedNCGroebnerBasisBergman I
+normalFormBergman(-y^3-x*y*z+y*x*z+x^3,Igb)
+normalFormBergman(z^24,Igb)
+normalFormBergman(x^20,Igb)
+B = A / I
+g = -y^3-x*y*z+y*x*z+x^3
+
+-----------
+-- this doesn't work since it is not homogeneous unless you use degree q = 0, which is not allowed.
+restart
+needsPackage "NCAlgebra"
+A = QQ{q,x,y,z}
+I = ncIdeal {q^4+q^3+q^2+q+1, q*x-x*q, q*y-y*q, q*z-z*q, y*x - q*x*y, z*y - q*y*z, z*x - q*x*z}
+Igb = twoSidedNCGroebnerBasisBergman I
