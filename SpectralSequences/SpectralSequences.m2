@@ -1701,6 +1701,142 @@ viewHelp SpectralSequences
 -- The following are some examples which illustrate the current state of the code.
 -- All examples seem to work correctly.
 --
+
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+--needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+-- the following example exposes a potential bug in the code.
+-- in this example we are trying out spectral sequences
+-- arising from filtered complexes which do not consist of free modules.
+
+A = QQ[x_0..x_4]
+
+C = coker gens monomialCurveIdeal(A,{1,3,4})
+
+m = ideal(x_0..x_2)
+
+y = ideal(x_3..x_4)
+
+E = koszul gens m
+ 
+F = (koszul gens y) 
+
+K = (filteredComplex E) ** F
+
+EE = prune spectralSequence K
+EE^0
+EE^1
+EE^2
+
+-- now let's try to tensor E with C and then see what happens.
+
+e = E ** C
+
+k = (filteredComplex e) ** F
+
+ee = prune spectralSequence k
+ee^0
+--- there is an induced map error when we try to compute the ee^1 page.
+ee^1
+ee^2
+
+-- try to track down the bug.
+
+help epqrMaps
+myList = select(keys ee^0 .dd, i -> class i === List)
+
+#myList
+
+epqrMaps(k,2,2,1)
+epq(k,2,2,1)
+k_infinity _4
+
+image id_(k_3) _4
+spots k
+f := (p,q,r) -> {p-r,q + r -1}
+f(2,2,1)
+peek epq(k,1,2,1)
+ambient epq(k,1,2,1)
+peek epq
+
+inducedMap(epq(k,1,2,1), epq(k,2,2,1),  k_infinity .dd_(4))
+
+epq(k,2,2,1)
+
+epq(k,1,2,1)
+
+cover k_infinity .dd_(4)
+image id_(k_infinity)
+inducedMap(epq(k,1,2,1), epq(k,2,2,1),  cover k_infinity .dd_(4))
+
+inducedMap(epq(k,1,2,1), epq(k,2,2,1),  (image id_(k_infinity)) .dd_(4))
+
+-- note after some trial and error, the following seems to work ok.
+
+inducedMap(image id_(epq(k,1,2,1)),image id_(epq(k,2,2,1)), k_infinity .dd_4) 
+
+-- so maybe this will work in general??
+
+testEpqrMaps = method()
+testEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
+     inducedMap(image id_(epq(K,p-r,q+r-1,r)), image id_(epq(K,p,q,r)),(K_infinity).dd_(p+q)))
+myList
+testEpqrMaps(k,2,2,1)
+ apply(myList, i -> testEpqrMaps(k,i#0, i#1,1))
+-- so everything seems to be computed.
+
+-- now try the E2 page.
+apply(myList, i -> testEpqrMaps(k,i#0, i#1,2))
+-- so there is still a bug here.
+apply(4 , i -> testEpqrMaps(k,myList#i #0, myList#i #1,2))
+myList#3
+testEpqrMaps(k,3,0,2)
+
+epq(K,3,0,2)
+prune epq(K,3,0,2)
+
+f(3,0,2)
+
+prune epq(K,1,1,2)
+
+inducedMap(image id_(epq(k,1,1,2)), image id_(epq(k,3,0,2)),  k_infinity .dd_3)
+
+epq(K,1,1,2)
+
+cover k_infinity .dd_3
+ambient epq(k,3,0,2)
+ambient epq(k,1,2,2)
+
+image id_(k_infinity _2)
+image id_(k_infinity _3)
+
+-- try some other fiddling around.
+g = inducedMap(image id_(k_infinity _2), image id_(k_infinity _3), k_infinity .dd_3)
+inducedMap(image id_(epq(k,1,1,2)), image id_(epq(k,3,0,2)), g)
+
+g == k_infinity .dd_3
+f = k_infinity .dd_3
+g = (f* id_(source f)) // id_(target f)
+inducedMap(image id_(epq(k,1,1,2)), image id_(epq(k,3,0,2)), g)
+inducedMap(image id_(epq(k,1,1,2)), image id_(epq(k,3,0,2)), cover g)
+
+-- so this needs to be investigated further.
+
+--
+-- Now try to replace C with a free resolution.
+
+e = E ** G
+k = filteredComplex(e) ** F;
+ee = prune spectralSequence k
+ee^0
+ee^1
+ee^1 .dd
+ee^2
+
+-------
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
@@ -1852,6 +1988,7 @@ isSubSimplicialComplex(SimplicialComplex,SimplicialComplex):=(E,D)->(
       )
 --
 -- now try some examples.
+R = QQ[a..z]
 
 L = filteredMatrixSimplicialComplex(3,3,R)
 all((#L - 1), i -> isSubSimplicialComplex(L#(i+1), L#i))
