@@ -9,7 +9,7 @@ newPackage("NCAlgebra",
      DebuggingMode => true
      )
 
-export { NCRing, generatorSymbols, -- can I get away with not exporting this somehow?
+export { NCRing, NCQuotientRing, generatorSymbols, bergmanRing, -- can I get away with not exporting these somehow?
          NCRingElement,
          NCGroebnerBasis, ncGroebnerBasis,
          NCIdeal, NCLeftIdeal, NCRightIdeal,
@@ -27,6 +27,8 @@ export { NCRing, generatorSymbols, -- can I get away with not exporting this som
 }
 
 NCRing = new Type of Ring
+NCQuotientRing = new Type of Ring
+NCPolynomialRing = new Type of Ring
 NCRingElement = new Type of HashTable
 NCGroebnerBasis = new Type of List
 NCMatrix = new Type of HashTable
@@ -34,7 +36,6 @@ NCMonomial = new Type of List
 NCIdeal = new Type of HashTable
 NCLeftIdeal = new Type of HashTable
 NCRightIdeal = new Type of HashTable
-NCQuotientRing = new Type of QuotientRing
 
 emptyMon := new NCMonomial from {}
 
@@ -60,7 +61,8 @@ new NCRing from List := (NCRing, inits) -> new NCRing of NCRingElement from new 
 Ring List := (R, varList) -> (
    A := new NCRing from {(symbol generators) => {},
                          (symbol generatorSymbols) => varList,
-                         CoefficientRing => R};
+                         CoefficientRing => R,
+                         (symbol bergmanRing) => false};
    newGens := apply(varList, v -> v <- new A from {(symbol ring) => A,
                                                    (symbol terms) => new HashTable from {(new NCMonomial from {v},1)}});
    A#(symbol generators) = newGens;
@@ -69,8 +71,12 @@ Ring List := (R, varList) -> (
                                           (symbol terms) => new HashTable from {(emptyMon,sub(n,R))}};
    promote (QQ,A) := (n,A) -> new A from {(symbol ring) => A,
                                           (symbol terms) => new HashTable from {(emptyMon,sub(n,R))}};
+   promote (R,A) := (n,A) -> new A from {(symbol ring) => A,
+                                         (symbol terms) => new HashTable from {(emptyMon,n)}};
    promote (NCMatrix,A) := (M,A) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> promote(entry,A))); 
    promote (A,A) := (f,A) -> f;
+   
+   if R === QQ or R === ZZ/(char R) then A#(symbol bergmanRing) = true;
       
    A * A := (f,g) -> (
       newHash := new MutableHashTable;
@@ -173,6 +179,7 @@ NCRing / NCIdeal := (A, I) -> (
    B := new NCQuotientRing from {(symbol generators) => {},
                                  (symbol generatorSymbols) => A.generatorSymbols,
                                  CoefficientRing => A.CoefficientRing,
+                                 (symbol bergmanRing) => false,
                                  (symbol ambient) => A,
                                  (symbol ideal) => I};
    newGens := apply(B.generatorSymbols, v -> v <- new B from {(symbol ring) => B,
@@ -181,6 +188,8 @@ NCRing / NCIdeal := (A, I) -> (
    
    R := A.CoefficientRing;
    
+   if R === QQ or R === ZZ/(char R) then B#(symbol bergmanRing) = true;
+
    promote (A,B) := (f,B) -> new B from {(symbol ring) => B,
                                          (symbol terms) => f.terms};
    promote (B,A) := (f,A) -> new A from {(symbol ring) => A,
@@ -189,6 +198,8 @@ NCRing / NCIdeal := (A, I) -> (
                                           (symbol terms) => new HashTable from {(emptyMon,sub(n,A.CoefficientRing))}};
    promote (QQ,B) := (n,B) -> new B from {(symbol ring) => B,
                                           (symbol terms) => new HashTable from {(emptyMon,sub(n,A.CoefficientRing))}};
+   promote (R,B) := (n,B) -> new B from {(symbol ring) => B,
+                                         (symbol terms) => new HashTable from {(emptyMon,n)}};
    promote (B,B) := (f,B) -> f;
    promote (NCMatrix,B) := (M,B) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> promote(entry,B)));
    lift B := opts -> f -> promote(f,A);
@@ -276,6 +287,14 @@ toString NCMonomial := mon -> (
 
 degree NCMonomial := mon -> #mon
 
+putInRing = method()
+putInRing (NCMonomial, NCRing) := (mon,A) ->
+      new A from {(symbol ring) => A,
+                  (symbol terms) => new HashTable from {(mon,1)}}
+putInRing (NCMonomial, NCQuotientRing) := (mon,B) ->
+      new B from {(symbol ring) => B,
+                  (symbol terms) => new HashTable from {(mon,1)}}
+
 NCMonomial _ List := (mon,substr) -> new NCMonomial from (toList mon)_substr
 
 findSubstring = method(Options => {CheckPrefixOnly => false})
@@ -288,7 +307,7 @@ findSubstring (NCMonomial,NCMonomial) := opts -> (lt, mon) -> (
    substrIndex := null;
    matchLength := 0;
    for i from 0 to #mon-1 do (
-      if matchLength + #mon - i < deg then break;  -- break if not enough for a match
+      if matchLength + #mon - i < deg then break;  -- break if not enough letters left for a match
       if lt#matchLength == mon#i then matchLength = matchLength + 1 else matchLength = 0;
       if matchLength == deg then (
          substrIndex = i - deg + 1;
@@ -357,14 +376,35 @@ toStringMaybeSort NCRingElement := opts -> f -> (
    )
 )
 
+ring NCRingElement := f -> f.ring
+
+coefficients NCRingElement := opts -> f -> (
+   B := f.ring;
+   if not isHomogeneous f then error "Extected a homogeneous element.";
+   mons := if opts#Monomials === null then flatten entries monomials f else opts#Monomials;
+   coeffs := transpose ncMatrix {apply(mons, m -> (m' := first keys m.terms;
+                                                   if (f.terms)#?m' then
+                                                      promote((f.terms)#m',B)
+                                                   else
+                                                      promote(0,B)))};
+   (ncMatrix {mons},coeffs)
+)
+
+monomials NCRingElement := opts -> f -> ncMatrix {apply(sort keys f.terms, mon -> putInRing(mon,f.ring))}
+
 toString NCRingElement := f -> toStringMaybeSort(f,"Sort"=>true)
 
-degree NCRingElement := f -> (pairs f.terms) / first / degree // max
+degree NCRingElement := f -> (keys f.terms) / degree // max
 leadTerm NCRingElement := f -> new (f.ring) from {(symbol ring) => f.ring,
                                                   (symbol terms) => new HashTable from {last sort (pairs f.terms)}};
-leadMonomial NCRingElement := f -> first last sort (pairs f.terms);
+leadMonomial NCRingElement := f -> putInRing(last sort (keys f.terms),f.ring);
 leadCoefficient NCRingElement := f -> last last sort (pairs f.terms);
 isConstant NCRingElement := f -> f.terms === hashTable {} or (#(f.terms) == 1 and f.terms#?{})
+isHomogeneous NCRingElement := f -> (
+    fTerms := keys f.terms;
+    degf := degree first fTerms;
+    all(fTerms / degree, d -> d == degf)
+)
 
 terms NCRingElement := f -> apply(pairs (f.terms), (m,c) -> new (f.ring) from {(symbol ring) => f.ring,
                                                                                (symbol terms) => new HashTable from {(m,c)}});
@@ -446,9 +486,8 @@ gbFromOutputFile String := tempOutput -> (
 
 twoSidedNCGroebnerBasisBergman = method(Options=>{DegreeLimit=>100})
 twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
-  coeffRing := coefficientRing I.ring;
-  if coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing) then
-     error << "Can only handle coefficients over QQ or ZZ/p at the present time." << endl;
+  if not I.ring.bergmanRing then
+     error << "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
   -- call Bergman for this, at the moment
   tempInit := temporaryFileName() | ".init";      -- init file
   tempInput := temporaryFileName() | ".bi";       -- gb input file
@@ -510,9 +549,8 @@ nfFromTerminalFile (NCRing,String) := (A,tempTerminal) -> (
 normalFormBergman = method(Options => options twoSidedNCGroebnerBasisBergman)
 normalFormBergman (List, NCGroebnerBasis) := opts -> (fList, ncgb) -> (
    A := (first fList).ring;
-   coeffRing := coefficientRing (first fList).ring;
-   if coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing) then
-      error << "Can only handle coefficients over QQ or ZZ/p at the present time." << endl;
+   if not A.bergmanRing then 
+      error << "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
    -- call Bergman for this, at the moment
    tempInit := temporaryFileName() | ".init";      -- init file
    tempGBInput := temporaryFileName() | ".bigb";   -- gb input file
@@ -546,18 +584,17 @@ hsFromOutputFile String := tempOutput -> (
 
 hilbertBergman = method(Options => {DegreeLimit => 0})  -- DegreeLimit = 0 means return rational function.
                                                         -- else return as a power series 
-hilbertBergman NCQuotientRing := opts -> R -> (
-  coeffRing := coefficientRing R;
-  if coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing) then
-     error << "Can only handle coefficients over QQ or ZZ/p at the present time." << endl;
+hilbertBergman NCQuotientRing := opts -> B -> (
+  if not B.bergmanRing then 
+     error << "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
   -- prepare the call to bergman
   tempInit := temporaryFileName() | ".init";      -- init file
   tempInput := temporaryFileName() | ".bi";       -- gb input file
   tempGBOutput := temporaryFileName() | ".bgb";   -- gb output goes here
   tempHSOutput := temporaryFileName() | ".bhs";   -- hs output goes here
   tempTerminal := temporaryFileName() | ".ter";   -- terminal output goes here
-  I := ideal R;
-  gensI := gens ideal R;
+  I := ideal B;
+  gensI := gens ideal B;
   writeBergmanInputFile(gensI,tempInput,opts#DegreeLimit);
   writeHSInitFile(tempInit,tempInput,tempGBOutput,tempHSOutput);
   error "err";
@@ -608,29 +645,42 @@ net NCGroebnerBasis := ncgb -> (
 ZZ % NCGroebnerBasis := (n,ncgb) -> n
 QQ % NCGroebnerBasis := (n,ncgb) -> n
 
-basis(ZZ,NCRing,NCGroebnerBasis) := opts -> (n,A,ncgb) -> (
+basis(ZZ,NCRing) := opts -> (n,A) -> (
    basisList := {emptyMon};
    varsList := A.generatorSymbols;
-   lastTerms := ncgb / last;
+   for i from 1 to n do (
+      basisList = flatten apply(varsList, v -> apply(basisList, b -> new NCMonomial from {v} | b));
+   );
+   ncMatrix {apply(basisList, mon -> putInRing(mon,A))}
+)
+
+basis(ZZ,NCQuotientRing) := opts -> (n,B) -> (
+   ncgb := ncGroebnerBasis B.ideal;
+   basisList := {emptyMon};
+   varsList := B.generatorSymbols;
+   lastTerms := apply(ncgb / last, mon -> first keys mon.terms);
    for i from 1 to n do (
       basisList = flatten apply(varsList, v -> apply(basisList, b -> new NCMonomial from {v} | b));
       if ncgb =!= {} then
          basisList = select(basisList, b -> all(lastTerms, mon -> findSubstring(mon,b,CheckPrefixOnly=>true) == false));
    );
-   basisList
+   ncMatrix {apply(basisList, mon -> putInRing(mon,B))}
 )
 
-multiplicationMap = method()
-multiplicationMap(NCRingElement,ZZ) := (f,n) -> (
+leftMultiplicationMap = method()
+leftMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
    -- Input : A form f of degree m, and a degree n
-   -- Output : A matrix (over coefficientRing f.ring) representing the multiplication
+   -- Output : A matrix (over coefficientRing f.ring) representing the left multiplication
    --          map from degree n to degree n+m.
    B := f.ring;
-   nBasis := basis();
+   if not isHomogeneous f then error "Expected a homogeneous element.";
+   m := degree f;
+   nBasis := basis(n,B);
+   nmBasis := basis(n+m,B);
 )
 
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
-   if degree f <= 50 and #(f.terms) <= 50 then
+   if (degree f <= 50 and #(f.terms) <= 50) or not f.ring.bergmanRing then
       remainderFunction(f,ncgb)
    else
       first normalFormBergman({f},ncgb)
@@ -639,6 +689,7 @@ NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
 remainderFunction = (f,ncgb) -> (
    if #ncgb == 0 then return f;
    if (ncgb#0#0).ring =!= f.ring then error "Expected GB over the same ring.";
+   ncgb = apply(ncgb, p -> (p#0, first keys (p#1).terms));
    newf := f;
    pairsf := sort pairs newf.terms;
    prefSuf := null;
@@ -680,11 +731,45 @@ remainderFunction = (f,ncgb) -> (
 ---------------------------------------
 
 ----NCMatrix Commands -----------------
+--- Would like to have the option of creating a matrix whose entries are matrices.
+--- Also, really should have graded maps if possible.
 ncMatrix = method()
 ncMatrix List := ncEntries -> (
+   if #ncEntries == 0 then error "Expected a nonempty list.";
    if not isTable ncEntries then error "Expected a rectangular matrix.";
-   new NCMatrix from hashTable {(symbol ring, (ncEntries#0#0).ring), 
-                                (symbol matrix, ncEntries)}
+   rows := #ncEntries;
+   cols := #(ncEntries#0);
+   --- here, we need to find a common ring to promote all the entries to before checking anything else.
+   ringList := (flatten ncEntries) / ring;
+   B := (ringList)#(position(ringList, r -> class r === NCQuotientRing or class r === NCRing));
+   ncEntries = applyTable(ncEntries, e -> promote(e,B));
+   types := ncEntries // flatten / class // unique;
+   if #types != 1 then error "Expected a table of either NCRingElements over the same ring or NCMatrices.";
+   if ancestor(NCRingElement,types#0) then (
+      new NCMatrix from hashTable {(symbol ring, (ncEntries#0#0).ring), 
+                                   (symbol matrix, ncEntries)}
+   )
+   else if types#0 === NCMatrix then (
+      -- this block of code handles a matrix of matrices and creates a large matrix from that
+      blockEntries := applyTable(ncEntries, entries);
+      -- this is a hash table with the sizes of the matrices in the matrix
+      sizeHash := new HashTable from flatten apply(rows, i -> apply(cols, j -> (i,j) => (#(blockEntries#i#j), #(blockEntries#i#j#0))));
+      -- make sure the blocks are of the right size, and all matrices are defined over same ring.
+      if not all(rows, i -> #(unique apply(select(pairs sizeHash, (e,m) -> e#0 == i), (e,m) -> m#0)) == 1) then
+         error "Expected all matrices in a row to have the same number of rows.";
+      if not all(cols, j -> #(unique apply(select(pairs sizeHash, (e,m) -> e#1 == j), (e,m) -> m#1)) == 1) then
+         error "Expected all matrices in a column to have the same number of columns.";
+      rings := unique apply(flatten ncEntries, m -> m.ring);
+      if #rings != 1 then error "Expected all matrices to be defined over the same ring.";
+      -- now we may perform the conversion.
+      newEntries := flatten for i from 0 to rows-1 list
+                            for k from 0 to (sizeHash#(i,0))#0-1 list (
+                               flatten for j from 0 to cols-1 list
+                                       for l from 0 to (sizeHash#(0,j))#1-1 list blockEntries#i#j#k#l
+                            );
+      new NCMatrix from hashTable {(symbol ring, (ncEntries#0#0).ring), 
+                                   (symbol matrix, newEntries)}
+   )
 )
 
 lift NCMatrix := opts -> M -> ncMatrix apply(M.matrix, row -> apply(row, entry -> promote(entry,(M.ring.ambient))))
@@ -713,9 +798,13 @@ NCMatrix * NCMatrix := (M,N) -> (
 NCMatrix % NCGroebnerBasis := (M,ncgb) -> (
    -- this function should be only one call to bergman
    -- the nf for a list is there already, just need to do entries, nf, then unpack.
+   coeffRing := coefficientRing M.ring;
    colsM := #(first M.matrix);
    entriesM := flatten M.matrix;
-   entriesMNF := normalFormBergman(entriesM, ncgb);
+   entriesMNF := if coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing) then 
+                    apply(entriesM, f -> f % ncgb)
+                 else
+                    normalFormBergman(entriesM, ncgb);
    ncMatrix pack(colsM,entriesMNF)
 )
 
@@ -751,6 +840,10 @@ NCMatrix * RingElement := (M,r) -> ncMatrix apply(M.matrix, row -> apply(row, en
 RingElement * NCMatrix := (r,M) -> M*r
 NCMatrix * NCRingElement := (M,r) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> entry*r))
 NCRingElement * NCMatrix := (r,M) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> r*entry))
+
+entries NCMatrix := M -> M.matrix
+transpose NCMatrix := M -> ncMatrix transpose M.matrix
+
 
 --- for printing out the matrices; taken from the core M2 code for
 --- usual matrix printouts (though simplified)
@@ -874,7 +967,13 @@ ncgb = ncGroebnerBasis(I,InstallGB=>true)
 B = A / I
 
 -- get a basis of the degree n piece of A over the base ring
-time bas = basis(100,A,ncgb);
+time bas = basis(10,B);
+coefficients(x*y+q^2*x*z)
+bas2 = flatten entries basis(2,B)
+(mons,coeffs) = coefficients(x*y+q^2*x*z, Monomials => bas2)
+first flatten entries (mons*coeffs)
+-- yay!
+ncMatrix {{coeffs, coeffs},{coeffs,coeffs}}
 
 --- we can verify that f is central in this ring, for example
 f = x^5 + y^5 + z^5
@@ -908,4 +1007,6 @@ restart
 needsPackage "NCAlgebra"
 A = QQ{q,x,y,z}
 I = ncIdeal {q^4+q^3+q^2+q+1, q*x-x*q, q*y-y*q, q*z-z*q, y*x - q*x*y, z*y - q*y*z, z*x - q*x*z}
+coefficients (I.gens)#1
 Igb = twoSidedNCGroebnerBasisBergman I
+
