@@ -20,6 +20,9 @@ export { NCRing, NCQuotientRing, generatorSymbols, bergmanRing, -- can I get awa
          CheckPrefixOnly,
          normalFormBergman,
          hilbertBergman,
+         centralElements,
+         leftMultiplicationMap,
+         rightMultiplicationMap,
          NCMatrix, ncMatrix,
          NCMonomial,
          isCentral,
@@ -305,16 +308,14 @@ findSubstring (NCMonomial,NCMonomial) := opts -> (lt, mon) -> (
    else if opts#CheckPrefixOnly then
       return false;
    substrIndex := null;
-   matchLength := 0;
    for i from 0 to #mon-1 do (
-      if matchLength + #mon - i < deg then break;  -- break if not enough letters left for a match
-      if lt#matchLength == mon#i then matchLength = matchLength + 1 else matchLength = 0;
-      if matchLength == deg then (
-         substrIndex = i - deg + 1;
+      if #mon - i < deg then break;
+      if lt == mon_{i..i+deg-1} then (
+         substrIndex = i;
          break;
       );
    );
-   if substrIndex =!= null then (take(mon,substrIndex),take(mon,-#mon+substrIndex+deg)) else null
+   if substrIndex =!= null then (take(mon,substrIndex),take(mon,-#mon+deg+substrIndex)) else null
 )
 
 NCMonomial ? NCMonomial := (m,n) -> if (toList m) == (toList n) then symbol == else
@@ -382,11 +383,11 @@ coefficients NCRingElement := opts -> f -> (
    B := f.ring;
    if not isHomogeneous f then error "Extected a homogeneous element.";
    mons := if opts#Monomials === null then flatten entries monomials f else opts#Monomials;
-   coeffs := transpose ncMatrix {apply(mons, m -> (m' := first keys m.terms;
-                                                   if (f.terms)#?m' then
-                                                      promote((f.terms)#m',B)
-                                                   else
-                                                      promote(0,B)))};
+   coeffs := transpose matrix {apply(mons, m -> (m' := first keys m.terms;
+                                                 if (f.terms)#?m' then
+                                                    promote((f.terms)#m',coefficientRing B)
+                                                 else
+                                                    promote(0,coefficientRing B)))};
    (ncMatrix {mons},coeffs)
 )
 
@@ -675,8 +676,35 @@ leftMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
    B := f.ring;
    if not isHomogeneous f then error "Expected a homogeneous element.";
    m := degree f;
+   nBasis := flatten entries basis(n,B);
+   nmBasis := flatten entries basis(n+m,B);
+   coeffList := apply(nBasis, m -> transpose matrix {flatten entries last coefficients(f*m,Monomials=>nmBasis)});
+   matrix {coeffList}
+)
+
+rightMultiplicationMap = method()
+rightMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
+   -- Input : A form f of degree m, and a degree n
+   -- Output : A matrix (over coefficientRing f.ring) representing the left multiplication
+   --          map from degree n to degree n+m.
+   B := f.ring;
+   if not isHomogeneous f then error "Expected a homogeneous element.";
+   m := degree f;
+   nBasis := flatten entries basis(n,B);
+   nmBasis := flatten entries basis(n+m,B);
+   coeffList := apply(nBasis, m -> transpose matrix {flatten entries last coefficients(m*f,Monomials=>nmBasis)});
+   matrix {coeffList}
+)
+
+centralElements = method()
+centralElements(NCQuotientRing,ZZ) := (B,n) -> (
+   -- This function returns a basis over R = coefficientRing B of the central
+   -- elements in degree n.
+   ringVars := gens B;
+   diffMatrix := matrix apply(ringVars, x -> {leftMultiplicationMap(x,n) - rightMultiplicationMap(x,n)});
    nBasis := basis(n,B);
-   nmBasis := basis(n+m,B);
+   kerDiff := ker diffMatrix;
+   nBasis * (gens kerDiff)
 )
 
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
@@ -793,6 +821,18 @@ NCMatrix * NCMatrix := (M,N) -> (
    )
    else
       ncMatrix apply(toList (0..(rowsM-1)), i -> apply(toList (0..(colsN-1)), j -> sum(0..(colsM-1), k -> ((M.matrix)#i#k)*((N.matrix)#k#j))))
+)
+
+NCMatrix * Matrix := (M,N) -> (
+   N' := sub(N,coefficientRing M.ring);
+   N'' := ncMatrix applyTable(entries N, e -> promote(e,M.ring));
+   M*N''
+)
+
+Matrix * NCMatrix := (N,M) -> (
+   N' := sub(N,coefficientRing M.ring);
+   N'' := ncMatrix applyTable(entries N, e -> promote(e,M.ring));
+   N''*M
 )
 
 NCMatrix % NCGroebnerBasis := (M,ncgb) -> (
@@ -914,6 +954,7 @@ I = ncIdeal {f1,f2,f3}
 Igb = ncGroebnerBasis I
 normalFormBergman(-y^3-x*y*z+y*x*z+x^3,Igb)
 B = A/I
+centralElements(B,3)
 g = -y^3-x*y*z+y*x*z+x^3
 --- skip the next line if you want to work in the tensor algebra
 h = x^2 + y^2 + z^2
@@ -974,6 +1015,11 @@ bas2 = flatten entries basis(2,B)
 first flatten entries (mons*coeffs)
 -- yay!
 ncMatrix {{coeffs, coeffs},{coeffs,coeffs}}
+basis(2,B)
+basis(3,B)
+leftMultiplicationMap(x,2)
+rightMultiplicationMap(x,2)
+centralElements(B,5)
 
 --- we can verify that f is central in this ring, for example
 f = x^5 + y^5 + z^5
