@@ -21,6 +21,7 @@ export { NCRing, NCQuotientRing, generatorSymbols, bergmanRing, -- can I get awa
          normalFormBergman,
          hilbertBergman,
          isLeftRegular,
+         isRightRegular,
          centralElements,
          leftMultiplicationMap,
          rightMultiplicationMap,
@@ -714,6 +715,15 @@ isLeftRegular (NCRingElement, ZZ) := (f,d) -> (
    A := ring f;
    if not isHomogeneous f then error "Expected a homogeneous element.";
    r := rank rightMultiplicationMap(f,d);
+   s := #(flatten entries basis(d,A));
+   r == s
+)
+
+isRightRegular = method()
+isRightRegular (NCRingElement, ZZ) := (f,d) -> (
+   A := ring f;
+   if not isHomogeneous f then error "Expected a homogeneous element.";
+   r := rank leftMultiplicationMap(f,d);
    s := #(flatten entries basis(d,A));
    r == s
 )
