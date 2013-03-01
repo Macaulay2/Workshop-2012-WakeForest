@@ -20,6 +20,7 @@ export { NCRing, NCQuotientRing, generatorSymbols, bergmanRing, -- can I get awa
          CheckPrefixOnly,
          normalFormBergman,
          hilbertBergman,
+         isLeftRegular,
          centralElements,
          leftMultiplicationMap,
          rightMultiplicationMap,
@@ -708,6 +709,15 @@ centralElements(NCQuotientRing,ZZ) := (B,n) -> (
    if kerDiff == 0 then sub(matrix{{}},R) else nBasis * (gens kerDiff)
 )
 
+isLeftRegular = method()
+isLeftRegular (NCRingElement, ZZ) := (f,d) -> (
+   A := ring f;
+   if not isHomogeneous f then error "Expected a homogeneous element.";
+   r := rank rightMultiplicationMap(f,d);
+   s := #(flatten entries basis(d,A));
+   r == s
+)
+
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
    if (degree f <= 50 and #(f.terms) <= 50) or not f.ring.bergmanRing then
       remainderFunction(f,ncgb)
@@ -957,6 +967,7 @@ normalFormBergman(-y^3-x*y*z+y*x*z+x^3,Igb)
 B = A/I
 centralElements(B,3)
 g = -y^3-x*y*z+y*x*z+x^3
+isLeftRegular(g,6)
 --- skip the next line if you want to work in the tensor algebra
 h = x^2 + y^2 + z^2
 isCentral h
