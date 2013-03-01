@@ -704,7 +704,8 @@ centralElements(NCQuotientRing,ZZ) := (B,n) -> (
    diffMatrix := matrix apply(ringVars, x -> {leftMultiplicationMap(x,n) - rightMultiplicationMap(x,n)});
    nBasis := basis(n,B);
    kerDiff := ker diffMatrix;
-   nBasis * (gens kerDiff)
+   R := ring diffMatrix;
+   if kerDiff == 0 then sub(matrix{{}},R) else nBasis * (gens kerDiff)
 )
 
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
@@ -1019,6 +1020,7 @@ basis(2,B)
 basis(3,B)
 leftMultiplicationMap(x,2)
 rightMultiplicationMap(x,2)
+centralElements(B,4)
 centralElements(B,5)
 
 --- we can verify that f is central in this ring, for example
