@@ -1,11 +1,14 @@
 newPackage("NCAlgebra",
      Headline => "Data types for Noncommutative algebras",
-     Version => "0.1",
-     Date => "February 16, 2013",
+     Version => "0.2",
+     Date => "March 8, 2013",
      Authors => {
 	  {Name => "Frank Moore",
 	   HomePage => "http://www.math.wfu.edu/Faculty/Moore.html",
-	   Email => "moorewf@wfu.edu"}},
+	   Email => "moorewf@wfu.edu"},
+	  {Name => "Andrew Conner",
+	   HomePage => "http://www.math.wfu.edu/Faculty/Conner.html",
+	   Email => "connerab@wfu.edu"}},
      DebuggingMode => true
      )
 
@@ -17,6 +20,7 @@ export { NCRing, NCQuotientRing, generatorSymbols, bergmanRing, -- can I get awa
          twoSidedNCGroebnerBasisBergman,
          ComputeNCGB,
          InstallGB,
+         NumberOfBins,
          CheckPrefixOnly,
          normalFormBergman,
          hilbertBergman,
@@ -25,11 +29,16 @@ export { NCRing, NCQuotientRing, generatorSymbols, bergmanRing, -- can I get awa
          centralElements,
          leftMultiplicationMap,
          rightMultiplicationMap,
+         rightHomogKernel,
+         rHomogKerSmart,
+         getLeftProductRows,
          NCMatrix, ncMatrix,
          NCMonomial,
          isCentral,
          wallTiming
 }
+
+bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of Ring
@@ -140,7 +149,7 @@ Ring List := (R, varList) -> (
                                             (symbol terms) => new HashTable from {(emptyMon,sub(r,R))}});
    QQ + A := (r,f) -> f + r;
 
-   A == A := (f,g) -> (sort pairs f.terms) == (sort pairs g.terms);
+   A == A := (f,g) -> #(f.terms) == #(g.terms) and (sort pairs f.terms) == (sort pairs g.terms);
    A == ZZ := (f,n) -> (#(f.terms) == 0 and n == 0) or (#(f.terms) == 1 and ((first pairs f.terms)#0 === emptyMon) and ((first pairs f.terms)#1 == n));
    ZZ == A := (n,f) -> f == n;
    A == QQ := (f,n) -> (#(f.terms) == 0 and n == 0) or (#(f.terms) == 1 and ((first pairs f.terms)#0 === emptyMon) and ((first pairs f.terms)#1 == n));
@@ -389,8 +398,9 @@ coefficients NCRingElement := opts -> f -> (
                                                  if (f.terms)#?m' then
                                                     promote((f.terms)#m',coefficientRing B)
                                                  else
-                                                    promote(0,coefficientRing B)))};
-   (ncMatrix {mons},coeffs)
+                                                    promote(0,coefficientRing B)))}
+   -- changed temporarily
+   --(ncMatrix {mons},coeffs)
 )
 
 monomials NCRingElement := opts -> f -> ncMatrix {apply(sort keys f.terms, mon -> putInRing(mon,f.ring))}
@@ -423,6 +433,7 @@ isCentral NCRingElement := f -> (
    all(varsList, x -> (f*x - x*f) == 0)   
 )
 
+
 ncRingElement = method()
 ncRingElement (NCMonomial,NCRing) := (mon,A) -> (
    new A from {(symbol ring) => A,
@@ -448,9 +459,17 @@ writeBergmanInputFile (List, String, ZZ) := opts -> (genList, tempInput, maxDeg)
    
    fil := openOut tempInput;
    -- print the setup of the computation
+   if not opts#ComputeNCGB then
+   (
+      fil << "(load \"" << bergmanPath << "/lap/clisp/unix/hseries.fas\")" << endl;
+      fil << "(setinterruptstrategy minhilblimits)" << endl;
+      fil << "(setinterruptstrategy minhilblimits)" << endl;
+      fil << "(sethseriesminima " << concatenate (maxDeg:"skipcdeg ") << ")" << endl;
+   );
    fil << "(noncommify)" << endl;
    fil << "(setmodulus " << charR << ")" << endl;
    fil << "(setmaxdeg " << maxDeg << ")" << endl;
+
    fil << "(algforminput)" << endl;
    
    -- print out the list of variables we are using
@@ -487,7 +506,7 @@ gbFromOutputFile String := tempOutput -> (
    new NCGroebnerBasis from apply(gensList, f -> (f, leadMonomial f))
 )
 
-twoSidedNCGroebnerBasisBergman = method(Options=>{DegreeLimit=>100})
+twoSidedNCGroebnerBasisBergman = method(Options=>{DegreeLimit=>10})
 twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
   if not I.ring.bergmanRing then
      error << "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
@@ -512,7 +531,7 @@ writeNFInputFile (List,NCGroebnerBasis, List, ZZ) := (fList,ncgb, inputFileList,
    genList := (toList ncgb) / first;
    --- set up gb computation
    -- need to also test if ncgb is in fact a gb, and if so, tell Bergman not to do the computation
-   writeBergmanInputFile(genList,inputFileList#0,maxDeg);
+   writeBergmanInputFile(genList,inputFileList#0,maxDeg, ComputeNCGB=>true);
    --- now set up the normal form computation
    fil := openOut inputFileList#1;
    for f in fList do (
@@ -521,7 +540,7 @@ writeNFInputFile (List,NCGroebnerBasis, List, ZZ) := (fList,ncgb, inputFileList,
    );
    fil << close;
 )
-writeNFInputFile (NCRingElement, NCGroebnerBasis,List,ZZ) := (f, ncgb, inputFileList, maxDeg) ->
+writeNFInputFile (NCRingElement, NCGroebnerBasis, List, ZZ) := (f, ncgb, inputFileList, maxDeg) ->
    writeNFInputFile({f},ncgb,inputFileList,maxDeg)
 
 writeNFInitFile = method()
@@ -680,9 +699,12 @@ leftMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
    m := degree f;
    nBasis := flatten entries basis(n,B);
    nmBasis := flatten entries basis(n+m,B);
-   coeffList := apply(nBasis, m -> transpose matrix {flatten entries last coefficients(f*m,Monomials=>nmBasis)});
+   coeffList := apply(nBasis, m -> (if f*m==0 then transpose matrix{apply(toList(0..(#nmBasis-1)),i->0)}
+                                    else transpose matrix {flatten entries last coefficients(f*m,Monomials=>nmBasis)}));
    matrix {coeffList}
 )
+
+
 
 rightMultiplicationMap = method()
 rightMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
@@ -694,7 +716,8 @@ rightMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
    m := degree f;
    nBasis := flatten entries basis(n,B);
    nmBasis := flatten entries basis(n+m,B);
-   coeffList := apply(nBasis, m -> transpose matrix {flatten entries last coefficients(m*f,Monomials=>nmBasis)});
+   coeffList := apply(nBasis, m -> (if m*f==0 then transpose matrix{apply(toList(0..(#nmBasis-1)),i->0)}
+                                    else transpose matrix {flatten entries last coefficients(m*f,Monomials=>nmBasis)}));
    matrix {coeffList}
 )
 
@@ -708,6 +731,100 @@ centralElements(NCQuotientRing,ZZ) := (B,n) -> (
    kerDiff := ker diffMatrix;
    R := ring diffMatrix;
    if kerDiff == 0 then sub(matrix{{}},R) else nBasis * (gens kerDiff)
+)
+
+rightHomogKernel = method()
+rightHomogKernel(NCMatrix, ZZ) := (M,d) -> (
+   -- Assume (without checking) that the entries of M are homogeneous of the same degree n
+   -- This function takes a NCMatrix M and a degree d and returns the left kernel in degree d over the tensor algebra
+   rows := # entries M;
+   cols := # first M.matrix;
+   n := max apply(flatten entries M, i->degree i);
+   degnBasis := flatten entries basis(n,M.ring);
+   -- We compute the left multiplication maps once and for all. 
+   -- In the future, maybe only compute them for elements actually appearing in the matrix.
+   maps := apply(degnBasis, e->leftMultiplicationMap(e,d));
+   B := basis(d,M.ring);
+   dimB := #(flatten entries B); --the number of rows of K is dim*cols
+   dimT := #(flatten entries basis(n+d,M.ring)); --the number of rows in multiplication map
+   -- Make a big matrix of left multiplication maps for each row and get its kernel
+   S := apply(toList(0..(rows-1)), i-> 
+        ker matrix{apply(toList(0..(cols-1)), j->(
+          if (M.matrix)#i#j==0 then matrix apply(toList(0..(dimT-1)), b->apply(toList(0..(dimB-1)),a->0))
+          else
+             coeffs := flatten entries last coefficients((M.matrix)#i#j,Monomials=>degnBasis);
+             sum(0..(#degnBasis-1),k->(coeffs#k)*(maps#k)))
+        )});
+   Kscalar := gens intersect S;
+   if Kscalar == 0 then return 0
+   else
+   K := ncMatrix apply(toList(0..(cols-1)), k-> flatten ((lift B)*submatrix(Kscalar,{k*dimB..(k*dimB+dimB-1)},)).matrix)
+)
+
+rHomogKerSmart = method(Options=>{NumberOfBins => 1, Verbosity=>0})
+rHomogKerSmart(NCMatrix,ZZ):= opts -> (M,deg) -> (
+   -- Assume (without checking) that the entries of M are homogeneous of the same degree n
+   -- This function takes a NCMatrix M and a degree deg and returns the left kernel in degree deg over the tensor algebra. 
+   -- Increasing bins can provide some memory savings if the degree deg part of the ring is large. Optimal bin size seems to be in the 1000-2000 range.
+   bins := opts#NumberOfBins;
+   rows := # entries M;
+   cols := # first M.matrix;
+   n := max apply(flatten entries M, i->degree i);
+
+   bas := basis(deg,M.ring);
+   fromBasis := flatten entries bas;
+   toBasis := flatten entries basis(deg+n,M.ring);
+
+   fromDim := #fromBasis; --the number of rows of K is dim*cols
+   toDim := #toBasis; --the number of rows in multiplication map
+
+   -- packing variables
+   if toDim % bins != 0 then error "Basis doesn't divide evenly into that many bins";
+   pn := toDim//bins; -- denominator is number of bins
+   pB := pack(toBasis,pn);
+
+   -- zero vectors
+   fromZeros := apply(toList(0..(fromDim-1)),i->0);
+   toZeros := transpose matrix{apply(toList(0..(#(pB#0)-1)),i->0)};
+   zeroMat := matrix{apply(fromZeros, i-> toZeros)};
+ 
+   -- get left product rows (no need for separate function call)
+   U:=unique select(flatten entries M, c->c!=0);
+   if opts#Verbosity > 0 then
+      << "Building hash table." << endl;
+   L:= hashTable apply(U,e->{e,flatten entries (e*bas)}); --returns a hash table of product rows for nonzero entries of M (slow, but a one-time cost)
+
+   --initialize (in an effort to save space, we're going to overwrite these variables in the loops below)
+   Kscalar := (coefficientRing M.ring)^(fromDim*cols);
+   nextKer := 0;  
+
+   for row from 0 to (rows-1) when Kscalar!=0 do (
+       if opts#Verbosity > 0 then 
+          << "Computing kernel of row " << row+1 << " of " << rows << endl; 
+
+       for ind from 0 to (#pB-1) when Kscalar!=0 do (
+       	   if opts#Verbosity > 0 then
+              << "Converting to coordinates" << endl;
+	   -- the following is the most expensive step in the calculation time-wise. 
+           coeffs := matrix{ flatten apply((M.matrix)#row,i-> (
+	   	    	    	           if i==0 then
+                                              return zeroMat
+	   	    	    	           else 
+				              apply(L#i,j-> (if j == 0 then return toZeros else coefficients(j,Monomials=>pB#ind)))  
+				           ))};
+
+       	   nextKer = ker coeffs;
+	   if opts#Verbosity > 0 then
+              << "Updating kernel" << endl;
+	   Kscalar = intersect(Kscalar,nextKer);
+	   );
+   );
+
+   if Kscalar == 0 then
+      return 0
+   else
+      if opts#Verbosity > 0 then << "Kernel computed. Reverting to ring elements." << endl;
+   ncMatrix apply(toList(0..(cols-1)), k-> {bas*submatrix(gens Kscalar,{k*fromDim..(k*fromDim+fromDim-1)},)})
 )
 
 isLeftRegular = method()
@@ -729,11 +846,12 @@ isRightRegular (NCRingElement, ZZ) := (f,d) -> (
 )
 
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
-   if (degree f <= 50 and #(f.terms) <= 50) or not f.ring.bergmanRing then
+   if (degree f <= 5000 and #(f.terms) <= 5000) or not f.ring.bergmanRing then
       remainderFunction(f,ncgb)
    else
       first normalFormBergman({f},ncgb)
 )
+
 
 remainderFunction = (f,ncgb) -> (
    if #ncgb == 0 then return f;
@@ -821,6 +939,8 @@ ncMatrix List := ncEntries -> (
    )
 )
 
+ring NCMatrix := M -> M.ring
+
 lift NCMatrix := opts -> M -> ncMatrix apply(M.matrix, row -> apply(row, entry -> promote(entry,(M.ring.ambient))))
 
 NCMatrix * NCMatrix := (M,N) -> (
@@ -841,7 +961,9 @@ NCMatrix * NCMatrix := (M,N) -> (
       promote(reducedMatr,B)
    )
    else
-      ncMatrix apply(toList (0..(rowsM-1)), i -> apply(toList (0..(colsN-1)), j -> sum(0..(colsM-1), k -> ((M.matrix)#i#k)*((N.matrix)#k#j))))
+      -- not sure which of the below is faster
+      -- ncMatrix apply(toList (0..(rowsM-1)), i -> apply(toList (0..(colsN-1)), j -> sum(0..(colsM-1), k -> ((M.matrix)#i#k)*((N.matrix)#k#j))))
+      ncMatrix table(toList (0..(rowsM-1)), toList (0..(colsN-1)), (i,j) -> sum(0..(colsM-1), k -> ((M.matrix)#i#k)*((N.matrix)#k#j)))
 )
 
 NCMatrix * Matrix := (M,N) -> (
@@ -862,7 +984,7 @@ NCMatrix % NCGroebnerBasis := (M,ncgb) -> (
    coeffRing := coefficientRing M.ring;
    colsM := #(first M.matrix);
    entriesM := flatten M.matrix;
-   entriesMNF := if coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing) then 
+   entriesMNF := if true or (coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing)) then 
                     apply(entriesM, f -> f % ncgb)
                  else
                     normalFormBergman(entriesM, ncgb);
@@ -897,10 +1019,38 @@ NCMatrix * ZZ := (M,r) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> en
 ZZ * NCMatrix := (r,M) -> M*r
 NCMatrix * QQ := (M,r) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> entry*sub(r,M.ring.CoefficientRing)))
 QQ * NCMatrix := (r,M) -> M*r
-NCMatrix * RingElement := (M,r) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> entry*r))
-RingElement * NCMatrix := (r,M) -> M*r
-NCMatrix * NCRingElement := (M,r) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> entry*r))
-NCRingElement * NCMatrix := (r,M) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> r*entry))
+NCMatrix * RingElement := (M,r) -> M*(promote(r,M.ring))
+RingElement * NCMatrix := (r,M) -> (promote(r,M.ring)*M)
+NCMatrix * NCRingElement := (M,r) -> (
+   B := M.ring;
+   s := promote(r,B);
+   -- lift entries of matrices to tensor algebra
+   if class B === NCQuotientRing then (
+      MOverTens := lift M;
+      sOverTens := lift s;
+      prodOverTens := MOverTens*sOverTens;
+      ncgb := B.ideal.cache#gb;
+      reducedMatr := prodOverTens % ncgb;
+      promote(reducedMatr,B)
+   )
+   else
+      ncMatrix applyTable(M.matrix, m -> m*s)
+)
+NCRingElement * NCMatrix := (r,M) -> (
+   B := M.ring;
+   s := promote(r,B);
+   -- lift entries of matrices to tensor algebra
+   if class B === NCQuotientRing then (
+      MOverTens := lift M;
+      sOverTens := lift s;
+      prodOverTens := sOverTens*MOverTens;
+      ncgb := B.ideal.cache#gb;
+      reducedMatr := prodOverTens % ncgb;
+      promote(reducedMatr,B)
+   )
+   else
+      ncMatrix applyTable(M.matrix, m -> s*m)
+)
 
 entries NCMatrix := M -> M.matrix
 transpose NCMatrix := M -> ncMatrix transpose M.matrix
@@ -945,14 +1095,14 @@ quickExponentiate (ZZ, NCMatrix) := (n, M) -> (
 ------- end package code ------------------------------------
 
 -------------------- timing code ---------------------------
-wallTime = Command (() -> value get "!date +%s")
+wallTime = Command (() -> value get "!date +%s.%N")
 wallTiming = f -> (
     a := wallTime(); 
     r := f(); 
     b := wallTime();  
     << "wall time : " << b-a << " seconds" << endl;
     r);
-
+------------------------------------------------------------
 end
 
 --- other things too maybe:
@@ -960,8 +1110,10 @@ end
 --- ncpbhgroebner  -- gb, hilbert series
 --- NCModules (?) (including module gb, hilbert series, modulebettinumbers)
 --- NCRingMap
---- Finding a k-basis of central elements in a given degree
---- Finding a k-basis of normal elements in a given degree
+--- Use Bergman to compute module generators of kernels of NCMatrix?
+--- Ore extensions
+--- Free resolutions of koszul algebras
+--- Finding a k-basis of normal elements in a given degree (not even a k-space!  How to do this?)
 --- Factoring one (homogeneous) map through another
 
 --- matrix factorizations over sklyanin algebra
@@ -978,6 +1130,9 @@ B = A/I
 centralElements(B,3)
 g = -y^3-x*y*z+y*x*z+x^3
 isLeftRegular(g,6)
+M=ncMatrix{{z,-x,-y},{-y,z,-x},{x,y,z}}
+rightHomogKernel(M,1)
+rHomogKerSmart(basis(1,B),10,1)
 --- skip the next line if you want to work in the tensor algebra
 h = x^2 + y^2 + z^2
 isCentral h
@@ -1063,7 +1218,7 @@ f2 = x*z + z*x - y^2
 f3 = z^2 - x*y - y*x
 I = ncIdeal {f1,f2,f3}
 Igb = twoSidedNCGroebnerBasisBergman I
-wallTiming(() -> normalFormBergman(z^20,Igb))
+wallTiming(() -> normalFormBergman(z^10,Igb))
 time (z^20 % Igb)  -- still slow!
 B = A / I
 g = -y^3-x*y*z+y*x*z+x^3
@@ -1078,4 +1233,137 @@ A = QQ{q,x,y,z}
 I = ncIdeal {q^4+q^3+q^2+q+1, q*x-x*q, q*y-y*q, q*z-z*q, y*x - q*x*y, z*y - q*y*z, z*x - q*x*z}
 coefficients (I.gens)#1
 Igb = twoSidedNCGroebnerBasisBergman I
+
+---- ore extensions
+restart
+needsPackage "NCAlgebra"
+A = QQ{x,y,z,w}
+I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
+B = A/I
+M1 = ncMatrix {{x,y,z,w}}
+M2 = rHomogKerSmart(M1,1)
+M3 = rHomogKerSmart(M2,1)
+M4 = rHomogKerSmart(M3,1)
+M5 = rHomogKerSmart(M4,1)
+M6 = rHomogKerSmart(M5,1)
+M4A = promote(M4,A)
+M5A = promote(M5,A)
+M6A = promote(M6,A)
+M4A
+M6A
+
+---- ore extensions
+restart
+needsPackage "NCAlgebra"
+A = QQ{x,y,z,w}
+f1 = y*z + z*y - x^2
+f2 = x*z + z*x - y^2
+f3 = z^2 - x*y - y*x
+I = ncIdeal {f1,f2,f3,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
+B = A/I
+M1 = ncMatrix {{x,y,z,w}}
+M2 = rHomogKerSmart(M1,1)
+M3 = rHomogKerSmart(M2,1)
+M4 = rHomogKerSmart(M3,1)
+M5 = rHomogKerSmart(M4,1)
+M6 = rHomogKerSmart(M5,1)
+M4A = promote(M4,A)
+M5A = promote(M5,A)
+M6A = promote(M6,A)
+M4A
+M6A
+
+---- ore extension of skew ring
+restart
+needsPackage "NCAlgebra"
+A = QQ{x,y,z,w}
+I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
+B = A/I
+M1 = ncMatrix {{x,y,w}}
+M2 = rHomogKerSmart(M1,1)
+M2 = rHomogKerSmart(M1,2)
+M2 = rHomogKerSmart(M1,3)
+M3 = rHomogKerSmart(M2,1)
+M4 = rHomogKerSmart(M3,1)
+M5 = rHomogKerSmart(M4,1)
+M6 = rHomogKerSmart(M5,1)
+M7 = rHomogKerSmart(M6,1)
+M8 = rHomogKerSmart(M7,1)
+M9 = rHomogKerSmart(M8,1)
+M10 = rHomogKerSmart(M9,1)
+M3A = promote(M3,A)
+M4A = promote(M4,A)
+M5A = promote(M5,A)
+M6A = promote(M6,A)
+M7A = promote(M7,A)
+M8A = promote(M8,A)
+M9A = promote(M9,A)
+M10A = promote(M10,A)
+
+---- ore extension of sklyanin
+restart
+needsPackage "NCAlgebra"
+A = QQ{x,y,z,w}
+f1 = y*z + z*y - x^2
+f2 = x*z + z*x - y^2
+f3 = z^2 - x*y - y*x
+I = ncIdeal {f1,f2,f3,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
+B = A/I
+M1 = ncMatrix {{x,y,w}}
+M2 = rHomogKerSmart(M1,1)
+M2 = rHomogKerSmart(M1,2)
+M2 = rHomogKerSmart(M1,3)
+M2 = rHomogKerSmart(M1,4)
+M3 = rHomogKerSmart(M2,1)
+M4 = rHomogKerSmart(M3,1)
+M5 = rHomogKerSmart(M4,1)
+M6 = rHomogKerSmart(M5,1)
+M7 = rHomogKerSmart(M6,1)
+M8 = rHomogKerSmart(M7,1)
+M9 = rHomogKerSmart(M8,1)
+M10 = rHomogKerSmart(M9,1)
+M3A = promote(M3,A)
+M4A = promote(M4,A)
+M5A = promote(M5,A)
+M6A = promote(M6,A)
+M7A = promote(M7,A)
+M8A = promote(M8,A)
+M9A = promote(M9,A)
+M10A = promote(M10,A)
+
+---- ore extension of skew ring with infinite automorphism
+restart
+needsPackage "NCAlgebra"
+A = QQ{x,y,z,w}
+I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-2*w*y,y*w-2*w*z,z*w-2*w*x,w^2}
+B = A/I
+M1 = ncMatrix {{x,y,w}}
+M2 = rHomogKerSmart(M1,1)
+M2 = rHomogKerSmart(M1,2)
+M3 = rHomogKerSmart(M2,1)
+M4 = rHomogKerSmart(M3,1)
+M5 = rHomogKerSmart(M4,1)
+M6 = rHomogKerSmart(M5,1)
+M7 = rHomogKerSmart(M6,1)
+M8 = rHomogKerSmart(M7,1)
+M9 = rHomogKerSmart(M8,1)
+M10 = rHomogKerSmart(M9,1)
+M3A = promote(M3,A)
+M4A = promote(M4,A)
+M5A = promote(M5,A)
+M6A = promote(M6,A)
+M7A = promote(M7,A)
+M8A = promote(M8,A)
+M9A = promote(M9,A)
+M10A = promote(M10,A)
+
+--- test for speed of reduction code
+restart
+needsPackage "NCAlgebra"
+A = QQ{x,y,z,w}
+I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-2*w*y,y*w-2*w*z,z*w-2*w*x,w^2}
+B = A/I
+M1 = ncMatrix {{x,y,w}}
+time M2 = rHomogKerSmart(M1,7,Verbosity=>1);
+time M3 = rHomogKerSmart(M2,3);
 
