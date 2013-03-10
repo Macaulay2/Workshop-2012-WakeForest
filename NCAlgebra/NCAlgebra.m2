@@ -12,13 +12,15 @@ newPackage("NCAlgebra",
      DebuggingMode => true
      )
 
-export { NCRing, NCQuotientRing, generatorSymbols, bergmanRing, -- can I get away with not exporting these somehow?
+export { NCRing, NCQuotientRing, NCPolynomialRing,
+         generatorSymbols, bergmanRing, -- can I get away with not exporting these somehow?
          NCRingElement,
          NCGroebnerBasis, ncGroebnerBasis,
          NCIdeal, NCLeftIdeal, NCRightIdeal,
          ncIdeal, ncLeftIdeal, ncRightIdeal,
          twoSidedNCGroebnerBasisBergman,
          ComputeNCGB,
+         UsePreviousGBOutput,
          CacheBergmanGB,
          InstallGB,
          ReturnIdeal,
@@ -32,7 +34,7 @@ export { NCRing, NCQuotientRing, generatorSymbols, bergmanRing, -- can I get awa
          leftMultiplicationMap,
          rightMultiplicationMap,
          rightHomogKernel,
-         rHomogKerSmart,
+         rightKernel,
          getLeftProductRows,
          NCMatrix, ncMatrix,
          NCMonomial,
@@ -46,12 +48,13 @@ NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
 NCPolynomialRing = new Type of NCRing
 NCRingElement = new Type of HashTable
-NCGroebnerBasis = new Type of List
+NCGroebnerBasis = new Type of HashTable
 NCMatrix = new Type of HashTable
 NCMonomial = new Type of List
 NCIdeal = new Type of HashTable
 NCLeftIdeal = new Type of HashTable
 NCRightIdeal = new Type of HashTable
+NCRingMap = new Type of HashTable
 
 emptyMon := new NCMonomial from {}
 
@@ -71,14 +74,50 @@ rebase = (m,n) -> (
    )   
 )
 
---- NCRing methods --------------
-new NCRing from List := (NCRing, inits) -> new NCRing of NCRingElement from new HashTable from inits
+-- list-based mingle
+functionMingle = method()
+functionMingle (List, List, FunctionClosure) := (xs,ys,f) -> (
+   -- This function merges the lists xs and ys together, but merges them according to the function f.
+   -- If f(i) is true, then the function takes the next unused element from xs.  Otherwise, the next
+   -- unused element of ys is taken.  If either list is 'asked' for an element and has run out,
+   -- then the list built so far is returned.
+   xlen := #xs;
+   ylen := #ys;
+   ix := -1;
+   iy := -1;
+   for ians from 0 to xlen+ylen-1 list (
+      if f ians then (
+         ix = ix + 1;
+         if ix >= xlen then break;
+         xs#ix
+      )
+      else (
+         iy = iy + 1;
+         if iy >= ylen then break;
+         ys#iy
+      )
+   )
+)
+
+-------------------------------------------
+--- NCRing methods ------------------------
+-------------------------------------------
+coefficientRing NCRing := A -> A.CoefficientRing
+
+generators NCRing := opts -> A -> (
+    if A.?generators then A.generators else {}
+)
+
+use NCRing := A -> (scan(A.generatorSymbols, A.generators, (sym,val) -> sym <- val); A)
+
+--- NCPolynomialRing methods --------------
+new NCPolynomialRing from List := (NCPolynomialRing, inits) -> new NCPolynomialRing of NCRingElement from new HashTable from inits
 
 Ring List := (R, varList) -> (
-   A := new NCRing from {(symbol generators) => {},
-                         (symbol generatorSymbols) => varList,
-                         CoefficientRing => R,
-                         (symbol bergmanRing) => false};
+   A := new NCPolynomialRing from {(symbol generators) => {},
+                                   (symbol generatorSymbols) => varList,
+                                   CoefficientRing => R,
+                                   (symbol bergmanRing) => false};
    newGens := apply(varList, v -> v <- new A from {(symbol ring) => A,
                                                    (symbol terms) => new HashTable from {(new NCMonomial from {v},1)}});
    A#(symbol generators) = newGens;
@@ -161,33 +200,14 @@ Ring List := (R, varList) -> (
    A
 )
 
-coefficientRing NCRing := A -> A.CoefficientRing
-
-generators NCRing := opts -> A -> (
-    if A.?generators then A.generators else {}
-)
-
 net NCRing := A -> net A.CoefficientRing | net A.generators
-
-use NCRing := A -> (scan(A.generatorSymbols, A.generators, (sym,val) -> sym <- val); A)
----------------------------------
-
-------------- NCIdeal ---------------------
-ncIdeal = method()
-ncIdeal List := idealGens -> (
-   if #idealGens == 0 then error "Expected at least one generator.";
-   new NCIdeal from new HashTable from {(symbol ring) => (idealGens#0).ring,
-                                        (symbol generators) => idealGens,
-                                        (symbol cache) => new CacheTable from {}}
-)
-
-generators NCIdeal := opts -> I -> I.generators;
-
-net NCIdeal := I -> "Two-sided ideal " | net (I.generators);
 
 -------------------------------------------
 
+-------------------------------------------
 --- NCQuotientRing functions --------------
+-------------------------------------------
+
 new NCQuotientRing from List := (NCQuotientRing, inits) -> new NCQuotientRing of NCRingElement from new HashTable from inits
 
 NCRing / NCIdeal := (A, I) -> (
@@ -252,23 +272,31 @@ NCRing / NCIdeal := (A, I) -> (
    B
 )
 
-coefficientRing NCQuotientRing := A -> A.CoefficientRing
-
-generators NCQuotientRing := opts -> A -> (
-    if A.?generators then A.generators else {}
-)
-
--- can't get this to work
---reverseLookup := f -> S -> if hasAttribute(S,ReverseDictionary) then toString getAttribute(S,ReverseDictionary) else f expression S
---net NCQuotientRing := reverseLookup net
-
 net NCQuotientRing := B -> net (B.ambient) | " / " | net (B.ideal.generators)
-
-use NCQuotientRing := B -> (scan(B.generatorSymbols, B.generators, (sym,val) -> sym <- val); B)
 
 -------------------------------------------
 
---- NCMonomial functions -----------
+-------------------------------------------
+------------- NCIdeal ---------------------
+-------------------------------------------
+ncIdeal = method()
+ncIdeal List := idealGens -> (
+   if #idealGens == 0 then error "Expected at least one generator.";
+   new NCIdeal from new HashTable from {(symbol ring) => (idealGens#0).ring,
+                                        (symbol generators) => idealGens,
+                                        (symbol cache) => new CacheTable from {}}
+)
+
+generators NCIdeal := opts -> I -> I.generators;
+
+net NCIdeal := I -> "Two-sided ideal " | net (I.generators);
+
+-------------------------------------------
+
+-------------------------------------------
+--- NCMonomial functions ------------------
+-------------------------------------------
+
 net NCMonomial := mon -> (
    if mon === emptyMon then return net "";
    myNet := net "";
@@ -307,9 +335,9 @@ putInRing = method()
 putInRing (NCMonomial, NCRing) := (mon,A) ->
       new A from {(symbol ring) => A,
                   (symbol terms) => new HashTable from {(mon,1)}}
-putInRing (NCMonomial, NCQuotientRing) := (mon,B) ->
-      new B from {(symbol ring) => B,
-                  (symbol terms) => new HashTable from {(mon,1)}}
+--putInRing (NCMonomial, NCQuotientRing) := (mon,B) ->
+--      new B from {(symbol ring) => B,
+--                  (symbol terms) => new HashTable from {(mon,1)}}
 
 NCMonomial _ List := (mon,substr) -> new NCMonomial from (toList mon)_substr
 
@@ -410,8 +438,9 @@ coefficients NCRingElement := opts -> f -> (
                                                     promote((f.terms)#m',coefficientRing B)
                                                  else
                                                     promote(0,coefficientRing B)))}
-   -- changed temporarily
-   --(ncMatrix {mons},coeffs)
+   -- changed temporarily for speed, but need a workaround.  Maybe accept
+   -- monomials as a matrix instead?
+   -- (ncMatrix {mons},coeffs)
 )
 
 monomials NCRingElement := opts -> f -> ncMatrix {apply(sort keys f.terms, mon -> putInRing(mon,f.ring))}
@@ -419,6 +448,7 @@ monomials NCRingElement := opts -> f -> ncMatrix {apply(sort keys f.terms, mon -
 toString NCRingElement := f -> toStringMaybeSort(f,"Sort"=>true)
 
 degree NCRingElement := f -> (keys f.terms) / degree // max
+size NCRingElement := f -> #(f.terms)
 leadTerm NCRingElement := f -> new (f.ring) from {(symbol ring) => f.ring,
                                                   (symbol terms) => new HashTable from {last sort (pairs f.terms)}};
 leadMonomial NCRingElement := f -> putInRing(last sort (keys f.terms),f.ring);
@@ -463,11 +493,36 @@ runCommand := cmd -> (
    if r != 0 then error("--command failed, error return code ",r) else stderr << "Complete!" << endl;
 )
 
-writeBergmanInputFile = method(Options => {ComputeNCGB => true})
-writeBergmanInputFile (List, String, ZZ) := opts -> (genList, tempInput, maxDeg) -> (
-   R := (first genList).ring;
-   charR := char coefficientRing R;
-   
+makeVarListString := B -> (
+   varListString := "vars ";
+   gensB := gens B;
+   lastVar := last gensB;
+   varListString = varListString | (concatenate apply(drop(gensB,-1), x -> (toStringMaybeSort x) | ","));
+   varListString | (toStringMaybeSort lastVar) | ";"
+)
+
+makeGenListString := genList -> (
+   lastGen := last genList;
+   genListString := concatenate apply(drop(genList,-1), f -> toStringMaybeSort clearDenominators f | ",\n");
+   genListString | (toStringMaybeSort clearDenominators lastGen) | ";\n"
+)
+
+writeBergmanInputFile = method(Options => {ComputeNCGB => true, DegreeLimit => 10})
+writeBergmanInputFile (List, String) := opts -> (genList, tempInput) -> (
+   B := ring first genList;
+   charB := char coefficientRing B;
+   maxDeg := max(opts#DegreeLimit, 2*(max(genList / degree)));
+   genListString := makeGenListString genList;
+   varListString := makeVarListString B;
+   writeBergmanInputFile(varListString,
+                         genListString,
+                         tempInput,
+                         charB,
+                         DegreeLimit => maxDeg,
+                         ComputeNCGB => opts#ComputeNCGB);
+)
+
+writeBergmanInputFile (String,String,String,ZZ) := opts -> (varListString,genListString,tempInput,charB) -> (
    fil := openOut tempInput;
    -- print the setup of the computation
    if not opts#ComputeNCGB then
@@ -475,31 +530,22 @@ writeBergmanInputFile (List, String, ZZ) := opts -> (genList, tempInput, maxDeg)
       -- if we don't want to recompute the GB, we need to tell Bergman that there are no
       -- Spairs to work on for twice the max degree of the gens we send it so it
       -- doesn't try to create any more Spairs.
-      maxDeg = max(maxDeg, 2*(max(genList / degree)));
       fil << "(load \"" << bergmanPath << "/lap/clisp/unix/hseries.fas\")" << endl;
       fil << "(setinterruptstrategy minhilblimits)" << endl;
       fil << "(setinterruptstrategy minhilblimits)" << endl;
-      fil << "(sethseriesminima" << concatenate(maxDeg:" skipcdeg") << ")" << endl;
-      --fil << "(sethseriesminima (default (cond ((lessp hsdeg " << maxDeg << ") skipcdeg))))" << endl;
+      fil << "(sethseriesminima" << concatenate(opts#DegreeLimit:" skipcdeg") << ")" << endl;
    );
    fil << "(noncommify)" << endl;
-   fil << "(setmodulus " << charR << ")" << endl;
-   fil << "(setmaxdeg " << maxDeg << ")" << endl;
+   fil << "(setmodulus " << charB << ")" << endl;
+   fil << "(setmaxdeg " << opts#DegreeLimit << ")" << endl;
 
    fil << "(algforminput)" << endl;
    
    -- print out the list of variables we are using
-   fil << "vars ";
-   gensR := gens (first genList).ring;
-   lastVar := last gensR;
-   scan(drop(gensR,-1), x -> fil << toStringMaybeSort x << ",");
-   fil << toStringMaybeSort lastVar << ";" << endl;
+   fil << varListString << endl;
    
    --- print out the generators of ideal
-   lastGen := last genList;
-   scan(drop(genList,-1), f -> fil << toStringMaybeSort clearDenominators f << "," << endl);
-   fil << toStringMaybeSort clearDenominators lastGen << ";" << endl;
-   fil << close;
+   fil << genListString << endl << close;
 )
 
 ------------------------------------------------------
@@ -516,18 +562,34 @@ writeGBInitFile (String, String, String) := (tempInit, tempInput, tempOutput) ->
 gbFromOutputFile = method(Options => {ReturnIdeal => false, CacheBergmanGB => true})
 gbFromOutputFile String := opts -> tempOutput -> (
    fil := openIn tempOutput;
-   fileLines := drop(select(lines get fil, l -> l != "" and l != "Done"),-1);
-   myFile := select(fileLines, s -> s#0#0 != "%");
+   totalFile := get fil;
+   fileLines := drop(select(lines totalFile, l -> l != "" and l != "Done"),-1);
+   gensString := select(fileLines, s -> s#0#0 != "%");
+   numLines := #fileLines;
+   fileLines = concatenate for i from 0 to numLines-1 list (
+                              if i != numLines-1 then
+                                 fileLines#i | "\n"
+                              else
+                                 replace(",",";",fileLines#i) | "\n"
+                           );
    -- The following 'value' call is dangerous.  It could step on variable names.  Need to make
    -- sure that we store the variable state, use the right ring, and then put the variable state back.
-   gensList := select(apply(myFile, l -> value l), f -> class f === Sequence) / first;
+   gensList := select(apply(gensString, l -> value l), f -> class f === Sequence) / first;
    gensList = apply(gensList, f -> 1/(leadCoefficient f)*f);
-   ncgb := new NCGroebnerBasis from apply(gensList, f -> (f, leadMonomial f));
+   ncgb := new NCGroebnerBasis from hashTable {(symbol generators) => apply(gensList, f -> (f, leadMonomial f)),
+                                               (symbol cache) => new CacheTable from {}};
    -- now write gb to file to be used later, and stash answer in ncgb's cache
    if opts#CacheBergmanGB then (
-      -- now need to change NCGroebnerBasis to a type of HashTable first, which will break
-      -- a lot of code...
       cacheGB := temporaryFileName() | ".bigb";
+      R := ring first gensList;
+      maxDeg := 2*(max(gensList / degree));
+      writeBergmanInputFile(makeVarListString R,
+                            fileLines,
+                            cacheGB,
+                            char coefficientRing R,
+                            ComputeNCGB=>false,
+                            DegreeLimit=>maxDeg);
+      ncgb.cache#"bergmanGBFile" = cacheGB;
    );
    if opts#ReturnIdeal then (
       I := ncIdeal gensList;
@@ -548,7 +610,7 @@ twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
   tempOutput := temporaryFileName() | ".bo";      -- gb output goes here
   tempTerminal := temporaryFileName() | ".ter";   -- terminal output goes here
   gensI := gens I;
-  writeBergmanInputFile(gensI,tempInput, opts#DegreeLimit);
+  writeBergmanInputFile(gensI,tempInput, opts);
   writeGBInitFile(tempInit,tempInput,tempOutput);
   runCommand("bergman -i " | tempInit | " --silent > " | tempTerminal);
   gbFromOutputFile(tempOutput)
@@ -558,12 +620,13 @@ twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
 ----- Bergman Normal Form commands
 ------------------------------------------------------
 
-writeNFInputFile = method()
-writeNFInputFile (List,NCGroebnerBasis, List, ZZ) := (fList,ncgb, inputFileList, maxDeg) -> (
-   genList := (toList ncgb) / first;
+writeNFInputFile = method(Options => {UsePreviousGBOutput => true})
+writeNFInputFile (List,NCGroebnerBasis, List, ZZ) := opts -> (fList,ncgb, inputFileList, maxDeg) -> (
+   genList := (toList (ncgb.generators)) / first;
    --- set up gb computation
    -- need to also test if ncgb is in fact a gb, and if so, tell Bergman not to do the computation
-   writeBergmanInputFile(genList,inputFileList#0,maxDeg, ComputeNCGB=>false);
+   if opts#UsePreviousGBOutput then
+      writeBergmanInputFile(genList,inputFileList#0,DegreeLimit=>maxDeg,ComputeNCGB=>false);
    --- now set up the normal form computation
    fil := openOut inputFileList#1;
    for f in fList do (
@@ -602,20 +665,36 @@ nfFromTerminalFile (NCRing,String) := (A,tempTerminal) -> (
 
 normalFormBergman = method(Options => options twoSidedNCGroebnerBasisBergman)
 normalFormBergman (List, NCGroebnerBasis) := opts -> (fList, ncgb) -> (
+   -- don't send zero elements to bergman, or an error occurs
+   fListLen := #fList;
+   nonzeroIndices := positions(fList, f -> f != 0);
+   fList = fList_nonzeroIndices;
+   -- if there are no nonzero entries left, then return
+   if fList == {} then return fList;
+   nonzeroIndices = set nonzeroIndices;
+   zeroIndices := (set (0..(fListLen-1)) - nonzeroIndices);
    A := (first fList).ring;
    if not A.bergmanRing then 
       error << "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
    -- call Bergman for this, at the moment
-   tempInit := temporaryFileName() | ".init";      -- init file
-   tempGBInput := temporaryFileName() | ".bigb";   -- gb input file
-   tempOutput := temporaryFileName() | ".bo";      -- gb output goes here
-   tempTerminal := temporaryFileName() | ".ter";   -- terminal output goes here
-   tempNFInput := temporaryFileName() | ".binf";   -- nf input file
-   writeNFInputFile(fList,ncgb,{tempGBInput,tempNFInput},opts#DegreeLimit);
+   tempInit := temporaryFileName() | ".init";            -- init file
+   usePreviousGBOutput := ncgb.cache#?"bergmanGBFile";
+   tempGBInput := if usePreviousGBOutput then    -- gb input file
+                     ncgb.cache#"bergmanGBFile"
+                  else
+                     temporaryFileName() | ".bigb";
+   tempOutput := temporaryFileName() | ".bo";            -- gb output goes here
+   tempTerminal := temporaryFileName() | ".ter";         -- terminal output goes here
+   tempNFInput := temporaryFileName() | ".binf";         -- nf input file
+   writeNFInputFile(fList,ncgb,{tempGBInput,tempNFInput},opts#DegreeLimit,UsePreviousGBOutput=>usePreviousGBOutput);
    writeNFInitFile(tempInit,tempGBInput,tempNFInput,tempOutput);
    runCommand("bergman -i " | tempInit | " --silent > " | tempTerminal);
-   nfFromTerminalFile(A,tempTerminal)
+   -- these are now the nfs of the nonzero entries.  Need to splice back in
+   -- the zeros where they were.
+   nfList := nfFromTerminalFile(A,tempTerminal);
+   functionMingle(nfList,toList((#zeroIndices):0), i -> member(i,nonzeroIndices))
 )
+
 normalFormBergman (NCRingElement, NCGroebnerBasis) := opts -> (f,ncgb) ->
    first normalFormBergman({f},ncgb,opts)
 
@@ -657,9 +736,6 @@ hilbertBergman NCQuotientRing := opts -> B -> (
   hsFromOutputFile(tempHSOutput)
 )
 
-hilbertBergman NCRing := opts -> R -> (
-)
-
 ------------------------------------------------------------------
 --- End Bergman interface code
 ------------------------------------------------------------------
@@ -668,7 +744,7 @@ hilbertBergman NCRing := opts -> R -> (
 ------- NCGroebnerBasis methods
 ------------------------------------------------------------------
 
-generators NCGroebnerBasis := opts -> ncgb -> ncMatrix {ncgb / first}
+generators NCGroebnerBasis := opts -> ncgb -> ncMatrix {ncgb.generators / first}
 
 leftNCGroebnerBasis = method()
 leftNCGroebnerBasis List := genList -> (
@@ -681,13 +757,15 @@ rightNCGroebnerBasis List := genList -> (
 
 ncGroebnerBasis = method(Options => {DegreeLimit => 100, InstallGB => false})
 ncGroebnerBasis List := opts -> fList -> (
-   if opts#InstallGB then new NCGroebnerBasis from apply(fList, f -> (f,leadMonomial f))
+   if opts#InstallGB then new NCGroebnerBasis from hashTable {(symbol generators) => apply(fList, f -> (f,leadMonomial f)),
+                                                              (symbol cache) => new CacheTable from {}}
    else ncGroebnerBasis ncIdeal fList;
 )
 
 ncGroebnerBasis NCIdeal := opts -> I -> (
    if I.cache#?gb then return I.cache#gb;
-   ncgb := if opts#InstallGB then new NCGroebnerBasis from apply(gens I, f -> (f,leadMonomial f))
+   ncgb := if opts#InstallGB then new NCGroebnerBasis from hashTable {(symbol generators) => apply(gens I, f -> (f,leadMonomial f)),
+                                                                      (symbol cache) => new CacheTable from {}}
            else twoSidedNCGroebnerBasisBergman(I, DegreeLimit=>opts#DegreeLimit);
    I.cache#gb = ncgb;
    ncgb   
@@ -695,30 +773,30 @@ ncGroebnerBasis NCIdeal := opts -> I -> (
 
 
 net NCGroebnerBasis := ncgb -> (
-   stack apply(ncgb, (pol,lt) -> (net pol) | net "; Lead Term = " | (net lt))
+   stack apply(ncgb.generators, (pol,lt) -> (net pol) | net "; Lead Term = " | (net lt))
 )
 
 ZZ % NCGroebnerBasis := (n,ncgb) -> n
 QQ % NCGroebnerBasis := (n,ncgb) -> n
 
-basis(ZZ,NCRing) := opts -> (n,A) -> (
-   basisList := {emptyMon};
-   varsList := A.generatorSymbols;
-   for i from 1 to n do (
-      basisList = flatten apply(varsList, v -> apply(basisList, b -> new NCMonomial from {v} | b));
-   );
-   ncMatrix {apply(basisList, mon -> putInRing(mon,A))}
-)
+--basis(ZZ,NCRing) := opts -> (n,A) -> (
+--   basisList := {emptyMon};
+--   varsList := A.generatorSymbols;
+--   for i from 1 to n do (
+--      basisList = flatten apply(varsList, v -> apply(basisList, b -> new NCMonomial from {v} | b));
+--   );
+--   ncMatrix {apply(basisList, mon -> putInRing(mon,A))}
+--)
 
-basis(ZZ,NCQuotientRing) := opts -> (n,B) -> (
-   ncgb := ncGroebnerBasis B.ideal;
+basis(ZZ,NCRing) := opts -> (n,B) -> (
+   ncgbGens := if class B === NCQuotientRing then (ncGroebnerBasis B.ideal).generators else {};
    basisList := {emptyMon};
    varsList := B.generatorSymbols;
-   lastTerms := apply(ncgb / last, mon -> first keys mon.terms);
+   lastTerms := apply(ncgbGens / last, mon -> first keys mon.terms);
    for i from 1 to n do (
       basisList = flatten apply(varsList, v -> apply(basisList, b -> new NCMonomial from {v} | b));
-      if ncgb =!= {} then
-         basisList = select(basisList, b -> all(lastTerms, mon -> findSubstring(mon,b,CheckPrefixOnly=>true) == false));
+      if ncgbGens =!= {} then
+         basisList = select(basisList, b -> all(lastTerms, mon -> not findSubstring(mon,b,CheckPrefixOnly=>true)));
    );
    ncMatrix {apply(basisList, mon -> putInRing(mon,B))}
 )
@@ -734,7 +812,7 @@ leftMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
    nBasis := flatten entries basis(n,B);
    nmBasis := flatten entries basis(n+m,B);
    coeffList := apply(nBasis, m -> (if f*m==0 then transpose matrix{apply(toList(0..(#nmBasis-1)),i->0)}
-                                    else transpose matrix {flatten entries last coefficients(f*m,Monomials=>nmBasis)}));
+                                    else transpose matrix {flatten entries coefficients(f*m,Monomials=>nmBasis)}));
    matrix {coeffList}
 )
 
@@ -751,12 +829,12 @@ rightMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
    nBasis := flatten entries basis(n,B);
    nmBasis := flatten entries basis(n+m,B);
    coeffList := apply(nBasis, m -> (if m*f==0 then transpose matrix{apply(toList(0..(#nmBasis-1)),i->0)}
-                                    else transpose matrix {flatten entries last coefficients(m*f,Monomials=>nmBasis)}));
+                                    else transpose matrix {flatten entries coefficients(m*f,Monomials=>nmBasis)}));
    matrix {coeffList}
 )
 
 centralElements = method()
-centralElements(NCQuotientRing,ZZ) := (B,n) -> (
+centralElements(NCRing,ZZ) := (B,n) -> (
    -- This function returns a basis over R = coefficientRing B of the central
    -- elements in degree n.
    ringVars := gens B;
@@ -767,8 +845,8 @@ centralElements(NCQuotientRing,ZZ) := (B,n) -> (
    if kerDiff == 0 then sub(matrix{{}},R) else nBasis * (gens kerDiff)
 )
 
-rightHomogKernel = method()
-rightHomogKernel(NCMatrix, ZZ) := (M,d) -> (
+rightHomogKernelOld = method()
+rightHomogKernelOld(NCMatrix, ZZ) := (M,d) -> (
    -- Assume (without checking) that the entries of M are homogeneous of the same degree n
    -- This function takes a NCMatrix M and a degree d and returns the left kernel in degree d over the tensor algebra
    rows := # entries M;
@@ -795,8 +873,8 @@ rightHomogKernel(NCMatrix, ZZ) := (M,d) -> (
    K := ncMatrix apply(toList(0..(cols-1)), k-> flatten ((lift B)*submatrix(Kscalar,{k*dimB..(k*dimB+dimB-1)},)).matrix)
 )
 
-rHomogKerSmart = method(Options=>{NumberOfBins => 1, Verbosity=>0})
-rHomogKerSmart(NCMatrix,ZZ):= opts -> (M,deg) -> (
+rightKernel = method(Options=>{NumberOfBins => 1, Verbosity=>0})
+rightKernel(NCMatrix,ZZ):= opts -> (M,deg) -> (
    -- Assume (without checking) that the entries of M are homogeneous of the same degree n
    -- This function takes a NCMatrix M and a degree deg and returns the left kernel in degree deg over the tensor algebra. 
    -- Increasing bins can provide some memory savings if the degree deg part of the ring is large. Optimal bin size seems to be in the 1000-2000 range.
@@ -826,7 +904,11 @@ rHomogKerSmart(NCMatrix,ZZ):= opts -> (M,deg) -> (
    U:=unique select(flatten entries M, c->c!=0);
    if opts#Verbosity > 0 then
       << "Building hash table." << endl;
-   L:= hashTable apply(U,e->{e,flatten entries (e*bas)}); --returns a hash table of product rows for nonzero entries of M (slow, but a one-time cost)
+   --L:= hashTable apply(U,e->{e,flatten entries (e*bas)}); --returns a hash table of product rows for nonzero entries of M (slow, but a one-time cost)
+   -- these three lines are an attempt to perform the above command with fewer calls to bergman
+   uMatr := ncMatrix pack(1,U);  -- just the transpose of ncMatrix {U}
+   uMatrBas := entries (uMatr * bas);
+   L := hashTable apply(#U, i -> {U#i,uMatrBas#i});
 
    --initialize (in an effort to save space, we're going to overwrite these variables in the loops below)
    Kscalar := (coefficientRing M.ring)^(fromDim*cols);
@@ -880,7 +962,7 @@ isRightRegular (NCRingElement, ZZ) := (f,d) -> (
 )
 
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
-   if (degree f <= 5 and #(f.terms) <= 50) or not f.ring.bergmanRing then
+   if (degree f <= 5 and size f <= 10) or not f.ring.bergmanRing then
       remainderFunction(f,ncgb)
    else
       first normalFormBergman({f},ncgb)
@@ -888,9 +970,9 @@ NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
 
 
 remainderFunction = (f,ncgb) -> (
-   if #ncgb == 0 then return f;
-   if (ncgb#0#0).ring =!= f.ring then error "Expected GB over the same ring.";
-   ncgb = apply(ncgb, p -> (p#0, first keys (p#1).terms));
+   if #(ncgb.generators) == 0 then return f;
+   if ((ncgb.generators)#0#0).ring =!= f.ring then error "Expected GB over the same ring.";
+   ncgb = apply(ncgb.generators, p -> (p#0, first keys (p#1).terms));
    newf := f;
    pairsf := sort pairs newf.terms;
    prefSuf := null;
@@ -929,11 +1011,16 @@ remainderFunction = (f,ncgb) -> (
    );
    newf
 )
+
+---------------------------------------
+----NCRingMap Commands -----------------
 ---------------------------------------
 
+---------------------------------------
 ----NCMatrix Commands -----------------
---- Would like to have the option of creating a matrix whose entries are matrices.
---- Also, really should have graded maps if possible.
+---------------------------------------
+--- Really should have graded maps implemented
+
 ncMatrix = method()
 ncMatrix List := ncEntries -> (
    if #ncEntries == 0 then error "Expected a nonempty list.";
@@ -942,7 +1029,7 @@ ncMatrix List := ncEntries -> (
    cols := #(ncEntries#0);
    --- here, we need to find a common ring to promote all the entries to before checking anything else.
    ringList := (flatten ncEntries) / ring;
-   B := (ringList)#(position(ringList, r -> class r === NCQuotientRing or class r === NCRing));
+   B := (ringList)#(position(ringList, r -> ancestor(NCRing,class r)));
    ncEntries = applyTable(ncEntries, e -> promote(e,B));
    types := ncEntries // flatten / class // unique;
    if #types != 1 then error "Expected a table of either NCRingElements over the same ring or NCMatrices.";
@@ -1018,7 +1105,10 @@ NCMatrix % NCGroebnerBasis := (M,ncgb) -> (
    coeffRing := coefficientRing M.ring;
    colsM := #(first M.matrix);
    entriesM := flatten M.matrix;
-   entriesMNF := if (coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing)) then 
+   maxDeg := max(entriesM / degree);
+   maxSize := max(entriesM / size);
+   -- this code does not yet handle zero entries correctly when sending them to the bergman interface.
+   entriesMNF := if (maxDeg <= 5 or maxSize <= 5) or (coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing)) then 
                     apply(entriesM, f -> f % ncgb)
                  else
                     normalFormBergman(entriesM, ncgb);
@@ -1142,10 +1232,8 @@ end
 --- bug fix/performance improvements
 ------------------------------------
 --- Make sure works with several rings at once with same variables names.
---- Rewrite so that there is an object called NCRing, and then subobjects called NCQuotientRing and NCPolynomialRing
----   This should simplify some of the code
---- Cache setup file with GB in it to NF code
---- Change NCGroebnerBasis to HashTable
+---   To do this, need to be extra careful whenever I use 'value' when reading
+---   from a bergman output file.
 
 --- other things to add in due time
 -----------------------------------
@@ -1175,8 +1263,8 @@ centralElements(B,3)
 g = -y^3-x*y*z+y*x*z+x^3
 isLeftRegular(g,6)
 M=ncMatrix{{z,-x,-y},{-y,z,-x},{x,y,z}}
-rightHomogKernel(M,1)
-rHomogKerSmart(basis(1,B),10,1)
+rightKernel(M,1)
+rightKernel(basis(1,B),10)
 --- skip the next line if you want to work in the tensor algebra
 h = x^2 + y^2 + z^2
 isCentral h
@@ -1193,6 +1281,7 @@ M3' = M3^2
 --- can now work in quotient ring!
 M3*M4
 M4*M3
+M3*(x*y) - (x*y)*M3
 M1 = ncMatrix {{x}}
 M2 = ncMatrix {{y}}
 M1*M2
@@ -1262,8 +1351,8 @@ f2 = x*z + z*x - y^2
 f3 = z^2 - x*y - y*x
 I = ncIdeal {f1,f2,f3}
 Igb = twoSidedNCGroebnerBasisBergman I
-wallTiming(() -> normalFormBergman(z^10,Igb))
-time (z^20 % Igb)  -- still slow!
+wallTiming(() -> normalFormBergman(z^20,Igb))
+(z^20 % Igb)  -- still slow!
 B = A / I
 g = -y^3-x*y*z+y*x*z+x^3
 isCentral g
@@ -1285,11 +1374,11 @@ A = QQ{x,y,z,w}
 I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
 B = A/I
 M1 = ncMatrix {{x,y,z,w}}
-M2 = rHomogKerSmart(M1,1)
-M3 = rHomogKerSmart(M2,1)
-M4 = rHomogKerSmart(M3,1)
-M5 = rHomogKerSmart(M4,1)
-M6 = rHomogKerSmart(M5,1)
+M2 = rightKernel(M1,1)
+M3 = rightKernel(M2,1)
+M4 = rightKernel(M3,1)
+M5 = rightKernel(M4,1)
+M6 = rightKernel(M5,1)
 M4A = promote(M4,A)
 M5A = promote(M5,A)
 M6A = promote(M6,A)
@@ -1306,11 +1395,11 @@ f3 = z^2 - x*y - y*x
 I = ncIdeal {f1,f2,f3,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
 B = A/I
 M1 = ncMatrix {{x,y,z,w}}
-M2 = rHomogKerSmart(M1,1)
-M3 = rHomogKerSmart(M2,1)
-M4 = rHomogKerSmart(M3,1)
-M5 = rHomogKerSmart(M4,1)
-M6 = rHomogKerSmart(M5,1)
+M2 = rightKernel(M1,1)
+M3 = rightKernel(M2,1)
+M4 = rightKernel(M3,1)
+M5 = rightKernel(M4,1)
+M6 = rightKernel(M5,1)
 M4A = promote(M4,A)
 M5A = promote(M5,A)
 M6A = promote(M6,A)
@@ -1324,17 +1413,17 @@ A = QQ{x,y,z,w}
 I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
 B = A/I
 M1 = ncMatrix {{x,y,w}}
-M2 = rHomogKerSmart(M1,1)
-M2 = rHomogKerSmart(M1,2)
-M2 = rHomogKerSmart(M1,3)
-M3 = rHomogKerSmart(M2,1)
-M4 = rHomogKerSmart(M3,1)
-M5 = rHomogKerSmart(M4,1)
-M6 = rHomogKerSmart(M5,1)
-M7 = rHomogKerSmart(M6,1)
-M8 = rHomogKerSmart(M7,1)
-M9 = rHomogKerSmart(M8,1)
-M10 = rHomogKerSmart(M9,1)
+M2 = rightKernel(M1,1)
+M2 = rightKernel(M1,2)
+M2 = rightKernel(M1,3)
+M3 = rightKernel(M2,1)
+M4 = rightKernel(M3,1)
+M5 = rightKernel(M4,1)
+M6 = rightKernel(M5,1)
+M7 = rightKernel(M6,1)
+M8 = rightKernel(M7,1)
+M9 = rightKernel(M8,1)
+M10 = rightKernel(M9,1)
 M3A = promote(M3,A)
 M4A = promote(M4,A)
 M5A = promote(M5,A)
@@ -1354,18 +1443,18 @@ f3 = z^2 - x*y - y*x
 I = ncIdeal {f1,f2,f3,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
 B = A/I
 M1 = ncMatrix {{x,y,w}}
-M2 = rHomogKerSmart(M1,1)
-M2 = rHomogKerSmart(M1,2)
-M2 = rHomogKerSmart(M1,3)
-M2 = rHomogKerSmart(M1,4)
-M3 = rHomogKerSmart(M2,1)
-M4 = rHomogKerSmart(M3,1)
-M5 = rHomogKerSmart(M4,1)
-M6 = rHomogKerSmart(M5,1)
-M7 = rHomogKerSmart(M6,1)
-M8 = rHomogKerSmart(M7,1)
-M9 = rHomogKerSmart(M8,1)
-M10 = rHomogKerSmart(M9,1)
+M2 = rightKernel(M1,1)
+M2 = rightKernel(M1,2)
+M2 = rightKernel(M1,3)
+M2 = rightKernel(M1,4)
+M3 = rightKernel(M2,1)
+M4 = rightKernel(M3,1)
+M5 = rightKernel(M4,1)
+M6 = rightKernel(M5,1)
+M7 = rightKernel(M6,1)
+M8 = rightKernel(M7,1)
+M9 = rightKernel(M8,1)
+M10 = rightKernel(M9,1)
 M3A = promote(M3,A)
 M4A = promote(M4,A)
 M5A = promote(M5,A)
@@ -1382,16 +1471,16 @@ A = QQ{x,y,z,w}
 I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-2*w*y,y*w-2*w*z,z*w-2*w*x,w^2}
 B = A/I
 M1 = ncMatrix {{x,y,w}}
-M2 = rHomogKerSmart(M1,1)
-M2 = rHomogKerSmart(M1,2)
-M3 = rHomogKerSmart(M2,1)
-M4 = rHomogKerSmart(M3,1)
-M5 = rHomogKerSmart(M4,1)
-M6 = rHomogKerSmart(M5,1)
-M7 = rHomogKerSmart(M6,1)
-M8 = rHomogKerSmart(M7,1)
-M9 = rHomogKerSmart(M8,1)
-M10 = rHomogKerSmart(M9,1)
+M2 = rightKernel(M1,1)
+M2 = rightKernel(M1,2)
+M3 = rightKernel(M2,1)
+M4 = rightKernel(M3,1)
+M5 = rightKernel(M4,1)
+M6 = rightKernel(M5,1)
+M7 = rightKernel(M6,1)
+M8 = rightKernel(M7,1)
+M9 = rightKernel(M8,1)
+M10 = rightKernel(M9,1)
 M3A = promote(M3,A)
 M4A = promote(M4,A)
 M5A = promote(M5,A)
@@ -1408,14 +1497,15 @@ A = QQ{x,y,z,w}
 I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-2*w*y,y*w-2*w*z,z*w-2*w*x,w^2}
 B = A/I
 M1 = ncMatrix {{x,y,w}}
-time M2 = rHomogKerSmart(M1,7,Verbosity=>1);
-time M3 = rHomogKerSmart(M2,3);
+time M2 = rightKernel(M1,7,Verbosity=>1);
+time M3 = rightKernel(M2,3,Verbosity=>1);
 
 ---- andy's example
 restart
 debug needsPackage "NCAlgebra"
 A=QQ{a, b, c, d, e, f, g, h}
 I = gbFromOutputFile("UghABCgb6.txt", ReturnIdeal=>true);
+Igb = ncGroebnerBasis I;
 B=A/I;
 
 M2=ncMatrix{{-b,-f,-c,0,0,0,-g,0,0,0,0,-h,0,0,0,0},
@@ -1431,7 +1521,8 @@ M=basis(1,B);
 bas=basis(2,B)
 use A
 f = a^7+b^7+c^7+d^7+e^7+f^7+g^7+h^7
-f = normalFormBergman(f,Igb)
 f = promote(f,B);
+--- sometimes bergman calls are great!
 time X = flatten entries (f*bas);
 netList X
+
