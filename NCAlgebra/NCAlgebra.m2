@@ -39,6 +39,8 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          NCMatrix, ncMatrix,
          NCMonomial,
          isCentral,
+         ncMap,functionHash,
+         oreExtension,oreIdeal,
          wallTiming
 }
 
@@ -108,12 +110,16 @@ generators NCRing := opts -> A -> (
     if A.?generators then A.generators else {}
 )
 
+numgens NCRing := A -> #(A.generators)
+
 use NCRing := A -> (scan(A.generatorSymbols, A.generators, (sym,val) -> sym <- val); A)
 
 --- NCPolynomialRing methods --------------
 new NCPolynomialRing from List := (NCPolynomialRing, inits) -> new NCPolynomialRing of NCRingElement from new HashTable from inits
 
 Ring List := (R, varList) -> (
+   -- get the symbols associated to the list that is passed in, in case the variables have been used earlier.
+   varList = varList / baseName;
    A := new NCPolynomialRing from {(symbol generators) => {},
                                    (symbol generatorSymbols) => varList,
                                    CoefficientRing => R,
@@ -274,6 +280,9 @@ NCRing / NCIdeal := (A, I) -> (
 
 net NCQuotientRing := B -> net (B.ambient) | " / " | net (B.ideal.generators)
 
+ideal NCQuotientRing := B -> B.ideal;
+ambient NCQuotientRing := B -> B.ambient;
+
 -------------------------------------------
 
 -------------------------------------------
@@ -290,6 +299,10 @@ ncIdeal List := idealGens -> (
 generators NCIdeal := opts -> I -> I.generators;
 
 net NCIdeal := I -> "Two-sided ideal " | net (I.generators);
+
+ring NCIdeal := I -> I.ring
+
+NCIdeal + NCIdeal := (I,J) -> ncIdeal (gens I | gens J)
 
 -------------------------------------------
 
@@ -335,9 +348,6 @@ putInRing = method()
 putInRing (NCMonomial, NCRing) := (mon,A) ->
       new A from {(symbol ring) => A,
                   (symbol terms) => new HashTable from {(mon,1)}}
---putInRing (NCMonomial, NCQuotientRing) := (mon,B) ->
---      new B from {(symbol ring) => B,
---                  (symbol terms) => new HashTable from {(mon,1)}}
 
 NCMonomial _ List := (mon,substr) -> new NCMonomial from (toList mon)_substr
 
@@ -366,6 +376,12 @@ NCMonomial ? NCMonomial := (m,n) -> if (toList m) == (toList n) then symbol == e
 -----------------------------------------
 
 --- NCRingElement methods ---------------
+ncRingElement = method()
+ncRingElement (NCMonomial,NCRing) := (mon,A) -> (
+   new A from {(symbol ring) => A,
+               (symbol terms) => new HashTable from {(mon,1)}}
+)
+
 net NCRingElement := f -> (
    if #(f.terms) == 0 then "0" else (
       firstTerm := true;
@@ -384,7 +400,7 @@ net NCRingElement := f -> (
                   else if t#1 == -1 then net "-"
                   else net "") |
                  (if printParens then net ")" else net "") |
-                 (if t#0 === emptyMon and t#1 == 1 then net "1" else net t#0);
+                 (if t#0 === emptyMon and (t#1 == 1 or t#1 == -1) then net "1" else net t#0);
          firstTerm = false;
       );
       myNet
@@ -411,7 +427,7 @@ toStringMaybeSort NCRingElement := opts -> f -> (
                   else if t#1 == -1 then "-"
                   else "") |
                  (if printParens then ")" else "") |
-                 (if t#0 === emptyMon and t#1 == 1 then "1" else toString t#0);
+                 (if t#0 === emptyMon and (t#1 == 1 or t#1 == -1) then "1" else toString t#0);
          firstTerm = false;
       );
       myNet
@@ -425,6 +441,13 @@ clearDenominators NCRingElement := f -> (
       myLCM := lcm coeffDens;
       f*myLCM
    )
+)
+
+baseName NCRingElement := x -> (
+   A := class x;
+   pos := position(gens A, y -> y == x);
+   if pos === null then error "Expected a generator";
+   A.generatorSymbols#pos
 )
 
 ring NCRingElement := f -> f.ring
@@ -474,12 +497,35 @@ isCentral NCRingElement := f -> (
    all(varsList, x -> (f*x - x*f) == 0)   
 )
 
-
-ncRingElement = method()
-ncRingElement (NCMonomial,NCRing) := (mon,A) -> (
-   new A from {(symbol ring) => A,
-               (symbol terms) => new HashTable from {(mon,1)}}
+isNormal NCRingElement := f -> (
+   if not isHomogeneous f then error "Expected a homogeneous element.";
+   all(gens ring f, x -> findNormalComplement(f,x) =!= null)
 )
+
+normalAutomorphism = method()
+normalAutomorphism NCRingElement := f -> (
+   B := ring f;
+   normalComplements := apply(gens B, x -> findNormalComplement(f,x));
+   if any(normalComplements, f -> f === null) then error "Expected a normal element.";
+   ncMap(B, B, normalComplements)
+)
+
+findNormalComplement = method()
+findNormalComplement (NCRingElement,NCRingElement) := (f,x) -> (
+   B := ring f;
+   if B =!= ring x then error "Expected elements from the same ring.";
+   if not isHomogeneous f or not isHomogeneous x then error "Expected homogeneous elements";
+   n := degree f;
+   m := degree x;
+   leftFCoeff := coefficients(f*x,Monomials=>flatten entries basis(n+m,B));
+   rightMultF := rightMultiplicationMap(f,m);
+   factorMap := (leftFCoeff // rightMultF);
+   if rightMultF * factorMap == leftFCoeff then
+      first flatten entries (basis(m,B) * factorMap)
+   else
+      null
+)
+
 ----------------------------------------
 
 ----------------------------------------
@@ -560,7 +606,7 @@ writeGBInitFile (String, String, String) := (tempInit, tempInput, tempOutput) ->
 )
 
 gbFromOutputFile = method(Options => {ReturnIdeal => false, CacheBergmanGB => true})
-gbFromOutputFile String := opts -> tempOutput -> (
+gbFromOutputFile(NCPolynomialRing,String) := opts -> (A,tempOutput) -> (
    fil := openIn tempOutput;
    totalFile := get fil;
    fileLines := drop(select(lines totalFile, l -> l != "" and l != "Done"),-1);
@@ -574,7 +620,14 @@ gbFromOutputFile String := opts -> tempOutput -> (
                            );
    -- The following 'value' call is dangerous.  It could step on variable names.  Need to make
    -- sure that we store the variable state, use the right ring, and then put the variable state back.
-   gensList := select(apply(gensString, l -> value l), f -> class f === Sequence) / first;
+   -- remember previous setup
+   oldVarSymbols := A.generatorSymbols;
+   oldVarValues := oldVarSymbols / value;
+   -- switch to tensor algebra
+   use A;
+   gensList := select(gensString / value, f -> class f === Sequence) / first;
+   -- roll back to old variables
+   scan(oldVarSymbols, oldVarValues, (sym,val) -> sym <- val);
    gensList = apply(gensList, f -> 1/(leadCoefficient f)*f);
    ncgb := new NCGroebnerBasis from hashTable {(symbol generators) => apply(gensList, f -> (f, leadMonomial f)),
                                                (symbol cache) => new CacheTable from {}};
@@ -613,7 +666,7 @@ twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
   writeBergmanInputFile(gensI,tempInput, opts);
   writeGBInitFile(tempInit,tempInput,tempOutput);
   runCommand("bergman -i " | tempInit | " --silent > " | tempTerminal);
-  gbFromOutputFile(tempOutput)
+  gbFromOutputFile(ring I,tempOutput)
 )
 
 ------------------------------------------------------
@@ -709,7 +762,7 @@ writeHSInitFile (String,String,String,String) := (tempInit, tempInput, tempGBOut
 )
 
 hsFromOutputFile = method()
-hsFromOutputFile String := tempOutput -> (
+hsFromOutputFile (NCQuotientRing,String) := tempOutput -> (
    fil := openIn tempOutput;
    fileLines := lines get fil;
    fileLines
@@ -732,8 +785,8 @@ hilbertBergman NCQuotientRing := opts -> B -> (
   writeHSInitFile(tempInit,tempInput,tempGBOutput,tempHSOutput);
   error "err";
   runCommand("bergman -i " | tempInit | " --silent > " | tempTerminal);
-  I.cache#gb = gbFromOutputFile(tempGBOutput);
-  hsFromOutputFile(tempHSOutput)
+  I.cache#gb = gbFromOutputFile(ring I,tempGBOutput);
+  hsFromOutputFile(ring I,tempHSOutput)
 )
 
 ------------------------------------------------------------------
@@ -1016,10 +1069,95 @@ remainderFunction = (f,ncgb) -> (
 ----NCRingMap Commands -----------------
 ---------------------------------------
 
+ncMap = method()
+ncMap (NCRing,NCRing,List) := (B,C,imageList) -> (
+   genCSymbols := C.generatorSymbols;
+   if not all(imageList / class, r -> r === B) then error "Expected a list of entries in the target ring.";
+   new NCRingMap from hashTable {(symbol functionHash) => hashTable apply(#genCSymbols, i -> (genCSymbols#i,imageList#i)),
+                                 (symbol source) => C,
+                                 (symbol target) => B}
+)
+
+source NCRingMap := f -> f.source
+target NCRingMap := f -> f.target
+matrix NCRingMap := opts -> f -> ncMatrix {(gens source f) / f}
+--id _ NCRing := B -> ncMap(B,B,gens B)
+
+NCRingMap NCRingElement := (f,x) -> (
+   if x == 0 then return promote(0, target f);
+   if ring x =!= source f then error "Ring element not in source of ring map.";
+   C := ring x;
+   sum for t in pairs x.terms list (
+      monImage := promote(product apply(t#0, v -> f.functionHash#v),target f);
+      (t#1)*monImage
+   )
+)
+
+List / NCRingMap := (xs, f) -> apply(xs, x -> f x)
+
+net NCRingMap := f -> (
+   net "NCRingMap " | (net target f) | net " <--- " | (net source f)
+)
+
+ambient NCRingMap := f -> (
+   C := source f;
+   ambC := ambient C;
+   genCSymbols := C.generatorSymbols;
+   ncMap(target f, ambC, apply(genCSymbols, c -> f.functionHash#c))
+)
+
+isWellDefined NCRingMap := f -> (
+   defIdeal := ideal source f;
+   liftf := ambient f;
+   all(gens defIdeal, x -> liftf x == 0)
+)
+
+oreIdeal = method()
+oreIdeal (NCRing,NCRingMap,NCRingMap,NCRingElement) := 
+oreIdeal (NCRing,NCRingMap,NCRingMap,Symbol) := (B,sigma,delta,X) -> (
+   -- This version assumes that the derivation is zero on B
+   -- Don't yet have multiple rings with the same variables names working yet.  Not sure how to
+   -- get the symbol with the same name as the variable.
+   X = baseName X;
+   kk := coefficientRing B;
+   varsList := ((gens B) / toString / getSymbol) | {X};
+   C := kk varsList;
+   A := ambient B;
+   fromBtoC := ncMap(C,B,drop(gens C, -1));
+   fromAtoC := ncMap(C,A,drop(gens C, -1));
+   X = value X;
+   ncIdeal (apply(gens B.ideal, f -> fromAtoC promote(f,A)) |
+            apply(gens B, x -> X*(fromBtoC x) - (fromBtoC sigma x)*X - (fromBtoC delta x)))
+)
+
+oreIdeal (NCRing,NCRingMap,Symbol) := 
+oreIdeal (NCRing,NCRingMap,NCRingElement) := (B,sigma,X) -> (
+   zeroMap := ncMap(B,B,toList ((numgens B):promote(0,B)));
+   oreIdeal(B,sigma,zeroMap,X)
+)
+
+oreExtension = method()
+oreExtension (NCRing,NCRingMap,NCRingMap,Symbol) := 
+oreExtension (NCRing,NCRingMap,NCRingMap,NCRingElement) := (B,sigma,delta,X) -> (
+   X = baseName X;
+   I := oreIdeal(B,sigma,delta,X);
+   C := ring I;
+   C/I
+)
+
+oreExtension (NCRing,NCRingMap,Symbol) := 
+oreExtension (NCRing,NCRingMap,NCRingElement) := (B,sigma,X) -> (
+   X = baseName X;
+   I := oreIdeal(B,sigma,X);
+   C := ring I;
+   C/I
+)
+
 ---------------------------------------
 ----NCMatrix Commands -----------------
 ---------------------------------------
---- Really should have graded maps implemented
+--- Really should have graded maps implemented, but first
+--- need graded free modules I think.
 
 ncMatrix = method()
 ncMatrix List := ncEntries -> (
@@ -1200,6 +1338,8 @@ quickExponentiate (ZZ, NCRingElement) := (n, f) -> (
    )
 )
 
+-- it seems that reducing at each step is actually much more important than minimizing the
+-- number of matrix products computed.  The number of monomials in the tensor algebra is huge!
 quickExponentiate (ZZ, NCMatrix) := (n, M) -> (
    rowsM := length M.matrix;
    colsM := length first M.matrix;
@@ -1231,22 +1371,23 @@ end
 
 --- bug fix/performance improvements
 ------------------------------------
---- Make sure works with several rings at once with same variables names.
----   To do this, need to be extra careful whenever I use 'value' when reading
----   from a bergman output file.
 
 --- other things to add in due time
 -----------------------------------
 --- anick          -- resolution
 --- ncpbhgroebner  -- gb, hilbert series
 --- NCModules (?) (including module gb, hilbert series, modulebettinumbers)
---- NCRingMap
 --- Use Bergman to compute module generators of kernels of NCMatrix?
---- Ore extensions
 --- Kernels of homogeneous maps between non-pure free modules
 --- Free resolutions of koszul algebras
---- Finding a k-basis of normal elements in a given degree (not even a k-space!  How to do this?)
+--- Finding a k-basis of normal elements in a given degree (not even a k-space!  Is this even possible?)
 --- Factoring one (homogeneous) map through another
+--- Testing!
+--- Documentation!
+
+---------------------------------------------------------
+-- Examples
+---------------------------------------------------------
 
 --- matrix factorizations over sklyanin algebra
 restart
@@ -1504,7 +1645,7 @@ time M3 = rightKernel(M2,3,Verbosity=>1);
 restart
 debug needsPackage "NCAlgebra"
 A=QQ{a, b, c, d, e, f, g, h}
-I = gbFromOutputFile("UghABCgb6.txt", ReturnIdeal=>true);
+I = gbFromOutputFile(A,"UghABCgb6.txt", ReturnIdeal=>true);
 Igb = ncGroebnerBasis I;
 B=A/I;
 
@@ -1526,3 +1667,43 @@ f = promote(f,B);
 time X = flatten entries (f*bas);
 netList X
 
+-------------------------------
+-- Testing NCRingMap code
+restart
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+I = ncIdeal {x*y-y*x,x*z-z*x,y*z-z*y}
+B = A/I
+sigma = ncMap(B,B,{y,z,x})
+delta = ncMap(B,B,apply(gens B, x -> promote(1,B)))
+isWellDefined sigma
+oreExtension(B,sigma,w)
+-- doesn't really matter that we can handle derivations yet, since bergman doesn't do inhomogeneous
+-- gbs very well.
+oreIdeal(B,sigma,delta,w)
+oreExtension(B,sigma,delta,w)
+-------------------------------
+--- Testing multiple rings code
+restart
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y}
+C = QQ{x,y,z}
+B = A/I
+
+-----------------------------------
+--- Testing out normal element code
+restart
+debug needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y}
+B = A/I
+sigma = ncMap(B,B,{y,z,x})
+isWellDefined sigma
+C = oreExtension(B,sigma,w)
+findNormalComplement(w,x)
+isNormal w
+phi = normalAutomorphism w
+matrix phi
+phi2 = normalAutomorphism w^2
+matrix phi2
