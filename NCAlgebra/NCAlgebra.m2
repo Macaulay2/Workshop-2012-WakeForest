@@ -15,7 +15,7 @@ newPackage("NCAlgebra",
 export { NCRing, NCQuotientRing, NCPolynomialRing,
          generatorSymbols, bergmanRing, -- can I get away with not exporting these somehow?
          NCRingElement,
-         NCGroebnerBasis, ncGroebnerBasis,
+         NCGroebnerBasis, ncGroebnerBasis, maxNCGBDegree, minNCGBDegree,
          NCIdeal, NCLeftIdeal, NCRightIdeal,
          ncIdeal, ncLeftIdeal, ncRightIdeal,
          twoSidedNCGroebnerBasisBergman,
@@ -41,6 +41,7 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          isCentral,
          ncMap,functionHash,
          oreExtension,oreIdeal,
+         endomorphismRing,endomorphismRingGens,
          wallTiming
 }
 
@@ -59,6 +60,8 @@ NCRightIdeal = new Type of HashTable
 NCRingMap = new Type of HashTable
 
 emptyMon := new NCMonomial from {}
+
+removeNulls := xs -> select(xs, x -> x =!= null)
 
 removeZeroes := myHash -> select(myHash, c -> c != 0)
 
@@ -119,6 +122,7 @@ new NCPolynomialRing from List := (NCPolynomialRing, inits) -> new NCPolynomialR
 
 Ring List := (R, varList) -> (
    -- get the symbols associated to the list that is passed in, in case the variables have been used earlier.
+   if #varList == 1 and class varList#0 === Sequence then varList = toList first varList;
    varList = varList / baseName;
    A := new NCPolynomialRing from {(symbol generators) => {},
                                    (symbol generatorSymbols) => varList,
@@ -223,6 +227,7 @@ NCRing / NCIdeal := (A, I) -> (
                                  CoefficientRing => A.CoefficientRing,
                                  (symbol bergmanRing) => false,
                                  (symbol ambient) => A,
+                                 (symbol cache) => new CacheTable from {},
                                  (symbol ideal) => I};
    newGens := apply(B.generatorSymbols, v -> v <- new B from {(symbol ring) => B,
                                                               (symbol terms) => new HashTable from {(new NCMonomial from {v},1)}});
@@ -283,6 +288,89 @@ net NCQuotientRing := B -> net (B.ambient) | " / " | net (B.ideal.generators)
 ideal NCQuotientRing := B -> B.ideal;
 ambient NCQuotientRing := B -> B.ambient;
 
+endomorphismRing = method()
+endomorphismRing (Module,Symbol) := (M,X) -> (
+   R := ring M;
+   endM := End M;
+   N := numgens endM;
+   gensEndMaps := apply(N, i -> homomorphism endM_{i});
+   gensEndM := gens endM;
+   endMVars := apply(N, i -> X_i);
+   A := R endMVars;
+   gensA := basis(1,A);
+   -- build the squarefree relations
+   twoSubsets := subsets(N,2);
+   mons := twoSubsets | (twoSubsets / reverse) | apply(N, i -> {i,i});
+   relsHomM := getHomRelations(gensA,gensEndM,mons,gensEndMaps);
+   -- should now make some attempt at finding a minimal set of algebra generators
+   I := ncIdeal relsHomM;
+   Igb := ncGroebnerBasis(I,InstallGB=>true);
+   B := A/I;
+   B.cache#(symbol endomorphismRingGens) = gensEndMaps;
+   B
+)
+
+getHomRelations = method()
+getHomRelations (NCMatrix,Matrix,List,List) := (gensA,gensEndM,mons,gensEndMaps) -> (
+   monMatrix := matrix {for m in mons list (
+      comp := gensEndMaps#(m#0)*gensEndMaps#(m#1);
+      matrix entries transpose flatten matrix comp
+   )};
+   linearParts := flatten entries (gensA*(monMatrix // gensEndM));
+   varsA := flatten entries gensA;
+   apply(#mons, i -> varsA#(mons#i#0)*varsA#(mons#i#1) - linearParts#i)
+)
+
+findLinearRelation = (x,relList) -> (
+    xmon := first first pairs x.terms;
+    i := 0;
+    while i < #relList do (
+        monMatches := select(2,pairs (relList#i).terms, m -> member(first xmon,first m));
+        if #monMatches == 1 and monMatches#0#0 == xmon then
+           return (i,monMatches#0#1);
+        i = i + 1;
+    );
+)
+
+partialInterreduce = relList -> (
+   unique removeNulls for i from 0 to #relList-1 list (
+      tempGb := ncGroebnerBasis(relList - set {relList#i},InstallGB=>true);
+      << "Reducing " << relList#i << endl;
+      error "err";
+      relListRem := remainderFunction2(relList#i,tempGb);
+      --relListRem := remainderFunction(relList#i,tempGb);
+      if relListRem != 0 then relListRem
+   );
+)
+
+minimizeRelations = method(Options => {Verbosity => 0})
+minimizeRelations List := opts -> rels -> (
+   A := ring first rels;
+   curRels := rels;
+   gensA := gens A;
+   linearRel := null;
+   elimVars := 1;
+   while true do (
+      i := 0;
+      while (i < #gensA) do (
+         linearRel = findLinearRelation(gensA#i,curRels);
+         if linearRel =!= null then break;
+         i = i + 1;
+      );
+      if i == #gensA then break;  -- if we make it all the way through the loop, no linear relations found
+      -- at this point, i is the index of the ring gen that is linear, and linearRel
+      -- is the index of the ideal generator.
+      relIndex := first linearRel;
+      relCoeff := last linearRel;
+      phi := ncMap(A,A,apply(gensA, x -> if x === gensA#i then curRels#relIndex - relCoeff*x else x));
+      elimVars = elimVars + 1;
+      if opts#Verbosity > 0 then << "Eliminating variable " << gensA#i << endl;
+      curRels = curRels / phi;
+      curRels = partialInterreduce(curRels);
+   );
+   curRels
+)
+
 -------------------------------------------
 
 -------------------------------------------
@@ -316,7 +404,7 @@ net NCMonomial := mon -> (
    tempVar := first mon;
    curDegree := 0;
    for v in mon do (
-      if v == tempVar then curDegree = curDegree + 1
+      if v === tempVar then curDegree = curDegree + 1
       else (
           myNet = myNet | (net tempVar) | if curDegree == 1 then (net "") else ((net curDegree)^1);
           tempVar = v;
@@ -332,7 +420,7 @@ toString NCMonomial := mon -> (
    tempVar := first mon;
    curDegree := 0;
    for v in mon do (
-      if v == tempVar then curDegree = curDegree + 1
+      if v === tempVar then curDegree = curDegree + 1
       else (
           myNet = myNet | (toString tempVar) | if curDegree == 1 then "*" else "^" | curDegree | "*";
           tempVar = v;
@@ -358,10 +446,11 @@ findSubstring (NCMonomial,NCMonomial) := opts -> (lt, mon) -> (
       return true
    else if opts#CheckPrefixOnly then
       return false;
+   if not isSubset(lt,mon) then return null;
    substrIndex := null;
    for i from 0 to #mon-1 do (
       if #mon - i < deg then break;
-      if lt == mon_{i..i+deg-1} then (
+      if lt === mon_{i..i+deg-1} then (
          substrIndex = i;
          break;
       );
@@ -369,10 +458,12 @@ findSubstring (NCMonomial,NCMonomial) := opts -> (lt, mon) -> (
    if substrIndex =!= null then (take(mon,substrIndex),take(mon,-#mon+deg+substrIndex)) else null
 )
 
-NCMonomial ? NCMonomial := (m,n) -> if (toList m) == (toList n) then symbol == else
+NCMonomial ? NCMonomial := (m,n) -> if (toList m) === (toList n) then symbol == else
                                     if #m < #n then symbol < else
                                     if #m > #n then symbol > else
                                     if (#m == #n and (toList m) < (toList n)) then symbol < else symbol >
+
+NCMonomial == NCMonomial := (m,n) -> (toList m) === (toList n)
 -----------------------------------------
 
 --- NCRingElement methods ---------------
@@ -474,7 +565,8 @@ degree NCRingElement := f -> (keys f.terms) / degree // max
 size NCRingElement := f -> #(f.terms)
 leadTerm NCRingElement := f -> new (f.ring) from {(symbol ring) => f.ring,
                                                   (symbol terms) => new HashTable from {last sort (pairs f.terms)}};
-leadMonomial NCRingElement := f -> putInRing(last sort (keys f.terms),f.ring);
+leadMonomial NCRingElement := f -> putInRing(leadNCMonomial f,f.ring);
+leadNCMonomial = f -> last sort (keys f.terms)
 leadCoefficient NCRingElement := f -> last last sort (pairs f.terms);
 isConstant NCRingElement := f -> f.terms === hashTable {} or (#(f.terms) == 1 and f.terms#?{})
 isHomogeneous NCRingElement := f -> (
@@ -629,8 +721,14 @@ gbFromOutputFile(NCPolynomialRing,String) := opts -> (A,tempOutput) -> (
    -- roll back to old variables
    scan(oldVarSymbols, oldVarValues, (sym,val) -> sym <- val);
    gensList = apply(gensList, f -> 1/(leadCoefficient f)*f);
-   ncgb := new NCGroebnerBasis from hashTable {(symbol generators) => apply(gensList, f -> (f, leadMonomial f)),
-                                               (symbol cache) => new CacheTable from {}};
+   minNCGBDeg := infinity;
+   maxNCGBDeg := -infinity;
+   scan(gensList, f -> (if degree f > maxNCGBDeg then maxNCGBDeg = degree f;
+                        if degree f < minNCGBDeg then minNCGBDeg = degree f;));
+   ncgb := new NCGroebnerBasis from hashTable {(symbol generators) => hashTable apply(gensList, f -> (leadNCMonomial f,f)),
+                                               (symbol cache) => new CacheTable from {},
+                                               (symbol maxNCGBDegree) => maxNCGBDeg,
+                                               (symbol minNCGBDegree) => minNCGBDeg};
    -- now write gb to file to be used later, and stash answer in ncgb's cache
    if opts#CacheBergmanGB then (
       cacheGB := temporaryFileName() | ".bigb";
@@ -675,7 +773,7 @@ twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
 
 writeNFInputFile = method(Options => {UsePreviousGBOutput => true})
 writeNFInputFile (List,NCGroebnerBasis, List, ZZ) := opts -> (fList,ncgb, inputFileList, maxDeg) -> (
-   genList := (toList (ncgb.generators)) / first;
+   genList := (pairs ncgb.generators) / last;
    --- set up gb computation
    -- need to also test if ncgb is in fact a gb, and if so, tell Bergman not to do the computation
    if opts#UsePreviousGBOutput then
@@ -797,7 +895,7 @@ hilbertBergman NCQuotientRing := opts -> B -> (
 ------- NCGroebnerBasis methods
 ------------------------------------------------------------------
 
-generators NCGroebnerBasis := opts -> ncgb -> ncMatrix {ncgb.generators / first}
+generators NCGroebnerBasis := opts -> ncgb -> (pairs ncgb.generators) / last
 
 leftNCGroebnerBasis = method()
 leftNCGroebnerBasis List := genList -> (
@@ -810,23 +908,37 @@ rightNCGroebnerBasis List := genList -> (
 
 ncGroebnerBasis = method(Options => {DegreeLimit => 100, InstallGB => false})
 ncGroebnerBasis List := opts -> fList -> (
-   if opts#InstallGB then new NCGroebnerBasis from hashTable {(symbol generators) => apply(fList, f -> (f,leadMonomial f)),
-                                                              (symbol cache) => new CacheTable from {}}
-   else ncGroebnerBasis ncIdeal fList;
+   if opts#InstallGB then (
+      minDeg := infinity;
+      maxDeg := -infinity;
+      scan(fList, f -> (if degree f > maxDeg then maxDeg = degree f;
+                        if degree f < minDeg then minDeg = degree f;));
+      new NCGroebnerBasis from hashTable {(symbol generators) => hashTable apply(fList, f -> (leadNCMonomial f,f)),
+                                          (symbol cache) => new CacheTable from {},
+                                          (symbol maxNCGBDegree) => maxDeg,
+                                          (symbol minNCGBDegree) => minDeg}
+   )
+   else ncGroebnerBasis ncIdeal fList
 )
 
 ncGroebnerBasis NCIdeal := opts -> I -> (
    if I.cache#?gb then return I.cache#gb;
-   ncgb := if opts#InstallGB then new NCGroebnerBasis from hashTable {(symbol generators) => apply(gens I, f -> (f,leadMonomial f)),
-                                                                      (symbol cache) => new CacheTable from {}}
-           else twoSidedNCGroebnerBasisBergman(I, DegreeLimit=>opts#DegreeLimit);
+   ncgb := if opts#InstallGB then (
+              minDeg := infinity;
+              maxDeg := -infinity;
+              scan(gens I, f -> (if degree f > maxDeg then maxDeg = degree f;
+                                if degree f < minDeg then minDeg = degree f;));
+              new NCGroebnerBasis from hashTable {(symbol generators) => hashTable apply(gens I, f -> (leadNCMonomial f,f)),
+                                                  (symbol cache) => new CacheTable from {},
+                                                  (symbol maxNCGBDegree) => maxDeg,
+                                                  (symbol minNCGBDegree) => minDeg}
+   )
+   else twoSidedNCGroebnerBasisBergman(I, DegreeLimit=>opts#DegreeLimit);
    I.cache#gb = ncgb;
    ncgb   
 )
-
-
 net NCGroebnerBasis := ncgb -> (
-   stack apply(ncgb.generators, (pol,lt) -> (net pol) | net "; Lead Term = " | (net lt))
+   stack apply(pairs ncgb.generators, (lt,pol) -> (net pol) | net "; Lead Term = " | (net lt))
 )
 
 ZZ % NCGroebnerBasis := (n,ncgb) -> n
@@ -842,10 +954,10 @@ QQ % NCGroebnerBasis := (n,ncgb) -> n
 --)
 
 basis(ZZ,NCRing) := opts -> (n,B) -> (
-   ncgbGens := if class B === NCQuotientRing then (ncGroebnerBasis B.ideal).generators else {};
+   ncgbGens := if class B === NCQuotientRing then pairs (ncGroebnerBasis B.ideal).generators else {};
    basisList := {emptyMon};
    varsList := B.generatorSymbols;
-   lastTerms := apply(ncgbGens / last, mon -> first keys mon.terms);
+   lastTerms := ncgbGens / first;
    for i from 1 to n do (
       basisList = flatten apply(varsList, v -> apply(basisList, b -> new NCMonomial from {v} | b));
       if ncgbGens =!= {} then
@@ -1017,15 +1129,15 @@ isRightRegular (NCRingElement, ZZ) := (f,d) -> (
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
    if (degree f <= 5 and size f <= 10) or not f.ring.bergmanRing then
       remainderFunction(f,ncgb)
+      --remainderFunction2(f,ncgb)
    else
       first normalFormBergman({f},ncgb)
 )
 
-
 remainderFunction = (f,ncgb) -> (
-   if #(ncgb.generators) == 0 then return f;
-   if ((ncgb.generators)#0#0).ring =!= f.ring then error "Expected GB over the same ring.";
-   ncgb = apply(ncgb.generators, p -> (p#0, first keys (p#1).terms));
+   if #(gens ncgb) == 0 then return f;
+   if ((gens ncgb)#0).ring =!= f.ring then error "Expected GB over the same ring.";
+   ncgb = (pairs ncgb.generators) / reverse;
    newf := f;
    pairsf := sort pairs newf.terms;
    prefSuf := null;
@@ -1041,10 +1153,8 @@ remainderFunction = (f,ncgb) -> (
       if prefSuf =!= null then break;
    );
    while prefSuf =!= null do (
-      pref := new (f.ring) from {(symbol ring) => f.ring,
-                                 (symbol terms) => new HashTable from {(new NCMonomial from prefSuf#0,1)}};
-      suff := new (f.ring) from {(symbol ring) => f.ring,
-                                 (symbol terms) => new HashTable from {(new NCMonomial from prefSuf#1,1)}};
+      pref := putInRing(prefSuf#0,f.ring);
+      suff := putInRing(prefSuf#1,f.ring);
       newf = newf - coeff*pref*(gbHit#0)*suff;
       pairsf = sort pairs newf.terms;
       prefSuf = null;
@@ -1060,6 +1170,55 @@ remainderFunction = (f,ncgb) -> (
             )
          );
          if prefSuf =!= null then break;
+      );
+   );
+   newf
+)
+
+substrings = method()
+substrings (NCMonomial,ZZ,ZZ) := (mon,m,n) -> (
+   flatten apply(toList(1..(#mon)), i -> if i > n or i < m then 
+                                            {}
+                                         else
+                                            apply(#mon-i+1, j -> (mon_{0..(j-1)},mon_{j..j+i-1},mon_{j+i..(#mon-1)})))
+)
+
+remainderFunction2 = (f,ncgb) -> (
+   if #(gens ncgb) == 0 then return f;
+   if ((gens ncgb)#0).ring =!= f.ring then error "Expected GB over the same ring.";
+   ncgbHash := ncgb.generators;
+   maxGBDeg := ncgb.maxNCGBDegree;
+   minGBDeg := ncgb.minNCGBDegree;
+   newf := f;
+   pairsf := sort pairs newf.terms;
+   foundSubstr := null;
+   coeff := null;
+   gbHit := null;
+   for p in pairsf do (
+      substrs := substrings(p#0,minGBDeg,maxGBDeg);
+      foundSubstr = select(1,substrs, s -> ncgbHash#?(s#1));
+      coeff = p#1;
+      if foundSubstr =!= {} then (
+         gbHit = ncgbHash#(foundSubstr#0#1);
+         break;
+      );
+   );
+   while foundSubstr =!= {} do (
+      pref := putInRing(foundSubstr#0#0,f.ring);
+      suff := putInRing(foundSubstr#0#2,f.ring);
+      newf = newf - coeff*pref*gbHit*suff;
+      pairsf = sort pairs newf.terms;
+      foundSubstr = null;
+      gbHit = null;
+      coeff = null;
+      for p in pairsf do (
+         substrs := substrings(p#0,minGBDeg,maxGBDeg);
+         foundSubstr = select(1,substrs, s -> ncgbHash#?(s#1));
+         coeff = p#1;
+         if foundSubstr =!= {} then (
+            gbHit = ncgbHash#(foundSubstr#0#1);
+            break;
+         );
       );
    );
    newf
@@ -1374,6 +1533,7 @@ end
 
 --- other things to add in due time
 -----------------------------------
+--- NCRingMap kernels (to a certain degree)
 --- anick          -- resolution
 --- ncpbhgroebner  -- gb, hilbert series
 --- NCModules (?) (including module gb, hilbert series, modulebettinumbers)
@@ -1398,7 +1558,9 @@ f2 = x*z + z*x - y^2
 f3 = z^2 - x*y - y*x
 I = ncIdeal {f1,f2,f3}
 Igb = ncGroebnerBasis I
-normalFormBergman(-y^3-x*y*z+y*x*z+x^3,Igb)
+g = -y^3-x*y*z+y*x*z+x^3
+g % Igb
+normalFormBergman(g,Igb)
 B = A/I
 centralElements(B,3)
 g = -y^3-x*y*z+y*x*z+x^3
@@ -1485,15 +1647,17 @@ h = f^3
 
 --- testing out Bergman interface
 restart
-needsPackage "NCAlgebra"
+debug needsPackage "NCAlgebra"
 A = QQ{x,y,z}
 f1 = y*z + z*y - x^2
 f2 = x*z + z*x - y^2
 f3 = z^2 - x*y - y*x
 I = ncIdeal {f1,f2,f3}
 Igb = twoSidedNCGroebnerBasisBergman I
-wallTiming(() -> normalFormBergman(z^20,Igb))
-(z^20 % Igb)  -- still slow!
+wallTiming(() -> normalFormBergman(z^17,Igb))
+time remainderFunction(z^17,Igb)
+time remainderFunction2(z^17,Igb)
+time remainderFunction3(z^17,Igb)
 B = A / I
 g = -y^3-x*y*z+y*x*z+x^3
 isCentral g
@@ -1707,3 +1871,37 @@ phi = normalAutomorphism w
 matrix phi
 phi2 = normalAutomorphism w^2
 matrix phi2
+
+------------------------------------
+--- Testing out endomorphism code
+restart
+debug needsPackage "NCAlgebra"
+Q = QQ[a,b,c,d]
+R = Q/ideal{a*b+c*d}
+kRes = res(coker vars R, LengthLimit=>7);
+M = coker kRes.dd_5
+B = endomorphismRing(M,X);
+gensI = gens ideal B;
+newGensI = minimizeRelations(gensI, Verbosity=>1)
+first gensI
+first newGensI
+
+netList B.cache.endomorphismRingGens
+f = sum take(flatten entries basis(1,B),10)
+f^2
+HomM = Hom(M,M)
+map1 = homomorphism(HomM_{0})
+map2 = homomorphism(HomM_{1})
+gensHomM = gens HomM
+elt = transpose flatten matrix (map2*map1)
+gensHomM // elt
+
+restart
+debug needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+mon = first first pairs (x*y*z).terms
+substrings(mon,3)
+
+QQ toList vars(0..14)
+QQ{x_1,x_2}
+QQ{a..d}
