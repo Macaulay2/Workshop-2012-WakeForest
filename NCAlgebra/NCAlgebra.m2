@@ -316,6 +316,7 @@ getHomRelations (NCMatrix,Matrix,List,List) := (gensA,gensEndM,mons,gensEndMaps)
       comp := gensEndMaps#(m#0)*gensEndMaps#(m#1);
       matrix entries transpose flatten matrix comp
    )};
+   gensEndM = matrix entries matrix gensEndM;
    linearParts := flatten entries (gensA*(monMatrix // gensEndM));
    varsA := flatten entries gensA;
    apply(#mons, i -> varsA#(mons#i#0)*varsA#(mons#i#1) - linearParts#i)
@@ -326,21 +327,31 @@ findLinearRelation = (x,relList) -> (
     i := 0;
     while i < #relList do (
         monMatches := select(2,pairs (relList#i).terms, m -> member(first xmon,first m));
-        if #monMatches == 1 and monMatches#0#0 == xmon then
+        if #monMatches == 1 and monMatches#0#0 == xmon and isUnit monMatches#0#1 then
            return (i,monMatches#0#1);
         i = i + 1;
     );
 )
 
+removeConstants = f -> (
+    coeff := leadCoefficient f;
+    if isUnit coeff then
+       (coeff)^(-1)*f
+    else if isUnit leadCoefficient coeff then
+       (leadCoefficient coeff)^(-1)*f
+    else
+       f
+)
+
 partialInterreduce = relList -> (
-   unique removeNulls for i from 0 to #relList-1 list (
+   redList := for i from 0 to #relList-1 list (
       tempGb := ncGroebnerBasis(relList - set {relList#i},InstallGB=>true);
-      << "Reducing " << relList#i << endl;
-      error "err";
+      << "Reducing " << relList#i << endl << "  (" << i+1 << " of " << #relList << ")" << endl;
       relListRem := remainderFunction2(relList#i,tempGb);
       --relListRem := remainderFunction(relList#i,tempGb);
       if relListRem != 0 then relListRem
    );
+   (unique removeNulls redList) / removeConstants
 )
 
 minimizeRelations = method(Options => {Verbosity => 0})
@@ -365,10 +376,9 @@ minimizeRelations List := opts -> rels -> (
       phi := ncMap(A,A,apply(gensA, x -> if x === gensA#i then curRels#relIndex - relCoeff*x else x));
       elimVars = elimVars + 1;
       if opts#Verbosity > 0 then << "Eliminating variable " << gensA#i << endl;
-      curRels = curRels / phi;
-      curRels = partialInterreduce(curRels);
+      curRels = select(curRels / phi, f -> f != 0);
    );
-   curRels
+   unique curRels
 )
 
 -------------------------------------------
@@ -566,17 +576,17 @@ size NCRingElement := f -> #(f.terms)
 leadTerm NCRingElement := f -> new (f.ring) from {(symbol ring) => f.ring,
                                                   (symbol terms) => new HashTable from {last sort (pairs f.terms)}};
 leadMonomial NCRingElement := f -> putInRing(leadNCMonomial f,f.ring);
-leadNCMonomial = f -> last sort (keys f.terms)
-leadCoefficient NCRingElement := f -> last last sort (pairs f.terms);
+leadNCMonomial = f -> last sort (keys f.terms);
+leadCoefficient NCRingElement := f -> if size f == 0 then 0 else last last sort (pairs f.terms);
 isConstant NCRingElement := f -> f.terms === hashTable {} or (#(f.terms) == 1 and f.terms#?{})
 isHomogeneous NCRingElement := f -> (
     fTerms := keys f.terms;
     degf := degree first fTerms;
     all(fTerms / degree, d -> d == degf)
 )
-
 terms NCRingElement := f -> apply(pairs (f.terms), (m,c) -> new (f.ring) from {(symbol ring) => f.ring,
                                                                                (symbol terms) => new HashTable from {(m,c)}});
+support NCRingElement := f -> unique flatten apply(pairs (f.terms), (m,c) -> unique toList m)
 
 isCentral = method()
 isCentral (NCRingElement, NCGroebnerBasis) := (f,ncgb) -> (
@@ -720,7 +730,7 @@ gbFromOutputFile(NCPolynomialRing,String) := opts -> (A,tempOutput) -> (
    gensList := select(gensString / value, f -> class f === Sequence) / first;
    -- roll back to old variables
    scan(oldVarSymbols, oldVarValues, (sym,val) -> sym <- val);
-   gensList = apply(gensList, f -> 1/(leadCoefficient f)*f);
+   gensList = apply(gensList, f -> (leadCoefficient f)^(-1)*f);
    minNCGBDeg := infinity;
    maxNCGBDeg := -infinity;
    scan(gensList, f -> (if degree f > maxNCGBDeg then maxNCGBDeg = degree f;
@@ -911,6 +921,7 @@ ncGroebnerBasis List := opts -> fList -> (
    if opts#InstallGB then (
       minDeg := infinity;
       maxDeg := -infinity;
+      fList = apply(fList, f -> (coeff := leadCoefficient f; if isUnit coeff then (coeff)^(-1)*f else (leadCoefficient coeff)^(-1)*f));
       scan(fList, f -> (if degree f > maxDeg then maxDeg = degree f;
                         if degree f < minDeg then minDeg = degree f;));
       new NCGroebnerBasis from hashTable {(symbol generators) => hashTable apply(fList, f -> (leadNCMonomial f,f)),
@@ -924,11 +935,12 @@ ncGroebnerBasis List := opts -> fList -> (
 ncGroebnerBasis NCIdeal := opts -> I -> (
    if I.cache#?gb then return I.cache#gb;
    ncgb := if opts#InstallGB then (
+              gensI := apply(gens I, f -> (coeff := leadCoefficient f; if isUnit coeff then (leadCoefficient f)^(-1)*f else (leadCoefficient coeff)^(-1)*f));
               minDeg := infinity;
               maxDeg := -infinity;
-              scan(gens I, f -> (if degree f > maxDeg then maxDeg = degree f;
+              scan(gensI, f -> (if degree f > maxDeg then maxDeg = degree f;
                                 if degree f < minDeg then minDeg = degree f;));
-              new NCGroebnerBasis from hashTable {(symbol generators) => hashTable apply(gens I, f -> (leadNCMonomial f,f)),
+              new NCGroebnerBasis from hashTable {(symbol generators) => hashTable apply(gensI, f -> (leadNCMonomial f,f)),
                                                   (symbol cache) => new CacheTable from {},
                                                   (symbol maxNCGBDegree) => maxDeg,
                                                   (symbol minNCGBDegree) => minDeg}
@@ -981,8 +993,6 @@ leftMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
    matrix {coeffList}
 )
 
-
-
 rightMultiplicationMap = method()
 rightMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
    -- Input : A form f of degree m, and a degree n
@@ -1002,8 +1012,18 @@ centralElements = method()
 centralElements(NCRing,ZZ) := (B,n) -> (
    -- This function returns a basis over R = coefficientRing B of the central
    -- elements in degree n.
+   idB := ncMap(B,B,gens B);
+   normalElements(idB,n)
+)
+
+normalElements = method()
+normalElements(NCRingMap,ZZ) := (phi,n) -> (
+   -- this function returns a basis over R = coefficientRing B of the normal
+   -- elements with respect to the automorphism phi in degree n
+   if source phi =!= target phi then error "Expected an automorphism.";
+   B := source phi;
    ringVars := gens B;
-   diffMatrix := matrix apply(ringVars, x -> {leftMultiplicationMap(x,n) - rightMultiplicationMap(x,n)});
+   diffMatrix := matrix apply(ringVars, x -> {leftMultiplicationMap(phi x,n) - rightMultiplicationMap(x,n)});
    nBasis := basis(n,B);
    kerDiff := ker diffMatrix;
    R := ring diffMatrix;
@@ -1128,8 +1148,8 @@ isRightRegular (NCRingElement, ZZ) := (f,d) -> (
 
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
    if (degree f <= 5 and size f <= 10) or not f.ring.bergmanRing then
-      remainderFunction(f,ncgb)
-      --remainderFunction2(f,ncgb)
+      --remainderFunction(f,ncgb)
+      remainderFunction2(f,ncgb)
    else
       first normalFormBergman({f},ncgb)
 )
@@ -1183,6 +1203,13 @@ substrings (NCMonomial,ZZ,ZZ) := (mon,m,n) -> (
                                             apply(#mon-i+1, j -> (mon_{0..(j-1)},mon_{j..j+i-1},mon_{j+i..(#mon-1)})))
 )
 
+minUsing = (xs,f) -> (
+   n := min (xs / f);
+   first select(1,xs, x -> f x == n)
+)
+
+divides = (x,y) -> (y // x)*x == y
+
 remainderFunction2 = (f,ncgb) -> (
    if #(gens ncgb) == 0 then return f;
    if ((gens ncgb)#0).ring =!= f.ring then error "Expected GB over the same ring.";
@@ -1191,32 +1218,34 @@ remainderFunction2 = (f,ncgb) -> (
    minGBDeg := ncgb.minNCGBDegree;
    newf := f;
    pairsf := sort pairs newf.terms;
-   foundSubstr := null;
+   foundSubstr := {};
    coeff := null;
    gbHit := null;
    for p in pairsf do (
       substrs := substrings(p#0,minGBDeg,maxGBDeg);
-      foundSubstr = select(1,substrs, s -> ncgbHash#?(s#1));
+      foundSubstr = select(substrs, s -> ncgbHash#?(s#1) and divides(leadCoefficient ncgbHash#(s#1),p#1));
       coeff = p#1;
       if foundSubstr =!= {} then (
-         gbHit = ncgbHash#(foundSubstr#0#1);
+         foundSubstr = minUsing(foundSubstr, s -> size ncgbHash#(s#1));
+         gbHit = ncgbHash#(foundSubstr#1);
          break;
       );
    );
    while foundSubstr =!= {} do (
-      pref := putInRing(foundSubstr#0#0,f.ring);
-      suff := putInRing(foundSubstr#0#2,f.ring);
-      newf = newf - coeff*pref*gbHit*suff;
+      pref := putInRing(foundSubstr#0,f.ring);
+      suff := putInRing(foundSubstr#2,f.ring);
+      newf = newf - (coeff//(leadCoefficient gbHit))*pref*gbHit*suff;
       pairsf = sort pairs newf.terms;
-      foundSubstr = null;
+      foundSubstr = {};
       gbHit = null;
       coeff = null;
       for p in pairsf do (
          substrs := substrings(p#0,minGBDeg,maxGBDeg);
-         foundSubstr = select(1,substrs, s -> ncgbHash#?(s#1));
+         foundSubstr = select(substrs, s -> ncgbHash#?(s#1) and divides(leadCoefficient ncgbHash#(s#1),p#1));
          coeff = p#1;
          if foundSubstr =!= {} then (
-            gbHit = ncgbHash#(foundSubstr#0#1);
+            foundSubstr = minUsing(foundSubstr, s -> size ncgbHash#(s#1));
+            gbHit = ncgbHash#(foundSubstr#1);
             break;
          );
       );
@@ -1269,6 +1298,22 @@ isWellDefined NCRingMap := f -> (
    defIdeal := ideal source f;
    liftf := ambient f;
    all(gens defIdeal, x -> liftf x == 0)
+)
+
+NCRingMap _ ZZ := (f,n) -> (
+   B := source f;
+   C := target f;
+   srcBasis := flatten entries basis(n,B);
+   tarBasis := flatten entries basis(n,C);
+   imageList := srcBasis / f;
+   if #(unique (select(imageList, g -> g != 0) / degree)) != 1 then
+      error "Expected the image of degree " << n << " part of source to lie in single degree." << endl;
+   matrix {apply(imageList, g -> coefficients(g,Monomials => tarBasis))}
+)
+
+NCRingMap @@ NCRingMap := (f,g) -> (
+   if target g =!= source f then error "Expected composable maps.";
+   ncMap(target f, source g, apply(gens source g, x -> f g x))
 )
 
 oreIdeal = method()
@@ -1540,7 +1585,6 @@ end
 --- Use Bergman to compute module generators of kernels of NCMatrix?
 --- Kernels of homogeneous maps between non-pure free modules
 --- Free resolutions of koszul algebras
---- Finding a k-basis of normal elements in a given degree (not even a k-space!  Is this even possible?)
 --- Factoring one (homogeneous) map through another
 --- Testing!
 --- Documentation!
@@ -1657,7 +1701,6 @@ Igb = twoSidedNCGroebnerBasisBergman I
 wallTiming(() -> normalFormBergman(z^17,Igb))
 time remainderFunction(z^17,Igb)
 time remainderFunction2(z^17,Igb)
-time remainderFunction3(z^17,Igb)
 B = A / I
 g = -y^3-x*y*z+y*x*z+x^3
 isCentral g
@@ -1863,8 +1906,15 @@ A = QQ{x,y,z}
 I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y}
 B = A/I
 sigma = ncMap(B,B,{y,z,x})
+sigma_2   -- testing restriction of NCMap to degree code
 isWellDefined sigma
 C = oreExtension(B,sigma,w)
+tau = ncMap(C,C,{y,z,x,w})
+normalElements(tau,3)
+normalElements(tau @@ tau,1)
+normalElements(tau @@ tau,2)
+normalElements(tau @@ tau,3)
+normalElements(tau @@ tau,4)
 findNormalComplement(w,x)
 isNormal w
 phi = normalAutomorphism w
@@ -1876,13 +1926,52 @@ matrix phi2
 --- Testing out endomorphism code
 restart
 debug needsPackage "NCAlgebra"
+Q = QQ[a,b,c]
+R = Q/ideal{a*b-c^2}
+kRes = res(coker vars R, LengthLimit=>7);
+M = coker kRes.dd_5
+B = endomorphismRing(M,X);
+gensI = gens ideal B;
+newGensI = minimizeRelations(gensI, Verbosity=>1)
+partialInterreduce newGensI
+------------------------------------
+--- Testing out endomorphism code
+restart
+debug needsPackage "NCAlgebra"
 Q = QQ[a,b,c,d]
 R = Q/ideal{a*b+c*d}
 kRes = res(coker vars R, LengthLimit=>7);
 M = coker kRes.dd_5
 B = endomorphismRing(M,X);
 gensI = gens ideal B;
-newGensI = minimizeRelations(gensI, Verbosity=>1)
+gensIMin = minimizeRelations(gensI, Verbosity=>1);
+newGensI = partialInterreduce gensIMin;
+newGensI = partialInterreduce newGensI;
+newGensI2 = minimizeRelations(newGensI, Verbosity=>1)
+newGensI2' = partialInterreduce newGensI2'
+minimizeRelations(newGensI2', Verbosity => 1)
+unique flatten (newGensI2 / support)
+
+--------------------------------------
+--- Skew group ring example?
+restart
+debug needsPackage "NCAlgebra"
+S = QQ[x,y,z]
+Q = QQ[w_1..w_6,Degrees=>{2,2,2,2,2,2}]
+phi = map(S,Q,matrix{{x^2,x*y,x*z,y^2,y*z,z^2}})
+I = ker phi
+R = Q/I
+phi = map(S,R,matrix{{x^2,x*y,x*z,y^2,y*z,z^2}})
+M = pushForward(phi,S^1)
+B = endomorphismRing(M,X)
+gensI = gens ideal B;
+netList pack(8,gensI)
+
+A = ambient B
+f = a*d*X_4
+tempGb = ncGroebnerBasis({a*X_4},InstallGB=>true)
+remainderFunction2(f,tempGb)
+
 first gensI
 first newGensI
 
