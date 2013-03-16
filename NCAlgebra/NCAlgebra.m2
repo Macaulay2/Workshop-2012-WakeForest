@@ -343,42 +343,70 @@ removeConstants = f -> (
        f
 )
 
-partialInterreduce = relList -> (
-   redList := for i from 0 to #relList-1 list (
-      tempGb := ncGroebnerBasis(relList - set {relList#i},InstallGB=>true);
-      << "Reducing " << relList#i << endl << "  (" << i+1 << " of " << #relList << ")" << endl;
-      relListRem := remainderFunction2(relList#i,tempGb);
-      --relListRem := remainderFunction(relList#i,tempGb);
-      if relListRem != 0 then relListRem
+partialInterreduce = method(Options => {Verbosity => 0, "MaxLoops" => infinity})
+partialInterreduce List := opts -> relList -> (
+   redList := relList;   
+   oldListLen := -1;
+   numLoops := 0;
+   while #redList != oldListLen and numLoops < opts#"MaxLoops" do
+   (
+      oldListLen = #redList;
+      tempGb := ncGroebnerBasis(redList,InstallGB=>true);
+      redList = for i from 0 to #redList-1 list (
+         if opts#Verbosity > 0  then (
+            << "Reducing " << redList#i << endl
+            << "  (" << i+1 << " of " << #redList << ")" << endl
+            << "  (Pass " << numLoops+1 << ")" << endl;
+         );
+         redListRem := remainderFunction2(redList#i,tempGb,"DontUse"=>redList#i);
+         --redListRem := remainderFunction(redList#i,tempGb);
+         if redListRem != 0 then redListRem
+      );
+      redList = (unique removeNulls redList) / removeConstants;
+      numLoops = numLoops + 1;
    );
-   (unique removeNulls redList) / removeConstants
+   redList
 )
 
-minimizeRelations = method(Options => {Verbosity => 0})
-minimizeRelations List := opts -> rels -> (
+eliminateLinearVariables = method(Options => {Verbosity => 0})
+eliminateLinearVariables List := opts -> rels -> (
    A := ring first rels;
    curRels := rels;
    gensA := gens A;
    linearRel := null;
    elimVars := 1;
-   while true do (
-      i := 0;
-      while (i < #gensA) do (
-         linearRel = findLinearRelation(gensA#i,curRels);
-         if linearRel =!= null then break;
-         i = i + 1;
-      );
-      if i == #gensA then break;  -- if we make it all the way through the loop, no linear relations found
-      -- at this point, i is the index of the ring gen that is linear, and linearRel
-      -- is the index of the ideal generator.
+   i := 0;
+   while (i < #gensA) do (
+      linearRel = findLinearRelation(gensA#i,curRels);
+      if linearRel =!= null then break;
+      i = i + 1;
+   );
+   while i != #gensA do (
       relIndex := first linearRel;
       relCoeff := last linearRel;
       phi := ncMap(A,A,apply(gensA, x -> if x === gensA#i then curRels#relIndex - relCoeff*x else x));
       elimVars = elimVars + 1;
       if opts#Verbosity > 0 then << "Eliminating variable " << gensA#i << endl;
       curRels = select(curRels / phi, f -> f != 0);
+      i = 0;
+      while (i < #gensA) do (
+         linearRel = findLinearRelation(gensA#i,curRels);
+         if linearRel =!= null then break;
+         i = i + 1;
+      );
    );
    unique curRels
+)
+
+minimizeRelations = method(Options => {Verbosity => 0})
+minimizeRelations List := opts -> rels -> (
+   numOldRels := -1;
+   loopRels := rels;
+   while numOldRels != #loopRels do (
+      numOldRels = #loopRels;
+      loopRels = partialInterreduce(eliminateLinearVariables(loopRels,opts),opts);
+   );
+   loopRels
 )
 
 -------------------------------------------
@@ -1086,15 +1114,11 @@ rightKernel(NCMatrix,ZZ):= opts -> (M,deg) -> (
    zeroMat := matrix{apply(fromZeros, i-> toZeros)};
  
    -- get left product rows (no need for separate function call)
-   U:=unique select(flatten entries M, c->c!=0);
-   if opts#Verbosity > 0 then
-      << "Building hash table." << endl;
-   --L:= hashTable apply(U,e->{e,flatten entries (e*bas)}); --returns a hash table of product rows for nonzero entries of M (slow, but a one-time cost)
-   -- these three lines are an attempt to perform the above command with fewer calls to bergman
-   uMatr := ncMatrix pack(1,U);  -- just the transpose of ncMatrix {U}
-   uMatrBas := entries (uMatr * bas);
-   L := hashTable apply(#U, i -> {U#i,uMatrBas#i});
-
+   U := unique select(flatten entries M, c->c!=0);
+   Umat := ncMatrix {U};
+   Lmat := (transpose Umat)*bas;
+   L:= hashTable apply(#U, e->{U#e,(Lmat.matrix)#e});
+   
    --initialize (in an effort to save space, we're going to overwrite these variables in the loops below)
    Kscalar := (coefficientRing M.ring)^(fromDim*cols);
    nextKer := 0;  
@@ -1210,9 +1234,11 @@ minUsing = (xs,f) -> (
 
 divides = (x,y) -> (y // x)*x == y
 
-remainderFunction2 = (f,ncgb) -> (
+remainderFunction2 = method(Options => {"DontUse" => 0})
+remainderFunction2 (NCRingElement,NCGroebnerBasis) := opts -> (f,ncgb) -> (
    if #(gens ncgb) == 0 then return f;
    if ((gens ncgb)#0).ring =!= f.ring then error "Expected GB over the same ring.";
+   dontUse := opts#"DontUse";
    ncgbHash := ncgb.generators;
    maxGBDeg := ncgb.maxNCGBDegree;
    minGBDeg := ncgb.minNCGBDegree;
@@ -1223,7 +1249,9 @@ remainderFunction2 = (f,ncgb) -> (
    gbHit := null;
    for p in pairsf do (
       substrs := substrings(p#0,minGBDeg,maxGBDeg);
-      foundSubstr = select(substrs, s -> ncgbHash#?(s#1) and divides(leadCoefficient ncgbHash#(s#1),p#1));
+      foundSubstr = select(substrs, s -> ncgbHash#?(s#1) and 
+                                         ncgbHash#(s#1) != dontUse and
+                                         divides(leadCoefficient ncgbHash#(s#1),p#1));
       coeff = p#1;
       if foundSubstr =!= {} then (
          foundSubstr = minUsing(foundSubstr, s -> size ncgbHash#(s#1));
@@ -1241,7 +1269,9 @@ remainderFunction2 = (f,ncgb) -> (
       coeff = null;
       for p in pairsf do (
          substrs := substrings(p#0,minGBDeg,maxGBDeg);
-         foundSubstr = select(substrs, s -> ncgbHash#?(s#1) and divides(leadCoefficient ncgbHash#(s#1),p#1));
+         foundSubstr = select(substrs, s -> ncgbHash#?(s#1) and
+                                            ncgbHash#(s#1) != dontUse and
+                                            divides(leadCoefficient ncgbHash#(s#1),p#1));
          coeff = p#1;
          if foundSubstr =!= {} then (
             foundSubstr = minUsing(foundSubstr, s -> size ncgbHash#(s#1));
@@ -1933,7 +1963,6 @@ M = coker kRes.dd_5
 B = endomorphismRing(M,X);
 gensI = gens ideal B;
 newGensI = minimizeRelations(gensI, Verbosity=>1)
-partialInterreduce newGensI
 ------------------------------------
 --- Testing out endomorphism code
 restart
@@ -1945,12 +1974,6 @@ M = coker kRes.dd_5
 B = endomorphismRing(M,X);
 gensI = gens ideal B;
 gensIMin = minimizeRelations(gensI, Verbosity=>1);
-newGensI = partialInterreduce gensIMin;
-newGensI = partialInterreduce newGensI;
-newGensI2 = minimizeRelations(newGensI, Verbosity=>1)
-newGensI2' = partialInterreduce newGensI2'
-minimizeRelations(newGensI2', Verbosity => 1)
-unique flatten (newGensI2 / support)
 
 --------------------------------------
 --- Skew group ring example?
@@ -1965,12 +1988,7 @@ phi = map(S,R,matrix{{x^2,x*y,x*z,y^2,y*z,z^2}})
 M = pushForward(phi,S^1)
 B = endomorphismRing(M,X)
 gensI = gens ideal B;
-netList pack(8,gensI)
-
-A = ambient B
-f = a*d*X_4
-tempGb = ncGroebnerBasis({a*X_4},InstallGB=>true)
-remainderFunction2(f,tempGb)
+gensIMin = minimizeRelations(gensI, Verbosity=>1)
 
 first gensI
 first newGensI
