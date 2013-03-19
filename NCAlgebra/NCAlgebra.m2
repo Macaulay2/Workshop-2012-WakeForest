@@ -1683,27 +1683,15 @@ end
 
 --- bug fix/performance improvements
 ------------------------------------
---- The system currently does not handle nc algebras with coefficients
----    from a ring that is not a field correctly.  Elements that
----    reduce to zero are zero in a quotient, but just because an
----    element does not reduce to zero, does not mean that the element
----    is not zero.  This stems from the fact that in case the base
----    ring is not a field, the lead term of an element in R{X} is
----    then the product of the lead term in R of the coefficient of
----    the lead term in the Xs.  To fix this I will have to rewrite
----    part of the remainder function, as well as the hashTable
----    structure of the gb itself.
-
---- While I am mucking around with the guts, I may as well fix the bug
----    that the variables are considered in lex order, but in the opposite
----    order that is presented.  This should 'just' be changing first
----    to last in various places, but tracking all these down could be
+---    Because Frank was stupid at the beginning, the variables are considered
+---    in lex order, but in the opposite order that is presented.  This should 'just' be changing 'first'
+---    to 'last' in various places, but tracking all these down could be
 ---    tricky.
 
 --- other things to add in due time
 -----------------------------------
 --- NCRingMap kernels (to a certain degree)  -- Not sure I can do this with Bergman, can't use
----   elimination orders (with several variables) in bergman.
+---   block orders in bergman.
 --- anick          -- resolution
 --- ncpbhgroebner  -- gb, hilbert series
 --- NCModules (?) (including module gb (via simple), hilbert series, modulebettinumbers)
