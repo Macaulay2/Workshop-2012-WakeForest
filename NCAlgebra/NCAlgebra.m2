@@ -1870,18 +1870,9 @@ end
 
 --- bug fix/performance improvements
 ------------------------------------
----    Fix Ore extension with subscripted variables.  This uncovered a bug that is
----       going to require a rewrite of NCMonomial as a HashTable rather than a List.
----       The new piece of information needed is the ring that the NCMonomial is in.
-
 ---    Make the degrees persist when multiplying matrices.
 ---       If the degrees don't match, then still multiply matrices
 ---       but just get rid of degrees.
-
----    Because Frank was stupid at the beginning, the variables are considered
----    in lex order, but in the opposite order that is presented.  This should 'just' be changing 'first'
----    to 'last' in various places, but tracking all these down could be
----    tricky.
 
 --- other things to add in due time
 -----------------------------------
@@ -1890,8 +1881,6 @@ end
 --- anick          -- resolution
 --- ncpbhgroebner  -- gb, hilbert series
 --- NCModules (?) (including module gb (via simple), hilbert series, modulebettinumbers)
---- (Right) Kernels of homogeneous maps between non-pure free modules  (can now do with bergman, but
----    it's not the *most* efficient method.  Should implement.  Need to do modules first.
 --- Free resolutions of koszul algebras
 --- Factoring one (homogeneous) map through another (can do with bergman, or with homogeneous trick.  However
 ---   For large matrices and large maps, this could take a long time in top level M2.
