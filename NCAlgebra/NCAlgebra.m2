@@ -1142,14 +1142,15 @@ rightKernelBergman (NCMatrix) := opts -> (M) -> (
       error "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time.";
    if not isHomogeneous M then
       error "Expected a homogeneous matrix.";
+   maxKerDeg := max M.source + opts#DegreeLimit;
    C := buildMatrixRing(M);
    matrRels := buildMatrixRelations(C,M);
    kerGBGens := gens twoSidedNCGroebnerBasisBergman(matrRels,
                                                     "NumModuleVars" => numgens C - numgens B,
-                                                    DegreeLimit => opts#DegreeLimit,
+                                                    DegreeLimit => maxKerDeg,
                                                     ClearDenominators=>false,
                                                     CacheBergmanGB=>false);
-   kerM := minimizeMatrixKerGens(C,M,kerGBGens, DegreeLimit=>10);
+   kerM := minimizeMatrixKerGens(C,M,kerGBGens, DegreeLimit=>maxKerDeg);
    kerMtar := M.source;
    kerMsrc := kerM.cache#"kerGens" / degree;
    assignDegrees(kerM,kerMtar,kerMsrc);
@@ -2412,24 +2413,15 @@ findNormalComplement(f,z)
 --- one more test...
 restart
 debug needsPackage "NCAlgebra"
-A = (frac(QQ[a_0..a_5])) {x,y,z};
-(coefficientRing A)
-gensA = gens A;
-net gensA#0
-net gensA#1
-net gensA#2
-y^2*x-x*y^2
-y*x^2-x^2*y
-z*x-y^2+x*z
-z*y+y*z-x^2
-z^2-y*x-x*y
+A = (QQ[a_0..a_5]) {x,y,z};
 gensI = {y^2*x-x*y^2, y*x^2-x^2*y, z*x-y^2+x*z, z*y+y*z-x^2, z^2-y*x-x*y}
 I = ncIdeal gensI
 Igb = ncGroebnerBasis(I, InstallGB=>true)
 B = A/I
 f = a_0*x^2 + a_1*x*y + a_1*y*x + a_4*y^2
-isCentral f
-isNormal f
+centralElements(B,3)
+normalElements(B,3,b,c)
+basis(3,B)
 
 ------------------------------------
 --- Testing out endomorphism code
@@ -2509,7 +2501,7 @@ f1 = y*z + z*y - x^2
 f2 = x*z + z*x - y^2
 f3 = z^2 - x*y - y*x
 g = -y^3-x*y*z+y*x*z+x^3
-I = ncIdeal {f1,f2,f3,2*g}
+I = ncIdeal {f1,f2,f3,g}
 B = A/I
 M3 = ncMatrix {{x,y,z,0},
                {-y*z-2*x^2,-y*x,z*x-x*z,x},
@@ -2519,11 +2511,14 @@ assignDegrees(M3,{1,0,0,0},{2,2,2,1})
 assert isHomogeneous M3
 ker1M3 = rightKernelBergman(M3)
 assert isHomogeneous ker1M3
+M3*ker1M3    --- make NCMatrix == 0 work
 ker2M3 = rightKernelBergman(ker1M3)
 assert isHomogeneous ker2M3
+ker1M3*ker2M3
 -- bug.  I think this is because the matrix is injective up to the degree given
 ker3M3 = rightKernelBergman(ker2M3)
 assert isHomogeneous ker3M3  
+ker2M3*ker3M3
 
 -------------------------------------
 --- Testing lead terms
