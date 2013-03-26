@@ -145,6 +145,7 @@ new NCPolynomialRing from List := (NCPolynomialRing, inits) -> new NCPolynomialR
 
 Ring List := (R, varList) -> (
    -- get the symbols associated to the list that is passed in, in case the variables have been used earlier.
+   if #varList == 0 then error "Expected at least one variable.";
    if #varList == 1 and class varList#0 === Sequence then varList = toList first varList;
    varList = varList / baseName;
    A := new NCPolynomialRing from {(symbol generators) => {},
@@ -160,9 +161,9 @@ Ring List := (R, varList) -> (
    
    setWeights(A, toList (#(gens A):1));
       
-   promote (ZZ,A) := (n,A) -> putInRing({},A,sub(n,R));
+   promote (ZZ,A) := (n,A) -> putInRing({},A,promote(n,R));
 
-   promote (QQ,A) := (n,A) -> putInRing({},A,sub(n,R));
+   promote (QQ,A) := (n,A) -> putInRing({},A,promote(n,R));
    
    promote (R,A) := (n,A) -> putInRing({},A,n);
    
@@ -193,6 +194,7 @@ Ring List := (R, varList) -> (
                             (symbol cache, new CacheTable from {}),
                             (symbol terms, removeZeroes hashTable pairs newHash)}
    );
+
    A ^ ZZ := (f,n) -> product toList (n:f);
 
    R * A := (r,f) -> promote(r,A)*f;
@@ -220,7 +222,7 @@ Ring List := (R, varList) -> (
    QQ == A := (n,f) -> f == n;
    A == R := (f,n) -> (#(f.terms) == 0 and n == 0) or (#(f.terms) == 1 and ((first pairs f.terms)#0#monList === {}) and ((first pairs f.terms)#1 == n));
    R == A := (n,f) -> f == n;
-   
+
    A
 )
 
@@ -262,11 +264,11 @@ NCPolynomialRing / NCIdeal := (A, I) -> (
                                          (symbol cache) => new CacheTable from {},
                                          (symbol terms) => promoteHash(f.terms,A)};
 
-   promote (ZZ,B) := (n,B) -> putInRing({},B,sub(n,A.CoefficientRing));
+   promote (ZZ,B) := (n,B) -> putInRing({},B,promote(n,A.CoefficientRing));
 
-   promote (QQ,B) := (n,B) -> putInRing({},B,sub(n,A.CoefficientRing));
+   promote (QQ,B) := (n,B) -> putInRing({},B,promote(n,A.CoefficientRing));
    
-   promote (R,B) := (n,B) -> putInRing({},B,sub(n,A.CoefficientRing));
+   promote (R,B) := (n,B) -> putInRing({},B,promote(n,A.CoefficientRing));
    
    promote (B,B) := (f,B) -> f;
 
@@ -551,14 +553,14 @@ putInRing (NCMonomial, QQ) :=
 putInRing (NCMonomial, RingElement) := (mon,coeff) ->
       new (mon.ring) from {(symbol ring) => mon.ring,
                            (symbol cache) => new CacheTable from {},
-                           (symbol terms) => new HashTable from {(mon,coeff)}}
+                           (symbol terms) => new HashTable from {(mon,promote(coeff,coefficientRing (mon.ring)))}}
 putInRing (List, NCRing, ZZ) := 
 putInRing (List, NCRing, QQ) :=
 putInRing (List, NCRing, RingElement) := (monList,A,coeff) -> (
     mon := ncMonomial(monList,A);
     new A from {(symbol ring) => A,
                 (symbol cache) => new CacheTable from {},
-                (symbol terms) => new HashTable from {(mon,coeff)}}
+                (symbol terms) => new HashTable from {(mon,promote(coeff,coefficientRing A))}}
 )
 
 NCMonomial _ List := (mon,substr) -> ncMonomial((mon#monList)_substr,mon.ring)
@@ -603,28 +605,28 @@ toIndexList NCMonomial := mon -> (
 -----------------------------------------
 
 net NCRingElement := f -> (
-   if #(f.terms) == 0 then "0" else (
-      firstTerm := true;
-      myNet := net "";
-      for t in sort pairs f.terms do (
-         tempNet := net t#1;
-         printParens := ring t#1 =!= QQ and ring t#1 =!= ZZ and size t#1 > 1;
-         myNet = myNet |
-                 (if not firstTerm and t#1 > 0 then
-                    net "+"
-                 else 
-                    net "") |
-                 (if printParens then net "(" else net "") | 
-                 (if t#1 != 1 and t#1 != -1 then
-                    tempNet
-                  else if t#1 == -1 then net "-"
-                  else net "") |
-                 (if printParens then net ")" else net "") |
-                 (if t#0#monList === {} and (t#1 == 1 or t#1 == -1) then net "1" else net t#0);
-         firstTerm = false;
-      );
-      myNet
-   )
+   if #(f.terms) == 0 then return net "0";
+   
+   firstTerm := true;
+   myNet := net "";
+   for t in sort pairs f.terms do (
+      tempNet := net t#1;
+      printParens := ring t#1 =!= QQ and ring t#1 =!= ZZ and size t#1 > 1;
+      myNet = myNet |
+              (if not firstTerm and t#1 > 0 then
+                 net "+"
+              else 
+                 net "") |
+              (if printParens then net "(" else net "") | 
+              (if t#1 != 1 and t#1 != -1 then
+                 tempNet
+               else if t#1 == -1 then net "-"
+               else net "") |
+              (if printParens then net ")" else net "") |
+              (if t#0#monList === {} and (t#1 == 1 or t#1 == -1) then net "1" else net t#0);
+      firstTerm = false;
+   );
+   myNet
 )
 
 toStringMaybeSort := method(Options => {"Sort" => false})
@@ -2380,6 +2382,51 @@ matrix phi
 phi2 = normalAutomorphism w^2
 matrix phi2
 
+-- another normal element test
+restart
+debug needsPackage "NCAlgebra"
+A = QQ{a,b,c}
+I = ncIdeal {a*b+b*a,a*c+c*a,b*c+c*b}
+B = A/I
+normalElements(B,1,x,y)
+
+-- another test
+restart
+debug needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+I = ncIdeal {y*z + z*y - x^2,x*z + z*x - y^2,z^2 - x*y - y*x}
+B = A/I
+basis(2,B)
+normalElements(B,2,a,b)
+f = x^2+2*x*y+2*y*x+3*y^2
+isNormal f
+isCentral f
+findNormalComplement(f,x)
+findNormalComplement(f,y)
+findNormalComplement(f,z)
+
+--- one more test...
+restart
+debug needsPackage "NCAlgebra"
+A = (frac(QQ[a_0..a_5])) {x,y,z};
+(coefficientRing A)
+gensA = gens A;
+net gensA#0
+net gensA#1
+net gensA#2
+y^2*x-x*y^2
+y*x^2-x^2*y
+z*x-y^2+x*z
+z*y+y*z-x^2
+z^2-y*x-x*y
+gensI = {y^2*x-x*y^2, y*x^2-x^2*y, z*x-y^2+x*z, z*y+y*z-x^2, z^2-y*x-x*y}
+I = ncIdeal gensI
+Igb = ncGroebnerBasis(I, InstallGB=>true)
+B = A/I
+f = a_0*x^2 + a_1*x*y + a_1*y*x + a_4*y^2
+isCentral f
+isNormal f
+
 ------------------------------------
 --- Testing out endomorphism code
 restart
@@ -2475,7 +2522,7 @@ ker3M3 = rightKernelBergman(ker2M3)
 assert isHomogeneous ker3M3  
 
 -------------------------------------
---- Making lead terms work right
+--- Testing lead terms
 restart
 debug needsPackage "NCAlgebra"
 A = QQ{a,b,c,d}
@@ -2491,3 +2538,30 @@ dictionaryPath = prepend(junkDic,dictionaryPath)
 RoW
 dictionaryPath = drop(dictionaryPath,1)
 RoW
+
+--- Serious Bug ?!?
+restart
+debug needsPackage "NCAlgebra"
+A = (frac(QQ[a])) {x,y,z};
+gensA = gens A;
+net gensA#0
+net gensA#0 -- this call fails.  The first net changes something, and now
+            -- any attempt to look at pairs (gensA#0).terms results in an error.
+
+restart
+debug needsPackage "NCAlgebra"
+A = (QQ[a]) {x,y,z};
+gensA = gens A;
+net gensA#0
+net gensA#0 -- this works.
+
+restart
+debug needsPackage "NCAlgebra"
+A = QQ {x,y,z};
+(coefficientRing A)
+gensA = gens A;
+net gensA#0
+net gensA#0  -- this works
+
+
+
