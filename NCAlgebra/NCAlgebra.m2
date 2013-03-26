@@ -2543,7 +2543,7 @@ RoW
 dictionaryPath = drop(dictionaryPath,1)
 RoW
 
---- Serious Bug ?!?
+--- Bug #1
 restart
 debug needsPackage "NCAlgebra"
 A = (frac(QQ[a])) {x,y,z};
@@ -2551,6 +2551,7 @@ gensA = gens A;
 net gensA#0
 net gensA#0 -- this call fails.  The first net changes something?  SIGSEGV
 
+--- Bug #2
 restart
 debug needsPackage "NCAlgebra"
 A = (frac(QQ[a])) {x,y,z};
