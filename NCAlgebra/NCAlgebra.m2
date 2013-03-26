@@ -187,7 +187,8 @@ Ring List := (R, varList) -> (
       for t in pairs f.terms do (
          for s in pairs g.terms do (
             newMon := t#0 | s#0;
-            if newHash#?newMon then newHash#newMon = newHash#newMon + t#1*s#1 else newHash#newMon = t#1*s#1;
+            newCoeff := (t#1)*(s#1);
+            if newHash#?newMon then newHash#newMon = newHash#newMon + newCoeff else newHash#newMon = newCoeff;
          );
       );
       new A from hashTable {(symbol ring, f.ring),
@@ -733,6 +734,9 @@ support NCRingElement := f -> (
    varSymbols := unique flatten apply(pairs (f.terms), (m,c) -> unique toList m#monList);
    apply(varSymbols, v -> putInRing({v},f.ring,1))
 )
+
+NCRingElement * List := (f,xs) -> apply(xs, x -> f*x);
+List * NCRingElement := (xs,f) -> apply(xs, x -> x*f);
 
 isCentral = method()
 isCentral (NCRingElement, NCGroebnerBasis) := (f,ncgb) -> (
@@ -2545,8 +2549,17 @@ debug needsPackage "NCAlgebra"
 A = (frac(QQ[a])) {x,y,z};
 gensA = gens A;
 net gensA#0
-net gensA#0 -- this call fails.  The first net changes something, and now
-            -- any attempt to look at pairs (gensA#0).terms results in an error.
+net gensA#0 -- this call fails.  The first net changes something?  SIGSEGV
+
+restart
+debug needsPackage "NCAlgebra"
+A = (frac(QQ[a])) {x,y,z};
+gensA = gens A;
+net gensA#0
+(gensA#0) * (gensA#0);   -- this call fails.  The first net changes something, and now
+                         -- I don't understand what the error message is, and I can't reproduce
+                         -- it in the debugger.
+
 
 restart
 debug needsPackage "NCAlgebra"
@@ -2562,6 +2575,3 @@ A = QQ {x,y,z};
 gensA = gens A;
 net gensA#0
 net gensA#0  -- this works
-
-
-
