@@ -208,7 +208,7 @@ net FilteredComplex := K -> (
 
 zpq:= (K,p,q,r)->(
 ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1), 
-     K_p _ (p+q), K_(infinity).dd_(p+q))
+     K_p _ (p+q), K_(infinity).dd_(p+q), Verify => false)
      )
 
 
@@ -237,7 +237,7 @@ computeErModules(FilteredComplex,ZZ):= (K,r) -> (myList:={};
 -- the following will compute the pq maps on the rth page explicitly.
 epqrMaps = method()
 epqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
-     inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),(K_infinity).dd_(p+q)))
+     inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),(K_infinity).dd_(p+q), Verify => false))
 
 -- the following will prune the pq maps on the rth page explicitly. --
 pruneEpqrMaps = method()
@@ -1702,15 +1702,90 @@ viewHelp SpectralSequences
 -- All examples seem to work correctly.
 --
 
+-- An example on PP^1 x PP^1
+-- I think that the following
+-- computes the cohomology of a g^1_3 
+-- on a canonical curve of genus 4.
+-- of course the hypercohomology spectral sequence is not
+-- very interesting but at least it is a proof of concept.
+-- (need to use the above first.)
+
+restart
+needsPackage "SpectralSequences";
+
+R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]
+B = intersect(ideal(a_0,a_1),ideal(b_0,b_1))
+B = B_*/(x -> x^5)//ideal
+C = res image gens B
+C' = prune dual C
+I = ideal random(R^1, R^{{-3,-3}})
+D = res comodule I
+
+-- will want to twist D by an appropriate line bundle
+-- e.g. one of the lines of ruling to produce one of the g^1_3 's 
+
+K = C' ** filteredComplex (D ** R^{{1,0}});
+
+E = prune spectralSequence K
+E^0
+E^0_{2,0}
+E^1
+
+basis({0,0}, E^1_{0,0})
+basis({0,0}, E^1_{1,-2})
+
+-- these are both 2 dimensional which is what we want.
+
+
+--Try PP^1 x PP^1 X PP^1
+-- computer could compute the E^2 page in this example.  
+restart
+needsPackage "SpectralSequences";
+
+R = ZZ/101[a_0..c_1, Degrees=>{2:{1,0,0},2:{0,1,0},2:{0,0,1}}]
+B = intersect(ideal(a_0,a_1),ideal(b_0,b_1), ideal(c_0,c_1))
+B = B_*/(x -> x^5)//ideal
+C = res image gens B
+C' = prune dual C;
+I = ideal random(R^2, R^{{-1,-1,-1}});
+D = res comodule I;
+
+K = (C') ** (filteredComplex D);
+
+E = prune spectralSequence K
+
+E^0;
+E^1;
+E^2;
+
+--Try PP^1 x PP^2 
+-- The E^2 page could be computed as well.  
+restart
+needsPackage "SpectralSequences";
+
+R = ZZ/101[a_0,a_1,b_0..b_2, Degrees=>{2:{1,0},3:{0,1}}]
+B = intersect(ideal(a_0,a_1),ideal(b_0,b_1,b_2))
+B = B_*/(x -> x^5)//ideal
+C = res image gens B
+C' = prune dual C;
+I = ideal random(R^2, R^{{-1,-1}});
+D = res comodule I;
+K = (C') ** (filteredComplex D);
+
+E = prune spectralSequence K
+
+E^0
+E^1
+E^2
+
+
+-------
 restart
 needsPackage "SpectralSequences";
 needsPackage "SimplicialComplexes"; 
 --needsPackage "ChainComplexExtras";
 debug SpectralSequences;
 
--- the following example exposes a potential bug in the code.
--- in this example we are trying out spectral sequences
--- arising from filtered complexes which do not consist of free modules.
 
 A = QQ[x_0..x_4]
 
@@ -1739,91 +1814,9 @@ k = (filteredComplex e) ** F
 
 ee = prune spectralSequence k
 ee^0
---- there is an induced map error when we try to compute the ee^1 page.
 ee^1
 ee^2
 
--- try to track down the bug.
-
-help epqrMaps
-myList = select(keys ee^0 .dd, i -> class i === List)
-
-#myList
-
-epqrMaps(k,2,2,1)
-epq(k,2,2,1)
-k_infinity _4
-
-image id_(k_3) _4
-spots k
-f := (p,q,r) -> {p-r,q + r -1}
-f(2,2,1)
-peek epq(k,1,2,1)
-ambient epq(k,1,2,1)
-peek epq
-
-inducedMap(epq(k,1,2,1), epq(k,2,2,1),  k_infinity .dd_(4))
-
-epq(k,2,2,1)
-
-epq(k,1,2,1)
-
-cover k_infinity .dd_(4)
-image id_(k_infinity)
-inducedMap(epq(k,1,2,1), epq(k,2,2,1),  cover k_infinity .dd_(4))
-
-inducedMap(epq(k,1,2,1), epq(k,2,2,1),  (image id_(k_infinity)) .dd_(4))
-
--- note after some trial and error, the following seems to work ok.
-
-inducedMap(image id_(epq(k,1,2,1)),image id_(epq(k,2,2,1)), k_infinity .dd_4) 
-
--- so maybe this will work in general??
-
-testEpqrMaps = method()
-testEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
-     inducedMap(image id_(epq(K,p-r,q+r-1,r)), image id_(epq(K,p,q,r)),(K_infinity).dd_(p+q)))
-myList
-testEpqrMaps(k,2,2,1)
- apply(myList, i -> testEpqrMaps(k,i#0, i#1,1))
--- so everything seems to be computed.
-
--- now try the E2 page.
-apply(myList, i -> testEpqrMaps(k,i#0, i#1,2))
--- so there is still a bug here.
-apply(4 , i -> testEpqrMaps(k,myList#i #0, myList#i #1,2))
-myList#3
-testEpqrMaps(k,3,0,2)
-
-epq(K,3,0,2)
-prune epq(K,3,0,2)
-
-f(3,0,2)
-
-prune epq(K,1,1,2)
-
-inducedMap(image id_(epq(k,1,1,2)), image id_(epq(k,3,0,2)),  k_infinity .dd_3)
-
-epq(K,1,1,2)
-
-cover k_infinity .dd_3
-ambient epq(k,3,0,2)
-ambient epq(k,1,2,2)
-
-image id_(k_infinity _2)
-image id_(k_infinity _3)
-
--- try some other fiddling around.
-g = inducedMap(image id_(k_infinity _2), image id_(k_infinity _3), k_infinity .dd_3)
-inducedMap(image id_(epq(k,1,1,2)), image id_(epq(k,3,0,2)), g)
-
-g == k_infinity .dd_3
-f = k_infinity .dd_3
-g = (f* id_(source f)) // id_(target f)
-inducedMap(image id_(epq(k,1,1,2)), image id_(epq(k,3,0,2)), g)
-inducedMap(image id_(epq(k,1,1,2)), image id_(epq(k,3,0,2)), cover g)
-
--- so this needs to be investigated further.
 
 --
 -- Now try to replace C with a free resolution.
