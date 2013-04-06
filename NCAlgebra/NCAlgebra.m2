@@ -47,6 +47,9 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          wallTiming
 }
 
+MAXDEG = 50
+MAXSIZE = 50
+
 bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
@@ -73,6 +76,9 @@ minUsing = (xs,f) -> (
    n := min (xs / f);
    first select(1,xs, x -> f x == n)
 )
+
+sortUsing = (xs,f) -> (sort apply(xs, x -> (f x, x))) / last
+reverseSortUsing = (xs, f) -> (reverse sort apply(xs, x -> (f x, x))) / last
 
 -- get base m representation of an integer n
 rebase = (m,n) -> (
@@ -137,6 +143,11 @@ promoteHash = (termHash,A) -> (
    hashTable apply(pairs termHash, p -> (ncMonomial(p#0#monList,A),p#1))
 )
 
+isHomogeneous NCRing := A -> (
+   if instance(A,NCPolynomialRing) then true
+   else isHomogeneous ideal A
+)
+
 -------------------------------------------
 --- NCPolynomialRing methods --------------
 -------------------------------------------
@@ -167,7 +178,12 @@ Ring List := (R, varList) -> (
    
    promote (R,A) := (n,A) -> putInRing({},A,n);
    
-   promote (NCMatrix,A) := (M,A) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> promote(entry,A))); 
+   promote (NCMatrix,A) := (M,A) -> (
+       prom := ncMatrix apply(M.matrix, row -> apply(row, entry -> promote(entry,A)));
+       if isHomogeneous M then
+          assignDegrees(prom,M.target,M.source);
+       prom
+   );
 
    promote (A,A) := (f,A) -> f;
    
@@ -273,7 +289,12 @@ NCPolynomialRing / NCIdeal := (A, I) -> (
    
    promote (B,B) := (f,B) -> f;
 
-   promote (NCMatrix,B) := (M,B) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> promote(entry,B)));
+   promote (NCMatrix,B) := (M,B) -> (
+      prom := ncMatrix apply(M.matrix, row -> apply(row, entry -> promote(entry,B)));
+      if isHomogeneous M then
+         assignDegrees(prom,M.target,M.source);
+      prom
+   );
 
    lift B := opts -> f -> promote(f,A);
    push := f -> (
@@ -283,7 +304,7 @@ NCPolynomialRing / NCIdeal := (A, I) -> (
                   (symbol terms) => promoteHash(temp.terms,B)}
    );
    B * B := (f,g) -> push((lift f)*(lift g));
-   B ^ ZZ := (f,n) -> push((lift f)^n);  -- note that ^ for tensor algebra uses faster expon. already
+   B ^ ZZ := (f,n) -> product toList (n:f);
    B + B := (f,g) -> push((lift f)+(lift g));
    R * B := (r,f) -> push(r*(lift f));
    B * R := (f,r) -> r*f;
@@ -488,13 +509,67 @@ ncIdeal NCRingElement := f -> ncIdeal {f}
 
 generators NCIdeal := opts -> I -> I.generators;
 
+isHomogeneous NCIdeal := I -> all(gens I, isHomogeneous)
+
 net NCIdeal := I -> "Two-sided ideal " | net (I.generators);
 
 ring NCIdeal := I -> I.ring
 
 NCIdeal + NCIdeal := (I,J) -> ncIdeal (gens I | gens J)
 
------------------------------------------------
+------------------------------------------------
+
+------------------------------------------------
+------------- NCRightIdeal ---------------------
+------------------------------------------------
+
+ncRightIdeal = method()
+ncRightIdeal List := idealGens -> (
+   if #idealGens == 0 then error "Expected at least one generator.";
+   new NCRightIdeal from new HashTable from {(symbol ring) => (idealGens#0).ring,
+                                        (symbol generators) => idealGens,
+                                        (symbol cache) => new CacheTable from {}}
+)
+
+ncRightIdeal NCRingElement := f -> ncIdeal {f}
+
+generators NCRightIdeal := opts -> I -> I.generators;
+
+isHomogeneous NCRightIdeal := I -> all(gens I, isHomogeneous)
+
+net NCRightIdeal := I -> "Right ideal " | net (I.generators);
+
+ring NCRightIdeal := I -> I.ring
+
+NCRightIdeal + NCRightIdeal := (I,J) -> ncIdeal (gens I | gens J)
+
+------------------------------------------------
+
+------------------------------------------------
+------------- NCLeftIdeal ---------------------
+------------------------------------------------
+
+ncLeftIdeal = method()
+ncLeftIdeal List := idealGens -> (
+   if #idealGens == 0 then error "Expected at least one generator.";
+   new NCLeftIdeal from new HashTable from {(symbol ring) => (idealGens#0).ring,
+                                        (symbol generators) => idealGens,
+                                        (symbol cache) => new CacheTable from {}}
+)
+
+ncLeftIdeal NCRingElement := f -> ncIdeal {f}
+
+generators NCLeftIdeal := opts -> I -> I.generators;
+
+isHomogeneous NCLeftIdeal := I -> all(gens I, isHomogeneous)
+
+net NCLeftIdeal := I -> "Left ideal " | net (I.generators);
+
+ring NCLeftIdeal := I -> I.ring
+
+NCLeftIdeal + NCLeftIdeal := (I,J) -> ncIdeal (gens I | gens J)
+
+------------------------------------------------
 
 -------------------------------------------
 --- NCMonomial functions ------------------
@@ -906,16 +981,17 @@ gbFromOutputFile(NCPolynomialRing,String) := opts -> (A,tempOutput) -> (
                               else
                                  replace(",",";",fileLines#i) | "\n"
                            );
-   -- save the 'old' state
+   -- save the 'old' state to move to tensor algebra (should I be doing all this with dictionaries?)
    oldVarSymbols := A.generatorSymbols;
    oldVarValues := oldVarSymbols / value;
+   use A;
    -- load dictionary on dictionaryPath if present.
    if A.cache#?Dictionary then dictionaryPath = prepend(A.cache#Dictionary,dictionaryPath);
    -- switch to tensor algebra
    gensList := select(gensString / value, f -> class f === Sequence) / first;
    -- roll back dictionaryPath, if present
    if A.cache#?Dictionary then dictionaryPath = drop(dictionaryPath,1);
-   -- roll back to old variables
+   -- roll back to old variables (maybe no longer in tensor algebra)
    scan(oldVarSymbols, oldVarValues, (sym,val) -> sym <- val);
    if opts#ClearDenominators then
       gensList = apply(gensList, f -> (leadCoefficient f)^(-1)*f);
@@ -1099,7 +1175,7 @@ hilbertBergman NCQuotientRing := opts -> B -> (
 -------------------------------------------------
 
 buildMatrixRing = method()
-buildMatrixRing (NCMatrix) := (M) -> (
+buildMatrixRing NCMatrix := M -> (
    rowsM := #(M.target);
    colsM := #(M.source);
    B := ring M;
@@ -1113,14 +1189,28 @@ buildMatrixRing (NCMatrix) := (M) -> (
    --- create the variables
    rowGens := toList (RoW_0..RoW_(rowsM-1));
    colGens := toList (CoL_0..CoL_(colsM-1));
+   --- store old values of B gens
+   oldVarSymbols := B.generatorSymbols;
+   oldVarValues := oldVarSymbols / value;
+   --- create the ring
    gensC := gensB | colGens | rowGens;
    C := kk gensC;
+   --- roll back B gens
+   scan(oldVarSymbols, oldVarValues, (sym,val) -> sym <- val);
+   --- fill the cache
    C.cache#Dictionary = varsDic;
+   C.cache#"MatrixRingOver" = B;
+   C.cache#"rows" = rowsM;
+   C.cache#"cols" = colsM;
+   -- set weights
    setWeights(C,weightsB | (M.source) | (M.target))
 )
 
 buildMatrixRelations = method()
-buildMatrixRelations (NCRing,NCMatrix) := (C,M) -> (
+buildMatrixRelations NCMatrix := M -> (
+   --- if done before, no need to recreate
+   if M.cache#?"BergmanRelations" then return M.cache#"BergmanRelations";
+   C := buildMatrixRing M;
    B := ring M;
    I := ideal B;
    rowsM := #(M.target);
@@ -1132,7 +1222,9 @@ buildMatrixRelations (NCRing,NCMatrix) := (C,M) -> (
    rowVars := gensC_{(#gensB+colsM)..(#gensC-1)};
    rowVarMatr := ncMatrix {rowVars};
    colVarMatr := ncMatrix {colVars};
-   ((gens ideal B) / (ambient phi)) | (flatten entries (rowVarMatr*(phi M)-colVarMatr))
+   bergmanRels := (flatten entries (rowVarMatr*(phi M) - colVarMatr));
+   M.cache#"BergmanRelations" = bergmanRels;
+   ((gens ideal B) / (ambient phi)) | bergmanRels
 )
 
 rightKernelBergman = method(Options=>{DegreeLimit=>10})
@@ -1143,24 +1235,145 @@ rightKernelBergman (NCMatrix) := opts -> (M) -> (
    if not isHomogeneous M then
       error "Expected a homogeneous matrix.";
    maxKerDeg := max M.source + opts#DegreeLimit;
-   C := buildMatrixRing(M);
-   matrRels := buildMatrixRelations(C,M);
-   kerGBGens := gens twoSidedNCGroebnerBasisBergman(matrRels,
-                                                    "NumModuleVars" => numgens C - numgens B,
-                                                    DegreeLimit => maxKerDeg,
-                                                    ClearDenominators=>false,
-                                                    CacheBergmanGB=>false);
-   kerM := minimizeMatrixKerGens(C,M,kerGBGens, DegreeLimit=>maxKerDeg);
-   kerMtar := M.source;
-   kerMsrc := kerM.cache#"kerGens" / degree;
-   assignDegrees(kerM,kerMtar,kerMsrc);
+   matrRels := buildMatrixRelations M;
+   C := ring first matrRels;
+   kerGBGens := getMatrixGB(M, DegreeLimit => maxKerDeg);
+   kerM := minimizeMatrixKerGens(C,M,gens kerGBGens, DegreeLimit=>maxKerDeg);
    kerM
 )
 
 getKernelElements = (kerGens,gensBinC,colGens) -> (
-   select(kerGens, f -> (fsupp := support f;
-                         isSubset(fsupp,gensBinC | colGens) and not isSubset(fsupp,gensBinC)))
+   select(kerGens, f -> isKernelElement(f,gensBinC,colGens))
 )
+
+isKernelElement = (f, gensBinC, colGens) -> (
+   fsupp := support f;
+   isSubset(fsupp,gensBinC | colGens) and not isSubset(fsupp,gensBinC)
+)
+
+getModuleCoefficients = method()
+getModuleCoefficients (List, List) := (modElts, modVars) -> (
+   --- this is for the case of an ideal, where there is not a 'module' element.
+   if modVars == {} then return ncMatrix {modElts};
+   --- the rest is for honest module coefficients
+   C := ring first modElts;
+   B := C.cache#"MatrixRingOver";
+   cols := C.cache#"cols";
+   rows := C.cache#"rows";
+   bGensList := apply(gens B | toList (cols:0) | toList (rows:0), f -> promote(f,B));
+   CtoB := ncMap(B,C,bGensList);
+   modVarSymbols := modVars / baseName;
+   -- finally, build the matrix corresponding to the kernel
+   MkerC := ncMatrix {for f in modElts list (
+      -- need to get the coefficients of each element as a column vector.
+      -- the entry in row i of this column vector will be the coefficient of Col_i
+      -- need to be careful, however, since there may be several entries with Col_i
+      -- as a leading coefficient.
+      eltCoeffs := new MutableHashTable from {};
+      -- put in all module variables with zeroes
+      scan(modVarSymbols, c -> eltCoeffs#c = promote(0,C));
+      for p in pairs f.terms do (
+         modvar := first p#0#monList;
+         theRest := putInRing(drop(p#0#monList,1),C,1);
+         if eltCoeffs#?modvar then
+            eltCoeffs#modvar = eltCoeffs#modvar + theRest*(p#1);
+      );
+      ncMatrix apply(modVarSymbols, c -> {eltCoeffs#c})
+   )};
+   --- make homogeneous
+   if all(modElts, isHomogeneous) then
+      assignDegrees(MkerC,modVars / degree,modElts / degree);
+   CtoB MkerC
+)
+
+rightMingens = method()
+rightMingens NCMatrix := M -> (
+   --- returns a minimal generating set of the right column space
+   --- of the input matrix 
+   B := ring M;
+   if not B#"BergmanRing" then 
+      error "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time.";
+   if not isHomogeneous M then
+      error "Expected a homogeneous matrix.";
+   minDeg := min M.source;
+   minDegPos := positions(M.source, m -> m == minDeg);
+   otherPos := positions(M.source, m -> m != minDeg);
+   minGens := M_minDegPos;
+   loopM := M;
+   --- rewrite using module elements rather than matrices?  Probably faster.
+   while otherPos != {} do (
+      loopM = loopM_otherPos;
+      facMatr := loopM // minGens;
+      remainders := loopM - minGens*facMatr;
+      possGens := positions(toList(0..#otherPos-1), i -> remainders_{i} != 0);
+      if possGens != {} then (
+         minGens = minGens | loopM_{first possGens};
+         otherPos = drop(possGens, 1);
+      )
+      else
+         otherPos = possGens;
+   );
+   minGens
+)
+
+{*
+--- this was an attempt at speeding up the computations.  It is significantly slower.  I expect
+--- because Bergman is doing the reductions much faster than my code.
+rightMingens2 = method(Options => {DegreeLimit => 10})
+rightMingens2 NCMatrix := opts -> M -> (
+   B := ring M;
+   if not B#"BergmanRing" then 
+      error "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time.";
+   if not isHomogeneous M then
+      error "Expected a homogeneous matrix.";
+   cols := #(M.source);
+   rows := #(M.target);
+   maxDeg := max M.source + opts#DegreeLimit;
+   matrRels := buildMatrixRelations M;
+   C := ring first matrRels;
+   gensC := gens C;
+   gensBinC := take(gensC, numgens B);
+   rowGens := take(gensC, -rows);
+   ambBtoC := ambient ncMap(C,B,gensC);
+   --- At this point matrRels has the relations of the form Col_i - \sum_j f_ij RoW_j.
+   --- Need to zero out Col vars, compute a GB, grab the low degree elements, reduce
+   --- others mod a GB for that, grab the first nonzero element, add, repeat...
+   phi := ncMap(C,C,gensBinC | toList(cols:promote(0,C)) | rowGens);
+   initGB := gens twoSidedNCGroebnerBasisBergman((matrRels / phi) | ((gens ideal B) / ambBtoC),
+                                                "NumModuleVars" => numgens C - numgens B,
+                                                DegreeLimit => opts#DegreeLimit,
+                                                ClearDenominators=>false,
+                                                CacheBergmanGB=>false);
+   initGB = getKernelElements(initGB,gensBinC,rowGens);
+   initGB = sortUsing(initGB, f -> (degree f, size f));
+   --- at this point, initGB has a GB of the column space of the matrix.
+   minDeg := min (initGB / degree);
+   minGens := select(initGB, f -> degree f == minDeg);
+   otherGens := select(initGB, f -> degree f != minDeg);
+   while otherGens != {} do (
+      --- compute a GB of the mingens so far
+      minGensGB := twoSidedNCGroebnerBasisBergman(minGens | ((gens ideal B) / ambBtoC),
+                                              "NumModuleVars" => numgens C - numgens B,
+                                               DegreeLimit => opts#DegreeLimit,
+                                               ClearDenominators=>true,
+                                               CacheBergmanGB=>false);
+      --- reduce the other gens mod this GB, and select the nonzero images
+      possGens := select(apply(otherGens, f -> f % minGensGB), g -> g != 0);
+      if possGens != {} then (
+         -- if some don't reduce to zero, then add the first one, reset and continue
+         minGens = minGens | {first possGens};
+         otherGens = drop(possGens, 1);
+      )
+      else
+         otherGens = possGens;
+   );
+   -- at this point, minGens has the minimal generators we want.  Now put them in
+   -- a matrix.
+   minGensMatrix := getModuleCoefficients(minGens, rowGens);
+   assignDegrees(minGensMatrix,M.target, minGens / degree);
+   minGensMatrix
+)
+*}
 
 minimizeMatrixKerGens = method(Options => options rightKernelBergman)
 minimizeMatrixKerGens(NCPolynomialRing,NCMatrix,List) := opts -> (C,M,kerGens) -> (
@@ -1175,55 +1388,14 @@ minimizeMatrixKerGens(NCPolynomialRing,NCMatrix,List) := opts -> (C,M,kerGens) -
    gbIdealB := (gens ncGroebnerBasis ideal B) / ambientBtoC;
    colGens := gensC_{(numgens B)..(numgens B+cols-1)};
    colGenSymbols := (C.generatorSymbols)_{(numgens B)..(numgens B+cols-1)};
-   kerGens = getKernelElements(kerGens,gensBinC,colGens);
-   -- now, compute gbs in degree bunches, throwing away the redundant ones.
-   minDegree := min (kerGens / degree);
-   minKerGens := select(kerGens, f -> degree f == minDegree);
-   --- compute a GB of the minimal degree kernel elements
-   minKerGensGB := gens twoSidedNCGroebnerBasisBergman(gbIdealB | minKerGens,
-                                                       "NumModuleVars" => numgens C - numgens B,
-                                                       DegreeLimit => opts#DegreeLimit,
-                                                       ClearDenominators=>false,
-                                                       CacheBergmanGB=>false);
-   minKerGensGB = getKernelElements(minKerGensGB,gensBinC,colGens);
-   --- while this is not the whole GB,
-   while #minKerGensGB != #kerGens do (
-      -- grab the lowest degree elements not in the GB
-      newGBGens := toList ((set kerGens) - (set minKerGensGB));
-      minDegree = min (newGBGens / degree);
-      newGBGens = select(newGBGens, f -> degree f == minDegree);
-      -- and add them into the minimal generating set.
-      minKerGens = minKerGens | newGBGens;
-      minKerGensGB = gens twoSidedNCGroebnerBasisBergman(gbIdealB | minKerGens,
-                                                         "NumModuleVars" => numgens C - numgens B,
-                                                         DegreeLimit => opts#DegreeLimit,
-                                                         ClearDenominators=>false,
-                                                         CacheBergmanGB=>false);
-      minKerGensGB = getKernelElements(minKerGensGB,gensBinC,colGens);
-   );
-   -- Build the ring map to put it in the right ring
-   bGensList := apply(gens B | toList (cols:0) | toList (rows:0), f -> promote(f,B));
-   CtoB := ncMap(B,C,bGensList);
-   -- finally, build the matrix corresponding to the kernel
-   Mker := CtoB ncMatrix {for f in minKerGens list (
-      -- need to get the coefficients of each element as a column vector.
-      -- the entry in row i of this column vector will be the coefficient of Col_i
-      -- need to be careful, however, since there may be several entries with Col_i
-      -- as a leading coefficient.
-      eltCoeffs := new MutableHashTable from {};
-      -- put in all col variables with zeroes
-      scan(colGenSymbols, c -> eltCoeffs#c = promote(0,C));
-      for p in pairs f.terms do (
-         col := first p#0#monList;
-         theRest := putInRing(drop(p#0#monList,1),C,1);
-         eltCoeffs#col = eltCoeffs#col + theRest*(p#1)
-      );
-      ncMatrix apply(colGenSymbols, c -> {eltCoeffs#c})
-   )};
-   -- stash the kernel generators in the cache
-   Mker.cache#"kerGens" = minKerGens;
-   -- should also put the kernel in the cache too.
-   Mker
+   
+   kerGensElim := getKernelElements(kerGens,gensBinC,colGens);
+   sortGens := sortUsing(kerGensElim,f -> (degree f, #(terms f)));
+   kernelMatrix := getModuleCoefficients(sortGens,colGens);
+   
+   minMker := rightMingens kernelMatrix;
+   
+   minMker
 )
 
 ------------------------------------------------------------------
@@ -1456,7 +1628,7 @@ rightKernel(NCMatrix,ZZ):= opts -> (M,deg) -> (
 				              apply(L#i,j-> (if j == 0 then return toZeros else coefficients(j,Monomials=>pB#ind)))  
 				           ))};
 
-       	   nextKer = ker coeffs;
+       	   nextKer = sub(ker coeffs, coefficientRing M.ring);
 	   if opts#Verbosity > 0 then
               << "Updating kernel" << endl;
 	   Kscalar = intersect(Kscalar,nextKer);
@@ -1490,7 +1662,7 @@ isRightRegular (NCRingElement, ZZ) := (f,d) -> (
 
 
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
-   if (degree f <= 5 and size f <= 10) or not f.ring#"BergmanRing" then
+   if (degree f <= MAXDEG and size f <= MAXSIZE) or not f.ring#"BergmanRing" then
       remainderFunction(f,ncgb)
    else
       first normalFormBergman({f},ncgb)
@@ -1638,7 +1810,7 @@ isWellDefined NCRingMap := f -> (
 isHomogeneous NCRingMap := f -> (
    gensB := gens source f;
    gensC := gens target f;
-   all(gensB, x -> degree (f x) == degree x)
+   all(gensB, x -> degree (f x) == degree x or f x == 0)
 )
 
 NCRingMap _ ZZ := (f,n) -> (
@@ -1759,18 +1931,27 @@ NCMatrix * NCMatrix := (M,N) -> (
    rowsM := length M.matrix;
    colsN := length first N.matrix;
    -- lift entries of matrices to tensor algebra
+   local prod;
    if class B === NCQuotientRing then (
       MoverTens := lift M;
       NoverTens := lift N;
       prodOverTens := MoverTens*NoverTens;
       ncgb := B.ideal.cache#gb;
       reducedMatr := prodOverTens % ncgb;
-      promote(reducedMatr,B)
+      prod = promote(reducedMatr,B);
+      if isHomogeneous M and isHomogeneous N then
+         assignDegrees(prod,M.target,N.source);
+      prod
    )
    else
+   (
       -- not sure which of the below is faster
       -- ncMatrix apply(toList (0..(rowsM-1)), i -> apply(toList (0..(colsN-1)), j -> sum(0..(colsM-1), k -> ((M.matrix)#i#k)*((N.matrix)#k#j))))
-      ncMatrix table(toList (0..(rowsM-1)), toList (0..(colsN-1)), (i,j) -> sum(0..(colsM-1), k -> ((M.matrix)#i#k)*((N.matrix)#k#j)))
+      prod = ncMatrix table(toList (0..(rowsM-1)), toList (0..(colsN-1)), (i,j) -> sum(0..(colsM-1), k -> ((M.matrix)#i#k)*((N.matrix)#k#j)));
+      if isHomogeneous M and isHomogeneous N then
+         assignDegrees(prod,M.target,N.source);
+      prod
+   )
 )
 
 NCMatrix * Matrix := (M,N) -> (
@@ -1794,7 +1975,7 @@ NCMatrix % NCGroebnerBasis := (M,ncgb) -> (
    maxDeg := max(entriesM / degree);
    maxSize := max(entriesM / size);
    -- this code does not yet handle zero entries correctly when sending them to the bergman interface.
-   entriesMNF := if (maxDeg <= 5 or maxSize <= 5) or (coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing)) then 
+   entriesMNF := if (maxDeg <= MAXDEG or maxSize <= MAXSIZE) or (coeffRing =!= QQ and coeffRing =!= ZZ/(char coeffRing)) then 
                     apply(entriesM, f -> f % ncgb)
                  else
                     normalFormBergman(entriesM, ncgb);
@@ -1811,7 +1992,10 @@ NCMatrix + NCMatrix := (M,N) -> (
    rowsM := length M.matrix;
    colsN := length first N.matrix;
    if colsM != colsN or rowsM != rowsN then error "Matrices not the same shape.";
-   ncMatrix apply(toList(0..(rowsM-1)), i -> apply(toList(0..(colsM-1)), j -> M.matrix#i#j + N.matrix#i#j))
+   MpN := ncMatrix apply(toList(0..(rowsM-1)), i -> apply(toList(0..(colsM-1)), j -> M.matrix#i#j + N.matrix#i#j));
+   if isHomogeneous M and isHomogeneous N and M.target == N.target and M.source == N.source then
+      assignDegrees(MpN,M.target,M.source);
+   MpN
 )
 
 NCMatrix - NCMatrix := (M,N) -> (
@@ -1821,21 +2005,35 @@ NCMatrix - NCMatrix := (M,N) -> (
    rowsM := length M.matrix;
    colsN := length first N.matrix;
    if colsM != colsN or rowsM != rowsN then error "Matrices not the same shape.";
+   MmN := ncMatrix apply(toList(0..(rowsM-1)), i -> apply(toList(0..(colsM-1)), j -> M.matrix#i#j - N.matrix#i#j));
+   if isHomogeneous M and isHomogeneous N and M.target == N.target and M.source == N.source then
+      assignDegrees(MmN,M.target,M.source);
+   MmN
+)
 
-   ncMatrix apply(toList(0..(rowsM-1)), i -> apply(toList(0..(colsM-1)), j -> M.matrix#i#j - N.matrix#i#j))
+NCMatrix | NCMatrix := (M,N) -> (
+   if M.ring =!= N.ring then error "Expected matrices over the same ring.";
+   rowsN := length N.matrix;
+   rowsM := length M.matrix;
+   if rowsN != rowsM then error "Expected matrices with the same number of columns.";
+   pipe := ncMatrix apply(rowsN, i -> (M.matrix)#i | (N.matrix)#i);
+   if isHomogeneous M and isHomogeneous N and M.target == N.target then
+      assignDegrees(pipe,M.target, M.source | N.source);
+   pipe
 )
 
 NCMatrix * ZZ := (M,r) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> entry*sub(r,M.ring.CoefficientRing)))
 ZZ * NCMatrix := (r,M) -> M*r
 NCMatrix * QQ := (M,r) -> ncMatrix apply(M.matrix, row -> apply(row, entry -> entry*sub(r,M.ring.CoefficientRing)))
 QQ * NCMatrix := (r,M) -> M*r
+- NCMatrix := M -> (-1)*M
 NCMatrix * RingElement := (M,r) -> M*(promote(r,M.ring))
 RingElement * NCMatrix := (r,M) -> (promote(r,M.ring)*M)
 NCMatrix * NCRingElement := (M,r) -> (
    B := M.ring;
    s := promote(r,B);
    -- lift entries of matrices to tensor algebra
-   if class B === NCQuotientRing then (
+   Mr := if class B === NCQuotientRing then (
       MOverTens := lift M;
       sOverTens := lift s;
       prodOverTens := MOverTens*sOverTens;
@@ -1843,8 +2041,12 @@ NCMatrix * NCRingElement := (M,r) -> (
       reducedMatr := prodOverTens % ncgb;
       promote(reducedMatr,B)
    )
-   else
-      ncMatrix applyTable(M.matrix, m -> m*s)
+   else 
+      ncMatrix applyTable(M.matrix, m -> m*s);
+   --- now set the degrees properly
+   if isHomogeneous M and isHomogeneous r then
+      assignDegrees(Mr, M.target, apply(M.source, d -> d + degree r));
+   Mr
 )
 NCRingElement * NCMatrix := (r,M) -> (
    B := M.ring;
@@ -1880,8 +2082,10 @@ assignDegrees NCMatrix := M -> (
    -- if the zero matrix or entries not homogeneous, then just assign zero degrees.
    if entriesM == {} or any(entriesM, f -> not isHomogeneous f) then
       return assignDegrees(M,targetDeg,sourceDeg);
-   -- just make a guess based on first row.
-   sourceDeg = apply(first (M.matrix), f -> degree f);
+   colDegs := apply(transpose M.matrix, col -> unique apply(select(col, f -> f != 0), f -> degree f));
+   if not all(colDegs, coldeg -> #coldeg == 1) then
+      return assignDegrees(M,targetDeg,sourceDeg);
+   sourceDeg = apply(colDegs, coldeg -> if coldeg == {} then 0 else first coldeg);
    -- assign the degrees
    assignDegrees(M,targetDeg,sourceDeg);
    -- set the isHomogeneous flag
@@ -1905,12 +2109,81 @@ setIsHomogeneous = method()
 setIsHomogeneous NCMatrix := M -> (
    targetDeg := M.target;
    sourceDeg := M.source;
-   retVal := all(#(M.matrix), i -> all(i, j -> sourceDeg#j - degree ((M.matrix)#i#j) == targetDeg#i));
+   retVal := all(#(M.matrix), i -> all(#((M.matrix)#i), j -> (M.matrix)#i#j == 0 or sourceDeg#j - degree ((M.matrix)#i#j) == targetDeg#i));
    M#(symbol isHomogeneous) = retVal;
    retVal      
 )
 
 isHomogeneous NCMatrix := M -> M.?isHomogeneous and M.isHomogeneous
+
+NCMatrix _ List := (M,ns) -> (
+    M' := ncMatrix (transpose (transpose (M.matrix))_ns);
+    assignDegrees(M',M.target, (M.source)_ns);
+    M'
+)
+
+NCMatrix ^ List := (M,ns) -> (
+    M' := ncMatrix ((M.matrix)_ns);
+    assignDegrees(M',(M.target)_ns, M.source);
+    M'
+)
+
+NCMatrix // NCMatrix := (N,M) -> (
+   -- The function factors a map through another.  However, if no such lift is possible,
+   -- the function finds the 'closest' to a lift that it can by reducing the columns of N
+   -- modulo a GB for the image of M.  The answer satisfies M - N * (M // N) is equal to the
+   -- columns of N reduced modulo the image of M (similar to the // command for ordinary Matrices)
+   if not (isHomogeneous M and isHomogeneous N) then
+      error "Expected homogeneous maps.";
+   if M.target != N.target then
+      error "Expected maps with the same target.";
+   -- handle trivial cases now:
+   
+   -------------------------------
+   gbDegree := max N.source;   -- is this high enough of a degree to factor?
+   matrixRelsM := buildMatrixRelations M;
+   CM := ring first matrixRelsM;
+   matrixRelsN := buildMatrixRelations N;
+   CN := ring first matrixRelsN;
+   matrixGBM := getMatrixGB(M, DegreeLimit => gbDegree, ClearDenominators => true);
+   B := ring M;
+   colsN := #(N.source);
+   rowsN := #(N.target);
+   colsM := #(M.source);
+   rowsM := #(M.target);
+   phi := ncMap(CM,CN,take(gens CM, numgens B) | toList(colsN:promote(0,CM)) | take(gens CM, -rowsM));
+   colVarsCM := (gens CM)_{(numgens B)..(numgens B+colsM-1)};
+   reducedN := apply(N.cache#"BergmanRelations" / phi, f -> f % matrixGBM);
+   factorMap := getModuleCoefficients(reducedN,colVarsCM);
+   assignDegrees(factorMap, M.source, N.source);
+   factorMap
+)
+
+getMatrixGB = method(Options => {DegreeLimit => 10, ClearDenominators => false})
+getMatrixGB NCMatrix := opts -> M -> (
+   if M.cache#?"matrixGB" and M.cache#"gbDegree" >= opts#DegreeLimit then return M.cache#"matrixGB";
+   
+   matrRels := buildMatrixRelations M;
+   C := ring first matrRels;
+   B := ring M;
+   ambBtoC := ncMap (C,ambient B,take(gens C,numgens B));
+   mGB := twoSidedNCGroebnerBasisBergman(matrRels | ((gens ideal B) / ambBtoC),
+                                         "NumModuleVars" => numgens C - numgens B,
+                                         DegreeLimit => opts#DegreeLimit,
+                                         ClearDenominators=>opts#ClearDenominators,
+                                         CacheBergmanGB=>false);
+   M.cache#"matrixGB" = mGB;
+   M.cache#"gbDegree" = opts#DegreeLimit;
+
+   mGB
+)
+
+NCMatrix == NCMatrix := (M,N) -> (M.matrix) == (N.matrix)
+NCMatrix == ZZ := (M,n) -> (
+   if n != 0 then error "Expected a pair of matrices";
+   all(flatten entries M, f -> f == 0)
+)
+ZZ == NCMatrix := (n,M) -> M == n
 
 -------------------------------------------------------------
 ------- end package code ------------------------------------
@@ -1928,646 +2201,21 @@ end
 
 --- bug fix/performance improvements
 ------------------------------------
----    Make the degrees persist when multiplying matrices.
----       If the degrees don't match, then still multiply matrices
----       but just get rid of degrees.
+--- Make homogeneous maps interface a little more streamlined.
+---   May require implementation of modules to do properly
+--- Op
+--- Left kernels
+--- toCommutative
+--- skewPolynomial ring command
 
---- other things to add in due time
+
+--- other things to add or work on in due time
 -----------------------------------
 --- NCRingMap kernels (to a certain degree)  -- Not sure I can do this with Bergman, can't use
 ---   block orders in bergman.
 --- anick          -- resolution
 --- ncpbhgroebner  -- gb, hilbert series
 --- NCModules (?) (including module gb (via simple), hilbert series, modulebettinumbers)
---- Free resolutions of koszul algebras
---- Factoring one (homogeneous) map through another (can do with bergman, or with homogeneous trick.  However
----   For large matrices and large maps, this could take a long time in top level M2.
+--- Work on reduction code a bit?
 --- Testing!
 --- Documentation!
-
----------------------------------------------------------
--- Examples
----------------------------------------------------------
-
---- matrix factorizations over sklyanin algebra
-restart
-debug needsPackage "NCAlgebra"
-A = QQ{x,y,z}
-f1 = y*z + z*y - x^2
-f2 = x*z + z*x - y^2
-f3 = z^2 - x*y - y*x
-I = ncIdeal {f1,f2,f3}
-Igb = ncGroebnerBasis I
-z*x^3 % Igb
-g = -y^3-x*y*z+y*x*z+x^3
-J = I + ncIdeal {g}
-g % Igb
-normalFormBergman(g,Igb)
-B = A/I
-use A
-B' = A/J
-use B
-leftMultiplicationMap(x,3)
-leftMultiplicationMap(z,3)
-centralElements(B,3)
-basis(3,B)
-g = -y^3-x*y*z+y*x*z+x^3
----- broken?
-isLeftRegular(g,6)
-M=ncMatrix{{z,-x,-y},{-y,z,-x},{x,y,z}}
-rightKernel(M,1)
---- again, waaay too many calls to bergman!
-rightKernel(basis(1,B),10)
---- skip the next line if you want to work in the tensor algebra
-h = x^2 + y^2 + z^2
-isCentral h
-isCentral g
-M3 = ncMatrix {{x,y,z,0},
-               {-y*z-2*x^2,-y*x,z*x-x*z,x},
-               {x*y-2*y*x,x*z,-x^2,y},
-               {-y^2-z*x,x^2,-x*y,z}}
-M2 = ncMatrix {{-z*y,-x,z,y},
-               {z*x-x*z,z,-y,x},
-               {x*y,y,x,-z},
-               {2*x*y*z-4*x^3,-2*x^2,2*y^2,2*x*y-2*y*x}}
-M3*M2
-M2*M3
---- checking homogeneity
-assignDegrees M3
-isHomogeneous 3M
-assignDegrees(M3,{1,0,0,0},{2,2,2,1})
-isHomogeneous M3
----
-M3' = M3^2
---- can now work in quotient ring!
-M3*M4
-M4*M3
-M3*(x*y) - (x*y)*M3
-M1 = ncMatrix {{x}}
-M2 = ncMatrix {{y}}
-M1*M2
---- apparently it is very important to reduce your entries along the way.
-wallTiming (() -> M3^6)
---- still much slower!  It seems that reducing all along the way is much more efficient.
-wallTiming (() -> M3'^5)
-
---- or can work over free algebra and reduce later
-M4*M3 % ncgb
-M3*M4 % ncgb
-M3' = M3 % ncgb'
-M4' = M4 % ncgb'
-M3'*M4' % ncgb
-M4'*M3' % ncgb
-
-M3+M4
-2*M3
-(g*M3 - M3*g) % ncgb
-M3^4 % ncgb
-wallTiming (() -> M3^4 % Igb)
----------------------------------------------
-
----- working in quantum polynomial ring -----
-restart
-needsPackage "NCAlgebra"
-R = toField(QQ[q]/ideal{q^4+q^3+q^2+q+1})
-A = R{x,y,z}
---- this is a gb of the poly ring skewed by a fifth root of unity.
-I = ncIdeal {y*x - q*x*y, z*y - q*y*z, z*x - q*x*z}
-ncgb = ncGroebnerBasis(I,InstallGB=>true)
-B = A / I
-
--- get a basis of the degree n piece of A over the base ring
-time bas = basis(10,B);
-coefficients(x*y+q^2*x*z)
-bas2 = flatten entries basis(2,B)
-coeffs = coefficients(x*y+q^2*x*z, Monomials => bas2)
-first flatten entries ((ncMatrix{bas2})*coeffs)
--- yay!
-matrix {{coeffs, coeffs},{coeffs,coeffs}}
-basis(2,B)
-basis(3,B)
-leftMultiplicationMap(x,2)
-rightMultiplicationMap(x,2)
-centralElements(B,4)
-centralElements(B,5)
---- we can verify that f is central in this ring, for example
-f = x^5 + y^5 + z^5
-g = x^4 + y^4 + z^4
-isCentral f
-isCentral g
--- example computation
--- takes waaay too long!  Need to try and speed up reduction code.
-time h = f^4
-------------------------------------------------------
-
---- testing out Bergman interface
-restart
-debug needsPackage "NCAlgebra"
-A = QQ{x,y,z}
-f1 = y*z + z*y - x^2
-f2 = x*z + z*x - y^2
-f3 = z^2 - x*y - y*x
-I = ncIdeal {f1,f2,f3}
-Igb = twoSidedNCGroebnerBasisBergman I
-wallTiming(() -> normalFormBergman(z^17,Igb))
-time remainderFunction(z^17,Igb)
-B = A / I
-g = -y^3-x*y*z+y*x*z+x^3
-isCentral g
-hilbertBergman B
-
------------
--- this doesn't work since it is not homogeneous unless you use degree q = 0, which is not allowed.
-restart
-needsPackage "NCAlgebra"
-A = QQ{q,x,y,z}
-I = ncIdeal {q^4+q^3+q^2+q+1,q*x-x*q,q*y-y*q,q*z-z*q,y*x-q*x*y,z*y-q*y*z,z*x-q*x*z}
-Igb = twoSidedNCGroebnerBasisBergman I
-
----- ore extensions
-restart
-needsPackage "NCAlgebra"
-A = QQ{x,y,z,w}
-I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
-B = A/I
-M1 = ncMatrix {{x,y,z,w}}
-M2 = rightKernel(M1,1)
-M3 = rightKernel(M2,1)
-M4 = rightKernel(M3,1)
-M5 = rightKernel(M4,1)
-M6 = rightKernel(M5,1)
-M4A = promote(M4,A)
-M5A = promote(M5,A)
-M6A = promote(M6,A)
-M4A
-M6A
-
----- ore extensions
-restart
-needsPackage "NCAlgebra"
-A = QQ{x,y,z,w}
-f1 = y*z + z*y - x^2
-f2 = x*z + z*x - y^2
-f3 = z^2 - x*y - y*x
-I = ncIdeal {f1,f2,f3,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
-B = A/I
-M1 = ncMatrix {{x,y,z,w}}
-M2 = rightKernel(M1,1)
-M3 = rightKernel(M2,1)
-M4 = rightKernel(M3,1)
-M5 = rightKernel(M4,1)
-M6 = rightKernel(M5,1)
-M4A = promote(M4,A)
-M5A = promote(M5,A)
-M6A = promote(M6,A)
-M4A
-M6A
-
----- ore extension of skew ring
-restart
-debug needsPackage "NCAlgebra"
-A = QQ{x,y,z,w}
-I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
-B = A/I
-M1 = ncMatrix {{x,y,w}}
-assignDegrees M1
--- another bug!
-rightKernelBergman M1
-M2 = rightKernel(M1,1)
-M2 = rightKernel(M1,2)
-M2 = rightKernel(M1,3)
-M3 = rightKernel(M2,1)
-M4 = rightKernel(M3,1)
-M5 = rightKernel(M4,1)
-M6 = rightKernel(M5,1)
-M7 = rightKernel(M6,1)
-M8 = rightKernel(M7,1)
-M9 = rightKernel(M8,1)
-M10 = rightKernel(M9,1)
-M3A = promote(M3,A)
-M4A = promote(M4,A)
-M5A = promote(M5,A)
-M6A = promote(M6,A)
-M7A = promote(M7,A)
-M8A = promote(M8,A)
-M9A = promote(M9,A)
-M10A = promote(M10,A)
-
---- make sure ores with subscripts work
-restart
-needsPackage "NCAlgebra"
-n=4
-A = QQ {x_1..x_n}
-gensA = gens A;
-I = ncIdeal apply(subsets(toList(0..(n-1)),2), p -> gensA#(p#0)*gensA#(p#1)+gensA#(p#1)*gensA#(p#0))
-B = A/I
-sigma = ncMap(B,B,drop(gens B,1) | {(gens B)#0})
-matrix sigma
-C = oreExtension(B,sigma,w)
-
----- ore extension of skew ring
-restart
-debug needsPackage "NCAlgebra"
-n = 4
-A = QQ {x_1..x_n}
-gensA = gens A;
-I = ncIdeal apply(subsets(toList(0..(n-1)),2), p -> gensA#(p#0)*gensA#(p#1)+gensA#(p#1)*gensA#(p#0))
-B = A/I
-sigma = ncMap(B,B,drop(gens B,1) | {(gens B)#0})
-matrix sigma
-C = oreExtension(B,sigma,w)
-A' = ambient C
-use A'
-J = ideal C
-J = J + ncIdeal {w^2}
-D = A'/J
-DtoC = ncMap(C,D,gens C)
-sigmaCInv = ncMap(C,C,{(gens C)#(n-1)} | drop(drop(gens C,-1),-1) | {DtoC w})
-M1 = ncMatrix {drop(gens D,-2) | {w}}
-assignDegrees M1
-rightKernelBergman(M1,RoW,CoL)
-M2 = rightKernel(M1,1)
-M3 = rightKernel(M2,1)
-M4 = rightKernel(M3,1)
-M4C = DtoC M4
-M5 = rightKernel(M4,1)
-M5C = DtoC M5
-M4C*M5C
---- attempt to fix
-perm1 = matrix{{1,0,0,0,0,0,0,0},
-               {0,0,1,0,0,0,0,0},
-               {0,0,0,1,0,0,0,0},
-               {0,1,0,0,0,0,0,0},
-               {0,0,0,0,0,1,0,0},
-               {0,0,0,0,0,0,1,0},
-               {0,0,0,0,1,0,0,0},
-               {0,0,0,0,0,0,0,1}}
-M5C' = M5C*perm1
-M4C*M5C'
-M5C'*(sigmaCInv sigmaCInv M4C)
-(sigmaCInv sigmaCInv M4C)*(sigmaCInv sigmaCInv M5C')
---------
-M6 = rightKernel(M5,1)
-M6C = DtoC M6
-------
-M4Csig = sigmaCInv sigmaCInv M4C
-rowOp = matrix{{1,0,0,0,0,0,0,0},
-               {0,0,0,1,0,0,0,0},
-               {0,1,0,0,0,0,0,0},
-               {0,0,1,0,0,0,0,0},
-               {0,0,0,0,0,0,1,0},
-               {0,0,0,0,1,0,0,0},
-               {0,0,0,0,0,1,0,0},
-               {0,0,0,0,0,0,0,1}}
-colOp = matrix{{1,0,0,0,0,0,0,0},
-               {0,0,0,1,0,0,0,0},
-               {0,1,0,0,0,0,0,0},
-               {0,0,1,0,0,0,0,0},
-               {0,0,0,0,0,1,0,0},
-               {0,0,0,0,0,0,1,0},
-               {0,0,0,0,1,0,0,0},
-               {0,0,0,0,0,0,0,1}}
-rowOp*M6C*colOp - M4Csig
-M7 = rightKernel(M6,1)
-M8 = rightKernel(M7,1)
-M9 = rightKernel(M8,1)
-M10 = rightKernel(M9,1)
-M3A = promote(M3,A)
-M4A = promote(M4,A)
-M5A = promote(M5,A)
-M6A = promote(M6,A)
-M7A = promote(M7,A)
-M8A = promote(M8,A)
-M9A = promote(M9,A)
-M10A = promote(M10,A)
---- over C
-M4Cker = rightKernel(M4C,1)
-M4Csigma = rightKernel(sigmaDInvC M4C,1)
----- ore extension of sklyanin
-restart
-needsPackage "NCAlgebra"
-A = QQ{x,y,z,w}
-f1 = y*z + z*y - x^2
-f2 = x*z + z*x - y^2
-f3 = z^2 - x*y - y*x
-I = ncIdeal {f1,f2,f3,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
-B = A/I
-M1 = ncMatrix {{x,y,w}}
-M2 = rightKernel(M1,1)
-M2 = rightKernel(M1,2)
-M2 = rightKernel(M1,3)
-M2 = rightKernel(M1,4)
-M3 = rightKernel(M2,1)
-M4 = rightKernel(M3,1)
-M5 = rightKernel(M4,1)
-M6 = rightKernel(M5,1)
-M7 = rightKernel(M6,1)
-M8 = rightKernel(M7,1)
-M9 = rightKernel(M8,1)
-M10 = rightKernel(M9,1)
-M3A = promote(M3,A)
-M4A = promote(M4,A)
-M5A = promote(M5,A)
-M6A = promote(M6,A)
-M7A = promote(M7,A)
-M8A = promote(M8,A)
-M9A = promote(M9,A)
-M10A = promote(M10,A)
-
----- ore extension of skew ring with infinite automorphism
-restart
-needsPackage "NCAlgebra"
-A = QQ{x,y,z,w}
-I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-2*w*y,y*w-2*w*z,z*w-2*w*x,w^2}
-B = A/I
-M1 = ncMatrix {{x,y,w}}
-M2 = rightKernel(M1,1)
-M2 = rightKernel(M1,2)
-M3 = rightKernel(M2,1)
-M4 = rightKernel(M3,1)
-M5 = rightKernel(M4,1)
-M6 = rightKernel(M5,1)
-M7 = rightKernel(M6,1)
-M8 = rightKernel(M7,1)
-M9 = rightKernel(M8,1)
-M10 = rightKernel(M9,1)
-M3A = promote(M3,A)
-M4A = promote(M4,A)
-M5A = promote(M5,A)
-M6A = promote(M6,A)
-M7A = promote(M7,A)
-M8A = promote(M8,A)
-M9A = promote(M9,A)
-M10A = promote(M10,A)
-
---- test for speed of reduction code
-restart
-needsPackage "NCAlgebra"
-A = QQ{x,y,z,w}
-I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-2*w*y,y*w-2*w*z,z*w-2*w*x,w^2}
-B = A/I
-M1 = ncMatrix {{x,y,w}}
-time M2 = rightKernel(M1,7,Verbosity=>1);
-time M3 = rightKernel(M2,3,Verbosity=>1);
-
----- andy's example
-restart
-debug needsPackage "NCAlgebra"
-A=QQ{a, b, c, d, e, f, g, h}
--- this got very slow all of a sudden!
-I = gbFromOutputFile(A,"UghABCgb6.txt", ReturnIdeal=>true);
-Igb = ncGroebnerBasis I;
-B=A/I;
-
-M2=ncMatrix{{-b,-f,-c,0,0,0,-g,0,0,0,0,-h,0,0,0,0},
-    {a,0,c-f,0,0,0,0,d-g,0,0,0,e,e-h,0,0,0},
-    {0,0,a-b,-f,-d,0,0,0,d-g,0,0,0,0,e-h,0,0},
-    {0,0,0,0,c-f,0,0,-b,-c,-g,0,0,0,0,-h,0},
-    {0,0,0,0,0,-f,0,0,0,0,-g,-b,-b,-c,0,-h},
-    {0,a,b,c,d,e,0,0,0,0,0,0,0,0,0,0},
-    {0,0,0,0,0,0,a,b,c,d,e,0,0,0,0,0},
-    {0,0,0,0,0,0,0,0,0,0,0,a,b,c,d,e}};
-M=basis(1,B);
-
-bas=basis(2,B)
-use A
-f = a^7+b^7+c^7+d^7+e^7+f^7+g^7+h^7
-f = promote(f,B);
---- sometimes bergman calls are great!
-time X = flatten entries (f*bas);
-netList X
-
--------------------------------
--- Testing NCRingMap code
-restart
-needsPackage "NCAlgebra"
-A = QQ{x,y,z}
-I = ncIdeal {x*y-y*x,x*z-z*x,y*z-z*y}
-B = A/I
-sigma = ncMap(B,B,{y,z,x})
-delta = ncMap(B,B,apply(gens B, x -> promote(1,B)))
-isWellDefined sigma
-oreExtension(B,sigma,w)
--- doesn't really matter that we can handle derivations yet, since bergman doesn't do inhomogeneous
--- gbs very well.
-oreIdeal(B,sigma,delta,w)
-oreExtension(B,sigma,delta,w)
--------------------------------
---- Testing multiple rings code
-restart
-needsPackage "NCAlgebra"
-A = QQ{x,y,z}
-I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y}
-C = QQ{x,y,z}
-B = A/I
-
------------------------------------
---- Testing out normal element code
-restart
-debug needsPackage "NCAlgebra"
-A = QQ{a,b,c}
-I = ncIdeal {a*b+b*a,a*c+c*a,b*c+c*b}
-B = A/I
-sigma = ncMap(B,B,{b,c,a})
-sigma_2   -- testing restriction of NCMap to degree code
-isWellDefined sigma
-C = oreExtension(B,sigma,w)
-normalElements(C,1,x,y)
-tau = ncMap(C,C,{b,c,a,w})
-normalElements(tau,3)
-normalElements(tau,1)
-normalElements(tau @@ tau,1)
-normalElements(tau @@ tau,2)
-normalElements(tau @@ tau,3)
-normalElements(tau @@ tau,4)
-findNormalComplement(w,x)
-isNormal w
-phi = normalAutomorphism w
-matrix phi
-phi2 = normalAutomorphism w^2
-matrix phi2
-
--- another normal element test
-restart
-debug needsPackage "NCAlgebra"
-A = QQ{a,b,c}
-I = ncIdeal {a*b+b*a,a*c+c*a,b*c+c*b}
-B = A/I
-normalElements(B,1,x,y)
-
--- another test
-restart
-debug needsPackage "NCAlgebra"
-A = QQ{x,y,z}
-I = ncIdeal {y*z + z*y - x^2,x*z + z*x - y^2,z^2 - x*y - y*x}
-B = A/I
-basis(2,B)
-normalElements(B,2,a,b)
-f = x^2+2*x*y+2*y*x+3*y^2
-isNormal f
-isCentral f
-findNormalComplement(f,x)
-findNormalComplement(f,y)
-findNormalComplement(f,z)
-
---- one more test...
-restart
-debug needsPackage "NCAlgebra"
-A = (QQ[a_0..a_5]) {x,y,z};
-gensI = {y^2*x-x*y^2, y*x^2-x^2*y, z*x-y^2+x*z, z*y+y*z-x^2, z^2-y*x-x*y}
-I = ncIdeal gensI
-Igb = ncGroebnerBasis(I, InstallGB=>true)
-B = A/I
-f = a_0*x^2 + a_1*x*y + a_1*y*x + a_4*y^2
-centralElements(B,3)
-normalElements(B,3,b,c)
-basis(3,B)
-
-------------------------------------
---- Testing out endomorphism code
-restart
-debug needsPackage "NCAlgebra"
-Q = QQ[a,b,c]
-R = Q/ideal{a*b-c^2}
-kRes = res(coker vars R, LengthLimit=>7);
-M = coker kRes.dd_5
-B = endomorphismRing(M,X);
-gensI = gens ideal B;
-gensIMin = minimizeRelations(gensI, Verbosity=>1)
-checkHomRelations(gensIMin,B.cache.endomorphismRingGens);
-------------------------------------
---- Testing out endomorphism code
-restart
-debug needsPackage "NCAlgebra"
-Q = QQ[a,b,c,d]
-R = Q/ideal{a*b+c*d}
-kRes = res(coker vars R, LengthLimit=>7);
-M = coker kRes.dd_5
-time B = endomorphismRing(M,X);
-gensI = gens ideal B;
-time gensIMin = minimizeRelations(gensI, Verbosity=>1);   -- new bug here!!!
-checkHomRelations(gensIMin,B.cache.endomorphismRingGens);
---------------------------------------
---- Skew group ring example?
-restart
-debug needsPackage "NCAlgebra"
-S = QQ[x,y,z]
-Q = QQ[w_1..w_6,Degrees=>{2,2,2,2,2,2}]
-phi = map(S,Q,matrix{{x^2,x*y,x*z,y^2,y*z,z^2}})
-I = ker phi
-R = Q/I
-phi = map(S,R,matrix{{x^2,x*y,x*z,y^2,y*z,z^2}})
-M = pushForward(phi,S^1)
-B = endomorphismRing(M,X)
-gensI = gens ideal B;
-gensIMin = minimizeRelations(gensI, Verbosity=>1)
-checkHomRelations(gensIMin,B.cache.endomorphismRingGens);
-
-first gensI
-first newGensI
-
-netList B.cache.endomorphismRingGens
-f = sum take(flatten entries basis(1,B),10)
-f^2
-HomM = Hom(M,M)
-map1 = homomorphism(HomM_{0})
-map2 = homomorphism(HomM_{1})
-gensHomM = gens HomM
-elt = transpose flatten matrix (map2*map1)
-gensHomM // elt
-
-restart
-debug needsPackage "NCAlgebra"
-A = QQ{x,y,z}
-mon = first first pairs (x*y*z).terms
-substrings(mon,3)
-
-QQ toList vars(0..14)
-QQ{x_1,x_2}
-QQ{a..d}
-
-restart
-debug needsPackage "NCAlgebra"
-R = ZZ/101[a,b,c,d]/ideal{b^5,c^5}
-cSubstrings(first exponents (a*b^2*c^3*d^4),0,4)
-cSubstrings(first exponents (a*b^2*c^3*d^4),0,0)
-
------------------------------------
---- Test for Kernel code
-restart
-debug needsPackage "NCAlgebra"
-A = QQ{x,y,z}
-f1 = y*z + z*y - x^2
-f2 = x*z + z*x - y^2
-f3 = z^2 - x*y - y*x
-g = -y^3-x*y*z+y*x*z+x^3
-I = ncIdeal {f1,f2,f3,g}
-B = A/I
-M3 = ncMatrix {{x,y,z,0},
-               {-y*z-2*x^2,-y*x,z*x-x*z,x},
-               {x*y-2*y*x,x*z,-x^2,y},
-               {-y^2-z*x,x^2,-x*y,z}}
-assignDegrees(M3,{1,0,0,0},{2,2,2,1})
-assert isHomogeneous M3
-ker1M3 = rightKernelBergman(M3)
-assert isHomogeneous ker1M3
-M3*ker1M3    --- make NCMatrix == 0 work
-ker2M3 = rightKernelBergman(ker1M3)
-assert isHomogeneous ker2M3
-ker1M3*ker2M3
--- bug.  I think this is because the matrix is injective up to the degree given
-ker3M3 = rightKernelBergman(ker2M3)
-assert isHomogeneous ker3M3  
-ker2M3*ker3M3
-
--------------------------------------
---- Testing lead terms
-restart
-debug needsPackage "NCAlgebra"
-A = QQ{a,b,c,d}
-leadTerm(d*b+d*a*c)
-
---- Now I understand!!!
-restart
-RoW = 3
-junkDic = new GlobalDictionary
-getGlobalSymbol(junkDic,"RoW")
-getGlobalSymbol(junkDic,"CoL")
-dictionaryPath = prepend(junkDic,dictionaryPath)
-RoW
-dictionaryPath = drop(dictionaryPath,1)
-RoW
-
---- Bug #1
-restart
-debug needsPackage "NCAlgebra"
-A = (frac(QQ[a])) {x,y,z};
-gensA = gens A;
-net gensA#0
-net gensA#0 -- this call fails.  The first net changes something?  SIGSEGV
-
---- Bug #2
-restart
-debug needsPackage "NCAlgebra"
-A = (frac(QQ[a])) {x,y,z};
-gensA = gens A;
-net gensA#0
-(gensA#0) * (gensA#0);   -- this call fails.  The first net changes something, and now
-                         -- I don't understand what the error message is, and I can't reproduce
-                         -- it in the debugger.
-
-
-restart
-debug needsPackage "NCAlgebra"
-A = (QQ[a]) {x,y,z};
-gensA = gens A;
-net gensA#0
-net gensA#0 -- this works.
-
-restart
-debug needsPackage "NCAlgebra"
-A = QQ {x,y,z};
-(coefficientRing A)
-gensA = gens A;
-net gensA#0
-net gensA#0  -- this works
