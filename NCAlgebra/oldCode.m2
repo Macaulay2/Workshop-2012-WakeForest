@@ -1,3 +1,31 @@
+rightHomogKernelOld = method()
+rightHomogKernelOld(NCMatrix, ZZ) := (M,d) -> (
+   -- Assume (without checking) that the entries of M are homogeneous of the same degree n
+   -- This function takes a NCMatrix M and a degree d and returns the left kernel in degree d over the tensor algebra
+   rows := # entries M;
+   cols := # first M.matrix;
+   n := max apply(flatten entries M, i->degree i);
+   degnBasis := flatten entries basis(n,M.ring);
+   -- We compute the left multiplication maps once and for all. 
+   -- In the future, maybe only compute them for elements actually appearing in the matrix.
+   maps := apply(degnBasis, e->leftMultiplicationMap(e,d));
+   B := basis(d,M.ring);
+   dimB := #(flatten entries B); --the number of rows of K is dim*cols
+   dimT := #(flatten entries basis(n+d,M.ring)); --the number of rows in multiplication map
+   -- Make a big matrix of left multiplication maps for each row and get its kernel
+   S := apply(toList(0..(rows-1)), i-> 
+        ker matrix{apply(toList(0..(cols-1)), j->(
+          if (M.matrix)#i#j==0 then matrix apply(toList(0..(dimT-1)), b->apply(toList(0..(dimB-1)),a->0))
+          else
+             coeffs := flatten entries last coefficients((M.matrix)#i#j,Monomials=>degnBasis);
+             sum(0..(#degnBasis-1),k->(coeffs#k)*(maps#k)))
+        )});
+   Kscalar := gens intersect S;
+   if Kscalar == 0 then return 0
+   else
+   K := ncMatrix apply(toList(0..(cols-1)), k-> flatten ((lift B)*submatrix(Kscalar,{k*dimB..(k*dimB+dimB-1)},)).matrix)
+)
+
 --- this was an attempt at speeding up the computations.  It is significantly slower.  I expect
 --- because Bergman is doing the reductions much faster than my code.
 rightMingens2 = method(Options => {DegreeLimit => 10})

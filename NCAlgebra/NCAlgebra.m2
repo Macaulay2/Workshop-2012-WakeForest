@@ -33,6 +33,8 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          isLeftRegular,
          isRightRegular,
          centralElements,
+         normalElements,
+         normalAutomorphism,
          leftMultiplicationMap,
          rightMultiplicationMap,
          rightHomogKernel,
@@ -44,6 +46,8 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          ncMap,functionHash,
          oreExtension,oreIdeal,
          endomorphismRing,endomorphismRingGens,
+         minimizeRelations,checkHomRelations,
+         skewPolynomialRing,
          wallTiming
 }
 
@@ -244,6 +248,11 @@ Ring List := (R, varList) -> (
 )
 
 net NCRing := A -> net A.CoefficientRing | net A.generators
+
+ideal NCPolynomialRing := A ->
+   new NCIdeal from new HashTable from {(symbol ring) => A,
+                                        (symbol generators) => {},
+                                        (symbol cache) => new CacheTable from {}}
 
 -------------------------------------------
 
@@ -822,6 +831,26 @@ isCentral (NCRingElement, NCGroebnerBasis) := (f,ncgb) -> (
 isCentral NCRingElement := f -> (
    varsList := gens f.ring;
    all(varsList, x -> (f*x - x*f) == 0)   
+)
+
+isCommutative NCRing := A -> all(gens A, x -> isCentral x)
+
+abelianization = method()
+abelianization NCRing := B -> (
+   gensB := gens B;
+   R := coefficientRing B;
+   gensI := gens ideal B;
+   abB := R [ gens B ];
+   if gensI == {} then
+      abB
+   else (
+      phi := ambient ncMap(abB,B,gens abB);
+      abI := ideal flatten entries mingens ideal ((gensI) / phi);
+      if abI == 0 then
+         abB
+      else
+         abB/abI
+   )
 )
 
 isNormal NCRingElement := f -> (
@@ -1489,34 +1518,9 @@ normalElements (NCQuotientRing, ZZ, Symbol, Symbol) := (R,n,x,y) -> (
                                       0)),c->c!=0))
 )
 
-rightHomogKernelOld = method()
-rightHomogKernelOld(NCMatrix, ZZ) := (M,d) -> (
-   -- Assume (without checking) that the entries of M are homogeneous of the same degree n
-   -- This function takes a NCMatrix M and a degree d and returns the left kernel in degree d over the tensor algebra
-   rows := # entries M;
-   cols := # first M.matrix;
-   n := max apply(flatten entries M, i->degree i);
-   degnBasis := flatten entries basis(n,M.ring);
-   -- We compute the left multiplication maps once and for all. 
-   -- In the future, maybe only compute them for elements actually appearing in the matrix.
-   maps := apply(degnBasis, e->leftMultiplicationMap(e,d));
-   B := basis(d,M.ring);
-   dimB := #(flatten entries B); --the number of rows of K is dim*cols
-   dimT := #(flatten entries basis(n+d,M.ring)); --the number of rows in multiplication map
-   -- Make a big matrix of left multiplication maps for each row and get its kernel
-   S := apply(toList(0..(rows-1)), i-> 
-        ker matrix{apply(toList(0..(cols-1)), j->(
-          if (M.matrix)#i#j==0 then matrix apply(toList(0..(dimT-1)), b->apply(toList(0..(dimB-1)),a->0))
-          else
-             coeffs := flatten entries last coefficients((M.matrix)#i#j,Monomials=>degnBasis);
-             sum(0..(#degnBasis-1),k->(coeffs#k)*(maps#k)))
-        )});
-   Kscalar := gens intersect S;
-   if Kscalar == 0 then return 0
-   else
-   K := ncMatrix apply(toList(0..(cols-1)), k-> flatten ((lift B)*submatrix(Kscalar,{k*dimB..(k*dimB+dimB-1)},)).matrix)
-)
-
+--- This is the command that computes the kernel via linear
+--- algebra over the base ring.  It can only handle
+--- a matrix of homogeneous entries all of the same degree
 rightKernel = method(Options=>{NumberOfBins => 1, Verbosity=>0})
 rightKernel(NCMatrix,ZZ):= opts -> (M,deg) -> (
    -- Assume (without checking) that the entries of M are homogeneous of the same degree n
@@ -1600,7 +1604,6 @@ isRightRegular (NCRingElement, ZZ) := (f,d) -> (
    s := #(flatten entries basis(d,A));
    r == s
 )
-
 
 NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
    if (degree f <= MAXDEG and size f <= MAXSIZE) or not f.ring#"BergmanRing" then
@@ -1696,6 +1699,8 @@ remainderFunction (NCRingElement,NCGroebnerBasis) := opts -> (f,ncgb) -> (
 ---------------------------------------
 
 ncMap = method()
+--- ncMap from Ring to NCRing not implemented.
+ncMap (Ring,NCRing,List) := 
 ncMap (NCRing,NCRing,List) := (B,C,imageList) -> (
    genCSymbols := C.generatorSymbols;
    if not all(imageList / class, r -> r === B) then error "Expected a list of entries in the target ring.";
@@ -1770,6 +1775,67 @@ NCRingMap @@ NCRingMap := (f,g) -> (
    ncMap(target f, source g, apply(gens source g, x -> f g x))
 )
 
+oppositeElement = method()
+oppositeElement NCRingElement := f -> (
+   new (ring f) from hashTable {
+          (symbol ring, f.ring),
+          (symbol cache, new CacheTable from {}),
+          (symbol terms, hashTable apply(pairs f.terms, p -> (
+               newMon := new NCMonomial from {(symbol monList) => reverse p#0#monList,
+                                              (symbol ring) => ring f};
+               (newMon,p#1))))}
+)
+
+oppositeRing = method()
+oppositeRing NCRing := B -> (
+   gensB := gens B;
+   R := coefficientRing B;
+   oppA := R gensB;
+   if class B === NCPolynomialRing then return oppA;
+   idealB := gens ideal B;
+   phi := ncMap(oppA,ambient B, gens oppA);
+   oppIdealB := idealB / oppositeElement / phi // ncIdeal;
+   oppIdealBGB := ncGroebnerBasis(oppIdealB, InstallGB=>not B#"BergmanRing");
+   oppA / oppIdealB
+)
+
+validSkewMatrix = method()
+validSkewMatrix Matrix := M -> (
+   rows := numgens source M;
+   cols := numgens target M;
+   if rows != cols then return false;
+   invOffDiag := all(apply(rows, i -> all apply(toList(i..cols-1), j -> isUnit M_i_j and isUnit M_j_i and (M_j_i)^(-1) == M_i_j)));
+   oneOnDiag := all(rows, i -> M_i_i == 1);
+   invOffDiag and oneOnDiag
+)
+
+skewPolynomialRing = method()
+skewPolynomialRing (Ring,Matrix,List) := (R,skewMatrix,varList) -> (
+   if not validSkewMatrix skewMatrix then
+      error "Expected a matrix M such that M_ij = M_ji^(-1).";
+   if ring skewMatrix =!= R then error "Expected skewing matrix over base ring.";
+   A := R varList;
+   gensA := gens A;
+   I := ncIdeal apply(subsets(numgens A, 2), p -> 
+            (gensA_(p#0))*(gensA_(p#0)) - (skewMatrix_(p#0)_(p#1))*(gensA_(p#1))*(gensA_(p#0)));
+   Igb := ncGroebnerBasis(I, InstallGB=>A#"BergmanRing");
+   B := A/I;
+   B
+)
+
+skewPolynomialRing (Ring,ZZ,List) := 
+skewPolynomialRing (Ring,QQ,List) := 
+skewPolynomialRing (Ring,RingElement,List) := (R,skewElt,varList) -> (
+   if class skewElt =!= R then error "Expected ring element over base ring.";
+   A := R varList;
+   gensA := gens A;
+   I := ncIdeal apply(subsets(numgens A, 2), p ->
+            (gensA_(p#0))*(gensA_(p#1)) - skewElt*(gensA_(p#1))*(gensA_(p#0)));
+   Igb := ncGroebnerBasis(I, InstallGB=>(not A#"BergmanRing"));
+   B := A/I;
+   B
+)
+
 oreIdeal = method()
 oreIdeal (NCRing,NCRingMap,NCRingMap,NCRingElement) := 
 oreIdeal (NCRing,NCRingMap,NCRingMap,Symbol) := (B,sigma,delta,X) -> (
@@ -1778,7 +1844,6 @@ oreIdeal (NCRing,NCRingMap,NCRingMap,Symbol) := (B,sigma,delta,X) -> (
    -- get the symbol with the same name as the variable.
    X = baseName X;
    kk := coefficientRing B;
-   --- BUG HERE
    varsList := ((gens B) / baseName) | {X};
    C := kk varsList;
    A := ambient B;
@@ -2130,7 +2195,7 @@ ZZ == NCMatrix := (n,M) -> M == n
 ------- end package code ------------------------------------
 
 -------------------- timing code ---------------------------
-wallTime = Command (() -> value get "!date +%s.%N")
+wallTime = Command (() -> value get "!date +%s.%N")  --- %N doesn't work on Mac
 wallTiming = f -> (
     a := wallTime(); 
     r := f(); 
@@ -2144,11 +2209,12 @@ end
 ------------------------------------
 --- Make homogeneous maps interface a little more streamlined.
 ---   May require implementation of modules to do properly
---- Op
---- Left kernels
---- toCommutative
---- skewPolynomial ring command
-
+--- Left kernels/mingens etc (opposite ring now done)
+--- make sure that trivial ideals are handled correctly
+--- make sure that ring constructions respect weights, if present
+--- isFiniteDimensional?
+--- basis for f.d. algebras?
+--- basis for algebras not over a field (really just an R-generating set)
 
 --- other things to add or work on in due time
 -----------------------------------

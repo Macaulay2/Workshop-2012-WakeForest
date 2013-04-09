@@ -9,62 +9,165 @@ newPackage(
         DebuggingMode => true
         )
 
-needsPackage "NCAlgebra"
-
 --- check basic ring operations code
 TEST ///
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+f = y*z + z*y - x^2
+g = x*z + z*x - y^2
+h = z^2 - x*y - y*x
+assert(f*g == z*y*z*x-z*y^3+z*y*x*z+y*z^2*x-y*z*y^2+y*z*x*z-x^2*z*x+x^2*y^2-x^3*z)
+assert(f^2 == z*y*z*y+z*y^2*z-z*y*x^2+y*z^2*y+y*z*y*z-y*z*x^2-x^2*z*y-x^2*y*z+x^4)
+assert(f-g == z*y-z*x+y*z+y^2-x*z-x^2)
+assert(3*g == 3*z*x-3*y^2+3*x*z)
+assert(f+g == z*y+z*x+y*z-y^2+x*z-x^2)
+B = A/ncIdeal{f,g,h}
+j = -y^3-x*y*z+y*x*z+x^3
+k = x^2 + y^2 + z^2
+j*k
+k^3
+assert(k^3 == y^6+3*y*x*y^4+3*y*x*y*x*y^2+y*x*y*x*y*x+3*x*y^5+3*x*y*x*y^3+x*y*x*y*x*y+9*x^2*y^4+9*x^2*y*x*y^2+3*x^2*y*x*y*x+9*x^3*y^3+3*x^3*y*x*y+9*x^4*y^2+3*x^4*y*x+3*x^5*y+x^6)
+assert(j*k == -y^5+y*x*y^2*z-y*x*y^3+y*x*y*x*z-x*y^3*z-x*y^4-x*y*x*y*z-x^2*y^3+x^2*y*x*z-x^3*y*z+x^3*y^2+x^3*y*x+x^4*y+x^5)
+assert(j-k == -y^3-y^2+y*x*z-y*x-x*y*z-x*y+x^3-x^2)
+assert(j+k == -y^3+y^2+y*x*z+y*x-x*y*z+x*y+x^3+x^2)
+assert(3*k == 3*y^2+3*y*x+3*x*y+3*x^2)
 ///
 
 --- checking central elements (skylanin)
 TEST ///
+needsPackage "NCAlgebra"
 A = QQ{x,y,z}
-I = { y*z + z*y - x^2,x*z + z*x - y^2,z^2 - x*y - y*x}
+I = ncIdeal { y*z + z*y - x^2,x*z + z*x - y^2,z^2 - x*y - y*x}
 B = A/I
 g = -y^3-x*y*z+y*x*z+x^3
 h = x^2 + y^2 + z^2
 assert (isCentral h)
 assert (isCentral g)
---- make a test out of this
-centralElements(B,2)
-centralElements(B,3)
+assert(centralElements(B,2) == ncMatrix {{x^2, y*x+x*y, y^2}})
+assert(centralElements(B,3) == ncMatrix {{y^3-y*x*z+x*y*z-x^3}})
 ///
 
---- checking normal form code
+--- checking normal form code with non-field base
 TEST ///
+needsPackage "NCAlgebra"
+R = QQ[a,b,c,d]/ideal{a*b+c*d}
+A = R {x,y,z}
+I = ncIdeal {a*x*y,b*z^2}
+Igb = ncGroebnerBasis(I, InstallGB=>true)
+assert(c*z^2 % Igb == c*z^2)
+assert(b*z^2 % Igb == 0)
 ///
 
 --- checking normal form bergman code
 TEST ///
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+f = y*z + z*y - x^2
+g = x*z + z*x - y^2
+h = z^2 - x*y - y*x
+I = ncIdeal {f,g,h}
+Igb = ncGroebnerBasis I
+red = y*x*y*x*y*x*y*x*y*x*y*x*y*x*y*x*z+x*y*x*y*x*y*x*y*x*y*x*y*x*y*x*y*z+8*x^2*y*x*y*x*y*x*y*x*y*x*y*x*y^2*z+8*x^3*y*x*y*x*y*x*y*x*y*x*y^3*z+28*x^4*y*x*y*x*y*x*y*x*y^4*z+28*x^5*y*x*y*x*y*x*y^5*z+56*x^6*y*x*y*x*y^6*z+56*x^7*y*x*y^7*z+70*x^8*y^8*z
+assert(normalFormBergman(z^17,Igb) == red)
 ///
 
---- checking basis of algebra code (sklyanin)
+--- checking basis of algebra (sklyanin)
 TEST ///
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+f = y*z + z*y - x^2
+g = x*z + z*x - y^2
+h = z^2 - x*y - y*x
+I = ncIdeal {f,g,h}
+B = A/I
+basis1 = ncMatrix {{x^4, x^3*y, x^3*z, x^2*y*x, x^2*y^2, x^2*y*z, x*y*x*y, x*y*x*z, x*y^3, x*y^2*z, y*x*y*x, y*x*y^2, y*x*y*z, y^4, y^3*z}}
+basis2 = basis(4,B)
+assert(basis1 == basis2)
+///
+
+--- checking basis of algebra (quantum polynomial ring)
+TEST ///
+needsPackage "NCAlgebra"
+B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
+basis1 = ncMatrix {{x^3, x^2*y, x^2*z, x^2*w, x*y^2, x*y*z, x*y*w, x*z^2, x*z*w, x*w^2, y^3, y^2*z, y^2*w, y*z^2, y*z*w, y*w^2, z^3, z^2*w, z*w^2, w^3}}
+basis2 = basis(3,B)
+assert(basis1 == basis2)
 ///
 
 --- checking ore extensions
 TEST ///
+needsPackage "NCAlgebra"
+B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
+sigma = ncMap(B,B,{y,z,w,x})
+C = oreExtension(B,sigma,a)
+sigmaC = ncMap(C,C,{y,z,w,x,a})
+assert(normalElements(sigmaC,1) == ncMatrix {{a}})
+assert(normalElements(sigmaC,2) == 0)
+assert(normalElements(sigmaC @@ sigmaC,2) == ncMatrix {{a^2}})
+assert(matrix normalAutomorphism a == ncMatrix {{y,z,w,x,a}})
+assert(matrix normalAutomorphism a^2 == ncMatrix {{z,w,x,y,a}})
 ///
 
 --- checking endomorphism ring code
 TEST ///
+needsPackage "NCAlgebra"
+Q = QQ[a,b,c]
+R = Q/ideal{a*b-c^2}
+kRes = res(coker vars R, LengthLimit=>7);
+M = coker kRes.dd_5
+B = endomorphismRing(M,X);
+gensI = gens ideal B;
+gensIMin = minimizeRelations(gensI, Verbosity=>1);
+checkHomRelations(gensIMin,B.cache.endomorphismRingGens)
 ///
 
---- Test creation of matrices, both as matrices of entries,
---- and matrices of matrices
+--- Another example testing out endomorphism code
 TEST ///
+needsPackage "NCAlgebra"
+Q = QQ[a,b,c,d]
+R = Q/ideal{a*b+c*d}
+kRes = res(coker vars R, LengthLimit=>7);
+M = coker kRes.dd_5
+time B = endomorphismRing(M,X);
+gensI = gens ideal B;
+time gensIMin = minimizeRelations(gensI, Verbosity=>1);
+checkHomRelations(gensIMin,B.cache.endomorphismRingGens);
+///
+
+--- Test creation of matrices, as matrices of matrices
+TEST ///
+needsPackage "NCAlgebra"
+A = QQ{a,b,c,d}
+M = ncMatrix {{a,b,c,d}}
+N = ncMatrix {{M,2*M,3*M},{4*M,5*M,6*M}}
+assert (N == ncMatrix {{a, b, c, d, 2*a, 2*b, 2*c, 2*d, 3*a, 3*b, 3*c, 3*d}, {4*a, 4*b, 4*c, 4*d, 5*a, 5*b, 5*c, 5*d, 6*a, 6*b, 6*c, 6*d}})
 ///
 
 --- Test NCMatrix % NCGroebnerBasis
 TEST ///
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+f = y*z + z*y - x^2
+g = x*z + z*x - y^2
+h = z^2 - x*y - y*x
+I = ncIdeal {f,g,h}
+Igb = ncGroebnerBasis I
+M = ncMatrix {{x, y, z}}
+sigma = ncMap(A,A,{y,z,x})
+N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+Nred = N^3 % Igb
+B = A/I
+phi = ncMap(B,A,gens B)
+NB = phi N
+N3B = NB^3
+answer = ncMatrix {{-y^2*z+y^3+y*x*z-y*x*y+x*y*z+x*y^2+2*x*y*x+x^2*z+3*x^2*y, y^2*z+y*x*z+2*y*x*y+x*y*z+3*x*y^2-x*y*x-x^2*z+x^2*y+x^3, 2*y^2*z+y^3+y*x*y+x*y*x+2*x^2*z+x^3}, {y^2*z+y*x*z+2*y*x*y+x*y*z+3*x*y^2-x*y*x-x^2*z+x^2*y+x^3, 2*y^2*z+y^3+y*x*y+x*y*x+2*x^2*z+x^3, -y^2*z+y^3+y*x*z-y*x*y+x*y*z+x*y^2+2*x*y*x+x^2*z+3*x^2*y}, {2*y^2*z+y^3+y*x*y+x*y*x+2*x^2*z+x^3, -y^2*z+y^3+y*x*z-y*x*y+x*y*z+x*y^2+2*x*y*x+x^2*z+3*x^2*y, y^2*z+y*x*z+2*y*x*y+x*y*z+3*x*y^2-x*y*x-x^2*z+x^2*y+x^3}}
+assert(N3B == phi Nred)
+assert(N3B == answer)
 ///
 
 --- checking matrix multiplication, addition, etc
---- operations to test: +,-,^,|,||,*
-TEST ///
-///
-
---- Make sure homogeneous matrices persist through
---- all operations that make sense
+--- operations to test: +,-,^,|,||,*.  In this,
+--- also check that source/target are correct.
 TEST ///
 ///
 
@@ -138,6 +241,31 @@ TEST ///
 ///
 
 --- Include some matrix factorization tests
+TEST ///
+///
+
+--- Check variables with non-standard weights
+TEST ///
+///
+
+--- Check various NCRingElement commands
+--- leadTerm, leadMonomial, size, etc
+TEST ///
+///
+
+--- Skew Polynomial ring creation
+TEST ///
+///
+
+--- abelianization
+TEST ///
+///
+
+--- isCommutative
+TEST ///
+///
+
+--- oppositeRing
 TEST ///
 ///
 
@@ -806,3 +934,24 @@ tempGb =  twoSidedNCGroebnerBasisBergman(gbIdealB | nonminKerGens | {g},
                                          ClearDenominators=>true,
                                          CacheBergmanGB=>false);
 apply(newGBGens, f -> f % tempGb)
+
+--- skew poly ring
+restart
+debug needsPackage "NCAlgebra"
+R = QQ[q]/ideal{q^4+q^3+q^2+q+1}
+B = skewPolynomialRing(R,q,{x,y,z,w})
+C = skewPolynomialRing(QQ,1_QQ, {x,y,z,w})
+isCommutative C
+abC = abelianization C
+abC' = abelianization ambient C
+
+--- opposite ring
+restart
+debug needsPackage "NCAlgebra"
+R = QQ[q]/ideal{q^4+q^3+q^2+q+1}
+B = skewPolynomialRing(R,q,{x,y,z,w})
+oppositeRing B
+
+--- check NCAlgebra
+restart
+check "UnitTestsNCA"
