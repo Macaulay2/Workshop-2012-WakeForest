@@ -6,7 +6,7 @@
 --------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
--- Copyright 2011, 2012 Claudiu Raicu, Bart Snapp, Zach Teitler
+-- Copyright 2011, 2012, 2013 Claudiu Raicu, Bart Snapp, Zach Teitler
 --
 -- This program is free software: you can redistribute it and/or modify it under
 -- the terms of the GNU General Public License as published by the Free Software
@@ -24,8 +24,8 @@
 
 newPackage(
   "MultiplierIdeals",
-  Version => "0.1", 
-  Date => "May 10, 2013",
+  Version => "1.0", 
+  Date => "May 19, 2013",
   Authors => {
     {
       Name => "Zach Teitler",
@@ -65,7 +65,7 @@ newPackage(
 -- Implementation for monomial ideals is based on Howald's Theorem,
 --  arXiv:math/0003232v1 [math.AG]
 --  J.A. Howald, Multiplier ideals of monomial ideals.,
---  Trans. Amer. Math. Soc. 353 (2001), no. 7, 2665–2671
+--  Trans. Amer. Math. Soc. 353 (2001), no. 7, 2665-2671
 
 -- Implementation for monomial curves is based on the algorithm given in
 -- H.M. Thompson's paper: "Multiplier Ideals of Monomial Space
@@ -1478,49 +1478,51 @@ document {
 --     such as plane curve singularities."
 --   },
   SUBSECTION "References",
-  PARA {
+  UL {
+  LI {
     "[BL] ",
     "Blickle, Manuel and Lazarsfeld, Robert ",
     EM "An informal introduction to multiplier ideals. ",
-    "Trends in commutative algebra, 87–114, ",
+    "Trends in commutative algebra, 87-114, ",
     "Math. Sci. Res. Inst. Publ., 51, Cambridge Univ. Press, Cambridge, 2004."
- },
-  PARA {
+  },
+  LI {
     "[H] ",
     "Howald, J.A. ",
     EM "Multiplier ideals of monomial ideals. ",
-    "Trans. Amer. Math. Soc. 353 (2001), no. 7, 2665–2671"
+    "Trans. Amer. Math. Soc. 353 (2001), no. 7, 2665-2671"
   },
-  PARA {
+  LI {
     "[J] ",
     "Johnson, Amanda ",
     EM "Multiplier ideals of determinantal ideals. ",
-    "Thesis (Ph.D.)–University of Michigan. 2003"
+    "Thesis (Ph.D.)-University of Michigan. 2003"
   },
-  PARA {
+  LI {
     "[L] ",
     "Lazarsfeld, Robert ",
     EM "Positivity in algebraic geometry. II. ",
     "2004 "
   },
-  PARA {
+  LI {
     "[M] ",
-    "Mustaţă, Mircea ",
+    "Mustațǎ Mircea ",
     EM "Multiplier ideals of hyperplane arrangements. ",
-    "Trans. Amer. Math. Soc. 358 (2006), no. 11, 5015–5023."
+    "Trans. Amer. Math. Soc. 358 (2006), no. 11, 5015-5023."
   },
-  PARA {
+  LI {
     "[T] ",
     "Teitler, Zach ",
-    EM "A note on Mustaţă's computation of multiplier ideals of hyperplane arrangements. ",
-    "Proc. Amer. Math. Soc. 136 (2008), no. 5, 1575–1579."
+    EM "A note on Mustațǎ's computation of multiplier ideals of hyperplane arrangements. ",
+    "Proc. Amer. Math. Soc. 136 (2008), no. 5, 1575-1579."
   },
-  PARA {
+  LI {
     "[Th] ",
     "Thompson, H.M. ",
     EM "Multiplier Ideals of Monomial Space Curves, ",
     HREF { "http://arxiv.org/abs/1006.1915" , "arXiv:1006.1915v4" },
     " [math.AG]."
+  }
   }
 }
 
@@ -1583,7 +1585,7 @@ document {
       R = QQ[x,y,z];
       f = toList factor((x^2 - y^2)*(x^2 - z^2)*(y^2 - z^2)*z) / first;
       A = arrangement f;
-      multiplierIdeal(3/7,A)
+      multiplierIdeal(A,3/7)
     ///
   },
   
@@ -1599,16 +1601,9 @@ document {
       "I" => Ideal
     },
     PARA {
-      "Given a monomial space curve {\tt C} and a parameter {\tt t}, the function 
-      {\tt multiplierIdeal} computes the multiplier ideal associated to the embedding of {\tt C}
-      in {\tt 3}-space and the parameter {\tt t}."
+      "Computes the multiplier ideal of the space curve C parametrized by
+      (t^a,t^b,t^c) given by n=(a,b,c)."
     },
-    PARA {
-      "More precisely, we assume that {\tt R} is a polynomial ring in three variables, {\tt n = {a,b,c}}
-      is a sequence of positive integers of length three, and that {\tt t} is a rational number. The corresponding
-      curve {\tt C} is then given by the embedding {\tt u\to(u^a,u^b,u^c)}."
-    },
-  
     EXAMPLE lines ///
       R = QQ[x,y,z];
       n = {2,3,4};
@@ -1637,7 +1632,8 @@ document {
     EXAMPLE lines ///
       x = symbol x;
       R = QQ[x_1..x_20];
-      multiplierIdeal(R,{4,5},2,5/7)
+      X = genericMatrix(R,4,5);
+      multiplierIdeal(X,2,5/7)
     ///
   },
   
@@ -1777,15 +1773,23 @@ document {
     "(a generic matrix).",
   
     "lct of ideal of 2-by-2 minors of 4-by-5 matrix:",
-    EXAMPLE {"logCanonicalThreshold({4,5},2)"},
+    EXAMPLE lines ///
+      x = getSymbol "x";
+      R = QQ[x_1..x_20];
+      X = genericMatrix(R,4,5);
+      logCanonicalThreshold(X,2)
+    ///,
     "We produce some tables of lcts:",
     EXAMPLE {///
-      lctTable = (M,N,r) -> ( netList (
+      lctTable = (M,N,r) -> (
+        x = getSymbol "x";
+        R := QQ[x_1..x_(M*N)];
+        netList (
         prepend( join({"m\\n"}, toList(3..M)),
         for n from 3 to N list (
           prepend(n,
           for m from 3 to min(n,M) list (
-            logCanonicalThreshold({m,n},r)
+            logCanonicalThreshold(genericMatrix(R,m,n),r)
           ))
         ))
       ));
@@ -1819,9 +1823,11 @@ document {
     "Jumping numbers of an ideal I are those real numbers t
     at which the multiplier ideal J(I^t), as a function of the parameter t,
     changes.
+    More precisely, t is a jumping number if J(I^t) is different from J(I^{t-epsilon})
+    for all epsilon > 0.
     The jumping numbers form a discrete sequence of rational numbers.
     Thus t_1, t_2 are two consecutive jumping numbers of I
-    if and only if J(I^t) = J(I^t_1) for all t_1 \\leq t < t_2
+    when J(I^t) = J(I^t_1) for all t_1 \\leq t < t_2
     and J(I^t) \\neq J(I^t_1) for t < t_1 or t_2 \\leq t."
   },
   PARA {
@@ -1830,6 +1836,11 @@ document {
     By definition, the multiplier ideals are then determined at the
     intermediate parameter values."
   },
+  EXAMPLE lines ///
+    R = QQ[x,y,z,w];
+    I = monomialIdeal(x*y, x*z, y*z, y*w, z*w^2);
+    jumpingNumbers(I)
+  ///,
   PARA {
     "By default, jumpingNumbers looks for jumping numbers in a closed interval
     [a,b] where a is the log canonical threshold of the ideal
@@ -1837,7 +1848,17 @@ document {
     that is, J(I^t) = I.J(I^{t-1}) for t \\geq b.
     (In particular, the multiplier ideals and jumping numbers are determined
     for all t by the output of this command.)
-    The user may specify a different interval."
+    The user may specify a different interval via the optional arguments ",
+    TO "Interval", " and ", TO "IntervalType", "."
+  },
+  SUBSECTION "References",
+  UL {
+  LI {
+    "[ELSV] ",
+    "Lawrence Ein, Robert Lazarsfeld, Karen~E. Smith, and Dror Varolin,",
+    EM "Jumping coefficients of multiplier ideals. ",
+    "Duke Math. J. 123 (2004), no. 3, 469-506."
+  }
   },
   SeeAlso => {
     logCanonicalThreshold
@@ -1897,3 +1918,4 @@ loadPackage "MultiplierIdeals"
 installPackage oo
 
 check oo
+
