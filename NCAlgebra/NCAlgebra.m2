@@ -69,7 +69,7 @@ NCRightIdeal = new Type of HashTable
 NCRingMap = new Type of HashTable
 
 ---------------------------------------------------------------
---- General-purpose functions
+--- Helpful general-purpose functions
 ---------------------------------------------------------------
 
 removeNulls = xs -> select(xs, x -> x =!= null)
@@ -1405,7 +1405,7 @@ ncGroebnerBasis List := opts -> fList -> (
 ncGroebnerBasis NCIdeal := opts -> I -> (
    if I.cache#?gb then return I.cache#gb;
    ncgb := if opts#InstallGB then (
-              gensI := apply(gens I, f -> (coeff := leadCoefficient f; if isUnit coeff then (leadCoefficient f)^(-1)*f else (leadCoefficient coeff)^(-1)*f));
+              gensI := apply(gens I, f -> (coeff := leadCoefficient f; if isUnit coeff then (leadCoefficient f)^(-1)*f else promote((leadCoefficient coeff)^(-1), coefficientRing ring f)*f));
               (minNCGBDeg,maxNCGBDeg,minCoeffDeg,maxCoeffDeg) := getMinMaxDegrees(gensI);
               new NCGroebnerBasis from hashTable {(symbol generators) => hashTable apply(gensI, f -> (leadMonomialForGB f,f)),
                                                   (symbol cache) => new CacheTable from {},
@@ -2207,14 +2207,17 @@ end
 
 --- bug fix/performance improvements
 ------------------------------------
---- Make homogeneous maps interface a little more streamlined.
+--- Make homogeneous maps interface more streamlined.
 ---   May require implementation of modules to do properly
 --- Left kernels/mingens etc (opposite ring now done)
 --- make sure that trivial ideals are handled correctly
 --- make sure that ring constructions respect weights, if present
 --- isFiniteDimensional?
 --- basis for f.d. algebras?
---- basis for algebras not over a field (really just an R-generating set)
+--- generating set for algebras not over a field
+--- proper handling of rings generated in several positive degrees
+---    This goes for things such as basis, etc, as well.
+
 
 --- other things to add or work on in due time
 -----------------------------------
@@ -2226,3 +2229,31 @@ end
 --- Work on reduction code a bit?
 --- Testing!
 --- Documentation!
+
+-- skylanin example
+restart
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+a = random(QQ)
+b = random(QQ)
+c = random(QQ)
+a = 1
+b = 1
+c = -1
+I = ncIdeal {a*x*y+b*y*x+c*z^2,
+             a*y*z+b*z*y+c*x^2,
+             a*z*x+b*x*z+c*y^2}
+Igb = ncGroebnerBasis(I,DegreeLimit=>5)
+B = A/I
+C = first flatten entries centralElements(B,3)
+(b*(c^3-a^3))/(c*(c^3-b^3))
+(a*(b^3-c^3))/(c*(c^3-b^3))
+(c*(a^3-c^3))/(c*(c^3-b^3))
+
+--- andy bug 6/24/2013
+restart
+needsPackage "NCAlgebra"
+R=toField(QQ[q]/ideal{q^2+q+1})
+A=R{x,y,z}
+I=ncIdeal{z*z+q^2*x*y-q*y*x,q*y*z+q^2*x*x-z*y,q*y*y+z*x-q^2*x*z,x^2*z-q*y*x*y,q^2*x*y*x-x^2*y-y^2*z-q*y*x^2}
+ncgb=ncGroebnerBasis(I,InstallGB=>true)
