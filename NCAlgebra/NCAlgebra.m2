@@ -30,7 +30,8 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          normalFormBergman,
          hilbertBergman,
          rightKernelBergman,
-         isLeftRegular,
+         assignDegrees,
+	 isLeftRegular,
          isRightRegular,
          centralElements,
          normalElements,
@@ -48,6 +49,8 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          endomorphismRing,endomorphismRingGens,
          minimizeRelations,checkHomRelations,
          skewPolynomialRing,
+	 abelianization,
+	 oppositeRing,
          wallTiming
 }
 
@@ -768,10 +771,10 @@ coefficients NCRingElement := opts -> f -> (
                                                     promote((f.terms)#m',coefficientRing B)
                                                  else
                                                     promote(0,coefficientRing B)))};
-   coeffs
    -- changed temporarily for speed, but need a workaround.  Maybe accept
    -- monomials as a matrix instead?
-   -- (ncMatrix {mons},coeffs)
+   coeffs
+   --(ncMatrix {mons},coeffs)
 )
 
 monomials NCRingElement := opts -> f -> (
@@ -2186,7 +2189,7 @@ getMatrixGB NCMatrix := opts -> M -> (
 
 NCMatrix == NCMatrix := (M,N) -> (M.matrix) == (N.matrix)
 NCMatrix == ZZ := (M,n) -> (
-   if n != 0 then error "Expected a pair of matrices";
+   if n != 0 then error "Expected comparison to zero.";
    all(flatten entries M, f -> f == 0)
 )
 ZZ == NCMatrix := (n,M) -> M == n
@@ -2210,19 +2213,22 @@ end
 --- Make homogeneous maps interface more streamlined.
 ---   May require implementation of modules to do properly
 --- Left kernels/mingens etc (opposite ring now done)
---- make sure that trivial ideals are handled correctly
---- make sure that ring constructions respect weights, if present
+--- Make sure that trivial ideals are handled correctly
+--- Make sure that ring constructions respect weights, if present
 --- isFiniteDimensional?
---- basis for f.d. algebras?
---- generating set for algebras not over a field
---- proper handling of rings generated in several positive degrees
+--- 'basis' for f.d. algebras?
+--- Generating set for algebras not over a field
+--- Proper handling of rings generated in several positive degrees
 ---    This goes for things such as basis, etc, as well.
-
+--- fix coefficients to return a pair again.
+--- 3d sklyanin generator (following Artin-Schelter)
 
 --- other things to add or work on in due time
 -----------------------------------
---- NCRingMap kernels (to a certain degree)  -- Not sure I can do this with Bergman, can't use
----   block orders in bergman.
+--- Dare I say it, Diamond Lemma?
+--- Make Quotients of Quotients work.
+--- NCRingMap kernels (to a certain degree)  -- Not sure I can do this with
+---   Bergman, can't use block orders in bergman.
 --- anick          -- resolution
 --- ncpbhgroebner  -- gb, hilbert series
 --- NCModules (?) (including module gb (via simple), hilbert series, modulebettinumbers)
@@ -2230,7 +2236,7 @@ end
 --- Testing!
 --- Documentation!
 
--- skylanin example
+-- skylanin example from Ellen / Artin-Schelter generic Sklyanin example
 restart
 needsPackage "NCAlgebra"
 A = QQ{x,y,z}

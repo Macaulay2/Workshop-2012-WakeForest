@@ -181,6 +181,29 @@ TEST ///
 
 --- Check rightKernelBergman
 TEST ///
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+f1 = y*z + z*y - x^2
+f2 = x*z + z*x - y^2
+f3 = z^2 - x*y - y*x
+g = -y^3-x*y*z+y*x*z+x^3
+I = ncIdeal {f1,f2,f3,g}
+B = A/I
+M3 = ncMatrix {{x,y,z,0},
+               {-y*z-2*x^2,-y*x,z*x-x*z,x},
+               {x*y-2*y*x,x*z,-x^2,y},
+               {-y^2-z*x,x^2,-x*y,z}}
+assignDegrees(M3,{1,0,0,0},{2,2,2,1})
+assert isHomogeneous M3
+ker1M3 = rightKernelBergman(M3)
+assert isHomogeneous ker1M3
+assert(M3*ker1M3 == 0)
+ker2M3 = rightKernelBergman(ker1M3)
+assert isHomogeneous ker2M3
+assert(ker1M3*ker2M3 == 0)
+ker3M3 = rightKernelBergman(ker2M3)
+assert isHomogeneous ker3M3  
+assert(ker2M3*ker3M3 == 0)
 ///
 
 --- Check NCIdeal operations
@@ -205,6 +228,81 @@ TEST ///
 
 --- Test gbFromOutputFile
 TEST ///
+///
+
+TEST ///
+--- Test factoring code with skew polynomial ring
+needsPackage "NCAlgebra"
+-- n is the number of variables in skew poly ring
+n = 3
+rk = 2^(n-1)
+B = skewPolynomialRing(QQ,-1_QQ,{x_1..x_n})
+A = ambient B
+-- tau is cyclic ring automorphism
+tau = ncMap(B,B,drop(gens B,1) | {(gens B)#0})
+-- create an Ore extension with a new variable w and tau
+C = oreExtension(B,tau,w)
+A' = ambient C
+use A'
+J = ideal C
+J = J + ncIdeal {w^2}
+D = A'/J
+DtoC = ncMap(C,D,gens C)
+-- need inverse maps, since \varphi^\sigma is obtained by applying \sigma^{-1}
+-- to all the matrix entries
+tauCInv = ncMap(C,C,{(gens C)#(n-1)} | drop(drop(gens C,-1),-1) | {DtoC w})
+-- have to compose twice, because the normalizing automorphism of w^2 is tau^2
+sigmaInv = tauCInv @@ tauCInv
+-- build the presentation of the example module
+M1 = ncMatrix {drop(gens D,-2) | {w}}
+assignDegrees M1
+hiSyz = M1
+-- take a sufficiently high syzygy over D to make sure we have a MCM module
+-- Note that since the algebra is Koszul, we may use the rightKernel code
+-- that does not make a call to Bergman.
+scan(n, i -> (<< "Computing " << i+2 << "th syzygy" << endl; hiSyz = rightKernel(hiSyz,1)));
+-- lift the map to the ambient ring
+hiSyzC = DtoC hiSyz
+assignDegrees hiSyzC;
+assert(isHomogeneous hiSyzC)
+use C
+-- build f*id map
+-- (this needs to be easier to make)
+fId = w^2*(ncMatrix applyTable(entries id_(ZZ^rk), i -> promote(i,C)));
+assignDegrees fId;
+assert(isHomogeneous fId)
+-- now factor through w^2*identity
+hiSyzC' = fId // hiSyzC
+--- check that these satisfy the twisted matrix factorization condition
+assert(hiSyzC*hiSyzC' == fId)
+assert(hiSyzC'*(sigmaInv hiSyzC) == fId)
+///
+
+--- Factoring map code over Sklyanin
+TEST ///
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+f1 = y*z + z*y - x^2
+f2 = x*z + z*x - y^2
+f3 = z^2 - x*y - y*x
+I = ncIdeal {f1,f2,f3}
+-- note that this is not a 'generic' sklyanin, and has a finite GB
+Igb = ncGroebnerBasis I
+g = 2*(-y^3-x*y*z+y*x*z+x^3)
+J = I + ncIdeal {g}
+B = A/I
+B' = A/J
+BprimeToB = ncMap(B,B',gens B)
+k = ncMatrix {{x,y,z}}
+assignDegrees k
+M = BprimeToB rightKernelBergman rightKernelBergman k
+fId = g*(ncMatrix applyTable(entries id_(ZZ^4), i -> promote(i,B)));
+assignDegrees(fId,{2,2,2,3},{5,5,5,6});
+assert(isHomogeneous fId)
+-- now factor through g*id
+M' = fId // M
+assert(M*M' == fId)
+assert(M'*M == fId)
 ///
 
 --- Check NCGroebnerBasis code (InstallGB)
@@ -253,20 +351,21 @@ TEST ///
 TEST ///
 ///
 
---- Skew Polynomial ring creation
+--- Skew polynomial ring, abelianization, and isCommutative
 TEST ///
-///
-
---- abelianization
-TEST ///
-///
-
---- isCommutative
-TEST ///
-///
-
---- oppositeRing
-TEST ///
+needsPackage "NCAlgebra"
+R = QQ[q]/ideal{q^4+q^3+q^2+q+1}
+B = skewPolynomialRing(R,q,{x,y,z,w})
+assert(x*y == q*y*x)
+C = skewPolynomialRing(QQ,1_QQ, {x,y,z,w})
+assert(isCommutative C)
+assert(not isCommutative B)
+abC = abelianization C
+abC' = abelianization ambient C
+assert(ideal abC == 0)
+assert(ideal abC' == 0)
+Bop = oppositeRing B
+assert(y*x == q*x*y)
 ///
 
 end
@@ -357,7 +456,6 @@ A = R{x,y,z}
 I = ncIdeal {y*x - q*x*y, z*y - q*y*z, z*x - q*x*z}
 ncgb = ncGroebnerBasis(I,InstallGB=>true)
 B = A / I
-
 -- get a basis of the degree n piece of A over the base ring
 time bas = basis(10,B);
 coefficients(x*y+q^2*x*z)
@@ -514,6 +612,7 @@ hiSyzC = DtoC hiSyz
 assignDegrees hiSyzC;
 isHomogeneous hiSyzC
 ----
+
 --- try factoring code
 use C
 fId = w^2*(ncMatrix applyTable(entries id_(ZZ^rk), i -> promote(i,C)));
@@ -778,33 +877,6 @@ R = ZZ/101[a,b,c,d]/ideal{b^5,c^5}
 cSubstrings(first exponents (a*b^2*c^3*d^4),0,4)
 cSubstrings(first exponents (a*b^2*c^3*d^4),0,0)
 
------------------------------------
---- Test for Kernel code
-restart
-debug needsPackage "NCAlgebra"
-A = QQ{x,y,z}
-f1 = y*z + z*y - x^2
-f2 = x*z + z*x - y^2
-f3 = z^2 - x*y - y*x
-g = -y^3-x*y*z+y*x*z+x^3
-I = ncIdeal {f1,f2,f3,g}
-B = A/I
-M3 = ncMatrix {{x,y,z,0},
-               {-y*z-2*x^2,-y*x,z*x-x*z,x},
-               {x*y-2*y*x,x*z,-x^2,y},
-               {-y^2-z*x,x^2,-x*y,z}}
-assignDegrees(M3,{1,0,0,0},{2,2,2,1})
-assert isHomogeneous M3
-ker1M3 = rightKernelBergman(M3)
-assert isHomogeneous ker1M3
-M3*ker1M3    --- make NCMatrix == 0 work
-ker2M3 = rightKernelBergman(ker1M3)
-assert isHomogeneous ker2M3
-ker1M3*ker2M3
--- bug.  I think this is because the matrix is injective up to the degree given
-ker3M3 = rightKernelBergman(ker2M3)
-assert isHomogeneous ker3M3  
-ker2M3*ker3M3
 
 -------------------------------------
 --- Testing lead terms
@@ -812,59 +884,6 @@ restart
 debug needsPackage "NCAlgebra"
 A = QQ{a,b,c,d}
 leadTerm(d*b+d*a*c)
-
---- Now I understand!!!
-restart
-RoW = 3
-x_1 = 4
-junkDic = new GlobalDictionary
-getGlobalSymbol(junkDic, "x")
-getGlobalSymbol(junkDic,"RoW")
-getGlobalSymbol(junkDic,"CoL")
-dictionaryPath = prepend(junkDic,dictionaryPath)
-RoW
-x
-x_1
-x_1 = a-- uhoh!
-x
-x_1
-dictionaryPath = drop(dictionaryPath,1)
-RoW
-x
-x_1
-
---- Bug #1
-restart
-debug needsPackage "NCAlgebra"
-A = (frac(QQ[a])) {x,y,z};
-gensA = gens A;
-net gensA#0
-net gensA#0 -- this call fails.  The first net changes something?  SIGSEGV
-
---- Bug #2
-restart
-debug needsPackage "NCAlgebra"
-A = (frac(QQ[a])) {x,y,z};
-gensA = gens A;
-net gensA#0
-(gensA#0) * (gensA#0);   -- this call fails.  The first net changes something, and now
-                         -- I don't understand what the error message is, and I can't reproduce
-                         -- it in the debugger.
-
-restart
-debug needsPackage "NCAlgebra"
-A = (QQ[a]) {x,y,z};
-gensA = gens A;
-net gensA#0
-net gensA#0 -- this works.
-
-restart
-debug needsPackage "NCAlgebra"
-A = QQ {x,y,z};
-(coefficientRing A)
-gensA = gens A;
-net gensA#0
-net gensA#0  -- this works
 
 -- Andy test
 restart
