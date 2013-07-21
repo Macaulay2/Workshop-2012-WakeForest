@@ -143,7 +143,7 @@ N = ncMatrix {{M,2*M,3*M},{4*M,5*M,6*M}}
 assert (N == ncMatrix {{a, b, c, d, 2*a, 2*b, 2*c, 2*d, 3*a, 3*b, 3*c, 3*d}, {4*a, 4*b, 4*c, 4*d, 5*a, 5*b, 5*c, 5*d, 6*a, 6*b, 6*c, 6*d}})
 ///
 
---- Test NCMatrix % NCGroebnerBasis
+--- Test NCMatrix commands
 TEST ///
 needsPackage "NCAlgebra"
 A = QQ{x,y,z}
@@ -160,23 +160,18 @@ B = A/I
 phi = ncMap(B,A,gens B)
 NB = phi N
 N3B = NB^3
+X = NB + 3*NB
+Y = NB | 2*NB
+Z = X || NB
+Xans = ncMatrix {{4*x, 4*y, 4*z}, {4*y, 4*z, 4*x}, {4*z, 4*x, 4*y}}
+Yans = ncMatrix {{x, y, z, 2*x, 2*y, 2*z}, {y, z, x, 2*y, 2*z, 2*x}, {z, x, y, 2*z, 2*x, 2*y}}
+Zans = ncMatrix {{4*x, 4*y, 4*z}, {4*y, 4*z, 4*x}, {4*z, 4*x, 4*y}, {x, y, z}, {y, z, x}, {z, x, y}}
 answer = ncMatrix {{-y^2*z+y^3+y*x*z-y*x*y+x*y*z+x*y^2+2*x*y*x+x^2*z+3*x^2*y, y^2*z+y*x*z+2*y*x*y+x*y*z+3*x*y^2-x*y*x-x^2*z+x^2*y+x^3, 2*y^2*z+y^3+y*x*y+x*y*x+2*x^2*z+x^3}, {y^2*z+y*x*z+2*y*x*y+x*y*z+3*x*y^2-x*y*x-x^2*z+x^2*y+x^3, 2*y^2*z+y^3+y*x*y+x*y*x+2*x^2*z+x^3, -y^2*z+y^3+y*x*z-y*x*y+x*y*z+x*y^2+2*x*y*x+x^2*z+3*x^2*y}, {2*y^2*z+y^3+y*x*y+x*y*x+2*x^2*z+x^3, -y^2*z+y^3+y*x*z-y*x*y+x*y*z+x*y^2+2*x*y*x+x^2*z+3*x^2*y, y^2*z+y*x*z+2*y*x*y+x*y*z+3*x*y^2-x*y*x-x^2*z+x^2*y+x^3}}
+assert(X == Xans)
+assert(Y == Yans)
+assert(Z == Zans)
 assert(N3B == phi Nred)
 assert(N3B == answer)
-///
-
---- checking matrix multiplication, addition, etc
---- operations to test: +,-,^,|,||,*.  In this,
---- also check that source/target are correct.
-TEST ///
-///
-
---- Check mingens of a NCMatrix
-TEST ///
-///
-
---- Check rightKernel (ordinary)
-TEST ///
 ///
 
 --- Check rightKernelBergman
@@ -206,6 +201,10 @@ assert isHomogeneous ker3M3
 assert(ker2M3*ker3M3 == 0)
 ///
 
+--- Check mingens of a NCMatrix (code not yet finished)
+TEST ///
+///
+
 --- Check NCIdeal operations
 TEST ///
 ///
@@ -228,10 +227,72 @@ TEST ///
 
 --- Test gbFromOutputFile
 TEST ///
+-- this test works as of 7/19/2012
+-- however, it does not work in 'check UnitTestsNCA', because
+-- I don't know how to get the checker to see the gb file.  How can I do this?
+restart
+needsPackage "NCAlgebra"
+A=QQ{a, b, c, d, e, f, g, h}
+-- this got very slow all of a sudden... speed this up?  Not really sure how...
+I = time gbFromOutputFile(A,"UghABCgb6.txt", ReturnIdeal=>true);
+B=A/I
+IdegListAns = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6}
+assert(IdegListAns == (I.generators / degree))
+F = a^7+b^7+c^7+d^7+e^7+f^7+g^7+h^7;
+--- sometimes bergman calls are great!
+bas=basis(2,B);
+X = flatten entries (F*bas);
+-- change back to avoid calls to bergman engine for 'value' and equality test.
+XA = apply(X, x -> promote(x,A));
+use A
+firstFewAns = {e^7*a*b+e^7*a^2+7*e^6*a*b*h-7*e^6*a*b*e+3*e^5*b*e^2*b-3*e^5*a*e^2*b+21*e^5*a*b*h^2-42*e^5*a*b*e*h+21*e^5*a*b*e^2+9*e^4*b*e^3*b-10*e^4*b*e^3*a+28*e^4*b*e^2*b*h-57*e^4*b*e^2*b*e+e^4*a*e^3*b-28*e^4*a*e^2*b*h+57*e^4*a*e^2*b*e+35*e^4*a*b*h^3-105*e^4*a*b*e*h^2+105*e^4*a*b*e^2*h-35*e^4*a*b*e^3-20*e^3*b*e^4*b+19*e^3*b*e^4*a+28*e^3*b*e^3*b*h+44*e^3*b*e^3*b*e-49*e^3*b*e^3*a*h+34*e^3*b*e^3*a*e+105*e^3*b*e^2*b*h^2-357*e^3*b*e^2*b*e*h+231*e^3*b*e^2*b*e^2+e^3*a*e^4*b+21*e^3*a*e^3*b*h-78*e^3*a*e^3*b*e-105*e^3*a*e^2*b*h^2+357*e^3*a*e^2*b*e*h-231*e^3*a*e^2*b*e^2+35*e^3*a*b*h^4-140*e^3*a*b*e*h^3+210*e^3*a*b*e^2*h^2-140*e^3*a*b*e^3*h+35*e^3*a*b*e^4+15*e^2*b*e^5*b-15*e^2*b*e^5*a-70*e^2*b*e^4*b*h+70*e^2*b*e^4*a*h-27*e^2*b*e^4*a*e+280*e^2*b*e^3*b*e*h-198*e^2*b*e^3*b*e^2-105*e^2*b*e^3*a*h^2+224*e^2*b*e^3*a*e*h-189*e^2*b*e^3*a*e^2+210*e^2*b*e^2*b*h^3-945*e^2*b*e^2*b*e*h^2+1281*e^2*b*e^2*b*e^2*h-615*e^2*b*e^2*b*e^3+27*e^2*a*e^4*b*e+105*e^2*a*e^3*b*h^2-504*e^2*a*e^3*b*e*h+387*e^2*a*e^3*b*e^2-210*e^2*a*e^2*b*h^3+945*e^2*a*e^2*b*e*h^2-1281*e^2*a*e^2*b*e^2*h+615*e^2*a*e^2*b*e^3+21*e^2*a*b*h^5-105*e^2*a*b*e*h^4+210*e^2*a*b*e^2*h^3-210*e^2*a*b*e^3*h^2+105*e^2*a*b*e^4*h-21*e^2*a*b*e^5-7*e*b*e^6*b+6*e*b*e^6*a+28*e*b*e^5*b*h+6*e*b*e^5*b*e-35*e*b*e^5*a*h-105*e*b*e^4*b*h^2+35*e*b*e^4*b*e*h-15*e*b*e^4*b*e^2+105*e*b*e^4*a*h^2-182*e*b*e^4*a*e*h+171*e*b*e^4*a*e^2-140*e*b*e^3*b*h^3+840*e*b*e^3*b*e*h^2-1204*e*b*e^3*b*e^2*h+628*e*b*e^3*b*e^3-140*e*b*e^3*a*h^3+630*e*b*e^3*a*e*h^2-1085*e*b*e^3*a*e^2*h+600*e*b*e^3*a*e^3+210*e*b*e^2*b*h^4-1260*e*b*e^2*b*e*h^3+2835*e*b*e^2*b*e^2*h^2-2975*e*b*e^2*b*e^3*h+1194*e*b*e^2*b*e^4-105*e*b*e^2*a*h^4+840*e*b*e^2*a*e*h^3-2520*e*b*e^2*a*e^2*h^2+3360*e*b*e^2*a*e^3*h-1680*e*b*e^2*a*e^4+42*e*b*e*b*h^5-420*e*b*e*b*e*h^4+1680*e*b*e*b*e^2*h^3-3360*e*b*e*b*e^3*h^2+3360*e*b*e*b*e^4*h-1344*e*b*e*b*e^5+e*a*e^6*b+7*e*a*e^5*b*h-6*e*a*e^5*b*e+147*e*a*e^4*b*e*h-156*e*a*e^4*b*e^2+280*e*a*e^3*b*h^3-1470*e*a*e^3*b*e*h^2+2289*e*a*e^3*b*e^2*h-1228*e*a*e^3*b*e^3-105*e*a*e^2*b*h^4+420*e*a*e^2*b*e*h^3-315*e*a*e^2*b*e^2*h^2-385*e*a*e^2*b*e^3*h+486*e*a*e^2*b*e^4-42*e*a*e*b*h^5+420*e*a*e*b*e*h^4-1680*e*a*e*b*e^2*h^3+3360*e*a*e*b*e^3*h^2-3360*e*a*e*b*e^4*h+1344*e*a*e*b*e^5+7*e*a*b*h^6-42*e*a*b*e*h^5+105*e*a*b*e^2*h^4-140*e*a*b*e^3*h^3+105*e*a*b*e^4*h^2-42*e*a*b*e^5*h+7*e*a*b*e^6+d^7*a^2+c^7*a^2-b*e^7*a-14*b*e^6*b*h+7*b*e^6*b*e+7*b*e^6*a*h+42*b*e^5*b*e*h-21*b*e^5*b*e^2-21*b*e^5*a*h^2-70*b*e^4*b*h^3+105*b*e^4*b*e*h^2-105*b*e^4*b*e^2*h+35*b*e^4*b*e^3+105*b*e^4*a*h^3-525*b*e^4*a*e*h^2+1008*b*e^4*a*e^2*h-623*b*e^4*a*e^3-210*b*e^3*b*h^4+1260*b*e^3*b*e*h^3-2940*b*e^3*b*e^2*h^2+3304*b*e^3*b*e^3*h-1449*b*e^3*b*e^4+70*b*e^3*a*h^4-700*b*e^3*a*e*h^3+2415*b*e^3*a*e^2*h^2-3598*b*e^3*a*e^3*h+1953*b*e^3*a*e^4-42*b*e^2*b*h^5+420*b*e^2*b*e*h^4-1890*b*e^2*b*e^2*h^3+4305*b*e^2*b*e^3*h^2-4851*b*e^2*b*e^4*h+2142*b*e^2*b*e^5-21*b*e^2*a*h^5+105*b*e^2*a*e*h^4-840*b*e^2*a*e^3*h^2+1680*b*e^2*a*e^4*h-1008*b*e^2*a*e^5-42*b*e*b*e*h^5+210*b*e*b*e^2*h^4-280*b*e*b*e^3*h^3-210*b*e*b*e^4*h^2+756*b*e*b*e^5*h-462*b*e*b*e^6-7*b*e*a*h^6+84*b*e*a*e*h^5-420*b*e*a*e^2*h^4+1120*b*e*a*e^3*h^3-1680*b*e*a*e^4*h^2+1344*b*e*a*e^5*h-448*b*e*a*e^6+42*b^2*e^2*h^5-210*b^2*e^3*h^4+490*b^2*e^4*h^3-630*b^2*e^5*h^2+434*b^2*e^6*h-126*b^2*e^7+a*e^7*b+7*a*e^6*b*h-7*a*e^6*b*e+21*a*e^5*b*h^2-42*a*e^5*b*e*h+21*a*e^5*b*e^2-35*a*e^4*b*h^3+420*a*e^4*b*e*h^2-903*a*e^4*b*e^2*h+588*a*e^4*b*e^3+140*a*e^3*b*h^4-560*a*e^3*b*e*h^3+525*a*e^3*b*e^2*h^2+294*a*e^3*b*e^3*h-504*a*e^3*b*e^4+63*a*e^2*b*h^5-525*a*e^2*b*e*h^4+1890*a*e^2*b*e^2*h^3-3465*a*e^2*b*e^3*h^2+3171*a*e^2*b*e^4*h-1134*a*e^2*b*e^5+7*a*e*b*h^6-42*a*e*b*e*h^5+210*a*e*b*e^2*h^4-840*a*e*b*e^3*h^3+1890*a*e*b*e^4*h^2-2100*a*e*b*e^5*h+910*a*e*b*e^6-7*a*b*e*h^6-21*a*b*e^2*h^5+175*a*b*e^3*h^4-455*a*b*e^4*h^3+609*a*b*e^5*h^2-427*a*b*e^6*h+125*a*b*e^7+a^2*h^7+a^2*g^7+a^2*f^7+a^2*b^7+a^9, 2*e^7*a*b+7*e^6*a*b*h-7*e^6*a*b*e+6*e^5*b*e^2*b-6*e^5*a*e^2*b+21*e^5*a*b*h^2-42*e^5*a*b*e*h+21*e^5*a*b*e^2-4*e^4*b*e^3*b-4*e^4*b*e^3*a+42*e^4*b*e^2*b*h-54*e^4*b*e^2*b*e+8*e^4*a*e^3*b-42*e^4*a*e^2*b*h+54*e^4*a*e^2*b*e+35*e^4*a*b*h^3-105*e^4*a*b*e*h^2+105*e^4*a*b*e^2*h-35*e^4*a*b*e^3+3*e^3*b*e^4*a-28*e^3*b*e^3*b*h+40*e^3*b*e^3*b*e-28*e^3*b*e^3*a*h+40*e^3*b*e^3*a*e+126*e^3*b*e^2*b*h^2-336*e^3*b*e^2*b*e*h+228*e^3*b*e^2*b*e^2-3*e^3*a*e^4*b+56*e^3*a*e^3*b*h-80*e^3*a*e^3*b*e-126*e^3*a*e^2*b*h^2+336*e^3*a*e^2*b*e*h-228*e^3*a*e^2*b*e^2+35*e^3*a*b*h^4-140*e^3*a*b*e*h^3+210*e^3*a*b*e^2*h^2-140*e^3*a*b*e^3*h+35*e^3*a*b*e^4+21*e^2*b*e^4*a*h-33*e^2*b*e^4*a*e-84*e^2*b*e^3*b*h^2+252*e^2*b*e^3*b*e*h-192*e^2*b*e^3*b*e^2-84*e^2*b*e^3*a*h^2+252*e^2*b*e^3*a*e*h-192*e^2*b*e^3*a*e^2+210*e^2*b*e^2*b*h^3-882*e^2*b*e^2*b*e*h^2+1260*e^2*b*e^2*b*e^2*h-612*e^2*b*e^2*b*e^3-21*e^2*a*e^4*b*h+33*e^2*a*e^4*b*e+168*e^2*a*e^3*b*h^2-504*e^2*a*e^3*b*e*h+384*e^2*a*e^3*b*e^2-210*e^2*a*e^2*b*h^3+882*e^2*a*e^2*b*e*h^2-1260*e^2*a*e^2*b*e^2*h+612*e^2*a*e^2*b*e^3+21*e^2*a*b*h^5-105*e^2*a*b*e*h^4+210*e^2*a*b*e^2*h^3-210*e^2*a*b*e^3*h^2+105*e^2*a*b*e^4*h-21*e^2*a*b*e^5+63*e*b*e^4*a*h^2-210*e*b*e^4*a*e*h+177*e*b*e^4*a*e^2-140*e*b*e^3*b*h^3+672*e*b*e^3*b*e*h^2-1092*e*b*e^3*b*e^2*h+600*e*b*e^3*b*e^3-140*e*b*e^3*a*h^3+672*e*b*e^3*a*e*h^2-1092*e*b*e^3*a*e^2*h+600*e*b*e^3*a*e^3+210*e*b*e^2*b*h^4-1260*e*b*e^2*b*e*h^3+2898*e*b*e^2*b*e^2*h^2-3024*e*b*e^2*b*e^3*h+1206*e*b*e^2*b*e^4-105*e*b*e^2*a*h^4+840*e*b*e^2*a*e*h^3-2520*e*b*e^2*a*e^2*h^2+3360*e*b*e^2*a*e^3*h-1680*e*b*e^2*a*e^4+42*e*b*e*b*h^5-420*e*b*e*b*e*h^4+1680*e*b*e*b*e^2*h^3-3360*e*b*e*b*e^3*h^2+3360*e*b*e*b*e^4*h-1344*e*b*e*b*e^5-63*e*a*e^4*b*h^2+210*e*a*e^4*b*e*h-177*e*a*e^4*b*e^2+280*e*a*e^3*b*h^3-1344*e*a*e^3*b*e*h^2+2184*e*a*e^3*b*e^2*h-1200*e*a*e^3*b*e^3-105*e*a*e^2*b*h^4+420*e*a*e^2*b*e*h^3-378*e*a*e^2*b*e^2*h^2-336*e*a*e^2*b*e^3*h+474*e*a*e^2*b*e^4-42*e*a*e*b*h^5+420*e*a*e*b*e*h^4-1680*e*a*e*b*e^2*h^3+3360*e*a*e*b*e^3*h^2-3360*e*a*e*b*e^4*h+1344*e*a*e*b*e^5+7*e*a*b*h^6-42*e*a*b*e*h^5+105*e*a*b*e^2*h^4-140*e*a*b*e^3*h^3+105*e*a*b*e^4*h^2-42*e*a*b*e^5*h+7*e*a*b*e^6+6*d^5*a*d^2*b+4*d^4*b*d^3*a-8*d^4*a*d^3*b-12*d^4*a*d^2*b*d-3*d^3*b*d^4*a-12*d^3*b*d^3*a*d+3*d^3*a*d^4*b+24*d^3*a*d^3*b*d+18*d^3*a*d^2*b*d^2+12*d^2*b*d^4*a*d+24*d^2*b*d^3*a*d^2-12*d^2*a*d^4*b*d-48*d^2*a*d^3*b*d^2-24*d^2*a*d^2*b*d^3-30*d*b*d^4*a*d^2-40*d*b*d^3*a*d^3+105*d*b*d^2*a*d^4+30*d*a*d^4*b*d^2+80*d*a*d^3*b*d^3-75*d*a*d^2*b*d^4-42*d*a*d*b*d^5+c^7*a^2+6*c^5*a*c^2*b-6*c^5*a*c^2*a+4*c^4*b*c^3*a-8*c^4*a*c^3*b+4*c^4*a*c^3*a-12*c^4*a*c^2*b*c+12*c^4*a*c^2*a*c-3*c^3*b*c^4*a-12*c^3*b*c^3*a*c+3*c^3*a*c^4*b+24*c^3*a*c^3*b*c-12*c^3*a*c^3*a*c+18*c^3*a*c^2*b*c^2-18*c^3*a*c^2*a*c^2+12*c^2*b*c^4*a*c+24*c^2*b*c^3*a*c^2-12*c^2*a*c^4*b*c-48*c^2*a*c^3*b*c^2+24*c^2*a*c^3*a*c^2-24*c^2*a*c^2*b*c^3+24*c^2*a*c^2*a*c^3-30*c*b*c^4*a*c^2-40*c*b*c^3*a*c^3+105*c*b*c^2*a*c^4+30*c*a*c^4*b*c^2+80*c*a*c^3*b*c^3-40*c*a*c^3*a*c^3-75*c*a*c^2*b*c^4-30*c*a*c^2*a*c^4-42*c*a*c*b*c^5+42*c*a*c*a*c^5-b*e^7*b-7*b*e^6*b*h+7*b*e^6*b*e-21*b*e^5*b*h^2+42*b*e^5*b*e*h-21*b*e^5*b*e^2-35*b*e^4*b*h^3+105*b*e^4*b*e*h^2-105*b*e^4*b*e^2*h+35*b*e^4*b*e^3+105*b*e^4*a*h^3-567*b*e^4*a*e*h^2+1029*b*e^4*a*e^2*h-627*b*e^4*a*e^3-175*b*e^3*b*h^4+1120*b*e^3*b*e*h^3-2814*b*e^3*b*e^2*h^2+3248*b*e^3*b*e^3*h-1439*b*e^3*b*e^4+70*b*e^3*a*h^4-700*b*e^3*a*e*h^3+2436*b*e^3*a*e^2*h^2-3612*b*e^3*a*e^3*h+1956*b*e^3*a*e^4-21*b*e^2*b*h^5+315*b*e^2*b*e*h^4-1680*b*e^2*b*e^2*h^3+4116*b*e^2*b*e^3*h^2-4767*b*e^2*b*e^4*h+2127*b*e^2*b*e^5-21*b*e^2*a*h^5+105*b*e^2*a*e*h^4-840*b*e^2*a*e^3*h^2+1680*b*e^2*a*e^4*h-1008*b*e^2*a*e^5+7*b*e*b*h^6-84*b*e*b*e*h^5+315*b*e*b*e^2*h^4-420*b*e*b*e^3*h^3-105*b*e*b*e^4*h^2+714*b*e*b*e^5*h-455*b*e*b*e^6-7*b*e*a*h^6+84*b*e*a*e*h^5-420*b*e*a*e^2*h^4+1120*b*e*a*e^3*h^3-1680*b*e*a*e^4*h^2+1344*b*e*a*e^5*h-448*b*e*a*e^6+60*b*d^4*a*d^3-150*b*d^3*a*d^4+84*b*d^2*a*d^5+7*b*d*a*d^6+60*b*c^4*a*c^3-150*b*c^3*a*c^4+84*b*c^2*a*c^5+7*b*c*a*c^6-7*b^2*e*h^6+63*b^2*e^2*h^5-245*b^2*e^3*h^4+525*b^2*e^4*h^3-651*b^2*e^5*h^2+441*b^2*e^6*h-127*b^2*e^7+a*e^7*b+7*a*e^6*b*h-7*a*e^6*b*e+21*a*e^5*b*h^2-42*a*e^5*b*e*h+21*a*e^5*b*e^2-70*a*e^4*b*h^3+462*a*e^4*b*e*h^2-924*a*e^4*b*e^2*h+592*a*e^4*b*e^3+105*a*e^3*b*h^4-420*a*e^3*b*e*h^3+378*a*e^3*b*e^2*h^2+364*a*e^3*b*e^3*h-517*a*e^3*b*e^4+42*a*e^2*b*h^5-420*a*e^2*b*e*h^4+1680*a*e^2*b*e^2*h^3-3276*a*e^2*b*e^3*h^2+3087*a*e^2*b*e^4*h-1119*a*e^2*b*e^5+105*a*e*b*e^2*h^4-700*a*e*b*e^3*h^3+1785*a*e*b*e^4*h^2-2058*a*e*b*e^5*h+903*a*e*b*e^6+a*d^7*b+7*a*d^6*b*g-7*a*d^6*b*d+21*a*d^5*b*g^2-42*a*d^5*b*d*g+21*a*d^5*b*d^2+35*a*d^4*b*g^3-105*a*d^4*b*d*g^2+105*a*d^4*b*d^2*g-95*a*d^4*b*d^3+35*a*d^3*b*g^4-140*a*d^3*b*d*g^3+210*a*d^3*b*d^2*g^2-140*a*d^3*b*d^3*g+125*a*d^3*b*d^4+21*a*d^2*b*g^5-105*a*d^2*b*d*g^4+210*a*d^2*b*d^2*g^3-210*a*d^2*b*d^3*g^2+105*a*d^2*b*d^4*g-15*a*d^2*b*d^5+7*a*d*b*g^6-42*a*d*b*d*g^5+105*a*d*b*d^2*g^4-140*a*d*b*d^3*g^3+105*a*d*b*d^4*g^2-42*a*d*b*d^5*g-28*a*d*b*d^6+a*c^7*b-a*c^7*a+7*a*c^6*b*f-7*a*c^6*b*c-7*a*c^6*a*f+7*a*c^6*a*c+21*a*c^5*b*f^2-42*a*c^5*b*c*f+21*a*c^5*b*c^2-21*a*c^5*a*f^2+42*a*c^5*a*c*f-21*a*c^5*a*c^2+35*a*c^4*b*f^3-105*a*c^4*b*c*f^2+105*a*c^4*b*c^2*f-95*a*c^4*b*c^3-35*a*c^4*a*f^3+105*a*c^4*a*c*f^2-105*a*c^4*a*c^2*f+35*a*c^4*a*c^3+35*a*c^3*b*f^4-140*a*c^3*b*c*f^3+210*a*c^3*b*c^2*f^2-140*a*c^3*b*c^3*f+125*a*c^3*b*c^4-35*a*c^3*a*f^4+140*a*c^3*a*c*f^3-210*a*c^3*a*c^2*f^2+140*a*c^3*a*c^3*f+25*a*c^3*a*c^4+21*a*c^2*b*f^5-105*a*c^2*b*c*f^4+210*a*c^2*b*c^2*f^3-210*a*c^2*b*c^3*f^2+105*a*c^2*b*c^4*f-15*a*c^2*b*c^5-21*a*c^2*a*f^5+105*a*c^2*a*c*f^4-210*a*c^2*a*c^2*f^3+210*a*c^2*a*c^3*f^2-105*a*c^2*a*c^4*f-69*a*c^2*a*c^5+7*a*c*b*f^6-42*a*c*b*c*f^5+105*a*c*b*c^2*f^4-140*a*c*b*c^3*f^3+105*a*c*b*c^4*f^2-42*a*c*b*c^5*f-28*a*c*b*c^6-7*a*c*a*f^6+42*a*c*a*c*f^5-105*a*c*a*c^2*f^4+140*a*c*a*c^3*f^3-105*a*c*a*c^4*f^2+42*a*c*a*c^5*f+21*a*c*a*c^6+a*b*h^7+a*b*g^7+a*b*f^7-42*a*b*e^2*h^5+210*a*b*e^3*h^4-490*a*b*e^4*h^3+630*a*b*e^5*h^2-434*a*b*e^6*h+126*a*b*e^7-7*a*b*d*g^6+21*a*b*d^2*g^5-35*a*b*d^3*g^4+35*a*b*d^4*g^3-21*a*b*d^5*g^2+7*a*b*d^6*g-2*a*b*d^7-7*a*b*c*f^6+21*a*b*c^2*f^5-35*a*b*c^3*f^4+35*a*b*c^4*f^3-21*a*b*c^5*f^2+7*a*b*c^6*f-2*a*b*c^7+a*b^8+7*a^2*c*f^6-21*a^2*c^2*f^5+35*a^2*c^3*f^4-35*a^2*c^4*f^3+21*a^2*c^5*f^2-7*a^2*c^6*f+2*a^2*c^7+a^8*b, e^7*b*c+e^7*a*c+7*e^6*b*c*h-7*e^6*b*c*e+21*e^5*b*c*h^2-42*e^5*b*c*e*h+21*e^5*b*c*e^2+35*e^4*b*c*h^3-105*e^4*b*c*e*h^2+105*e^4*b*c*e^2*h-35*e^4*b*c*e^3+35*e^3*b*c*h^4-140*e^3*b*c*e*h^3+210*e^3*b*c*e^2*h^2-140*e^3*b*c*e^3*h+35*e^3*b*c*e^4+21*e^2*b*c*h^5-105*e^2*b*c*e*h^4+210*e^2*b*c*e^2*h^3-210*e^2*b*c*e^3*h^2+105*e^2*b*c*e^4*h-21*e^2*b*c*e^5+7*e*b*c*h^6-42*e*b*c*e*h^5+105*e*b*c*e^2*h^4-140*e*b*c*e^3*h^3+105*e*b*c*e^4*h^2-42*e*b*c*e^5*h+7*e*b*c*e^6+d^7*a*c+c^7*a*c-b*e^7*c-7*b*e^6*c*h+7*b*e^6*c*e-21*b*e^5*c*h^2+42*b*e^5*c*e*h-21*b*e^5*c*e^2-35*b*e^4*c*h^3+105*b*e^4*c*e*h^2-105*b*e^4*c*e^2*h+35*b*e^4*c*e^3-35*b*e^3*c*h^4+140*b*e^3*c*e*h^3-210*b*e^3*c*e^2*h^2+140*b*e^3*c*e^3*h-35*b*e^3*c*e^4-21*b*e^2*c*h^5+105*b*e^2*c*e*h^4-210*b*e^2*c*e^2*h^3+210*b*e^2*c*e^3*h^2-105*b*e^2*c*e^4*h+21*b*e^2*c*e^5-7*b*e*c*h^6+42*b*e*c*e*h^5-105*b*e*c*e^2*h^4+140*b*e*c*e^3*h^3-105*b*e*c*e^4*h^2+42*b*e*c*e^5*h-7*b*e*c*e^6+a*e^7*c+7*a*e^6*c*h-7*a*e^6*c*e+21*a*e^5*c*h^2-42*a*e^5*c*e*h+21*a*e^5*c*e^2+35*a*e^4*c*h^3-105*a*e^4*c*e*h^2+105*a*e^4*c*e^2*h-35*a*e^4*c*e^3+35*a*e^3*c*h^4-140*a*e^3*c*e*h^3+210*a*e^3*c*e^2*h^2-140*a*e^3*c*e^3*h+35*a*e^3*c*e^4+21*a*e^2*c*h^5-105*a*e^2*c*e*h^4+210*a*e^2*c*e^2*h^3-210*a*e^2*c*e^3*h^2+105*a*e^2*c*e^4*h-21*a*e^2*c*e^5+7*a*e*c*h^6-42*a*e*c*e*h^5+105*a*e*c*e^2*h^4-140*a*e*c*e^3*h^3+105*a*e*c*e^4*h^2-42*a*e*c*e^5*h+7*a*e*c*e^6+a*d^7*c+7*a*d^6*c*g-7*a*d^6*c*d+21*a*d^5*c*g^2-42*a*d^5*c*d*g+21*a*d^5*c*d^2+35*a*d^4*c*g^3-105*a*d^4*c*d*g^2+105*a*d^4*c*d^2*g-35*a*d^4*c*d^3+35*a*d^3*c*g^4-140*a*d^3*c*d*g^3+210*a*d^3*c*d^2*g^2-140*a*d^3*c*d^3*g+35*a*d^3*c*d^4+21*a*d^2*c*g^5-105*a*d^2*c*d*g^4+210*a*d^2*c*d^2*g^3-210*a*d^2*c*d^3*g^2+105*a*d^2*c*d^4*g-21*a*d^2*c*d^5+7*a*d*c*g^6-42*a*d*c*d*g^5+105*a*d*c*d^2*g^4-140*a*d*c*d^3*g^3+105*a*d*c*d^4*g^2-42*a*d*c*d^5*g+7*a*d*c*d^6+a*c*h^7+a*c*g^7+a*c*f^7-7*a*c*e*h^6+21*a*c*e^2*h^5-35*a*c*e^3*h^4+35*a*c*e^4*h^3-21*a*c*e^5*h^2+7*a*c*e^6*h-a*c*e^7-7*a*c*d*g^6+21*a*c*d^2*g^5-35*a*c*d^3*g^4+35*a*c*d^4*g^3-21*a*c*d^5*g^2+7*a*c*d^6*g-a*c*d^7+a*b^7*c+a^8*c, e^7*b*d+e^7*a*d-7*e^6*b*e*d+7*e^6*b*d*h+21*e^5*b*e^2*d-42*e^5*b*e*d*h+21*e^5*b*d*h^2-35*e^4*b*e^3*d+105*e^4*b*e^2*d*h-105*e^4*b*e*d*h^2+35*e^4*b*d*h^3+35*e^3*b*e^4*d-140*e^3*b*e^3*d*h+210*e^3*b*e^2*d*h^2-140*e^3*b*e*d*h^3+35*e^3*b*d*h^4-21*e^2*b*e^5*d+105*e^2*b*e^4*d*h-210*e^2*b*e^3*d*h^2+210*e^2*b*e^2*d*h^3-105*e^2*b*e*d*h^4+21*e^2*b*d*h^5+7*e*b*e^6*d-42*e*b*e^5*d*h+105*e*b*e^4*d*h^2-140*e*b*e^3*d*h^3+105*e*b*e^2*d*h^4-42*e*b*e*d*h^5+7*e*b*d*h^6+d^7*a*d+c^7*a*d-b*e^7*d+7*b*e^6*d*h-21*b*e^5*d*h^2+35*b*e^4*d*h^3-35*b*e^3*d*h^4+21*b*e^2*d*h^5-7*b*e*d*h^6+a*d*h^7+a*d*g^7+a*d*f^7-7*a*d*c*f^6+21*a*d*c^2*f^5-35*a*d*c^3*f^4+35*a*d*c^4*f^3-21*a*d*c^5*f^2+7*a*d*c^6*f-a*d*c^7+7*a*c*d*f^6-42*a*c*d*c*f^5+105*a*c*d*c^2*f^4-140*a*c*d*c^3*f^3+105*a*c*d*c^4*f^2-42*a*c*d*c^5*f+7*a*c*d*c^6+21*a*c^2*d*f^5-105*a*c^2*d*c*f^4+210*a*c^2*d*c^2*f^3-210*a*c^2*d*c^3*f^2+105*a*c^2*d*c^4*f-21*a*c^2*d*c^5+35*a*c^3*d*f^4-140*a*c^3*d*c*f^3+210*a*c^3*d*c^2*f^2-140*a*c^3*d*c^3*f+35*a*c^3*d*c^4+35*a*c^4*d*f^3-105*a*c^4*d*c*f^2+105*a*c^4*d*c^2*f-35*a*c^4*d*c^3+21*a*c^5*d*f^2-42*a*c^5*d*c*f+21*a*c^5*d*c^2+7*a*c^6*d*f-7*a*c^6*d*c+a*c^7*d+a*b^7*d+a^8*d, e^7*b*e+e^7*a*e+7*e^6*b*e*h-7*e^6*b*e^2+21*e^5*b*e*h^2-42*e^5*b*e^2*h+21*e^5*b*e^3+35*e^4*b*e*h^3-105*e^4*b*e^2*h^2+105*e^4*b*e^3*h-35*e^4*b*e^4+35*e^3*b*e*h^4-140*e^3*b*e^2*h^3+210*e^3*b*e^3*h^2-140*e^3*b*e^4*h+35*e^3*b*e^5+21*e^2*b*e*h^5-105*e^2*b*e^2*h^4+210*e^2*b*e^3*h^3-210*e^2*b*e^4*h^2+105*e^2*b*e^5*h-21*e^2*b*e^6+7*e*b*e*h^6-42*e*b*e^2*h^5+105*e*b*e^3*h^4-140*e*b*e^4*h^3+105*e*b*e^5*h^2-42*e*b*e^6*h+7*e*b*e^7+d^7*a*e+c^7*a*e-7*b*e^2*h^6+21*b*e^3*h^5-35*b*e^4*h^4+35*b*e^5*h^3-21*b*e^6*h^2+7*b*e^7*h-b*e^8+a*e*h^7+a*e*g^7+a*e*f^7+a*b^7*e+a^8*e};
+assert(XA_{0,1,2,3,4} == firstFewAns)
 ///
 
+--- Check hilbert series code
 TEST ///
---- Test factoring code with skew polynomial ring
+///
+
+--- Check left and right multiplication map
+TEST ///
+///
+
+--- checking normal elements code
+TEST ///
+///
+
+--- Check NCRingMap code
+TEST ///
+///
+
+--- Make sure ring variables don't leak out when several rings are created
+--- Also test 'use' code
+TEST ///
+///
+
+--- Test coefficients
+TEST ///
+///
+
+--- Test NCMatrix // NCMatrix
+TEST ///
+///
+
+--- Include some matrix factorization tests
+TEST ///
+///
+
+--- Check variables with non-standard weights
+TEST ///
+///
+
+--- Check various NCRingElement commands
+--- leadTerm, leadMonomial, size, etc
+TEST ///
+///
+
+--- Factoring code with skew polynomial ring example/check
+TEST ///
 needsPackage "NCAlgebra"
 -- n is the number of variables in skew poly ring
 n = 3
@@ -278,7 +339,7 @@ assert(hiSyzC*hiSyzC' == fId)
 assert(hiSyzC'*(sigmaInv hiSyzC) == fId)
 ///
 
---- Factoring map code over Sklyanin
+--- Factoring map code over Sklyanin example/check
 TEST ///
 needsPackage "NCAlgebra"
 A = QQ{x,y,z}
@@ -303,52 +364,6 @@ assert(isHomogeneous fId)
 M' = fId // M
 assert(M*M' == fId)
 assert(M'*M == fId)
-///
-
---- Check NCGroebnerBasis code (InstallGB)
-TEST ///
-///
-
---- Check hilbert series code
-TEST ///
-///
-
---- Check left and right multiplication map
-TEST ///
-///
-
---- checking normal elements code
-TEST ///
-///
-
---- Check NCRingMap code
-TEST ///
-///
-
---- Make sure ring variables don't leak out when several rings are created
---- Also test 'use' code
-TEST ///
-///
-
---- Test coefficients
-TEST ///
-///
-
---- Test NCMatrix // NCMatrix
-TEST ///
-///
-
---- Include some matrix factorization tests
-TEST ///
-///
-
---- Check variables with non-standard weights
-TEST ///
-///
-
---- Check various NCRingElement commands
---- leadTerm, leadMonomial, size, etc
-TEST ///
 ///
 
 --- Skew polynomial ring, abelianization, and isCommutative
