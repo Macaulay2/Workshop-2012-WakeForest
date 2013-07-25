@@ -84,7 +84,6 @@ basis1 = ncMatrix {{x^4, x^3*y, x^3*z, x^2*y*x, x^2*y^2, x^2*y*z, x*y*x*y, x*y*x
 basis2 = basis(4,B)
 assert(basis1 == basis2)
 ///
-
 --- checking basis of algebra (quantum polynomial ring)
 TEST ///
 needsPackage "NCAlgebra"
@@ -536,17 +535,39 @@ I = ncIdeal {q^4+q^3+q^2+q+1,q*x-x*q,q*y-y*q,q*z-z*q,y*x-q*x*y,z*y-q*y*z,z*x-q*x
 Igb = twoSidedNCGroebnerBasisBergman I
 
 ---- ore extensions
+quit
+restart
+needsPackage "NCAlgebra"
+A = QQ{x,y,w}
+I = ncIdeal {x*y-y*x, x*w-w*x-w*y,y*w-w*x,w*w}
+B=A/I
+M1=ncMatrix{{x,w}}
+assignDegrees M1
+M2=rightKernelBergman(M1)
+M3=rightKernelBergman(M2)
+M4=rightKernelBergman(M3,DegreeLimit=>8)
+M5=rightKernelBergman(M4,DegreeLimit=>8)
+quit
 restart
 needsPackage "NCAlgebra"
 A = QQ{x,y,z,w}
 I = ncIdeal {x*y+y*x,x*z+z*x,y*z+z*y,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
+J = ncIdeal {x*y-y*x,x*z-z*x,y*z-z*y,x*w-w*y-w*z,y*w-w*z-w*x,z*w-w*x-w*y,w^2}
 B = A/I
-M1 = ncMatrix {{x,y,z,w}}
+C=A/J
+M1 = ncMatrix {{x,y,w}}
 M2 = rightKernel(M1,1)
 M3 = rightKernel(M2,1)
 M4 = rightKernel(M3,1)
 M5 = rightKernel(M4,1)
 M6 = rightKernel(M5,1)
+M7 = rightKernel(M6,1)
+M8 = rightKernel(M7,1)
+M9 = rightKernel(M8,1)
+Minfty = ncMatrix {{-1/2*w, 0, 0, 0}, {-z-2*x,w,-3/2*w,0},{y-x,0,-1/2*w,0},{0,y-x,z+2*x,w}}
+M0 = rightKernel(Minfty,1)
+N = matrix {{1,1,0},{1,0,1},{0,1,1}}
+N^5
 M4A = promote(M4,A)
 M5A = promote(M5,A)
 M6A = promote(M6,A)
@@ -1002,4 +1023,6 @@ oppositeRing B
 
 --- check NCAlgebra
 restart
+path = append(path, "/home/connerab/M2stuff/WFU-2012/NCAlgebra/")
+needsPackage "NCAlgebra"
 check "UnitTestsNCA"
