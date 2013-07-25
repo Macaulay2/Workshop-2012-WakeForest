@@ -29,7 +29,7 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          NumberOfBins,
          CheckPrefixOnly,
          normalFormBergman,
-         hilbertBergman,
+         hilbertBergman, DegreeVariable,
          rightKernelBergman,
          assignDegrees,
 	 isLeftRegular,
@@ -550,11 +550,11 @@ ncRightIdeal = method()
 ncRightIdeal List := idealGens -> (
    if #idealGens == 0 then error "Expected at least one generator.";
    new NCRightIdeal from new HashTable from {(symbol ring) => (idealGens#0).ring,
-                                        (symbol generators) => idealGens,
-                                        (symbol cache) => new CacheTable from {}}
+                                             (symbol generators) => idealGens,
+                                             (symbol cache) => new CacheTable from {}}
 )
 
-ncRightIdeal NCRingElement := f -> ncIdeal {f}
+ncRightIdeal NCRingElement := f -> ncRightIdeal {f}
 
 generators NCRightIdeal := opts -> I -> I.generators;
 
@@ -564,7 +564,7 @@ net NCRightIdeal := I -> "Right ideal " | net (I.generators);
 
 ring NCRightIdeal := I -> I.ring
 
-NCRightIdeal + NCRightIdeal := (I,J) -> ncIdeal (gens I | gens J)
+NCRightIdeal + NCRightIdeal := (I,J) -> ncRightIdeal (gens I | gens J)
 
 ------------------------------------------------
 
@@ -576,11 +576,11 @@ ncLeftIdeal = method()
 ncLeftIdeal List := idealGens -> (
    if #idealGens == 0 then error "Expected at least one generator.";
    new NCLeftIdeal from new HashTable from {(symbol ring) => (idealGens#0).ring,
-                                        (symbol generators) => idealGens,
-                                        (symbol cache) => new CacheTable from {}}
+                                            (symbol generators) => idealGens,
+                                            (symbol cache) => new CacheTable from {}}
 )
 
-ncLeftIdeal NCRingElement := f -> ncIdeal {f}
+ncLeftIdeal NCRingElement := f -> ncLeftIdeal {f}
 
 generators NCLeftIdeal := opts -> I -> I.generators;
 
@@ -590,7 +590,7 @@ net NCLeftIdeal := I -> "Left ideal " | net (I.generators);
 
 ring NCLeftIdeal := I -> I.ring
 
-NCLeftIdeal + NCLeftIdeal := (I,J) -> ncIdeal (gens I | gens J)
+NCLeftIdeal + NCLeftIdeal := (I,J) -> ncLeftIdeal (gens I | gens J)
 
 ------------------------------------------------
 
@@ -1186,23 +1186,45 @@ normalFormBergman (NCRingElement, NCGroebnerBasis) := opts -> (f,ncgb) ->
 ----- Bergman Hilbert commands
 ------------------------------------------------------
 
-writeHSInitFile = method()
-writeHSInitFile (String,String,String,String) := (tempInit, tempInput, tempGBOutput, tempHSOutput) -> (
+-- can't be a method.  Too many arguments
+--writeHSInitFile = method()
+writeHSInitFile := (tempInit,
+                    tempInput,
+		    tempGBOutput,
+		    tempPBOutput,
+		    tempHSOutput) -> (
    fil := openOut tempInit;
-   fil << "(hilbert \"" << tempInput << "\" \"" << tempGBOutput << "\" \"" << tempHSOutput << "\")" << endl;
+   fil << "(setf (getenv \"bmload\") \"" << bergmanPath << "/lap/clisp/unix\")" << endl;
+   fil << "(ncpbhgroebner " 
+       << "\"" << tempInput << "\" "
+       << "\"" << tempGBOutput << "\" "
+       << "\"" << tempPBOutput << "\" "
+       << "\"" << tempHSOutput << "\")" << endl;
+   fil << "(calctolimit (getmaxdeg))" << endl;
+   fil << "(tdegreehseriesout (getmaxdeg))" << endl;
    fil << "(quit)" << endl << close;   
 )
 
-hsFromOutputFile = method()
-hsFromOutputFile (NCQuotientRing,String) := tempOutput -> (
-   fil := openIn tempOutput;
-   fileLines := lines get fil;
-   fileLines
+hsFromOutputFiles = method()
+hsFromOutputFiles (NCQuotientRing,String,String) := (B,tempOutput,tempTerminal) -> (
+   fil1 := openIn tempOutput;
+   file1Lines := lines get fil1;
+   fil2 := openIn tempTerminal;
+   file2Lines := lines get fil2;
+   dims := select(file1Lines | file2Lines, l -> #l > 0 and l#0 == "+");
+   dims = apply(dims, d -> first select("[0-9][0-9]*",d));
+   dims
 )
 
-hilbertBergman = method(Options => {DegreeLimit => 0})  -- DegreeLimit = 0 means return rational function.
-                                                        -- else return as a power series 
+hilbertBergman = method(Options => {DegreeLimit => 0,  -- DegreeLimit = 0 means return rational function (if possible)
+                                                       -- else return as a power series 
+	                            DegreeVariable => (getSymbol "T")})
+
+-- will add this later
+-- hilbertBergman NCIdeal := opts -> I -> (
+
 hilbertBergman NCQuotientRing := opts -> B -> (
+  -- Is the result already here? Check the cache and return if so.
   if not B#"BergmanRing" then 
      error << "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
   -- prepare the call to bergman
@@ -1210,15 +1232,18 @@ hilbertBergman NCQuotientRing := opts -> B -> (
   tempInput := temporaryFileName() | ".bi";       -- gb input file
   tempGBOutput := temporaryFileName() | ".bgb";   -- gb output goes here
   tempHSOutput := temporaryFileName() | ".bhs";   -- hs output goes here
+  tempPBOutput := temporaryFileName() | ".bpb";   -- pb output goes here (?)
   tempTerminal := temporaryFileName() | ".ter";   -- terminal output goes here
   I := ideal B;
-  gensI := gens ideal B;
-  writeBergmanInputFile(gensI,tempInput,opts#DegreeLimit);
-  writeHSInitFile(tempInit,tempInput,tempGBOutput,tempHSOutput);
+  gensI := gens I;
+  writeBergmanInputFile(gensI,
+                        tempInput,
+			DegreeLimit=>opts#DegreeLimit);
+  writeHSInitFile(tempInit,tempInput,tempGBOutput,tempPBOutput,tempHSOutput);
   stderr << "--Calling bergman for HS computation." << endl;
   runCommand("bergman -i " | tempInit | " -on-error exit --silent > " | tempTerminal);
   I.cache#gb = gbFromOutputFile(ring I,tempGBOutput);
-  hsFromOutputFile(ring I,tempHSOutput)
+  hsFromOutputFiles(B,tempHSOutput,tempTerminal)
 )
 
 -------------------------------------------------

@@ -206,23 +206,52 @@ TEST ///
 ///
 
 --- Check NCIdeal operations
+--- can't really do much with these yet, except define quotient rings
 TEST ///
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+f1 = y*z + z*y - x^2
+f2 = x*z + z*x - y^2
+f3 = z^2 - x*y - y*x
+g = -y^3-x*y*z+y*x*z+x^3
+I = ncIdeal {f1,f2,f3}
+J = ncIdeal g
+I + J
+IJgb = ncGroebnerBasis (I+J)
+-- need to make some tests here
 ///
 
 --- Check basis of ideal code
+--- was this code ever added?
 TEST ///
 ///
 
 --- Check NCRightIdeal operations
+--- can't really do much with these yet.
 TEST ///
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+f1 = y*z + z*y - x^2
+f2 = x*z + z*x - y^2
+f3 = z^2 - x*y - y*x
+g = -y^3-x*y*z+y*x*z+x^3
+I = ncRightIdeal {f1,f2,f3}
+J = ncRightIdeal g
+I + J
 ///
 
 --- Check NCLeftIdeal operations
+--- can't really do much with these yet.
 TEST ///
-///
-
---- Check NCGroebnerBasis code (Bergman)
-TEST ///
+needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+f1 = y*z + z*y - x^2
+f2 = x*z + z*x - y^2
+f3 = z^2 - x*y - y*x
+g = -y^3-x*y*z+y*x*z+x^3
+I = ncLeftIdeal {f1,f2,f3}
+J = ncLeftIdeal g
+I + J
 ///
 
 --- Test gbFromOutputFile
@@ -253,41 +282,13 @@ assert(XA_{0,1,2,3,4} == firstFewAns)
 TEST ///
 ///
 
---- Check left and right multiplication map
-TEST ///
-///
-
---- checking normal elements code
-TEST ///
-///
-
---- Check NCRingMap code
-TEST ///
-///
-
---- Make sure ring variables don't leak out when several rings are created
---- Also test 'use' code
-TEST ///
-///
-
 --- Test coefficients
-TEST ///
-///
-
---- Test NCMatrix // NCMatrix
-TEST ///
-///
-
---- Include some matrix factorization tests
+--- coefficients should be fixed so that the return value
+--- can recreate the input in some way.
 TEST ///
 ///
 
 --- Check variables with non-standard weights
-TEST ///
-///
-
---- Check various NCRingElement commands
---- leadTerm, leadMonomial, size, etc
 TEST ///
 ///
 
@@ -298,16 +299,27 @@ needsPackage "NCAlgebra"
 n = 3
 rk = 2^(n-1)
 B = skewPolynomialRing(QQ,-1_QQ,{x_1..x_n})
+assert(x_1*x_2 + x_2*x_1 == 0)
+assert(x_1*x_3 + x_3*x_1 == 0)
+assert(x_2*x_3 + x_3*x_2 == 0)
+assert(ring x_1 === B)
 A = ambient B
+assert(ring x_1 === A)
 -- tau is cyclic ring automorphism
 tau = ncMap(B,B,drop(gens B,1) | {(gens B)#0})
 -- create an Ore extension with a new variable w and tau
 C = oreExtension(B,tau,w)
+assert(w*x_1-x_2*w == 0)
+assert(w*x_2-x_3*w == 0)
+assert(w*x_3-x_1*w == 0)
+assert(ring x_1 === C)
 A' = ambient C
+assert(ring x_1 === A')
 use A'
 J = ideal C
 J = J + ncIdeal {w^2}
 D = A'/J
+assert(ring x_1 === D)
 DtoC = ncMap(C,D,gens C)
 -- need inverse maps, since \varphi^\sigma is obtained by applying \sigma^{-1}
 -- to all the matrix entries
@@ -384,6 +396,8 @@ assert(y*x == q*x*y)
 ///
 
 end
+
+--- Some examples are below and could be turned into part of the documentation
 
 --- matrix factorizations over sklyanin algebra
 restart
@@ -511,7 +525,7 @@ time remainderFunction(z^17,Igb)
 B = A / I
 g = -y^3-x*y*z+y*x*z+x^3
 isCentral g
-hilbertBergman B
+dims := hilbertBergman(B,DegreeLimit=>10)
 
 -----------
 -- this doesn't work since it is not homogeneous unless you use degree q = 0, which is not allowed.
