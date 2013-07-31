@@ -6,10 +6,9 @@ undocumented { (describe,SpectralSequence),
 	       (net, SpectralSequence)}
 
  document {
-     Key => {SpectralSequences},
-     Headline => "A package for working with spectral sequences",
-    PARA { "SpectralSequences is a package to work with spectral sequences
-	 associated to a filterd complex." },
+     Key => {NCAlgebra},
+     Headline => "A package for working with noncommutative graded rings",
+    PARA { "NCAlgebra is a package for working with noncommutative N-graded algebras over a commutative ring." },
      }
 
 --doc ///

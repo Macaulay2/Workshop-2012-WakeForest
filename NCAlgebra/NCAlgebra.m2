@@ -592,8 +592,8 @@ basis (ZZ,NCIdeal) := opts -> (n,I) -> (
    R:=ring I;
    idealGens:=select(I.generators, g->degree g <= n);
    varsList:=gens R;
-   ringBasis:=basis(n,R);
-   basisList:=flatten entries ringBasis;
+--   ringBasis:=basis(n,R);
+--   basisList:=flatten entries ringBasis;
    V:= flatten apply(idealGens, r-> (
        	degnList:={r}; 
 	d:=degree r; 
@@ -602,7 +602,10 @@ basis (ZZ,NCIdeal) := opts -> (n,I) -> (
 	);
 	degnList));
    V = select(V,m-> m!=0); 
-   VasCoeffs := sparseCoeffs(V,Monomials=>basisList);
+--   VasCoeffs := sparseCoeffs(V,Monomials=>basisList);
+
+   VasCoeffs := sparseCoeffs(V);
+
 ---------------------------------------------------
 --     Alternate version using coefficients function
 ----------------------------------------------------
@@ -614,7 +617,8 @@ basis (ZZ,NCIdeal) := opts -> (n,I) -> (
 --     minGens:=mingens image M;
 ------------------------------------------------------
    minGens := mingens image VasCoeffs;
-   ringBasis*minGens
+   terms := ncMatrix{ unique flatten apply(V, e-> flatten entries monomials e)};
+   terms*minGens
 )
 
 
@@ -650,8 +654,8 @@ basis (ZZ,NCRightIdeal) := opts -> (n,I) -> (
    R:=ring I;
    idealGens:=select(I.generators, g->degree g <= n);
    varsList:=gens R;
-   ringBasis:=basis(n,R);
-   basisList:=flatten entries ringBasis;
+--   ringBasis:=basis(n,R);
+--   basisList:=flatten entries ringBasis;
    V:= flatten apply(idealGens, r-> (
         degnList:={r};
         d:=degree r;
@@ -660,7 +664,10 @@ basis (ZZ,NCRightIdeal) := opts -> (n,I) -> (
         );
         degnList));
    V = select(V,m-> m!=0);
-   VasCoeffs := sparseCoeffs(V,Monomials=>basisList);
+--   VasCoeffs := sparseCoeffs(V,Monomials=>basisList);
+
+   VasCoeffs := sparseCoeffs(V);
+
 ---------------------------------------
 --     VasCoeffs := apply(V, m -> (if m==0 then transpose matrix{apply(toList(0..(#basisList-1)),i->0)}
 --                else
@@ -670,7 +677,8 @@ basis (ZZ,NCRightIdeal) := opts -> (n,I) -> (
 --     minGens:=mingens image M;
 ------------
    minGens := mingens image VasCoeffs;
-   ringBasis*minGens
+   terms := ncMatrix{ unique flatten apply(V, e-> flatten entries monomials e)};
+   terms*minGens
 )
 
 
@@ -704,8 +712,8 @@ basis (ZZ,NCLeftIdeal) := opts -> (n,I) -> (
    R:=ring I;
    idealGens:=select(I.generators, g->degree g <= n);
    varsList:=gens R;
-   ringBasis:=basis(n,R);
-   basisList:=flatten entries ringBasis;
+--   ringBasis:=basis(n,R);
+--   basisList:=flatten entries ringBasis;
    V:= flatten apply(idealGens, r-> (
         degnList:={r};
         d:=degree r;
@@ -714,7 +722,10 @@ basis (ZZ,NCLeftIdeal) := opts -> (n,I) -> (
         );
         degnList));
    V = select(V,m-> m!=0);
-   VasCoeffs := sparseCoeffs(V,Monomials=>basisList);
+--   VasCoeffs := sparseCoeffs(V,Monomials=>basisList);
+
+   VasCoeffs := sparseCoeffs(V);
+
 ---------------
 --     VasCoeffs := apply(V, m -> (if m==0 then transpose matrix{apply(toList(0..(#basisList-1)),i->0)}
 --                else
@@ -724,7 +735,8 @@ basis (ZZ,NCLeftIdeal) := opts -> (n,I) -> (
 --     minGens:=mingens image M;
 ------------
    minGens := mingens image VasCoeffs;
-   ringBasis*minGens
+   terms := ncMatrix{ unique flatten apply(V, e-> flatten entries monomials e)};
+   terms*minGens
 )
 
 
@@ -926,8 +938,9 @@ sparseCoeffs List := opts -> L -> (
 	error "Expected homogeneous elements of the same degree.";
   B := (L#0).ring;
   R := coefficientRing B;
-  mons := if opts#Monomials === null then 
-              unique flatten apply(L, e-> flatten entries monomials e) 
+  mons := if opts#Monomials === null then (
+              << "Warning: unique does not work yet." << endl;
+              unique flatten apply(L, e-> flatten entries monomials e)) 
           else opts#Monomials;
   terms := (L#0).terms;
   pos := positions(mons, m -> terms#?(first keys m.terms));
@@ -1676,7 +1689,7 @@ leftMultiplicationMap(NCRingElement,List,List) := (f,fromBasis,toBasis) -> (
 
    if not isHomogeneous f then error "Expected a homogeneous element.";
    coeffList := apply(fromBasis, m -> (if f*m==0 then transpose matrix{apply(toList(0..(#toBasis-1)),i->0)}
-                                    else transpose matrix {flatten entries coefficients(f*m,Monomials=>toBasis)}));
+                                    else coefficients(f*m,Monomials=>toBasis)));
    matrix {coeffList}
 )
 
@@ -1700,7 +1713,7 @@ rightMultiplicationMap(NCRingElement,List,List) := (f,fromBasis,toBasis) -> (
 
    if not isHomogeneous f then error "Expected a homogeneous element.";
    coeffList := apply(fromBasis, m -> (if m*f==0 then transpose matrix{apply(toList(0..(#toBasis-1)),i->0)}
-                                    else transpose matrix {flatten entries coefficients(m*f,Monomials=>toBasis)}));
+                                    else coefficients(m*f,Monomials=>toBasis)));
    matrix {coeffList}
 )
 
