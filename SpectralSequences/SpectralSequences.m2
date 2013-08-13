@@ -17,8 +17,8 @@
 --------------------------------------------------------------------------------
 newPackage(
   "SpectralSequences",
-  Version => "0.5",
-  Date => "11 October 2012",
+  Version => "0.6",
+  Date => "13 Aug 2013",
   Authors => {
        {
       Name => "David Berlekamp", 
@@ -64,7 +64,8 @@ export {
   "pprune",
   "epqrMaps",
   "pruneEpqrMaps",
-  "epq"
+  "epq",
+  "connectingMorphism"
   }
 
 
@@ -564,6 +565,18 @@ filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
 chainComplex SpectralSequence := ChainComplex => E -> chainComplex filteredComplex E
 
 
+-- given a morphism f: A --> B
+-- compute the connecting map
+-- HH_{n+1}( coker f) --> HH_n (im f)
+
+connectingMorphism = method()
+
+connectingMorphism(ChainComplexMap,ZZ) := (a,n) -> (
+    K := filteredComplex ({a}) ;
+    e := spectralSequence K ;
+    e^1 .dd_{1, n}
+    )
+
 ------------------------------------------------------------------------------------
 -- ChainComplexExtraExtras 
 --------------------------------------------------------------------------------------
@@ -730,9 +743,163 @@ doc ///
      	      @TO"Computing the Serre Spectral Sequence associated to a Hopf Fibration"@
 	      
 	      @TO "Balancing Tor"@
+	      
+	      @TO "Spectral sequences and hypercohomology calculations"@
+	      
+	      @TO "Spectral sequences and connecting morphisms"@
+	      
+	      @TO "Spectral sequences and non-Koszul syzygies"@
 ///	
-     
-     
+  doc ///
+    Key
+      "Spectral sequences and non-Koszul syzygies"
+    Headline
+     	  Using spectralsequences to compute non-Koszul syzygies
+    Description
+    	  Text
+	       We illustrate some aspects of the paper 
+	       "A case study in bigraded commutative algebra" by Cox-Dickenstein-Schenck.
+	       In that paper, an appropriate term on the E_2 page of a suitable 
+	       spectral sequence corresponds to non-koszul syzygies.
+	       Using our indexing conventions, the E^2_{3,-1} term will be what the
+	       $E^{0,1}_2$ term is in their paper.
+	       We illustrate an instance of the non-generic case for non-Koszul syzygies.
+	       This is acheived by looking at the three polynomials used in their Example 4.3.
+    	       The behaviour that we expect to exhibit is predicted by their Proposition 5.2.
+	  Example
+		needsPackage "SpectralSequences"
+		R = QQ[x,y,z,w, Degrees => {{1,0},{1,0},{0,1},{0,1}}]
+		B = ideal(x*z, x*w, y*z, y*w)
+		p_0 = x^2*z
+		p_1 = y^2*w
+		p_2 = y^2*z+x^2*w
+		I = ideal(p_0,p_1,p_2)
+		-- make the frobenious power of the irrelevant ideal
+		B = B_*/(x -> x^2)//ideal
+		-- need to take a large enough power. 
+		-- it turns out that that 2 is large enough for this example 
+		G = res image gens B
+		F = koszul gens I
+		K = Hom(G, filteredComplex(F))
+		E = prune spectralSequence K
+		E^1
+		E^2
+		E^2_{3,-1}
+		basis({0,0}, E^2_{3, -1} ** R^{{2, 3}})
+		E^2 .dd_{3, -1}
+		E^2 .dd
+		basis({0,0}, image E^2 .dd_{3,-1} ** R^{{2,3}})
+		basis({0,0}, E^2_{1,0} ** R^{{2,3}})
+		-- this shows that there is a 1 dimensional space of non-Koszul syzygies of bi-degree (2,3)
+		-- which is also what is predicted by the paper.
+		basis({0,0}, E^2 _{3, -1} ** R^{{6,1}})
+		-- this shows that there is a 1 dimensional space of non-Koszul syzygies of bi-degree (6,1)
+		-- this is what is predicted by the paper.
+		isIsomorphism(E^2 .dd_{3, -1})	       
+	       	  
+///	  
+     doc ///
+     Key
+       "Spectral sequences and connecting morphisms"
+     Headline
+          Using spectral sequences to compute connecting morphisms
+     Description
+     	  Text
+	       If $0 \rightarrow A \rightarrow B \rightarrow C \rightarrow 0$ is a 
+	       short exact sequence of chain complexes, then the connecting morphism
+	       $H_i(C) \rightarrow H_{i - 1}(A)$ can relized as a suitable map
+	       on the $E^1$ of a spectral sequences determined by a suitably defined
+	       two step filtration of $B$.
+	       
+	       In this example, we illustrate how these constructions can be used to 
+	       compute the connecting morphism $H^i(X, F) \rightarrow H^{i + 1}(X, G)$
+	       arising from a short exact sequence 
+	       $0 \rightarrow G \rightarrow H \rightarrow F \rightarrow 0$ of sheaves
+	       on a smooth toric variety $X$.
+	       
+	       In more detail, we use multigraded commutative algebra and 
+	       spectral sequences
+	      to compute the connecting
+	       morphism 
+	      $H^1(C, OO_C(1,0)) \rightarrow H^2(X, OO_X(-2,-3))$ where 
+	      $X := \mathbb{P}^1 \times \mathbb{P}^1$ and $C$ is a general divisor
+	      of type $(3,3)$ on $X$.  This connecting morphism is an
+	      isomorphism.
+	  Example   
+	        needsPackage "SpectralSequences";
+                needsPackage "ChainComplexExtras";
+                R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]; -- PP^1 x PP^1
+		B = intersect(ideal(a_0,a_1),ideal(b_0,b_1)) ; -- irrelevant ideal
+		B = B_*/(x -> x^5)//ideal ; -- Suitably high Frobenius power of B
+		G = res image gens B
+		I = ideal random(R^1, R^{{-3,-3}}) -- ideal of C
+	        b = chainComplex gradedModule R^{{1,0}} -- make line bundle a chain complex
+		a = chainComplex gradedModule R^{{-2,-3}}
+		-- make the map OO(-2, -3) --> OO(1,0)     
+		f = chainComplexMap(b, a,{random(R^1, R^{{-3,-3}})}) ; 
+		k = filteredComplex ({Hom(G,f)}) ; -- the two step filtered complex we want
+		e = prune spectralSequence k ;
+		e^1 .dd_{1,-2} -- the connecting map HH^1(C, OO_C(1,0)) --> HH^2(X, OO_X(-2,-3)) 
+		basis({0,0}, image e^1 .dd_{1,-2})  -- image 2-dimensional
+		basis({0,0}, ker e^1 .dd_{1,-2}) -- map is injective
+		basis({0,0}, target e^1 .dd_{1,-2}) -- target 2-dimensional 
+		basis({0,0}, source e^1 .dd_{1,-2}) -- source 2 dimensional 
+	  Text
+	       An alternative way to compute the connecting morphism is 
+	  Example
+	      	prune connectingMorphism(Hom(G, f), - 2) ;
+		prune connectingMorphism(Hom(G, f), - 2) == e^1 .dd_{1, -2}    
+///     
+     doc ///
+     Key
+       "Spectral sequences and hypercohomology calculations"
+     Headline
+     	  Illustrating how to use spectral sequences to compute hypercohomology
+     Description
+     	  Text
+	       If $\mathcal{F}$ is a coherent sheaf on a smooth toric variety $X$,
+	       then multigraded commutative algebra can be used to compute
+	       the cohomology groups $H^i(X, \mathcal{F})$.  
+	       
+	       More specifically, if $B$ is the irrelevant ideal of $X$ then
+	       $H^i(X, \mathcal{F})$ is relized as the degree zero piece of the multigraded
+	       module
+	       $Ext^i(B^{[l]}, F)$ for sufficiently large $l$; here $B^{[l]}$ denotes
+	       the $l$th Forbenius power of $B$ and $F$ is any multigraded module whose
+	       corresponding sheaf on $X$ is $\mathcal{F}$.  
+	       
+	       Given the fan of
+	       $X$ and $F$, a sufficiently large power of $l$ can be determined effectively.
+	       We refer to sections 2 and 3 of the paper 
+	       "Cohomology on Toric Varieties and Local Cohomology with Monomial Supports"
+	       for more details.
+	       
+	       In this example, we consider
+	       the case that $X = \mathbb{P}^1 \times \mathbb{P}^1$ and 
+	       $F = \mathcal{O}_C(1,0)$ where 
+	       $C$ is a general divisor of type $(3,3)$ on $X$. 
+	       In this setting, $H^0(C,F)$ and $H^1(C, F)$ are both $2$-dimensional 
+	       vector spaces.
+    	  Example
+	         needsPackage "SpectralSequences";
+		 needsPackage "ChainComplexExtras";
+	         -- C \subseteq PP^1 x PP^1 type (3,3)
+		 -- Use hypercohomology to compute HH OO_C(1,0) 
+		 R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]; -- PP^1 x PP^1
+		 B = intersect(ideal(a_0,a_1),ideal(b_0,b_1)) ; -- irrelevant ideal
+		 B = B_*/(x -> x^5)//ideal ; -- Sufficentily high Frobenius power 
+		 G = res image gens B
+		 I = ideal random(R^1, R^{{-3,-3}}) -- ideal of C
+		 F = res comodule I 
+		 -- Twist F by a line of ruling and make filtered complex whose ss abuts to HH OO_C(1,0) 
+		 K = Hom(G , filteredComplex (F ** R^{{1,0}})) ;
+		 E = prune spectralSequence K ; --the spectral sequence degenerates on the second page 
+		 E^1 
+		 E^2 ; -- output is a mess
+		 basis({0,0}, E^2_{0,0}) --  == HH^0 OO_C(1,0)
+		 basis({0,0}, E^2_{1,-2}) --  == HH^1 OO_C(1,0)	 
+///	  
+
 
 doc ///
           Key
@@ -1119,7 +1286,7 @@ doc ///
      Key
         "filtered complexes from tensor products of chain complexes"
      Headline
-     	 Making filtered complexes and spectral sequences from tesor products 	
+     	 Making filtered complexes and spectral sequences from tensor products 	
      Description
      	  Text
 ///	  
@@ -1686,14 +1853,50 @@ doc ///
      	  Text 
 	       Returns the sorted integer keys of a hash table.	      
 ///
+
+  doc ///
+     Key
+     	  connectingMorphism
+     Headline
+          Use spectral sequences to compute connecting morphisms
+     Usage 
+         g = connectingMorphism(f, n)
+     Inputs
+         f:ChainComplexMap
+	 n:ZZ	 
+     Outputs
+         g:Matrix 
+     Description
+          Text
+	       Given a morphism $f: A \rightarrow B$ of chain complexes
+	       returns the connecting map $H_{n+1}( coker f) \rightarrow H_n (im f)$.
+///
+
+doc ///
+     Key
+     	  (connectingMorphism, ChainComplexMap,ZZ)
+     Headline
+          Use spectral sequences to compute connecting morphisms
+     Usage 
+         g = connectingMorphism(f, n)
+     Inputs
+         f:ChainComplexMap
+	 n:ZZ	 
+     Outputs
+         g:Matrix 
+     Description
+          Text
+	       Given a morphism $f: A \rightarrow B$ of chain complexes
+	       returns the connecting map $H_{n+1}( coker f) \rightarrow H_n (im f)$.
+///
+
     
-      
 end
 
 --------------------------------------------------------------------------------
 restart
 installPackage"SpectralSequences"
-installPackage("SpectralSequences",RemakeAllDocumentation=>true)
+installPackage("SpectralSequences", RemakeAllDocumentation => true)
 check "SpectralSequences";
 viewHelp SpectralSequences
 ------------------------------------------
@@ -1702,42 +1905,65 @@ viewHelp SpectralSequences
 -- All examples seem to work correctly.
 --
 
--- An example on PP^1 x PP^1
--- I think that the following
--- computes the cohomology of a g^1_3 
--- on a canonical curve of genus 4.
--- of course the hypercohomology spectral sequence is not
--- very interesting but at least it is a proof of concept.
--- (need to use the above first.)
+restart
+needsPackage "SpectralSequences";
+needsPackage "ChainComplexExtras";
+-- C \subseteq PP^1 x PP^1 type (3,3)
+-- Use hypercohomology to compute HH OO_C(1,0) 
+R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]; -- PP^1 x PP^1
+B = intersect(ideal(a_0,a_1),ideal(b_0,b_1)) ; -- irrelevant ideal
+B = B_*/(x -> x^5)//ideal ; -- Frobenius power 
+G = res image gens B
+I = ideal random(R^1, R^{{-3,-3}}) -- ideal of C
+F = res comodule I 
+-- Twist F by a line of ruling and make filtered complex whose ss abuts to HH OO_C(1,0) 
+K = Hom(G , filteredComplex (F ** R^{{1,0}})) ;
+E = prune spectralSequence K ; --the spectral sequence degenerates on the second page 
+E^1 
+E^2 ; -- output is a mess
+basis({0,0}, E^2_{0,0}) --  == HH^0 OO_C(1,0)
+basis({0,0}, E^2_{1,-2}) --  == HH^1 OO_C(1,0)
+-- Now use spectral sequences to commute the connecting map 
+-- HH^1(C, OO_C(1,0)) --> HH^2(X, OO_X(-2,-3)) which is an isom. 
+b = chainComplex gradedModule R^{{1,0}} -- make line bundle a chain complex
+a = chainComplex gradedModule R^{{-2,-3}}
+-- make the map OO(-2, -3) --> OO(1,0)     
+f = chainComplexMap(b, a,{random(R^1, R^{{-3,-3}})}) ; 
+k = filteredComplex ({Hom(G,f)}) ; -- the two step filtered complex we want
+e = prune spectralSequence k ;
+e^1 .dd_{1,-2} -- the connecting map HH^1(C, OO_C(1,0)) --> HH^2(X, OO_X(-2,-3)) 
+basis({0,0}, image e^1 .dd_{1,-2})  -- image 2-dimensional
+basis({0,0}, ker e^1 .dd_{1,-2}) -- map is injective
+basis({0,0}, target e^1 .dd_{1,-2}) -- target 2-dimensional 
+basis({0,0}, source e^1 .dd_{1,-2}) -- source 2 dimensional 
 
 restart
 needsPackage "SpectralSequences";
+-- Try to compute the cohomology of OO_X(4,0,-4), where
+-- X in P^2 x P^2 x P^2 is a c.i. of three (1,1,1) forms
+-- should compare with Mike Stillmans p2xp2xp2 example.
 
-R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]
-B = intersect(ideal(a_0,a_1),ideal(b_0,b_1))
+R = ZZ/101[a_0..c_2, Degrees=>{3:{1,0,0},3:{0,1,0},3:{0,0,1}}]
+B = intersect(ideal(a_0,a_1,a_2),ideal(b_0,b_1,b_2),ideal(c_0,c_1,c_2))
 B = B_*/(x -> x^5)//ideal
-C = res image gens B
-C' = prune dual C
-I = ideal random(R^1, R^{{-3,-3}})
+G = res image gens B
+I = ideal random(R^3, R^{{-1,-1,-1}})
 D = res comodule I
+D = D ** R^{{4,0,-4}}
 
--- will want to twist D by an appropriate line bundle
--- e.g. one of the lines of ruling to produce one of the g^1_3 's 
-
-K = C' ** filteredComplex (D ** R^{{1,0}});
-
-E = prune spectralSequence K
-E^0
-E^0_{2,0}
+K = Hom(G, filteredComplex(D)) ;
+E = prune spectralSequence K ;
+E^0 ;
+E^1 ;
+-- can compute the E^0 and E^1 pages
+numgens image basis({0,0,0}, E^1 _{0, - 2})
+numgens image basis({0,0,0}, E^1 _{2, - 4})
 E^1
 
-basis({0,0}, E^1_{0,0})
-basis({0,0}, E^1_{1,-2})
-
--- these are both 2 dimensional which is what we want.
+E^2 ;
 
 
---Try PP^1 x PP^1 X PP^1
+-- Try PP^1 x PP^1 X PP^1
 -- computer could compute the E^2 page in this example.  
 restart
 needsPackage "SpectralSequences";
@@ -1990,6 +2216,8 @@ E = prune spectralSequence K
 E^0
 E^1
 E^2
+E^2 .dd
+E^3
 prune HH K_infinity
 
 L = filteredMatrixSimplicialComplex(4,2,R)
@@ -2790,7 +3018,7 @@ E^infinity
 -- Example 8 --
 --
 -- In this example we compute the spectral sequence arising from the Hopf Fibration
--- SS^1 --> SS^3 --> SS^1.
+-- SS^1 --> SS^3 --> SS^2.
 restart
 installPackage"SpectralSequences"
 needsPackage "SpectralSequences"
@@ -2827,6 +3055,7 @@ E = prune spectralSequence K
 E^0
 E^1
 E^2
+E^2 .dd
 E^3
 
 ---
@@ -2873,115 +3102,47 @@ Tor_1(I,J) == EE^2 _{1,0} -- this resturned false for some reason.  Strange...
 ---------------------------------------------------------------------
 ----------------------------------------------------------------------
 -- Example 10 --
--- This example is still very much in progress. --
--- trying to do an example from the paper "A case study in 
--- bigraded commutative algebra" by C-D-S.
--- an appropriate term on the E2 page will correspond to non-koszul syzygies.
-
+-- This example illustrates some aspects of the paper
+--"A case study in bigraded commutative algebra" by Cox-Dickenstein-Schenck.
+-- In that paper, an appropriate term on the E2 page of a suitable spectral sequence corresponds to non-koszul syzygies.
+-- Using our indexing conventions, the E^2_{3,-1} term will be what the
+-- E^{0,1}_2 term is in there paper.
+-- We illustrate an instance of the non-generic case for non-Koszul syzygies.
+-- This is acheived by looking at the three polynomials used in their Example 4.3.
+-- The behaviour that we expect to exhibit is predicted by their Proposition 5.2.
 
 restart
 needsPackage "SpectralSequences"
-
 R = QQ[x,y,z,w, Degrees => {{1,0},{1,0},{0,1},{0,1}}]
 B = ideal(x*z, x*w, y*z, y*w)
-help basis
-basis({1,1},R)
 p_0 = x^2*z
 p_1 = y^2*w
 p_2 = y^2*z+x^2*w
-
 I = ideal(p_0,p_1,p_2)
-
-ideal gens I
-
-
-ideal apply(flatten entries gens I, i -> i^2)
-
--- make the frobenious power of an ideal
-Ideal ^ Array := (I,n) -> (ideal apply(flatten entries gens I, i -> i ^ (n#0)))
-
-
-koszul gens B ^ [2]
-
--- the following complex is the cech like complex that we want to use.
-K = truncate(Hom(koszul gens B ^ [6], R^1),-1)
-
-myChainComplex = method()
--- something like this will let us
--- make chain complexes wit a specified minimum homological degree
-myChainComplex(List, ZZ) := (L,n) -> (
-     C := new ChainComplex ;
-     for i from 0 to #L -1 do (
-     C.dd_(n+i) = L#i);
-     C.ring = ring C.dd_n;
-     C
-      )
-prune K
-
-prune myChainComplex(drop(apply(support K, i -> K.dd_i),1),0)
--- something like this will let us obtain a new chain complex
--- (with the same differentials) but with the homological
--- indices shifted.  (This is not the usual shift of a chain complex.)  
-myChainComplex(ChainComplex, ZZ) := (C,n) -> (
-     D := new ChainComplex ;
-     D.ring = C.ring;
-     for i from min support C + 1 to max support C do(
-     D.dd_(i+n) = C.dd_i);
-     D
-     )
-
-prune K
-C = prune myChainComplex(K,1)
-C.dd
-C_(-3)
-
-K = myChainComplex(truncate(Hom(koszul gens B ^ [6], R^1),-1),1)
-
-C = myChainComplex(koszul matrix(R,{{p_0,p_1,p_2}}), -3)
-
-prune HH K
-
-myFilt = K ** filteredComplex C
-
-E = prune spectralSequence myFilt
-E^0
+-- make the frobenious power of the irrelevant ideal
+B = B_*/(x -> x^2)//ideal
+B
+-- need to take a large enough power. 
+-- it turns out that that 2 is large enough for this example 
+G = res image gens B
+F = koszul gens I
+K = Hom(G, filteredComplex(F))
+E = prune spectralSequence K
 E^1
 E^2
-(res ideal(p_0,p_1,p_2)) .dd_3
--- so there are non-koszul syzygies
--- of degrees {2,3} and {6,1}
-
-E^2 _{0,-1} ** R^{{2,3}}
--- then look at the degree 0 piece.
--- similarly 
-E^2 _{0,-1} ** R^{{6,1}}
--- the key point is ensuring that in the calculation of K above that we have taken 
--- a high enough frobenious power of B to compute the E2 page in the appropriate
--- multidegree correctly.
--- In this example, we are really computing the hypercohomology of the complex C.
--- So we should study or at least write down a condition
--- for what high enough means in terms of C.  (One way of getting high enough is 
--- to make the E1 page computed correctly in an approprate multi-degree.
--- this will be determined by the corresponding twisted modules of C.)
--- One condititon for example will be if l is large enough for HH^q C_p ** R(b) to be 
--- computed correctly (this will be the p,q module on the E1 page) then all
--- modules on the E1 page are computed correctly in this multidegree and so 
--- we get all other pages.
--- if we just want to focus on a particular p,q then need to check p-r,q+r-1 for all
--- possible values of r etc.
--- Note Er computed correctly in a multidegree => E^{r+1} computed correctly,
--- but the converse presumably need not hold in general.
-
-
--- check out the top row of the E^1 page.  this looks like it is suppose too.
-
--- E^1_{p,q} module is supposed to equal HH_q(K ** C_p).
--- we can check this explicitly as 
---follows.
-
-E^1
-all(keys (support E^1), i -> E^1 _{i#0,i#1} == (prune HH_(i#1)(K ** C_(i#0))))
--- so this looks promising.
+E^2_{3,-1}
+basis({0,0}, E^2_{3, -1} ** R^{{2, 3}})
+E^2 .dd_{3, -1}
+E^2 .dd
+basis({0,0}, image E^2 .dd_{3,-1} ** R^{{2,3}})
+basis({0,0}, E^2_{1,0} ** R^{{2,3}})
+-- this shows that there is a 1 dimensional space of non-Koszul syzygies of bi-degree (2,3)
+-- which is also what is predicted by the paper.
+basis({0,0}, E^2 _{3, -1} ** R^{{6,1}})
+-- this shows that there is a 1 dimensional space of non-Koszul syzygies of bi-degree (6,1)
+-- this is what is predicted by the paper.
+isIsomorphism(E^2 .dd_{3, -1})
+-- See Example 4.3 and Proposition 5.2 of their paper for more details related to this example.
 
 --
 --
