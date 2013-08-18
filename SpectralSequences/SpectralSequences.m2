@@ -210,6 +210,7 @@ net FilteredComplex := K -> (
 zpq:= (K,p,q,r)->(
 ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1), 
      K_p _ (p+q), K_(infinity).dd_(p+q), Verify => false)
+--     K_p _ (p+q), K_(infinity).dd_(p+q))
      )
 
 
@@ -239,7 +240,7 @@ computeErModules(FilteredComplex,ZZ):= (K,r) -> (myList:={};
 epqrMaps = method()
 epqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
      inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),(K_infinity).dd_(p+q), Verify => false))
-
+--      inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),(K_infinity).dd_(p+q)))
 -- the following will prune the pq maps on the rth page explicitly. --
 pruneEpqrMaps = method()
 pruneEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> ( 
@@ -749,7 +750,70 @@ doc ///
 	      @TO "Spectral sequences and connecting morphisms"@
 	      
 	      @TO "Spectral sequences and non-Koszul syzygies"@
+	      
+	      @TO "A spectral sequence which fails to degenerate quickly"@
 ///	
+
+  doc ///
+    Key
+      "A spectral sequence which fails to degenerate quickly"
+    Headline
+     	  Nonzero maps on higher page numbers
+    Description
+    	  Text
+	       The following example is taken from p. 127, Fig 7.2 of 
+	       Zomorodian's "Topology for computing".  In that figure, a filtration of a suitable
+	       simplicial complex is pictured.  Here we compute the associated spectral sequence.
+	       As we will see below, the spectral sequences has nonzero maps on higher page numbers.
+     	  Example
+	        needsPackage "SpectralSequences";
+		needsPackage "SimplicialComplexes"; 
+		needsPackage "ChainComplexExtras";
+		A = ZZ [s,t,u,v,w] ;
+		d0 = simplicialComplex {s} ;
+		d1 = simplicialComplex {s,t} ;
+		d2 = simplicialComplex {s,t,u} ;
+		d3 = simplicialComplex {s*t, u} ;
+		d4 = simplicialComplex {s*t, u, v} ;
+		d5 = simplicialComplex {s*t, u, v, w} ;
+		d6 = simplicialComplex {s*t, s*w ,u, v} ;
+		d7 = simplicialComplex {s*t, s*w ,t * w, u, v} ;
+		d8 = simplicialComplex {s*t, s*w ,t * w, u * v} ;
+		d9 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v} ;
+		d10 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u} ;
+		d11 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w} ;
+		d12 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u} ;
+		d13 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w} ;
+		d14 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w} ;
+		d15 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u} ;
+		d16 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v} ;
+		d17 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v, s*t*w} ;
+		L = reverse {d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17} ;
+		K = filteredComplex (L, ReducedHomology => false) ;
+		E = prune spectralSequence K ;
+		E^0
+		E^0 .dd
+		E^1
+		E^1 .dd
+		E^2
+		E^2 .dd
+		E^3
+		E^3 .dd
+		E^4
+		E^4 .dd
+		E^5
+		E^5 .dd
+		E^6
+		E^6 .dd
+		E^7
+		E^7 .dd
+		E^8
+		E^8 .dd
+		E^9
+		E^9 .dd
+		E^infinity
+		prune HH K_infinity
+///
   doc ///
     Key
       "Spectral sequences and non-Koszul syzygies"
@@ -1953,14 +2017,21 @@ D = D ** R^{{4,0,-4}}
 
 K = Hom(G, filteredComplex(D)) ;
 E = prune spectralSequence K ;
+e = spectralSequence K ;
 E^0 ;
 E^1 ;
+e^1 ;
+numgens image basis({0,0,0}, e^1 _{0, - 2})
+numgens image basis({0,0,0}, e^1 _{2, - 4})
+
 -- can compute the E^0 and E^1 pages
 numgens image basis({0,0,0}, E^1 _{0, - 2})
 numgens image basis({0,0,0}, E^1 _{2, - 4})
 E^1
 
 E^2 ;
+
+e^2 ;
 
 
 -- Try PP^1 x PP^1 X PP^1
@@ -2066,7 +2137,7 @@ debug SpectralSequences;
 -- Zomorodian's "Topology for computing"
 
 
-A = ZZ [s,t,u,v,w]
+A = ZZ [s,t,u,v,w] 
 
 d0 = simplicialComplex {s}
 d1 = simplicialComplex {s,t}
