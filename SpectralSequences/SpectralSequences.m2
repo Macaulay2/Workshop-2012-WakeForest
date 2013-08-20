@@ -499,8 +499,13 @@ truncate(ChainComplex,ZZ):= (C,q) ->(
 filteredComplex ChainComplex := FilteredComplex => opts-> C->( complete C; 
      	       n := max support C;
      	       m := min support C;
-     	       H := for i from 1 to length C list inducedMap(C,truncate(C,-i));
-     	      filteredComplex(H,Shift => -m))
+	       p := length C;
+	       if p > 0 then (
+     	       H := for i from 1 to p list inducedMap(C,truncate(C,-i));
+     	      filteredComplex(H,Shift => -m) )
+	      else filteredComplex {id_C} 
+	      -- now the constructor supports the zero chain complex
+	      )
 
 
 --produce the "x-filtration" of the tensor product complex.
@@ -1993,7 +1998,15 @@ doc ///
 	       returns the connecting map $H_{n+1}( coker f) \rightarrow H_n (im f)$.
 ///
 
-    
+TEST ///
+restart;
+needsPackage "SpectralSequences";
+A = QQ[a,b,c];
+C = new ChainComplex;
+C.ring = A;
+filtererdComplex C
+///    
+
 end
 
 
