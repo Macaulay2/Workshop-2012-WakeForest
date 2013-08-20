@@ -17,6 +17,7 @@
 --------------------------------------------------------------------------------
 newPackage(
   "SpectralSequences",
+--  AuxiliaryFiles => true,
   Version => "0.6",
   Date => "13 Aug 2013",
   Authors => {
@@ -41,7 +42,9 @@ newPackage(
       Email => "vqthanh@math.berkeley.edu",
       HomePage => "http://math.berkeley.edu/~thanh"}},
   Headline => "spectral sequences",
-  DebuggingMode => true
+  DebuggingMode => true,
+  PackageImports => {"SimplicialComplexes", "ChainComplexExtras"},
+  PackageExports => {"SimplicialComplexes", "ChainComplexExtras"}
   )
 
 export {
@@ -65,36 +68,46 @@ export {
   "epqrMaps",
   "pruneEpqrMaps",
   "epq",
-  "connectingMorphism"
+  "connectingMorphism",
+  "sourcePruningMap",
+  "targetPruningMap"
   }
 
 
 protect inducedMaps
-needsPackage "SimplicialComplexes"
-needsPackage "ChainComplexExtras"
+--needsPackage "SimplicialComplexes"
+--needsPackage "ChainComplexExtras"
 
 --------------------------------------------------------------------------------
-
-
-------------------------------------------------------
-------------------------------------------------------
-
---------------------------------------------------------------------------------
-Module + Module := Module => (M,N) -> (
-  if ring M =!= ring N  then error "expected modules over the same ring";
-  if ambient M != ambient N
-  or M.?relations and N.?relations and M.relations != N.relations
-  or M.?relations and not N.?relations
-  or not M.?relations and N.?relations
-  then error "expected submodules of the same module";
-  subquotient(
-    ambient M,
-    if not M.?generators or not N.?generators then null else M.generators | N.generators,
-    if M.?relations then M.relations else null))
 
 hasAttribute = value Core#"private dictionary"#"hasAttribute"
 getAttribute = value Core#"private dictionary"#"getAttribute"
 ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
+
+------------------------------------------------------
+------------------------------------------------------
+
+-- add some point there was a bug related to adding modules
+-- the following code was added to fix this bug.
+-- it is commented out because it seems not to be needed for M2 1.6
+-- (At least the example we compute here seem to work OK.)
+-- Also by typing code(symbol +, Module, Module) into M2 the following is
+--exactly what is in the core file modules2.m2
+
+--Module + Module := Module => (M,N) -> (
+--  if ring M =!= ring N  then error "expected modules over the same ring";
+--  if ambient M != ambient N
+--  or M.?relations and N.?relations and M.relations != N.relations
+--  or M.?relations and not N.?relations
+--  or not M.?relations and N.?relations
+--  then error "expected submodules of the same module";
+--  subquotient(
+--    ambient M,
+--    if not M.?generators or not N.?generators then null else M.generators | N.generators,
+--    if M.?relations then M.relations else null))
+
+
+--------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
 -- CODE
@@ -241,15 +254,23 @@ epqrMaps = method()
 epqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
      inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),(K_infinity).dd_(p+q), Verify => false))
 --      inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),(K_infinity).dd_(p+q)))
+
 -- the following will prune the pq maps on the rth page explicitly. --
 pruneEpqrMaps = method()
 pruneEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> ( 
      d := epqrMaps(K,p,q,r);
      N := minimalPresentation(source d);
      M := minimalPresentation(target d);
-    inverse(M.cache.pruningMap)* d * (N.cache.pruningMap) 
+    f := inverse(M.cache.pruningMap)* d * (N.cache.pruningMap);
+    f.cache #(symbol sourcePruningMap) = N.cache.pruningMap;
+    f.cache #(symbol targetPruningMap) = M.cache.pruningMap;
+    f 
      )
----
+ --  "sourcePruningMap",
+  --"targetPruningMap"
+--- the above can probably just be replaced by prune d --- except I want to cache the 
+-- pruning maps.  --
+
 ErMaps = method(Options =>{Prune => false})
 
 
@@ -268,7 +289,18 @@ rpqHomology(HashTable,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
 -- on the r-th page and the module on at the pq spot on the r+1-th page.
 rpqIsomorphism = method()
 rpqIsomorphism(HashTable,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
+    if E.Prune == false then 
 inducedMap(source (E^(r+1) .dd_{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filteredComplex _infinity _(p+q)))
+    else
+    rpqPruneIsomorphism(E,p,q,r)
+  ) 
+
+rpqPruneIsomorphism = method()
+rpqPruneIsomorphism(HashTable,ZZ,ZZ,ZZ) := (E,p,q,r) -> (    
+    M := rpqHomology(E,p,q,r);
+    f := inducedMap(target (E^(r + 1) .dd_{p,q}) .cache.sourcePruningMap,
+	    M, (E^r .dd_{p,q}).cache.sourcePruningMap);
+	inverse((E^(r + 1) .dd_{p,q}) .cache.sourcePruningMap) * f    
   ) 
 
 
@@ -316,9 +348,9 @@ net SpectralSequencePageMap := f -> (
 SpectralSequencePageMap _ List := Matrix => (d,i)-> (if (d)#?i then d#i 
      	  else  
 	       if d.Prune == false then 
-	            epqrMaps(d.filteredComplex,i#0,i#1,- d.degree #1) 
+	            epqrMaps(d.filteredComplex,i#0,i#1,- d.degree #0) 
      	       else
-	       	    pruneEpqrMaps(d.filteredComplex,i#0,i#1,- d.degree #1) 	       	    		    
+	       	    pruneEpqrMaps(d.filteredComplex,i#0,i#1,- d.degree #0) 	       	    		    
 		    )
 
 SpectralSequencePageMap ^ List := Module => (d,i)-> (d_(-i))    
@@ -340,7 +372,9 @@ new SpectralSequencePage from
        symbol Prune => opts.Prune,
        symbol number => r,
        symbol dd => spectralSequencePageMap(K,r, Prune => opts.Prune), 
-      symbol zero => (ring K_infinity)^0})
+       symbol zero => (ring K_infinity)^0,
+       symbol cache => CacheTable}
+  )
 
 minimalPresentation SpectralSequencePage := prune SpectralSequencePage := SpectralSequencePage  => opts -> (E) -> (
      spectralSequencePage(E.filteredComplex, E.number, Prune =>true)
@@ -611,23 +645,28 @@ Hom(Matrix, Module) := Matrix => (f,N) -> (
 
 -- the following method seems to work ok, athough need to test
 -- more carefully.
-Hom(Module, Matrix) := Matrix => (N,f) -> (inducedMap(Hom(N,target f),
-	  Hom(N,source f),   dual id_(cover N) ** f))
+-- will comment the following out, and see if the M2 1.6 version works OK.
+-- Hom(Module, Matrix) := Matrix => (N,f) -> (inducedMap(Hom(N,target f),
+--	  Hom(N,source f),   dual id_(cover N) ** f))
 
 
 -- there is/was a bug in cover chain complex -- 
--- need to test more carefully. --     
-cover ChainComplex := ChainComplex => C -> (
-     minC := min spots C;
-     maxC := max spots C;
-     P:= apply(toList(minC..maxC),i-> cover C#i);
-     chainComplex apply(toList(minC..maxC-1), i-> C.dd_(i+1) * map(C_(i+1),P_(i+1),1) // map(C_i,P_i,1)))
+-- need to test more carefully. --    
+-- comment this out too.
+ 
+-- cover ChainComplex := ChainComplex => C -> (
+--     minC := min spots C;
+--     maxC := max spots C;
+--     P:= apply(toList(minC..maxC),i-> cover C#i);
+--     chainComplex apply(toList(minC..maxC-1), i-> C.dd_(i+1) * map(C_(i+1),P_(i+1),1) // map(C_i,P_i,1)))
 
 isWellDefined ChainComplexMap := Boolean => f -> (
      (F,G):= (source f, target f);
      all(drop(spots F,1), i -> G.dd_i * f#i == f#(i-1) * F.dd_i))
 
 -- Computes the total complex of the Hom double complex of two chain complexes
+-- This code is different from that in ChainComplexExtras.  We need this version
+-- so that the indicies are cached.
 Hom (ChainComplex, ChainComplex) := ChainComplex => (C,D) -> (
   if C.ring =!= D.ring then error "expected chain complexes over the same ring";
   E := chainComplex (lookup( Hom, GradedModule, GradedModule))(C,D);
@@ -683,7 +722,7 @@ project := (K,p) -> (
      )
 
 
-
+-- do we need this??
 -- Method for looking at all of the chain subcomplexes pleasantly
 see = method();
 see FilteredComplex := K -> (
@@ -1957,8 +1996,10 @@ doc ///
     
 end
 
+
 --------------------------------------------------------------------------------
 restart
+uninstallPackage"SpectralSequences"
 installPackage"SpectralSequences"
 installPackage("SpectralSequences", RemakeAllDocumentation => true)
 check "SpectralSequences";
@@ -2021,6 +2062,8 @@ e = spectralSequence K ;
 E^0 ;
 E^1 ;
 e^1 ;
+
+e^2 ;
 numgens image basis({0,0,0}, e^1 _{0, - 2})
 numgens image basis({0,0,0}, e^1 _{2, - 4})
 
@@ -2029,9 +2072,10 @@ numgens image basis({0,0,0}, E^1 _{0, - 2})
 numgens image basis({0,0,0}, E^1 _{2, - 4})
 E^1
 
-E^2 ;
+-- computing the E^2 page takes too long
+-- E^2 ;
 
-e^2 ;
+--e^2 ;
 
 
 -- Try PP^1 x PP^1 X PP^1
@@ -2494,9 +2538,9 @@ prune HH K_infinity
 
 restart
 needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
+--needsPackage "SimplicialComplexes"; 
+--needsPackage "ChainComplexExtras";
+--debug SpectralSequences;
 
 A=QQ[a,b,c,d]
 D=simplicialComplex {a*d*c, a*b, a*c, b*c}
@@ -2572,7 +2616,9 @@ E^0 .dd
 E^0
 E^1
 E^0 .dd_{1,0}
-
+E^1 .dd
+E^1
+E^0
 E^2
 
 prune HH K_infinity
@@ -2589,8 +2635,8 @@ prune HH K_infinity
 --
 restart
 needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
+--needsPackage "SimplicialComplexes"; 
+--needsPackage "ChainComplexExtras";
 debug SpectralSequences;
 
 A = QQ[a,b,c]
@@ -2613,17 +2659,21 @@ E^2 .dd
 ----------------------------------------------------
 -- the above agrees with my caclulations by hand. --
 ----------------------------------------------------
--- note: rpqIsomorphism is not implemented to handle the pruned version.
+
 all(keys support E^0, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
--- the error is in the rpqIsomorphism code. --
+all(keys support E^1, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
+all(keys support E^2, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
+all(keys support E^3, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,3))
+
+
 e = spectralSequence K
-all(keys support e^0, i->  isIsomorphism rpqIsomorphism(e,i#0,i#1,0))
+all(keys support e^0, i ->  isIsomorphism rpqIsomorphism(e,i#0,i#1,0))
 -- cool.
-all(keys support  e^1 , i->  isIsomorphism rpqIsomorphism(e,i#0,i#1,1))
+all(keys support  e^1 , i ->  isIsomorphism rpqIsomorphism(e,i#0,i#1,1))
 -- cool.
-all(keys support e^2, i->  isIsomorphism rpqIsomorphism(e,i#0,i#1,2))
+all(keys support e^2, i ->  isIsomorphism rpqIsomorphism(e,i#0,i#1,2))
 -- cool.
-all(keys support e^5, i->  isIsomorphism rpqIsomorphism(e,i#0,i#1,5))
+all(keys support e^5, i ->  isIsomorphism rpqIsomorphism(e,i#0,i#1,5))
 -- cool.
 
 --------------------------------------------------
@@ -3264,7 +3314,13 @@ G = res ideal(x*y,y*z,z^3)
 
 -- Example of spectral sequence for Ext
 H = Hom(F,filteredComplex G)
-E = spectralSequence H
+E = prune spectralSequence H
+
+ E^0
+E^1
+E^2
+E^infinity
+
 netList support E_0
 netList support E_1
 netList support E_infinity
@@ -3288,9 +3344,16 @@ J=ker G.dd_lim
 G#(lim+1) = J
 G.dd#(lim+1) = inducedMap(G_lim,G_(lim+1))
 H = filteredComplex(F ** S)
+K = H ** G
 see (K = H ** G)
-E = spectralSequence K
+E = prune spectralSequence K
 netList apply(lim, k -> prune Tor_k(M,pushForward(map(S,R),N)))
+
+E^0
+E^1
+E^2
+
+
 netList support E_0
 netList support E_1
 netList support E_infinity
