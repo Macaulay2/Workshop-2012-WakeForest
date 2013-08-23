@@ -52,7 +52,7 @@ export {
   "filteredComplex",
   "SpectralSequence",
   "spectralSequence",
-  "see", 
+--  "see", 
   "computeErModules",
   "computeErMaps", 
   "spots",
@@ -64,7 +64,7 @@ export {
   "ReducedHomology","project",
   "SpectralSequencePageMap",
   "spectralSequencePageMap",
-  "pprune",
+ -- "pprune",
   "epqrMaps",
   "pruneEpqrMaps",
   "epq",
@@ -641,11 +641,14 @@ Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
 
 -- the following method seems to work ok, although need to test more
 -- carefully.
-Hom(Matrix, Module) := Matrix => (f,N) -> (
-     g := (f * id_(source f)) // id_(target f);
-     inducedMap(image id_(Hom(source f, N)),image id_(Hom(target f, N)), 
-	       cover((transpose cover g) ** (id_(N))))
-)
+
+-- maybe we no longer need this??
+
+--Hom(Matrix, Module) := Matrix => (f,N) -> (
+--     g := (f * id_(source f)) // id_(target f);
+--     inducedMap(image id_(Hom(source f, N)),image id_(Hom(target f, N)), 
+--	       cover((transpose cover g) ** (id_(N))))
+--)
 
 
 -- the following method seems to work ok, athough need to test
@@ -720,25 +723,25 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 	  else 0)))))
 
 
-
-project := (K,p) -> (
-     f:= i -> map(K_p_i,K_infinity_i,1);
-     map(K_p,K_infinity,f)
-     )
+-- do we need this?
+--project := (K,p) -> (
+--     f:= i -> map(K_p_i,K_infinity_i,1);
+--     map(K_p,K_infinity,f)
+--     )
 
 
 -- do we need this??
 -- Method for looking at all of the chain subcomplexes pleasantly
-see = method();
-see FilteredComplex := K -> (
+-- see = method();
+-- see FilteredComplex := K -> (
      -- Eliminate the duplication of the homological indices
-  (minK, maxK) := (min K, max K);
-  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
-    toList(minK .. maxK), (p,i) ->
-    if i === minK then p | " : " | net prune K^p_i else
-    " <-- " | net prune K^p_i);
-  T = T | {toList(minK .. maxK)};
-  netList T)
+--  (minK, maxK) := (min K, max K);
+--  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
+--    toList(minK .. maxK), (p,i) ->
+--    if i === minK then p | " : " | net prune K^p_i else
+--    " <-- " | net prune K^p_i);
+--  T = T | {toList(minK .. maxK)};
+--  netList T)
 
 
   
