@@ -220,7 +220,7 @@ net FilteredComplex := K -> (
 -- In any event it is easy enough to prove directly that they satisfy the requirments 
 -- for a spectral sequence.
 
-zpq:= (K,p,q,r)->(
+zpq := (K,p,q,r)->(
 ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1), 
      K_p _ (p+q), K_(infinity).dd_(p+q), Verify => false)
 --     K_p _ (p+q), K_(infinity).dd_(p+q))
@@ -228,7 +228,7 @@ ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1),
 
 
 
-bpq:= (K,p,q,r) ->(
+bpq := (K,p,q,r) ->(
     ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q))
       )
 
@@ -241,7 +241,7 @@ epq(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bp
 
 computeErModules = method()
 
-computeErModules(FilteredComplex,ZZ):= (K,r) -> (myList:={};
+computeErModules(FilteredComplex,ZZ) := (K,r) -> (myList:={};
      for p from min K to max K do (
 	  for q from -p + min K_(infinity) to max K_(infinity) do (--length K_(max K) do (
 	       myList=append(myList, {p,q}=> epq(K,p,q,r)); )
@@ -261,10 +261,10 @@ pruneEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
      d := epqrMaps(K,p,q,r);
      N := minimalPresentation(source d);
      M := minimalPresentation(target d);
-    f := inverse(M.cache.pruningMap)* d * (N.cache.pruningMap);
-    f.cache #(symbol sourcePruningMap) = N.cache.pruningMap;
-    f.cache #(symbol targetPruningMap) = M.cache.pruningMap;
-    f 
+     f := inverse(M.cache.pruningMap)* d * (N.cache.pruningMap);
+     f.cache #(symbol sourcePruningMap) = N.cache.pruningMap;
+     f.cache #(symbol targetPruningMap) = M.cache.pruningMap;
+     f 
      )
  --  "sourcePruningMap",
   --"targetPruningMap"
@@ -274,7 +274,7 @@ pruneEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
 ErMaps = method(Options =>{Prune => false})
 
 
-ErMaps(FilteredComplex,ZZ,ZZ,ZZ):= Matrix => opts -> (K,p,q,r) -> (if opts.Prune == false then
+ErMaps(FilteredComplex,ZZ,ZZ,ZZ) := Matrix => opts -> (K,p,q,r) -> (if opts.Prune == false then
      epqrMaps(K,p,q,r)
      else   pruneEpqrMaps(K,p,q,r))
 
@@ -314,7 +314,7 @@ spots SpectralSequencePageMap := List => (cacheValue symbol spots)(
 
 spectralSequencePageMap = method(Options =>{Prune => false})
 
-spectralSequencePageMap(FilteredComplex,ZZ):= SpectralSequencePageMap => opts ->
+spectralSequencePageMap(FilteredComplex,ZZ) := SpectralSequencePageMap => opts ->
  (K,r) -> (myList:={};
            for p from min K to max K do (
 		for q from -p + min K_(infinity) to max K_(infinity) -p do (
@@ -353,7 +353,7 @@ SpectralSequencePageMap _ List := Matrix => (d,i)-> (if (d)#?i then d#i
 	       	    pruneEpqrMaps(d.filteredComplex,i#0,i#1,- d.degree #0) 	       	    		    
 		    )
 
-SpectralSequencePageMap ^ List := Module => (d,i)-> (d_(-i))    
+SpectralSequencePageMap ^ List := Matrix => (d,i)-> (d_(-i))    
 
 --------------------------------------------------------------------------------
 -- spectral sequence pages
@@ -590,7 +590,7 @@ complex := (T,p) ->
 	       );
      N := max support K_infinity;
      P := min support K_infinity;
-     H:= Hom(C,K_infinity);
+     H := Hom(C,K_infinity);
      filteredComplex(reverse for i from P to (N -1) list 
 	       inducedMap(H, complex(H,i)), Shift => -P)
      )
@@ -600,7 +600,7 @@ prune FilteredComplex := FilteredComplex => opts -> F ->
   apply(keys F, p -> if class p =!= Symbol then p => prune F#p else p => F#p)
 
 
-filteredComplex SpectralSequence := FilteredComplex => E -> E.filteredComplex
+filteredComplex SpectralSequence := FilteredComplex => opts -> E -> E.filteredComplex
 
 chainComplex SpectralSequence := ChainComplex => E -> chainComplex filteredComplex E
 
@@ -1478,7 +1478,7 @@ doc ///
 -- truncate a filtered complex documentation --
 doc ///
      Key
-     	   (truncate, ChainComplex,ZZ)
+     	  (truncate, ChainComplex,ZZ)
      Headline
      	  truncate a filitered complex.
      Usage
@@ -1507,6 +1507,22 @@ doc ///
 	  	  
   ///
   
+--doc ///
+--     Key
+--     	  (spectralSequencePageMap, FilteredChainComplex, ZZ)
+--     Headline
+--     	  The maps on a spectral sequence page
+--     Usage
+--     	  d = spectralSequencePageMap(K,r)
+--     Inputs
+--     	  K:FilteredChainComplex
+--	  r:ZZ
+--     Outputs
+--     	  d:SpectralSequencePageMap
+--     Description
+--     	  Text 
+--	      Returns the maps on the rth page of the spectral sequence determined by K.	  
+--  ///
 
 
  
@@ -1640,6 +1656,36 @@ doc ///
     /// 
 
 doc ///
+     Key 
+          (filteredComplex,SpectralSequence)
+     Headline 
+         obtain the filtered complex associated to the spectral sequence
+     Usage 
+         K = filteredComplex E 
+     Inputs 
+	  E: SpectralSequence
+-- these options don't do anything for this constructor.
+	  ReducedHomology => Boolean	       	  	    
+	  Shift => ZZ
+     Outputs
+          K: FilteredComplex
+     Description	  
+     	  Text
+	     Produces the filtered complex which determined the spectral sequence.
+	  Example 
+	    needsPackage "SpectralSequences";
+	    A = QQ[a,b,c,d];
+	    D = simplicialComplex {a*d*c, a*b, a*c, b*c};
+	    F2D = D
+	    F1D = simplicialComplex {a*c, d}
+	    F0D = simplicialComplex {a,d}
+	    K = filteredComplex {F2D, F1D, F0D}
+	    E = spectralSequence(K) ;
+    	    C = filteredComplex E ;
+    /// 
+
+
+doc ///
      Key
   	  (chainComplex, FilteredComplex)
      Headline
@@ -1678,7 +1724,7 @@ doc ///
      	   (Hom, FilteredComplex, ChainComplex)
 	   (Hom, ChainComplex, FilteredComplex)
      Headline
-     	  The ith inclusion map in a filtered complex
+     	  The filtered complex $Hom(K_infinty, C)$ 
      Usage
      	  f = Hom(K,C)
      Inputs
@@ -1688,7 +1734,7 @@ doc ///
      	  f:FilteredComplex
      Description
      	  Text 
-	       Blah
+	      Returns the filtrations of $Hom(K_infy, C)$ determined by the double complex  
     ///
     doc ///
      Key
@@ -1711,7 +1757,7 @@ doc ///
      	  (spectralSequencePage, FilteredComplex, ZZ)
 	  spectralSequencePage
      Headline
-     	  Construct a SpectralPage from a filtered complex
+     	  Construct a SpectralSequencePage from a filtered complex
      Usage
      	  E = spectralSequencePage(K,r)
      Inputs
@@ -1722,7 +1768,7 @@ doc ///
      	  E:SpectralSequencePage
      Description
      	  Text 
-	       Blah
+	       Returns the rth page of the spectral sequence determined by K.
      ///
  
 doc ///
@@ -1769,6 +1815,43 @@ doc ///
 	      Returns the kth page of the spectral sequence.
      ///
      
+     doc ///
+     Key
+     	  (symbol _, SpectralSequencePageMap, List)
+     Headline
+     	  The {p,q}th map on of a spectral sequence page 
+     Usage
+     	  d = D _L
+     Inputs
+     	  D:SpectralSequencePageMap
+	  L:List
+	      A list L = \{p,q\} of integers.
+     Outputs
+     	  d: Matrix
+     Description
+     	  Text 
+	      Returns the \{p,q\}th map on a spectral sequence page.
+     ///
+
+doc ///
+     Key
+     	  (symbol ^, SpectralSequencePageMap, List)
+     Headline
+     	  The {p,q}th map on of a spectral sequence page 
+     Usage
+     	  d = D ^L
+     Inputs
+     	  D:SpectralSequencePageMap
+	  L:List
+	      A list L = \{p,q\} of integers.
+     Outputs
+     	  d: Matrix
+     Description
+     	  Text 
+	      Returns the \{p,q\}th map on a spectral sequence page.
+     ///
+         
+     
 doc ///
      Key
      	  (symbol ^, SpectralSequence, ZZ)
@@ -1787,6 +1870,7 @@ doc ///
 	      Returns the kth page of the spectral sequence.
      ///
 
+
   doc ///
      Key
      	  (symbol ^, SpectralSequencePage, List)
@@ -1802,7 +1886,7 @@ doc ///
      	  M:Module
      Description
      	  Text 
-	       Returns the module in the \{i,j\}  \ position in the spectral sequence page. 
+	       Returns the module in the \{i,j\}   position in the spectral sequence page. 
 	       (Using cohomological indexing conventions.)  
     ///
 
@@ -1843,7 +1927,7 @@ doc ///
      	  KK:FilteredComplex
      Description
      	  Text 
-	       Blah
+	       Returns the two filtrations of K_infty ** C determined by the double complex
     ///
  doc ///
      Key
@@ -1907,7 +1991,6 @@ doc ///
      SeeAlso
      	  (symbol _, FilteredComplex, ZZ)	       
     ///
-
 
 
     doc ///
@@ -2551,9 +2634,6 @@ prune HH K_infinity
 
 restart
 needsPackage "SpectralSequences";
---needsPackage "SimplicialComplexes"; 
---needsPackage "ChainComplexExtras";
---debug SpectralSequences;
 
 A=QQ[a,b,c,d]
 D=simplicialComplex {a*d*c, a*b, a*c, b*c}
