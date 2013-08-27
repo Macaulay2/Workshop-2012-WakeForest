@@ -285,7 +285,16 @@ TEST ///
 --- coefficients should be fixed so that the return value
 --- can recreate the input in some way.
 TEST ///
-///
+restart
+needsPackage "NCAlgebra"
+A=QQ{a, b, c, d, e, f, g, h}
+F = a^6+b^6+c^6+d^6+e^6+f^6+g^6+h^6;
+bas = time flatten entries basis(6,A);
+#bas
+coeffs = time coefficients(F,Monomials=>bas);
+time sparseCoeffs({F},Monomials=>bas);
+time sparseCoeffs(toList (10:F),Monomials=>bas);
+//
 
 --- Check variables with non-standard weights
 TEST ///
@@ -524,7 +533,7 @@ time remainderFunction(z^17,Igb)
 B = A / I
 g = -y^3-x*y*z+y*x*z+x^3
 isCentral g
-dims := hilbertBergman(B,DegreeLimit=>10)
+dims := hilbertBergman(B,DegreeLimit=>100)
 
 -----------
 -- this doesn't work since it is not homogeneous unless you use degree q = 0, which is not allowed.
@@ -1023,6 +1032,6 @@ oppositeRing B
 
 --- check NCAlgebra
 restart
-path = append(path, "/home/connerab/M2stuff/WFU-2012/NCAlgebra/")
+--path = append(path, "/home/connerab/M2stuff/WFU-2012/NCAlgebra/")
 needsPackage "NCAlgebra"
 check "UnitTestsNCA"

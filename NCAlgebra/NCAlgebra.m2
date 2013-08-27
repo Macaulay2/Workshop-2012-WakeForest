@@ -942,18 +942,25 @@ sparseCoeffs List := opts -> L -> (
               << "Warning: unique does not work yet." << endl;
               unique flatten apply(L, e-> flatten entries monomials e)) 
           else opts#Monomials;
-  terms := (L#0).terms;
-  pos := positions(mons, m -> terms#?(first keys m.terms));
-  coeffs := apply(pos, p-> ((p,0) => promote(terms#(first keys (mons#p).terms),R)));
+  
+  m := #mons;
+  
+  mons = time (mons / (m -> first keys m.terms));
+  mons = time hashTable apply(#mons, i -> (mons#i,i));
+    
+  termsF := pairs (L#0).terms;
+  
+  coeffs := time (apply(termsF, (k,v) -> (mons#k,0) => v));
+
   l:=length L;
   if l>1 then
      for i from 1 to l-1 do (
         if not isHomogeneous L#i then error "Extected a homogeneous element.";
-        terms = (L#i).terms;
-        pos = positions(mons, m -> terms#?(first keys m.terms));
-        coeffs = flatten{coeffs,apply(pos, p-> ((p,i) => promote(terms#(first keys (mons#p).terms),R)))};
+        termsF = pairs (L#i).terms;
+        newCoeffs := time (apply(termsF, (k,v) -> (mons#k,i) => v));
+
+	coeffs = coeffs | newCoeffs;
      ); 
-   m := length mons;
    map(R^m , R^l, coeffs)
 )
 
@@ -1414,7 +1421,7 @@ hilbertBergman NCQuotientRing := opts -> B -> (
   tempInput := temporaryFileName() | ".bi";       -- gb input file
   tempGBOutput := temporaryFileName() | ".bgb";   -- gb output goes here
   tempHSOutput := temporaryFileName() | ".bhs";   -- hs output goes here
-  tempPBOutput := temporaryFileName() | ".bpb";   -- pb output goes here (?)
+  tempPBOutput := temporaryFileName() | ".bpb";   -- pb 'output' goes here (?)
   tempTerminal := temporaryFileName() | ".ter";   -- terminal output goes here
   I := ideal B;
   gensI := gens I;
