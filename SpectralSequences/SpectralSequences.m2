@@ -19,7 +19,7 @@ newPackage(
   "SpectralSequences",
 --  AuxiliaryFiles => true,
   Version => "0.6",
-  Date => "13 Aug 2013",
+  Date => "28 Aug 2013",
   Authors => {
        {
       Name => "David Berlekamp", 
@@ -31,8 +31,8 @@ newPackage(
       HomePage => "http://www.math.berkeley.edu/~aboocher"},
        {
       Name => "Nathan Grieve", 
-      Email => "nathangrieve@mast.queensu.ca",
-      HomePage => "http://www.mast.queensu.ca/~nathangrieve"},             
+      Email => "ngrieve@math.mcgill.ca",
+      HomePage => "http://www.math.mcgill.ca/ngrieve"},             
     {
       Name => "Gregory G. Smith", 
       Email => "ggsmith@mast.queensu.ca", 
@@ -70,13 +70,13 @@ export {
   "epq",
   "connectingMorphism",
   "sourcePruningMap",
-  "targetPruningMap"
+  "targetPruningMap",
+   "Page", "PageMap", "InfiniteSequence", "SequenceMap", "pageMap", "page", "next",
+  "prunningMaps", "DoubleChainComplex", "DoubleChainComplexMap", "xx", "yy"
   }
 
 
 protect inducedMaps
---needsPackage "SimplicialComplexes"
---needsPackage "ChainComplexExtras"
 
 --------------------------------------------------------------------------------
 
@@ -87,27 +87,6 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 ------------------------------------------------------
 ------------------------------------------------------
 
--- add some point there was a bug related to adding modules
--- the following code was added to fix this bug.
--- it is commented out because it seems not to be needed for M2 1.6
--- (At least the example we compute here seem to work OK.)
--- Also by typing code(symbol +, Module, Module) into M2 the following is
---exactly what is in the core file modules2.m2
-
---Module + Module := Module => (M,N) -> (
---  if ring M =!= ring N  then error "expected modules over the same ring";
---  if ambient M != ambient N
---  or M.?relations and N.?relations and M.relations != N.relations
---  or M.?relations and not N.?relations
---  or not M.?relations and N.?relations
---  then error "expected submodules of the same module";
---  subquotient(
---    ambient M,
---    if not M.?generators or not N.?generators then null else M.generators | N.generators,
---    if M.?relations then M.relations else null))
-
-
---------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
 -- CODE
@@ -256,6 +235,11 @@ epqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
 --      inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),(K_infinity).dd_(p+q)))
 
 -- the following will prune the pq maps on the rth page explicitly. --
+--  "sourcePruningMap",
+--"targetPruningMap"
+--- the above can probably just be replaced by prune d --- except I want to cache the 
+-- pruning maps.  --
+
 pruneEpqrMaps = method()
 pruneEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> ( 
      d := epqrMaps(K,p,q,r);
@@ -266,10 +250,6 @@ pruneEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
      f.cache #(symbol targetPruningMap) = M.cache.pruningMap;
      f 
      )
- --  "sourcePruningMap",
-  --"targetPruningMap"
---- the above can probably just be replaced by prune d --- except I want to cache the 
--- pruning maps.  --
 
 ErMaps = method(Options =>{Prune => false})
 
@@ -304,10 +284,13 @@ rpqPruneIsomorphism(HashTable,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
   ) 
 
 
+
+
 SpectralSequencePageMap = new Type of HashTable
 SpectralSequencePageMap.synonym = "spectral sequence page map"
 
 -- spots might need to be improved.  This will work for now.
+-- spots shouldn't be cached either --- because the hash tables are mutable
 spots SpectralSequencePageMap := List => (cacheValue symbol spots)(
   K ->  select(keys K, i -> class i === List))
 
@@ -395,11 +378,6 @@ support SpectralSequencePage := E->(
 -- on the r th page in grid form.  
 -- this method is called in net of spectral sequence page.
 -- it would be good to delete the zero rows.
-
--- the following is an experimental net for a spectral sequence page.
--- for now we view the coordinates in the box.  Perhaps this is what 
--- we want to do...  for example if the box is too large to fit on a screen it
--- will be annoying to try to search for a coordinate axis...
 net SpectralSequencePage:= E->(L:=select(keys E.dd, i-> class i === List 
 	  and E_i !=0);
 maxQ:= max(apply(L, i->i#1)); minQ:=min(apply(L, i-> i#1)); 
@@ -471,7 +449,7 @@ minimalPresentation SpectralSequence := prune SpectralSequence := SpectralSequen
 
 -- Can/Should we add options??  e.g. ker and image to return
 -- the truncated complex with ker d_p in degree 0 and zero in degrees > p 
--- or the truncated complex with image d_{p+1} in degree p and zero in degrees <p ??
+-- or the truncated complex with image d_{p+1} in degree p and zero in degrees < p ??
 
 -- the following method truncates a chain complex 
 truncate(ChainComplex,ZZ):= (C,q) ->( 
@@ -660,7 +638,7 @@ Hom (GradedModule, GradedModule) := GradedModule => (C,D) -> (
 
 -- there is/was a bug in cover chain complex -- 
 -- need to test more carefully. --    
--- comment this out too.
+-- comment this out too for now.
  
 -- cover ChainComplex := ChainComplex => C -> (
 --     minC := min spots C;
@@ -723,57 +701,220 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 	  else 0)))))
 
 
--- do we need this?
---project := (K,p) -> (
---     f:= i -> map(K_p_i,K_infinity_i,1);
---     map(K_p,K_infinity,f)
---     )
-
-
--- do we need this??
--- Method for looking at all of the chain subcomplexes pleasantly
--- see = method();
--- see FilteredComplex := K -> (
-     -- Eliminate the duplication of the homological indices
---  (minK, maxK) := (min K, max K);
---  T := table(reverse toList(min K^-infinity .. max K^-infinity), 
---    toList(minK .. maxK), (p,i) ->
---    if i === minK then p | " : " | net prune K^p_i else
---    " <-- " | net prune K^p_i);
---  T = T | {toList(minK .. maxK)};
---  netList T)
-
-
   
 --FilteredComplex == FilteredComplex := Boolean => (C,D) -> (
 --  all(min(min C,min D)..max(max C,max D),i-> C_i == D_i))
 
+-----------------------------------------------------------
+-- Experimental Code --------------------------------------
+-----------------------------------------------------------
+--- Here is some experimental types.  There utility are demonstrated 
+-- in some scratch examples below.
+-------------------------------------------------------
+--  There are some redundancies with existing code;
+-- perhaps the existing code should be rewritten in light of our new 
+-- types.
+
+
+
+---
+-- this part should be ignored for now; I'm not doing anything with it at the moment.
+-- on the other hand, if implemented properly, we could use this to handle
+-- non-bounded chain complexes by using lazy evaluation.
+---
+
+InfiniteSequence = new Type of MutableHashTable
+InfiniteSequence.synonym = "infinite sequence"
+InfiniteSequence.GlobalAssignHook = globalAssignFunction
+InfiniteSequence.GlobalReleaseHook = globalReleaseFunction
+describe InfiniteSequence := E -> net expression E
+net InfiniteSequence := E -> (
+  if hasAttribute(E, ReverseDictionary) 
+  then toString getAttribute(E, ReverseDictionary) 
+  else net expression E)
+expression InfiniteSequence := E -> stack(
+  "  .-.  ", " (o o) ", " | O \\   Unnamed infinite sequence! ..ooOOOooooOO", 
+  "  \\   \\  ", "   `~~~` ")
+
+----------------------------------------------------------------------------
+
+
+-- should we use infinite sequence or Book??
+--InfiniteSequence ^ ZZ := Page => (E,r) -> E#r
+
+InfiniteSequence _ InfiniteNumber :=
+InfiniteSequence _ ZZ := Page => (E,r) -> ( if E#?r then E^r else E.infinity )
+
+InfiniteSequence ^ InfiniteNumber :=
+InfiniteSequence ^ ZZ := Page => (E,r) -> ("Hi" )
+
+
+--------------------------------------------------------------------------------
+-- PageMap
+--------------------------------------------------------------------------------
+
+PageMap = new Type of MutableHashTable
+PageMap.synonym = "page map"
+
+-- spots might need to be improved.  This will work for now.
+
+-- spots = method()
+PageMap _ List := Matrix => (f,i) ->  if f#?i then f#i else (
+      de := f.degree;
+      so := (f.source)_i;
+      ta := (f.target)_(i+de);
+      map(ta,so,0))
+
+
+spots PageMap := List => (
+  K) ->  (select(keys K, i -> class i === List) )
+
+lineOnTop := (s) -> concatenate(width s : "-") || s
+net PageMap := f -> (
+     v := between("",
+	  apply(spots f, 
+     	       i -> horizontalJoin(
+		         net (i + f.degree), " : " , net (target f#i), " <--",
+		         lineOnTop net f#i,
+		         "-- ", net source f#i, " : ", net i
+		    )
+	       )
+	       );
+	  stack v
+)
+
+-- need to write PageMap _ List
+
+-- at present there are no constructors for pageMap
+--------------------------------------------------------------------------------
+-- Pages
+--------------------------------------------------------------------------------
+Page = new Type of MutableHashTable
+Page.synonym = "Page"
+Page.GlobalAssignHook = globalAssignFunction
+Page.GlobalReleaseHook = globalReleaseFunction
+
+
+new Page := Page => (cl) -> (
+     C := newClass(Page,new MutableHashTable); -- sigh
+     C.cache = new CacheTable;
+     b := C.dd = new PageMap;
+     b.degree = {};
+     b.source = b.target = C;
+     C)
+ring Page := C -> C.ring
+degree Page := C -> C.dd.degree
+
+net Page := E -> (
+    L := select(keys E, i -> class i === List and E#i !=0);
+    maxQ := max(apply(L, i->i#1)); 
+    minQ := min(apply(L, i-> i#1)); 
+    maxP := max(apply(L, i->i#0));
+    minP := min(apply(L,i->i#0));
+    K := while maxQ >= minQ list makeRow(maxP,minP, maxQ, E) do maxQ = maxQ-1;
+    netList K)
+
+makeRow = method()
+makeRow(ZZ,ZZ,ZZ,Page) := (maxP,minP,q,E)->(L:={};
+      apply(minP .. maxP, i-> 
+	   if E#?{i,q} then L = append(L, stack(net E#{i,q}, "  ", net {i,q}))
+	   else L = append(L, stack(net 0, " ", net {i,q})));
+       L)
+
+Page _ List := (E,L) -> ( if E#?L then E#L else (ring E)^0 )
+
+-- at present there are no constructors for Page.
+
+page = method (Options => {Prune => false})
+
+-- given {minP, maxP, Page} make a page.  the idea here is to make the needed keys
+-- we then can make entries nonzero as needed.
+page(List,List,Page) := Page => opts -> (L,M,E) -> (
+    if E.?ring then (
+    minP := L#0;
+    maxP := L#1;
+    minQ := M#0;
+    maxQ := M#1;
+  --  E := new Page;
+  --  E.ring = A;
+    for i from minP to maxP do (
+	for j from minQ to maxQ do (
+	    E#{i,j} = (E.ring)^0;
+    )
+);
+E) else error "page does not have a ring"
+)
+
+
+-- here are some needed functions related to hilbert polynomials --
+hilbertPolynomial ZZ := ProjectiveHilbertPolynomial => o -> (M) -> ( 
+    new ProjectiveHilbertPolynomial from {0 => M}
+    )
+ProjectiveHilbertPolynomial == ZZ := (M,N) -> (M == hilbertPolynomial N)
+ProjectiveHilbertPolynomial + ZZ := (P, N) -> P + hilbertPolynomial N
+ZZ + ProjectiveHilbertPolynomial := (P,N) -> hilbertPolynomial P + N
+ProjectiveHilbertPolynomial - ZZ := (P, N) -> P - hilbertPolynomial N
+ZZ - ProjectiveHilbertPolynomial := (P,N) -> hilbertPolynomial P - N
+
+
+hilbertPolynomial(SpectralSequencePage) := Page => o -> (E) -> (
+    P := new Page;
+    apply(spots E .dd, i -> P#i = hilbertPolynomial(E_i));
+    P
+    )
+-- perhaps I should make a HilbertPolynomialPage as a new type of Page ?? --
+
+prunningMaps = method()
+prunningMaps(SpectralSequencePage) := (E) -> ( if E.Prune == false then error "page is not prunned"
+    else
+    P := new PageMap;
+    P.degree = E.dd.degree;
+    apply(spots E.dd, i -> P#i = E.dd_i .cache.sourcePruningMap);
+    P    
+    )
+
+basis (ZZ,SpectralSequencePage) := opts -> (deg,E) -> (
+    P := new Page;
+    apply(spots E.dd, i -> P#i = basis(deg,E_i));
+    P
+    )
+basis (List,SpectralSequencePage) := opts -> (deg,E) -> (
+    P := new Page;
+    apply(spots E.dd, i -> P#i = basis(deg,E_i));
+    P
+    )
+
+-- some experimental code replated to double complexes --
+
+DoubleChainComplex = new Type of Page
+
+DoubleChainComplexMap = new Type of PageMap
+DoubleChainComplexMap.synonym = "double chain complex map"
+
+
+DoubleChainComplex.synonym = "double chain complex"
+new DoubleChainComplex := DoubleChainComplex => (cl) -> (
+     C := newClass(DoubleChainComplex,new MutableHashTable); -- sigh
+     C.cache = new CacheTable;
+   --  b := C.dd = new DoubleChainComplexMap from {(symbol xx ) => new PageMap, (symbol yy) => new PageMap};
+     b := C.dd = new DoubleChainComplexMap from {symbol xx => new PageMap
+	 from { symbol degree => {-1,0}, symbol source => C, symbol target => C}, 
+	     symbol yy => new PageMap from {symbol degree => {0,-1}, symbol source => C,
+		 symbol target => C}};
+     b.degree = {-1,-1};
+     b.source = b.target = C;
+     C)
+ring DoubleChainComplex := C -> C.ring
+
+-----------------------------------------------------------
+-----------------------------------------------------------
 
 
 
 -----------------------------------------------------------------------
 -----------------------------------------------------------------------
 
---SpectralSequenceSheet = new Type of MutableHashTable
---SpectralSequenceSheet.synonym = "spectral sequence sheet"
 
-
---SpectralSequenceSheet ^ List := Module => (Er,L) -> if Er#?L then Er#L else Er.zero
-
-
---support SpectralSequenceSheet := List => E -> 
---  apply (select(keys E,i -> class i === List), j -> j => prune E^j)
-  
---SpectralSequenceSheet == SpectralSequenceSheet := Boolean => (E,F) -> 
---  all(keys E, i-> F#?i and E#i == F#i)
-     
---changeofRing = method ();
---changeofRing (Module,Module):= SpectralSequence => (M,N) -> 
---     spectralSequence ((filteredComplex ((res M) ** ring N)) ** (res N))
-
-
---load "Doc/SpectralSequencesDoc.m2"
---load "Doc/TestSpectralSequencesDoc.m2"
 
 beginDocumentation()
 
@@ -781,12 +922,20 @@ doc ///
      Key 
           SpectralSequences
      Headline 
-         a package for working with spectral sequences associated to filtered complexes,
+         a package for working with spectral sequences associated to filtered complexes
     Description
     	 Text 
-              SpectralSequences is a package to work with spectral sequences
-	      associated to a filtered complex.  Here are some examples illustrating 
-	      this package.
+	      The SpectralSequences package allows for effective computation of spectral sequences
+	      associated to separated and exhaustive filtrations of bounded chain complexes.	    
+	      For an overview of how to create and manipulate filtered complexes 
+	      see @TO"filtered complexes"@.	  
+	      For an overview of how to create and manipulate spectral sequences see
+	      @TO"spectral sequences"@.	    
+	      For an overview of how to create and manipulate spectral sequence pages see
+	      @TO"spectral sequence page"@.
+	      associated to a filtered complex.  
+	      
+	      Below are some examples which illustrate this package.
 	      
      	      @TO"Computing the Serre Spectral Sequence associated to a Hopf Fibration"@
 	      
@@ -805,7 +954,7 @@ doc ///
     Key
       "A spectral sequence which fails to degenerate quickly"
     Headline
-     	  Nonzero maps on higher page numbers
+     	  nonzero maps on higher page numbers
     Description
     	  Text
 	       The following example is taken from p. 127, Fig 7.2 of 
@@ -865,7 +1014,7 @@ doc ///
     Key
       "Spectral sequences and non-Koszul syzygies"
     Headline
-     	  Using spectralsequences to compute non-Koszul syzygies
+     	  using spectral sequences to compute non-Koszul syzygies
     Description
     	  Text
 	       We illustrate some aspects of the paper 
@@ -913,7 +1062,7 @@ doc ///
      Key
        "Spectral sequences and connecting morphisms"
      Headline
-          Using spectral sequences to compute connecting morphisms
+          using spectral sequences to compute connecting morphisms
      Description
      	  Text
 	       If $0 \rightarrow A \rightarrow B \rightarrow C \rightarrow 0$ is a 
@@ -965,7 +1114,7 @@ doc ///
      Key
        "Spectral sequences and hypercohomology calculations"
      Headline
-     	  Illustrating how to use spectral sequences to compute hypercohomology
+     	  illustrating how to use spectral sequences to compute hypercohomology
      Description
      	  Text
 	       If $\mathcal{F}$ is a coherent sheaf on a smooth toric variety $X$,
@@ -1227,15 +1376,14 @@ doc ///
      Headline
      	  the type of all FilteredComplexes
      Description
-     	  Text	      	   
-	       The SpectralSequences package provides effective computation of spectral sequences
-	       associated to separated and exhaustive filtrations of a chain complex.	    
-	       For an overview of how to create and manipulate filtered complexes 
-	       see @TO"filtered complexes"@.	  
-	       For an overview of how to create and manipulate spectral sequences see
-	       @TO"spectral sequences"@.	    
-	       For an overview of how to create and manipulate spectral sequence pages see
-	       @TO"spectral sequence page"@.
+     	  Text	 
+	     The type FilteredComplex is a data type for storing information associated to separated and exhaustive filtrations of bounded chain complexes.
+	     For an overview of how to create and manipulate filtered complexes 
+	     see @TO"filtered complexes"@.	  
+	     For an overview of how to create and manipulate spectral sequences see
+	     @TO"spectral sequences"@.	    
+	     For an overview of how to create and manipulate spectral sequence pages see
+	     @TO"spectral sequence page"@.
 	     
 	  --     The type FilteredComplex is a data type for storing information associated
 	  --     to separated and exhaustive filtrations of a chain complex.
@@ -1334,7 +1482,7 @@ doc ///
      Key
      	  "filtered complexes from chain complexes"
      Headline
-     	  Making filtered complexes and spectral sequences from chain complexes.
+     	  making filtered complexes and spectral sequences from chain complexes.
      Description
      	  Text
 ///	  	  
@@ -1342,7 +1490,7 @@ doc ///
      Key
         "filtered complexes and spectral sequences from chain complex maps"
      Headline
-     	  Making filtered complexes and spectral sequences from chain complex maps	
+     	  making filtered complexes and spectral sequences from chain complex maps	
      Description
      	  Text  
        	    We can make a filtered complex from a list of chain complex maps as follows.
@@ -1397,7 +1545,7 @@ doc ///
      Key
         "filtered complexes from tensor products of chain complexes"
      Headline
-     	 Making filtered complexes and spectral sequences from tensor products 	
+     	 making filtered complexes and spectral sequences from tensor products 	
      Description
      	  Text
 ///	  
@@ -1406,7 +1554,7 @@ doc ///
      Key
         "filtered complexes from Hom"
      Headline
-     	 Making filtered complexes and spectral sequences from Hom
+     	 making filtered complexes and spectral sequences from Hom
      Description
      	  Text
 ///	  
@@ -1727,7 +1875,7 @@ doc ///
      	   (Hom, FilteredComplex, ChainComplex)
 	   (Hom, ChainComplex, FilteredComplex)
      Headline
-     	  The filtered complex $Hom(K_infinty, C)$ 
+     	  the filtered complex Hom complex
      Usage
      	  f = Hom(K,C)
      Inputs
@@ -1737,7 +1885,7 @@ doc ///
      	  f:FilteredComplex
      Description
      	  Text 
-	      Returns the filtrations of $Hom(K_infy, C)$ determined by the double complex  
+	      Returns the filtrations of the Hom complex determined by the double complex  
     ///
     doc ///
      Key
@@ -2104,6 +2252,172 @@ installPackage("SpectralSequences", RemakeAllDocumentation => true)
 check "SpectralSequences";
 viewHelp SpectralSequences
 ------------------------------------------
+-- New scratch examples trying to illustrate the new experimental types --
+
+--- I wonder how hard it would be to make double chain complexes?
+-- the following shows that maybe it is not so hard now that we have
+-- the data types page and pageMap.
+---
+restart
+needsPackage"SpectralSequences"
+C = new DoubleChainComplex
+keys C.dd
+C.dd.xx
+C.dd.yy
+
+A = QQ[x]
+C
+C.ring = A
+keys C.dd
+
+
+C#{0,0} = A^1
+
+C#{1,0} = A^1
+
+C#{0,1} = A^1 
+
+C#{1,1} = A^1
+
+C.dd.degree
+
+C
+
+C.dd.yy #{0,1} = map(C_{0,0}, C_{0,1}, id_(A^1))
+
+C.dd.yy #{1,1} = map(C_{1,0}, C_{1,1}, id_(A^1))
+
+C.dd.xx #{1,1} = map(C_{0,1}, C_{1,1}, id_(A^1))
+
+C.dd.xx #{1,0} = map(C_{1,0}, C_{0,0}, - id_(A^1))
+
+C.dd.xx
+C.dd.yy
+
+C.dd.yy _{0,1}
+C.dd.yy _{0,0}
+C.dd.yy_{10,10}
+C.dd.xx_{1,1}
+C.dd.xx
+C.dd.xx_{0,1}
+
+C
+
+(C.dd.xx #{1,0}) * (C.dd.yy #{1,1}) == - (C.dd.yy #{0,1}) * (C.dd.xx #{1,1})
+
+C.dd.yy.degree = {0,-1}
+C.dd.yy
+
+C.dd.xx.degree = {-1,0}
+
+C.dd.xx
+
+spots(C.dd.yy)
+
+keys C.dd.yy
+
+(C.dd).yy
+
+
+restart
+needsPackage"SpectralSequences"
+A = QQ[x,y,z]
+I = monomialCurveIdeal(A, {1,3})
+M = coker vars A
+hilbertPolynomial M
+peek hilbertPolynomial I
+hilbertPolynomial 3
+hilbertPolynomial 0
+P = hilbertPolynomial I
+P + 3
+3 + P
+P - 3
+- P + 3
+
+----
+----
+---
+
+restart
+needsPackage "SpectralSequences";
+-- C \subseteq PP^1 x PP^1 type (3,3)
+-- Use hypercohomology to compute HH OO_C(1,0) 
+R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]; -- PP^1 x PP^1
+B = intersect(ideal(a_0,a_1),ideal(b_0,b_1)) ; -- irrelevant ideal
+B = B_*/(x -> x^5)//ideal ; -- Frobenius power 
+G = res image gens B
+I = ideal random(R^1, R^{{-3,-3}}) -- ideal of C
+F = res comodule I 
+-- Twist F by a line of ruling and make filtered complex whose ss abuts to HH OO_C(1,0) 
+K = Hom(G , filteredComplex (F ** R^{{1,0}})) ;
+E = prune spectralSequence K ; --the (algebraic version of the) spectral sequence degenerates on the second page 
+E^1 
+basis({0,0},E^1)
+keys E^1
+E^1
+prunningMaps(E^1)
+
+---
+---
+restart
+needsPackage "SpectralSequences";
+A = QQ[x,y,z,w]
+I = coker gens monomialCurveIdeal(A,{1,2,3})
+hilbertPolynomial(A^0) == 0
+hilbertPolynomial(I) != 0
+hilbertPolynomial(A^0) != 0
+------
+--
+H = complete res I
+J = coker gens monomialCurveIdeal(A,{1,3,4})
+F = complete res J
+E = prune spectralSequence ((filteredComplex H) ** F)
+K = (filteredComplex H) ** F
+basis(0,E^0)
+basis(0,E^0_{0,0})
+basis(0,E^0)
+basis(0,E^1)
+basis(0,(prune HH K_infinity)_1)
+prune HH K_infinity
+Hilb = hilbertPolynomial(E^0)
+Hilb_{0,0}
+Hilb_{1,0}
+hilbertPolynomial(E^infinity)
+E^infinity
+prune HH K_infinity
+hilbertPolynomial (HH K_infinity) _0
+-----
+--
+restart
+needsPackage "SpectralSequences";
+-- Try to compute the cohomology of OO_X(4,0,-4), where
+-- X in P^2 x P^2 x P^2 is a c.i. of three (1,1,1) forms
+-- should compare with Mike Stillmans p2xp2xp2 example.
+R = ZZ/101[a_0..c_2, Degrees=>{3:{1,0,0},3:{0,1,0},3:{0,0,1}}]
+B = intersect(ideal(a_0,a_1,a_2),ideal(b_0,b_1,b_2),ideal(c_0,c_1,c_2))
+B = B_*/(x -> x^5)//ideal
+G = res image gens B
+I = ideal random(R^3, R^{{-1,-1,-1}})
+D = res comodule I
+D = D ** R^{{4,0,-4}}
+K = Hom(G, filteredComplex(D)) ;
+E = prune spectralSequence K ;
+e = spectralSequence K ;
+E^0 ;
+E^0
+basis({0,0},E^0_{1,-4});
+-- the E^0 page sees to be two large for the net to finish.
+-- try the E^1 page.
+E^1 ;
+basis({0,0},E^1)
+-- using the this picture we deduce that the spectral sequence (corresponding to sheaves)
+-- degenerates at the E^1 page.
+---
+
+-------------------------------------------
+--- end of experimental scratch examples.
+-------------------------------------------
+
 
 -- The following are some examples which illustrate the current state of the code.
 -- All examples seem to work correctly.
@@ -2111,7 +2425,7 @@ viewHelp SpectralSequences
 
 restart
 needsPackage "SpectralSequences";
-needsPackage "ChainComplexExtras";
+-- needsPackage "ChainComplexExtras";
 -- C \subseteq PP^1 x PP^1 type (3,3)
 -- Use hypercohomology to compute HH OO_C(1,0) 
 R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]; -- PP^1 x PP^1
@@ -3400,6 +3714,10 @@ Hom(filteredComplex K, C)
 -- examples by other people. ------------------------------------------------------
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
+--changeofRing = method ();
+--changeofRing (Module,Module):= SpectralSequence => (M,N) -> 
+--     spectralSequence ((filteredComplex ((res M) ** ring N)) ** (res N))
+
 restart
 needsPackage "SpectralSequences";
 debug SpectralSequences;
