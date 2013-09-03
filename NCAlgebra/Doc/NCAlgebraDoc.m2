@@ -1,50 +1,9 @@
 beginDocumentation()
 
-undocumented { generatorSymbols, weights, -- can I get away with not exporting these somehow?
-         NCRingElement, isReduced,
-         NCGroebnerBasis, ncGroebnerBasis, maxNCGBDegree, minNCGBDegree,
-         NCIdeal, NCLeftIdeal, NCRightIdeal,
-         ncIdeal, ncLeftIdeal, ncRightIdeal,
-         twoSidedNCGroebnerBasisBergman,
-         gbFromOutputFile,
-	 ComputeNCGB,
-         UsePreviousGBOutput,
-         CacheBergmanGB,
-         ClearDenominators,
-         InstallGB,
-         ReturnIdeal,
-         NumberOfBins,
-         CheckPrefixOnly,
-         normalFormBergman,
-         hilbertBergman, DegreeVariable,
-         rightKernelBergman,
-	 isLeftRegular,
-         isRightRegular,
-         centralElements,
-         normalElements,
-	 assignDegrees,
-         normalAutomorphism,
-         leftMultiplicationMap,
-         rightMultiplicationMap,
-         rightHomogKernel,
-         rightKernel,
-         getLeftProductRows,
-         NCMatrix, ncMatrix,
-         NCMonomial,monList,
-         isCentral,
-         ncMap,functionHash,
-         oreExtension,oreIdeal,
-         endomorphismRing,endomorphismRingGens,
-         minimizeRelations,checkHomRelations,
-         skewPolynomialRing,
-	 abelianization,
-	 oppositeRing,
-         quadraticClosure,
-	 homogDual,
-	 sparseCoeffs,
-	 wallTiming
-}
-
+-------------------------
+----- Types
+-------------------------
+    
 doc ///
   Key
     NCAlgebra
@@ -55,15 +14,10 @@ doc ///
       This package is used to define and manipulate noncommutative algebras.  Many of the
       commands contain calls to the existing noncommutative algebra package Bergman.
   Subnodes
-    "Basic operations on noncommutative algebras."
+    "Basic operations on noncommutative algebras"
     "Using the Bergman interface"
 ///
 
-
--------------------------
------ Types
--------------------------
-    
 doc ///
    Key
       NCRing
@@ -94,6 +48,22 @@ doc ///
    Description
       Text
          This is the type of a quotient of a tensor algebra by a two-sided ideal.
-      Caveat
+      
          At this point, one cannot define quotients of quotients.
+///
+
+doc ///
+   Key
+      "Basic operations on noncommutative algebras"
+   Description
+      Text
+         Here will go an extended example
+///
+
+doc ///
+   Key
+      "Using the Bergman interface"
+   Description
+      Text
+         Here will go an extended example
 ///

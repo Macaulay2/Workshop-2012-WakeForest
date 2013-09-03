@@ -2507,6 +2507,10 @@ wallTiming = f -> (
     << "wall time : " << b-a << " seconds" << endl;
     r);
 ------------------------------------------------------------
+
+--- include the documentation
+load "Doc/NCAlgebraDoc.m2"
+
 end
 
 --- bug fix/performance improvements
