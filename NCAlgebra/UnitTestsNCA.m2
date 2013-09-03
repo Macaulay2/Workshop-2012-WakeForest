@@ -304,7 +304,7 @@ TEST ///
 TEST ///
 needsPackage "NCAlgebra"
 -- n is the number of variables in skew poly ring
-n = 3
+n = 6
 rk = 2^(n-1)
 B = skewPolynomialRing(QQ,-1_QQ,{x_1..x_n})
 assert(x_1*x_2 + x_2*x_1 == 0)
@@ -371,8 +371,8 @@ I = ncIdeal {f1,f2,f3}
 Igb = ncGroebnerBasis I
 g = 2*(-y^3-x*y*z+y*x*z+x^3)
 J = I + ncIdeal {g}
-B = A/I
-B' = A/J
+B = A/I -- this is the sklyanin
+B' = A/J -- factor of sklyanin
 BprimeToB = ncMap(B,B',gens B)
 k = ncMatrix {{x,y,z}}
 assignDegrees k
