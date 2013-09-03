@@ -1,7 +1,7 @@
 newPackage("NCAlgebra",
      Headline => "Data types for Noncommutative algebras",
-     Version => "0.2",
-     Date => "March 8, 2013",
+     Version => "0.5",
+     Date => "September 8, 2013",
      Authors => {
 	  {Name => "Frank Moore",
 	   HomePage => "http://www.math.wfu.edu/Faculty/Moore.html",
@@ -2565,3 +2565,9 @@ R=toField(QQ[q]/ideal{q^2+q+1})
 A=R{x,y,z}
 I=ncIdeal{z*z+q^2*x*y-q*y*x,q*y*z+q^2*x*x-z*y,q*y*y+z*x-q^2*x*z,x^2*z-q*y*x*y,q^2*x*y*x-x^2*y-y^2*z-q*y*x^2}
 ncgb=ncGroebnerBasis(I,InstallGB=>true)
+
+----
+restart
+uninstallPackage "NCAlgebra"
+installPackage "NCAlgebra"
+viewHelp "NCAlgebra"
