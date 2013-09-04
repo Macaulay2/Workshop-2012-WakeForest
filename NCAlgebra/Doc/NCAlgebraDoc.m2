@@ -129,10 +129,10 @@ doc ///
 	b*z^2 % Igb
 
         A = QQ{x,y,z}
-	f = y*z + z*y - x^2
-	g = x*z + z*x - y^2
-	h = z^2 - x*y - y*x
-	I = ncIdeal {f,g,h}
+	p = y*z + z*y - x^2
+	q = x*z + z*x - y^2
+	r = z^2 - x*y - y*x
+	I = ncIdeal {p,q,r}
 	Igb = ncGroebnerBasis I
 	normalFormBergman(z^17,Igb)
 
@@ -412,14 +412,6 @@ doc ///
          B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
 	 sigma = ncMap(B,B,{y,z,w,x})
 	 C = oreExtension(B,sigma,a)
-	 -- this same example will be in the normal elements doc
-	 sigmaC = ncMap(C,C,{y,z,w,x,a})
-	 normalElements(sigmaC,1)
-	 normalElements(sigmaC,2)
-	 normalElements(sigmaC @@ sigmaC,2) 
-	 matrix normalAutomorphism a 
-	 matrix normalAutomorphism a^2
-
       Text
          stuff
 ///
@@ -450,7 +442,7 @@ doc ///
          R = Q/ideal{a*b+c*d}
          kRes = res(coker vars R, LengthLimit=>7);
          M = coker kRes.dd_5
-         B = endomorphismRing(M,X);
+         B = endomorphismRing(M,Y);
          gensI = gens ideal B;
          gensIMin = minimizeRelations(gensI);
          checkHomRelations(gensIMin,B.cache.endomorphismRingGens);
