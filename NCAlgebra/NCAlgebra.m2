@@ -925,6 +925,7 @@ sparseCoeffs NCRingElement := opts -> f -> (
 
 sparseCoeffs List := opts -> L -> (
   -- computes coefficient vectors for the elements of the list using map(Module,Module,OptionList) for fast matrix assembly
+  
   d:=L#(position(L,m->m!=0));
   if not all(L, m-> (isHomogeneous(m) and ((degree m)==(degree d) or m==0))) then 
 	error "Expected homogeneous elements of the same degree.";
@@ -938,19 +939,21 @@ sparseCoeffs List := opts -> L -> (
   
   mons = time (mons / (m -> first keys m.terms));
   mons = time hashTable apply(m, i -> (mons#i,i));
-    
+   
   termsF := pairs (L#0).terms;
   
-  coeffs := (apply(termsF, (k,v) -> (mons#k,0) => v));
+  coeffs := if (L#0)!=0 then (apply(termsF, (k,v) -> if v!=0 then (mons#k,0) => v)) else {};
+  
 
   l:=length L;
   if l>1 then
      for i from 1 to l-1 do (
         if not isHomogeneous L#i then error "Extected a homogeneous element.";
+        if (L#i) !=0 then (
         termsF = pairs (L#i).terms;
-        newCoeffs := (apply(termsF, (k,v) -> (mons#k,i) => v));
-
-	coeffs = coeffs | newCoeffs;
+        newCoeffs := (apply(termsF, (k,v) -> if v!=0 then (mons#k,i) => v));
+       
+	coeffs = coeffs | newCoeffs;);
      ); 
    map(R^m , R^l, coeffs)
 )
