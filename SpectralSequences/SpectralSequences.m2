@@ -223,7 +223,7 @@ computeErModules = method()
 computeErModules(FilteredComplex,ZZ) := (K,r) -> (myList:={};
      for p from min K to max K do (
 	  for q from -p + min K_(infinity) to max K_(infinity) do (--length K_(max K) do (
-	       myList=append(myList, {p,q}=> epq(K,p,q,r)); )
+	       myList = append(myList, {p,q}=> epq(K,p,q,r)); )
 	       	    );
 	       new HashTable from myList
       )
@@ -378,19 +378,21 @@ support SpectralSequencePage := E->(
 -- on the r th page in grid form.  
 -- this method is called in net of spectral sequence page.
 -- it would be good to delete the zero rows.
-net SpectralSequencePage:= E->(L:=select(keys E.dd, i-> class i === List 
+
+net SpectralSequencePage := E->(L := select(keys E.dd, i-> class i === List 
 	  and E_i !=0);
-maxQ:= max(apply(L, i->i#1)); minQ:=min(apply(L, i-> i#1)); 
-maxP:=max(apply(L, i->i#0)); minP:= min(apply(L,i->i#0));
-K:=  while maxQ>= minQ list testRow(maxP,minP, maxQ, E) do maxQ=maxQ-1;
+maxQ := max(apply(L, i->i#1)); minQ := min(apply(L, i-> i#1)); 
+maxP := max(apply(L, i->i#0)); minP := min(apply(L,i->i#0));
+K := while maxQ>= minQ list testRow(maxP,minP, maxQ, E) do maxQ = maxQ-1;
 netList K)
 
 testRow=method()
-testRow(ZZ,ZZ,ZZ,SpectralSequencePage):=(maxP,minP,q,E)->(L:={};
+testRow(ZZ,ZZ,ZZ,SpectralSequencePage) := (maxP,minP,q,E) -> (L:={};
       apply(minP .. maxP, i-> 
 	   if (E.dd) #?{i,q} then L=append(L, stack(net E_{i,q}, "  ", net {i,q}))
 	   else L=append(L, stack(net 0, " ", net {i,q})));
        L)
+
 
 
 --------------------------------------------------------------------------------
@@ -411,9 +413,9 @@ expression SpectralSequence := E -> stack(
 
 ----------------------------------------------------------------------------
 
---method (Options =>{Prune => false})
---SpectralSequencePage => opts ->  (K,r)
+
 spectralSequence = method (Options =>{Prune => false})
+
 spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
      new SpectralSequence from {
 	  symbol filteredComplex => K,
@@ -422,21 +424,37 @@ spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
      	  symbol Prune => opts.Prune}
      )
 
--- In the following we are using the rule 
--- if r> max K - min K then E^r_{p,q}=E^r'_{p,q} for all r'>=r.
 SpectralSequence ^ InfiniteNumber:=
   SpectralSequence ^ ZZ := SpectralSequencePage => (E,r) -> (
-       if E#?r then E#r else 
-       (if r> (max E.filteredComplex) - (min E.filteredComplex) then
-	    E#r= spectralSequencePage(E.filteredComplex,(max E.filteredComplex) 
-		 - (min E.filteredComplex), Prune => E.Prune)
-	    else
+      -- the case that r is an infinite number has been rewritten
+      -- and also returns a page --- with no maps!
+      -- this fixes an earlier bug.  
+      if class r === InfiniteNumber then (
+    if r < 0 then error "expected an infinite number bigger than zero"
+    else (
+	myList := {};
+	K := E.filteredComplex;
+	s := max K - min K + 1;
+	H := new Page;
+	    for p from min K to max K do (
+	  	for q from -p + min K_(infinity) to max K_(infinity) do (
+	       	    if E.Prune == false then H#{p,q} = epq(K,p,q,s)
+	       	    else H#{p,q} = prune epq(K,p,q,s)
+	       );
+    	   ); 
+       ); 
+H
+)
+      else (
+       if E#?r then E#r else (
        E#r = spectralSequencePage(E.filteredComplex,r, Prune => E.Prune);); 
        E#r
+       )
        )
 
 SpectralSequence _ InfiniteNumber :=
 SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r )
+
 minimalPresentation SpectralSequence := prune SpectralSequence := SpectralSequence  => opts -> (E) -> (
 	  spectralSequence(E.filteredComplex, Prune => true)
 	  )
@@ -918,6 +936,27 @@ ring DoubleChainComplex := C -> C.ring
 
 beginDocumentation()
 
+undocumented {computeErModules,
+     (computeErModules, FilteredComplex,ZZ),(net, Page),
+    (net, PageMap),
+    (net, SpectralSequence),
+    (net, SpectralSequencePage),
+    (net, SpectralSequencePageMap),
+    (pruneEpqrMaps,FilteredComplex,ZZ,ZZ,ZZ),
+    epq, epqrMaps,
+    (epqrMaps,FilteredComplex,ZZ,ZZ,ZZ),
+    (epq,FilteredComplex,ZZ,ZZ,ZZ),
+    (expression,InfiniteSequence),
+    (net, FilteredComplex),
+    (expression,SpectralSequence),
+    spots,
+    (spots,PageMap), (spots, SpectralSequencePageMap),
+    computeErMaps, xx, yy, Shift, project, next, sourcePruningMap, targetPruningMap, ReducedHomology,
+    DoubleChainComplex, DoubleChainComplexMap, InfiniteSequence, Page, SpectralSequencePageMap,pruneEpqrMaps,
+    prunningMaps, rpqHomology, rpqIsomorphism, spectralSequencePageMap,
+    (spectralSequencePageMap,FilteredComplex,ZZ)
+    }
+
 doc ///
      Key 
           SpectralSequences
@@ -925,7 +964,7 @@ doc ///
          a package for working with spectral sequences associated to filtered complexes
     Description
     	 Text 
-	      The SpectralSequences package allows for effective computation of spectral sequences
+	      The Spectral Sequences package allows for effective computation of spectral sequences
 	      associated to separated and exhaustive filtrations of bounded chain complexes.	    
 	      For an overview of how to create and manipulate filtered complexes 
 	      see @TO"filtered complexes"@.	  
@@ -937,17 +976,17 @@ doc ///
 	      
 	      Below are some examples which illustrate this package.
 	      
-     	      @TO"Computing the Serre Spectral Sequence associated to a Hopf Fibration"@
+	      $\bullet$ @TO"Computing the Serre Spectral Sequence associated to a Hopf Fibration"@
 	      
-	      @TO "Balancing Tor"@
+	      $\bullet$ @TO "Balancing Tor"@
 	      
-	      @TO "Spectral sequences and hypercohomology calculations"@
+	      $\bullet$ @TO "Spectral sequences and hypercohomology calculations"@
 	      
-	      @TO "Spectral sequences and connecting morphisms"@
+	      $\bullet$ @TO "Spectral sequences and connecting morphisms"@
 	      
-	      @TO "Spectral sequences and non-Koszul syzygies"@
+	      $\bullet$ @TO "Spectral sequences and non-Koszul syzygies"@
 	      
-	      @TO "A spectral sequence which fails to degenerate quickly"@
+	      $\bullet$ @TO "A spectral sequence which fails to degenerate quickly"@
 ///	
 
   doc ///
@@ -1255,7 +1294,7 @@ doc ///
      	       Example		    		    
 		    minimalE0page = minimalPresentation(E0page)  
 		    minimalE0page.dd
-		    apply(spots E0page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
+		 --   apply(spots E0page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
      	       Text
 	       	    Now try the $E^1$ page.  
      	       Example		       	       	    
@@ -1270,7 +1309,7 @@ doc ///
      	       Example		    		    
 		    minimalE1page = minimalPresentation(E1page)  
 		    minimalE1page.dd
-		    apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
+		  --  apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
      	       Text
 	       	    Now try the $E^2$ page.
      	       Example		    		    
@@ -1300,7 +1339,7 @@ doc ///
 		    minimalE3page = minimalPresentation(E3page)  
 		    minimalE3page.dd
 		    --new HashTable from apply(keys E3page.dd, i-> i=> E3page.dd #i)
-		    apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,3))
+		 --   apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,3))
      	       Text		    
 		   The E_3 page appears to have been computed correctly.		
 ///	       
@@ -1415,7 +1454,7 @@ doc ///
      Key
           "filtered complexes and spectral sequences from simplicial complexes"
      Headline
-     	  Making filtered complexes and spectral sequences from simplicial complexes
+     	  making filtered complexes and spectral sequences from simplicial complexes
      Description
      	  Text	 	    
 	    To make a filtered complex from a list of simplicial 
@@ -1454,9 +1493,7 @@ doc ///
 	       E^2 .dd
 	       F2.dd
 	       E^infinity
-	       F = minimalPresentation(E^infinity)
-	       E^infinity .dd	            
-	       F.dd
+    	       (prune E) ^infinity
 	  Text
      	     If we want the resulting complexes to correspond to the non-reduced homology
      	     of the simpicial complexes we set the ReducedHomology option
@@ -1858,7 +1895,7 @@ doc ///
      	  (spectralSequence, FilteredComplex)
 	  spectralSequence
      Headline
-     	  Construct a spectralSequence from a filtered complex
+     	  construct a spectralSequence from a filtered complex
      Usage
      	  E = spectralSequence K
      Inputs
@@ -1891,7 +1928,7 @@ doc ///
      Key
      	   (chainComplex, SpectralSequence)
      Headline
-     	  The underlying chain complex of a Spectral Sequence
+     	  the underlying chain complex of a Spectral Sequence
      Usage
      	  K = chainComplex E
      Inputs
@@ -1908,7 +1945,7 @@ doc ///
      	  (spectralSequencePage, FilteredComplex, ZZ)
 	  spectralSequencePage
      Headline
-     	  Construct a SpectralSequencePage from a filtered complex
+     	  construct a SpectralSequencePage from a filtered complex
      Usage
      	  E = spectralSequencePage(K,r)
      Inputs
@@ -1953,7 +1990,7 @@ doc ///
      	  (symbol _, SpectralSequence, ZZ)
 	  (symbol _, SpectralSequence, InfiniteNumber)
      Headline
-     	  The kth page of a spectral sequence
+     	  the kth page of a spectral sequence
      Usage
      	  P = E_k
      Inputs
@@ -1988,7 +2025,7 @@ doc ///
      Key
      	  (symbol ^, SpectralSequencePageMap, List)
      Headline
-     	  The {p,q}th map on of a spectral sequence page 
+     	  the {p,q}th map on of a spectral sequence page 
      Usage
      	  d = D ^L
      Inputs
@@ -2008,7 +2045,7 @@ doc ///
      	  (symbol ^, SpectralSequence, ZZ)
 	  (symbol ^, SpectralSequence, InfiniteNumber)
      Headline
-     	  The kth page of a spectral sequence
+     	  the kth page of a spectral sequence
      Usage
      	  P = E^k
      Inputs
@@ -2026,7 +2063,7 @@ doc ///
      Key
      	  (symbol ^, SpectralSequencePage, List)
      Headline
-     	  The module in the i,j position on the page
+     	  the module in the i,j position on the page
      Usage
      	  M = P^L
      Inputs
@@ -2046,7 +2083,7 @@ doc ///
      	  (symbol _, SpectralSequencePage, List)
 	  
      Headline
-     	  The module in the i,j position on the page
+     	  the module in the i,j position on the page
      Usage
      	  M = P_L
      Inputs
@@ -2103,7 +2140,7 @@ doc ///
           (symbol _, FilteredComplex, ZZ)
 	  (symbol _, FilteredComplex, InfiniteNumber)
      Headline
-     	  The filtered pieces
+     	  the filtered pieces
      Usage
      	  C = K _ j
      Inputs
@@ -2126,7 +2163,7 @@ doc ///
           (symbol ^, FilteredComplex, ZZ)
 	  (symbol ^, FilteredComplex, InfiniteNumber)
      Headline
-     	  The filtered pieces
+     	  the filtered pieces
      Usage
      	  C = K ^  j
      Inputs
@@ -2200,7 +2237,7 @@ doc ///
      Key
      	  connectingMorphism
      Headline
-          Use spectral sequences to compute connecting morphisms
+          use spectral sequences to compute connecting morphisms
      Usage 
          g = connectingMorphism(f, n)
      Inputs
@@ -2218,7 +2255,7 @@ doc ///
      Key
      	  (connectingMorphism, ChainComplexMap,ZZ)
      Headline
-          Use spectral sequences to compute connecting morphisms
+          use spectral sequences to compute connecting morphisms
      Usage 
          g = connectingMorphism(f, n)
      Inputs
@@ -2240,6 +2277,27 @@ C = new ChainComplex;
 C.ring = A;
 filtererdComplex C
 ///    
+
+TEST ///
+restart;
+needsPackage "SpectralSequences";
+A = QQ[a,b,c];
+D = simplicialComplex {a*b*c};
+F2D = D;
+F1D = simplicialComplex {a*b,a*c,b*c};
+F0D = simplicialComplex {a,b,c};
+K = filteredComplex({F2D,F1D,F0D}, ReducedHomology => false);
+E = prune spectralSequence K;
+e = spectralSequence K;
+assert(
+all(for i from 0 to 5 list all(keys support E^i, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,i)
+), i -> i == true)
+)
+assert(
+all(for i from 0 to 5 list all(keys support E^i, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,i)
+), i -> i == true)
+)
+///
 
 end
 
