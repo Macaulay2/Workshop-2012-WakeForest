@@ -13,21 +13,18 @@ newPackage("NCAlgebra",
      )
 
 export { NCRing, NCQuotientRing, NCPolynomialRing,
-         generatorSymbols, weights, -- can I get away with not exporting these somehow?
+         generatorSymbols, weights,  -- can I get away with not exporting these somehow?
          NCRingElement, isReduced,
          NCGroebnerBasis, ncGroebnerBasis, maxNCGBDegree, minNCGBDegree,
          NCIdeal, NCLeftIdeal, NCRightIdeal,
          ncIdeal, ncLeftIdeal, ncRightIdeal,
          twoSidedNCGroebnerBasisBergman,
          gbFromOutputFile,
-	 ComputeNCGB,
-         UsePreviousGBOutput,
          CacheBergmanGB,
          ClearDenominators,
          InstallGB,
          ReturnIdeal,
          NumberOfBins,
-         CheckPrefixOnly,
          normalFormBergman,
          hilbertBergman, DegreeVariable,
          rightKernelBergman,
@@ -39,13 +36,13 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          normalAutomorphism,
          leftMultiplicationMap,
          rightMultiplicationMap,
-         rightHomogKernel,
          rightKernel,
-         getLeftProductRows,
          NCMatrix, ncMatrix,
-         NCMonomial,monList,
+ --        NCMonomial,
+         monList,
          isCentral,
-         ncMap,functionHash,
+         ncMap,
+         functionHash,
          oreExtension,oreIdeal,
          endomorphismRing,endomorphismRingGens,
          minimizeRelations,checkHomRelations,
@@ -55,7 +52,6 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          quadraticClosure,
 	 homogDual,
 	 sparseCoeffs,
-	 basisAsCoeffs,
 	 wallTiming
 }
 
@@ -588,35 +584,35 @@ homogDual NCIdeal := I -> (
    J:=ncIdeal flatten entries dualGens
 )
 
-basisAsCoeffs = method()
- basisAsCoeffs (ZZ, NCIdeal) :=  (n,I) -> (
- R:=ring I;
- idealGens:=select(I.generators, g->degree g <= n);
- varsList:=gens R;
- << "Computing generatring set in degree " << n << endl;
- V:= flatten apply(idealGens, r-> (
-        d:=degree r;
-        toBasis:=basis(d,R);
-        fromBasis:=toBasis;
-        degnList:={sparseCoeffs(r,Monomials=>flatten entries toBasis)};
-        if d<n then for i from 1 to n-d do (
-	    fromBasis=toBasis;
-            toBasis=basis(d+i,R);
-            degnList= flatten apply(varsList, v->
-                          flatten{leftMultiplicationMap(v,flatten entries fromBasis,flatten entries toBasis)*degnList, 
-				  rightMultiplicationMap(v,flatten entries fromBasis,flatten entries toBasis)*degnList}
-            );
-        );
-     degnList));
- << "Done." << endl;
- << "Converting to a matrix" << endl;
- VasMatrix := matrix {V};
- << "Done." << endl;
- << "Minimizing" << endl;
- M:=mingens image VasMatrix;
- basis(n,R)*M
+--basisAsCoeffs = method()
+-- basisAsCoeffs (ZZ, NCIdeal) :=  (n,I) -> (
+-- R:=ring I;
+-- idealGens:=select(I.generators, g->degree g <= n);
+-- varsList:=gens R;
+-- << "Computing generatring set in degree " << n << endl;
+-- V:= flatten apply(idealGens, r-> (
+--        d:=degree r;
+--        toBasis:=basis(d,R);
+--        fromBasis:=toBasis;
+--        degnList:={sparseCoeffs(r,Monomials=>flatten entries toBasis)};
+--        if d<n then for i from 1 to n-d do (
+--	    fromBasis=toBasis;
+--            toBasis=basis(d+i,R);
+--            degnList= flatten apply(varsList, v->
+--                          flatten{leftMultiplicationMap(v,flatten entries fromBasis,flatten entries toBasis)*degnList, 
+--				  rightMultiplicationMap(v,flatten entries fromBasis,flatten entries toBasis)*degnList}
+--            );
+--        );
+--     degnList));
+-- << "Done." << endl;
+-- << "Converting to a matrix" << endl;
+-- VasMatrix := matrix {V};
+-- << "Done." << endl;
+-- << "Minimizing" << endl;
+-- M:=mingens image VasMatrix;
+-- basis(n,R)*M
 -- if desired, multiply by toBasis to revert to ring variables.
- )
+-- )
 
 
 
@@ -805,14 +801,14 @@ putInRing (List, NCRing, RingElement) := (monList,A,coeff) -> (
 
 NCMonomial _ List := (mon,substr) -> ncMonomial((mon#monList)_substr,mon.ring)
 
-findSubstring = method(Options => {CheckPrefixOnly => false})
+findSubstring = method(Options => {"CheckPrefixOnly" => false})
 findSubstring (NCMonomial,NCMonomial) := opts -> (lt, mon) -> (
    mon = mon#monList;
    lt = lt#monList;
    deg := length lt;
-   if opts#CheckPrefixOnly and take(mon, deg) === lt then
+   if opts#"CheckPrefixOnly" and take(mon, deg) === lt then
       return true
-   else if opts#CheckPrefixOnly then
+   else if opts#"CheckPrefixOnly" then
       return false;
    if not isSubset(lt,mon) then return null;
    substrIndex := null;
@@ -937,8 +933,8 @@ sparseCoeffs List := opts -> L -> (
   
   m := #mons;
   
-  mons = time (mons / (m -> first keys m.terms));
-  mons = time hashTable apply(m, i -> (mons#i,i));
+  mons =  (mons / (m -> first keys m.terms));
+  mons =  hashTable apply(m, i -> (mons#i,i));
    
   termsF := pairs (L#0).terms;
   
@@ -958,20 +954,20 @@ sparseCoeffs List := opts -> L -> (
    map(R^m , R^l, coeffs)
 )
 
-coefficients NCRingElement := opts -> f -> (
-   B := f.ring;
-   if not isHomogeneous f then error "Extected a homogeneous element.";
-   mons := if opts#Monomials === null then flatten entries monomials f else opts#Monomials;
-   coeffs := transpose matrix {apply(mons, m -> (m' := first keys m.terms;
-                                                 if (f.terms)#?m' then
-                                                    promote((f.terms)#m',coefficientRing B)
-                                                 else
-                                                    promote(0,coefficientRing B)))};
+--coefficients NCRingElement := opts -> f -> (
+--   B := f.ring;
+--   if not isHomogeneous f then error "Extected a homogeneous element.";
+--   mons := if opts#Monomials === null then flatten entries monomials f else opts#Monomials;
+--   coeffs := transpose matrix {apply(mons, m -> (m' := first keys m.terms;
+--                                                 if (f.terms)#?m' then
+--                                                    promote((f.terms)#m',coefficientRing B)
+--                                                 else
+--                                                    promote(0,coefficientRing B)))};
    -- changed temporarily for speed, but need a workaround.  Maybe accept
    -- monomials as a matrix instead?
-   coeffs
+--   coeffs
    --(ncMatrix {mons},coeffs)
-)
+--)
 
 monomials NCRingElement := opts -> f -> (
     ncMatrix {apply(sort keys f.terms, mon -> putInRing(mon,1))}
@@ -1137,7 +1133,7 @@ makeVarWeightString = (B,n) -> (
    concatenate apply(#gensB,i -> (if i >= numgensB - n then toString ((degree gensB#i) + adjust) else toString degree gensB#i) | " ")
 )
 
-writeBergmanInputFile = method(Options => {ComputeNCGB => true,
+writeBergmanInputFile = method(Options => {"ComputeNCGB" => true,
                                            DegreeLimit => 10,
                                            "NumModuleVars" => 0})
 writeBergmanInputFile (List, String) := opts -> (genList, tempInput) -> (
@@ -1150,7 +1146,7 @@ writeBergmanInputFile (List, String) := opts -> (genList, tempInput) -> (
                          tempInput,
                          "NumModuleVars" => opts#"NumModuleVars",
                          DegreeLimit => maxDeg,
-                         ComputeNCGB => opts#ComputeNCGB);
+                         "ComputeNCGB" => opts#"ComputeNCGB");
 )
 
 writeBergmanInputFile (NCRing,String,String) := opts -> (B,genListString,tempInput) -> (
@@ -1159,7 +1155,7 @@ writeBergmanInputFile (NCRing,String,String) := opts -> (B,genListString,tempInp
    charB := char coefficientRing B;
    weightString := makeVarWeightString(B,opts#"NumModuleVars");
    -- print the setup of the computation
-   if not opts#ComputeNCGB then
+   if not opts#"ComputeNCGB" then
    (
       -- if we don't want to recompute the GB, we need to tell Bergman that there are no
       -- Spairs to work on for twice the max degree of the gens we send it so it
@@ -1241,7 +1237,7 @@ gbFromOutputFile(NCPolynomialRing,String) := opts -> (A,tempOutput) -> (
       writeBergmanInputFile(R,
                             fileLines,
                             cacheGB,
-                            ComputeNCGB=>false,
+                            "ComputeNCGB"=>false,
                             DegreeLimit=>maxDeg);
       ncgb.cache#"bergmanGBFile" = cacheGB;
    );
@@ -1285,13 +1281,13 @@ twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
 ----- Bergman Normal Form commands
 ------------------------------------------------------
 
-writeNFInputFile = method(Options => {UsePreviousGBOutput => true})
+writeNFInputFile = method(Options => {"UsePreviousGBOutput" => true})
 writeNFInputFile (List,NCGroebnerBasis, List, ZZ) := opts -> (fList,ncgb, inputFileList, maxDeg) -> (
    genList := (pairs ncgb.generators) / last;
    --- set up gb computation
    -- need to also test if ncgb is in fact a gb, and if so, tell Bergman not to do the computation
-   if opts#UsePreviousGBOutput then
-      writeBergmanInputFile(genList,inputFileList#0,DegreeLimit=>maxDeg,ComputeNCGB=>false);
+   if opts#"UsePreviousGBOutput" then
+      writeBergmanInputFile(genList,inputFileList#0,DegreeLimit=>maxDeg,"ComputeNCGB"=>false);
    --- now set up the normal form computation
    fil := openOut inputFileList#1;
    for f in fList do (
@@ -1353,7 +1349,7 @@ normalFormBergman (List, NCGroebnerBasis) := opts -> (fList, ncgb) -> (
    tempNFInput := temporaryFileName() | ".binf";         -- nf input file
    -- (**) clear denominators first, since Bergman doesn't like fractions
    newFList := apply(fList, f -> clearDenominators f);
-   writeNFInputFile(newFList / first,ncgb,{tempGBInput,tempNFInput},opts#DegreeLimit,UsePreviousGBOutput=>usePreviousGBOutput);
+   writeNFInputFile(newFList / first,ncgb,{tempGBInput,tempNFInput},opts#DegreeLimit,"UsePreviousGBOutput"=>usePreviousGBOutput);
    writeNFInitFile(tempInit,tempGBInput,tempNFInput,tempOutput);
    stderr << "--Calling Bergman for NF calculation for " << #nonzeroIndices << " elements." << endl;
    runCommand("bergman -i " | tempInit | " -on-error exit --silent > " | tempTerminal);
@@ -1668,7 +1664,7 @@ basis(ZZ,NCRing) := opts -> (n,B) -> (
    for i from 1 to n do (
       basisList = flatten apply(varsList, v -> apply(basisList, b -> ncMonomial({v},B) | b));
       if ncgbGens =!= {} then
-         basisList = select(basisList, b -> all(lastTerms, mon -> not findSubstring(mon,b,CheckPrefixOnly=>true)));
+         basisList = select(basisList, b -> all(lastTerms, mon -> not findSubstring(mon,b,"CheckPrefixOnly"=>true)));
    );
    ncMatrix {apply(basisList, mon -> putInRing(mon,1))}
 )
