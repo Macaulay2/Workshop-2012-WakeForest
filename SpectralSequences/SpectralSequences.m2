@@ -787,7 +787,7 @@ PageMap _ List := Matrix => (f,i) ->  if f#?i then f#i else (
 spots PageMap := List => (
   K) ->  (select(keys K, i -> class i === List) )
 
-lineOnTop := (s) -> concatenate(width s : "-") || s
+--lineOnTop := (s) -> concatenate(width s : "-") || s
 net PageMap := f -> (
      v := between("",
 	  apply(spots f, 
@@ -865,7 +865,8 @@ E) else error "page does not have a ring"
 
 
 -- here are some needed functions related to hilbert polynomials --
-hilbertPolynomial ZZ := ProjectiveHilbertPolynomial => o -> (M) -> ( 
+hilbertPolynomial ZZ := ProjectiveHilbertPolynomial => o -> (M) -> ( if M == 0
+    then new ProjectiveHilbertPolynomial from {} else
     new ProjectiveHilbertPolynomial from {0 => M}
     )
 ProjectiveHilbertPolynomial == ZZ := (M,N) -> (M == hilbertPolynomial N)
@@ -902,7 +903,7 @@ basis (List,SpectralSequencePage) := opts -> (deg,E) -> (
     P
     )
 
--- some experimental code replated to double complexes --
+-- some experimental code related to double complexes --
 
 DoubleChainComplex = new Type of Page
 
@@ -964,8 +965,9 @@ doc ///
          a package for working with spectral sequences associated to filtered complexes
     Description
     	 Text 
-	      The Spectral Sequences package allows for effective computation of spectral sequences
-	      associated to separated and exhaustive filtrations of bounded chain complexes.	    
+	      This package allows users to compute of spectral sequences
+	      associated to separated and exhaustive filtrations 
+	      of bounded chain complexes.	    
 	      For an overview of how to create and manipulate filtered complexes 
 	      see @TO"filtered complexes"@.	  
 	      For an overview of how to create and manipulate spectral sequences see
@@ -1223,13 +1225,13 @@ doc ///
 		    simplical complex $D$ below is supposed to be a triangualtion of 
 		    $S^3$.  
 	       Example		    
-		    B=QQ[a_0..a_2,b_0..b_2,c_0..c_2,d_0..d_2]
-		    l1={a_0*b_0*b_1*c_1,a_0*b_0*c_0*c_1,a_0*a_1*b_1*c_1,b_0*b_1*c_1*d_1,b_0*c_0*c_1*d_2,a_0*a_1*c_1*d_2,a_0*c_0*c_1*d_2,b_0*c_1*d_1*d_2};
-		    l2={b_1*c_1*c_2*a_2,b_1*c_1*a_1*a_2,b_1*b_2*c_2*a_2,c_1*c_2*a_2*d_1,c_1*a_1*a_2*d_2,b_1*b_2*a_2*d_2,b_1*a_1*a_2*d_2,c_1*a_2*d_1*d_2};
-		    l3={c_2*a_2*a_0*b_0,c_2*a_2*b_2*b_0,c_2*c_0*a_0*b_0,a_2*a_0*b_0*d_1,a_2*b_2*b_0*d_2,c_2*c_0*b_0*d_2,c_2*b_2*b_0*d_2,a_2*b_0*d_1*d_2};
-		    l4={a_0*b_0*b_1*d_1,a_0*b_1*d_0*d_1,b_1*c_1*c_2*d_1,b_1*c_2*d_0*d_1,a_0*a_2*c_2*d_1,a_0*c_2*d_0*d_1};
-		    l5={a_0*b_1*d_0*d_2,a_0*a_1*b_1*d_2,b_1*c_2*d_0*d_2,b_1*b_2*c_2*d_2,a_0*c_2*d_0*d_2,a_0*c_0*c_2*d_2};
-		    D=simplicialComplex(join(l1,l2,l3,l4,l5));
+		    B = QQ[a_0..a_2,b_0..b_2,c_0..c_2,d_0..d_2];
+		    l1 = {a_0*b_0*b_1*c_1,a_0*b_0*c_0*c_1,a_0*a_1*b_1*c_1,b_0*b_1*c_1*d_1,b_0*c_0*c_1*d_2,a_0*a_1*c_1*d_2,a_0*c_0*c_1*d_2,b_0*c_1*d_1*d_2};
+		    l2 = {b_1*c_1*c_2*a_2,b_1*c_1*a_1*a_2,b_1*b_2*c_2*a_2,c_1*c_2*a_2*d_1,c_1*a_1*a_2*d_2,b_1*b_2*a_2*d_2,b_1*a_1*a_2*d_2,c_1*a_2*d_1*d_2};
+		    l3 = {c_2*a_2*a_0*b_0,c_2*a_2*b_2*b_0,c_2*c_0*a_0*b_0,a_2*a_0*b_0*d_1,a_2*b_2*b_0*d_2,c_2*c_0*b_0*d_2,c_2*b_2*b_0*d_2,a_2*b_0*d_1*d_2};
+		    l4 = {a_0*b_0*b_1*d_1,a_0*b_1*d_0*d_1,b_1*c_1*c_2*d_1,b_1*c_2*d_0*d_1,a_0*a_2*c_2*d_1,a_0*c_2*d_0*d_1};
+		    l5 = {a_0*b_1*d_0*d_2,a_0*a_1*b_1*d_2,b_1*c_2*d_0*d_2,b_1*b_2*c_2*d_2,a_0*c_2*d_0*d_2,a_0*c_0*c_2*d_2};
+		    D = simplicialComplex(join(l1,l2,l3,l4,l5));
 	       Text 
 	            We now construct filtrations of $D$ corresponding to $p$-
 		    sketeltons of the fibration.
@@ -1256,12 +1258,12 @@ doc ///
 		    inverse images
 		    of the two dimensional faces of the triangulation of $S^2$.
 	       Example
-		    f0l1={a_0*a_1,b_0*b_1,c_0*c_1,d_1*d_2};
-		    f0l2={a_1*a_2,b_1*b_2,c_1*c_2,d_1*d_2};
-		    f0l3={a_0*a_2,b_0*b_2,c_0*c_2,d_1*d_2};
-		    f0l4={a_0*a_2,b_0*b_1,c_1*c_2,d_0*d_1};
-		    f0l5={a_0*a_1,b_1*b_2,c_0*c_2,d_0*d_2};
-		    F0D=simplicialComplex(join(f0l1,f0l2,f0l3,f0l4,f0l5)); 
+		    f0l1 = {a_0*a_1,b_0*b_1,c_0*c_1,d_1*d_2};
+		    f0l2 = {a_1*a_2,b_1*b_2,c_1*c_2,d_1*d_2};
+		    f0l3 = {a_0*a_2,b_0*b_2,c_0*c_2,d_1*d_2};
+		    f0l4 = {a_0*a_2,b_0*b_1,c_1*c_2,d_0*d_1};
+		    f0l5 = {a_0*a_1,b_1*b_2,c_0*c_2,d_0*d_2};
+		    F0D = simplicialComplex(join(f0l1,f0l2,f0l3,f0l4,f0l5)); 
 	       Text
 	            So $F0D$ corresponds to the filtration of $D$ by considering 
 		    the inverse images of the 
@@ -1272,7 +1274,7 @@ doc ///
 		    asserted in the usual theorem we need to
 		    use non-reduced homology.		     
      	       Example		     
-     	       	    K=filteredComplex({D,F1D,F0D},ReducedHomology => false)
+     	       	    K = filteredComplex({D,F1D,F0D},ReducedHomology => false)
      	       Text		    
 		    Now try to compute the various pages of the spectral sequence.
 		    I have not made any serious attempt to compute the $E^0$ 
@@ -1416,7 +1418,7 @@ doc ///
      	  the type of all FilteredComplexes
      Description
      	  Text	 
-	     The type FilteredComplex is a data type for storing information associated to separated and exhaustive filtrations of bounded chain complexes.
+	     This is a data type for storing information associated to separated and exhaustive filtrations of bounded chain complexes.
 	     For an overview of how to create and manipulate filtered complexes 
 	     see @TO"filtered complexes"@.	  
 	     For an overview of how to create and manipulate spectral sequences see
@@ -1445,10 +1447,10 @@ doc ///
 	    @TO"filtered complexes from chain complexes"@
 	  Text    
 	    @TO"filtered complexes and spectral sequences from chain complex maps"@
-	  Text    
-	      @TO"filtered complexes from tensor products of chain complexes"@
-	  Text   
-	      @TO"filtered complexes from Hom"@	     	  
+--	  Text    
+--	      @TO"filtered complexes from tensor products of chain complexes"@
+--	  Text   
+--	      @TO"filtered complexes from Hom"@	     	  
 ///	  	 
 doc ///
      Key
@@ -1534,7 +1536,7 @@ doc ///
 	    We first need to load the relavent packages.
           Example
 	       needsPackage "SpectralSequences"	    
-	       needsPackage "ChainComplexExtras"
+--	       needsPackage "ChainComplexExtras"
      	  Text
 	       We then make a chain complex.
      	  Example	       	 
@@ -1558,24 +1560,24 @@ doc ///
      	  Text
 	       We now make the modules of another chain complex which we will label E.	     
      	  Example	      
-               E_2=image matrix(R,{{0}})
-	       E_1= image matrix(R,{{1,0},{0,0}})
+               E_2 =image matrix(R,{{0}})
+	       E_1 = image matrix(R,{{1,0},{0,0}})
 	       E_0 = image matrix(R,{{1}})
 	       E = chainComplex({inducedMap(E_0,E_1,C.dd_1),inducedMap(E_1,E_2,C.dd_2)})
      	  Text
 	       Now make a chain complex map.
      	  Example	      	       
-	       e=chainComplexMap(C,E,apply(spots C, i->inducedMap(C_i,D_i, id_C _i)))
+	       e = chainComplexMap(C,E,apply(spots C, i->inducedMap(C_i,D_i, id_C _i)))
      	  Text 
 	       Now make a filtered complex from a list of chain complex maps.
      	  Example	       	       
-	       K=filteredComplex({d,e})
+	       K = filteredComplex({d,e})
 	  Text
 	     We can make a filtered complex, with a specified minimum filtration degree
              from a list of ChainComplexMaps by using the Shift option.
       	  Example	       	     
-	       L=filteredComplex({d,e},Shift =>1)
-	       M=filteredComplex({d,e},Shift =>-1)	      	    
+	       L = filteredComplex({d,e},Shift =>1)
+	       M = filteredComplex({d,e},Shift =>-1)	      	    
 	  
 ///	  
 doc ///
@@ -1587,14 +1589,14 @@ doc ///
      	  Text
 ///	  
 
-doc ///
-     Key
-        "filtered complexes from Hom"
-     Headline
-     	 making filtered complexes and spectral sequences from Hom
-     Description
-     	  Text
-///	  
+--doc ///
+--     Key
+--       "filtered complexes from Hom"
+--     Headline
+--     	 making filtered complexes and spectral sequences from Hom
+--     Description
+--     	  Text
+--///	  
 
 doc ///
      Key
@@ -1603,8 +1605,7 @@ doc ///
      	  the type of all spectral sequences
      Description
      	  Text
-	       The SpectralSequences package provides effective computation of spectral sequences
-	       associated to separated and exhaustive filtrations of a chain complex.	    
+	       This is a data type for working with spectral sequences.
 	       For an overview of how to create and manipulate filtered complexes 
 	       see @TO"filtered complexes"@.	  
 	       For an overview of how to create and manipulate spectral sequences see
@@ -1634,8 +1635,9 @@ doc ///
      	  the type of all spectral sequence pages
      Description
      	  Text
-	       The SpectralSequences package provides effective computation of spectral sequences
-	       associated to separated and exhaustive filtrations of a chain complex.	    
+	       This is a data type for working with spectral sequence pages.	  
+--	       The SpectralSequences package provides effective computation of spectral sequences
+--	       associated to separated and exhaustive filtrations of a chain complex.	    
 	       For an overview of how to create and manipulate filtered complexes 
 	       see @TO"filtered complexes"@.	  
 	       For an overview of how to create and manipulate spectral sequences see
@@ -1659,6 +1661,9 @@ doc ///
      	  "spectral sequence page"
      Headline
      	  how to create and manipluate spectral sequence pages
+     Description
+     	   Text
+	       Here we explain how to create and manipluate spectral sequence pages.
 ///	  	  
 
 --- functions and methods ---
@@ -2181,57 +2186,57 @@ doc ///
     ///
 
 
-    doc ///
-     Key
-  	  (spots, FilteredComplex)
-     Headline
-     	  the sorted filtration degrees of a filtered complex 
-     Usage
-     	  L = spots H
-     Inputs
-     	  H: FilteredComplex 
+  --  doc ///
+ --    Key
+ -- 	  (spots, FilteredComplex)
+  --   Headline
+   --  	  the sorted filtration degrees of a filtered complex 
+   --  Usage
+    -- 	  L = spots H
+    -- Inputs
+   --  	  H: FilteredComplex 
 	       
-     Outputs
-     	  L:List
-     Description
-     	  Text 
-	       Returns the sorted filtration degrees of a filtered complex
-	       which the computer explicitly remembers. 	    	      
-///
+   --  Outputs
+    -- 	  L:List
+    -- Description
+     --	  Text 
+--	       Returns the sorted filtration degrees of a filtered complex
+--	       which the computer explicitly remembers. 	    	      
+--///
   
-  doc ///
-     Key
-  	  (spots, ChainComplex)
-     Headline
-     	  the sorted filtration degrees of a chain complex 
-     Usage
-     	  L = spots H
-     Inputs
-     	  H: ChainComplex 
+ -- doc ///
+   --  Key
+  --	  (spots, ChainComplex)
+    -- Headline
+     --	  the sorted filtration degrees of a chain complex 
+   --  Usage
+   --  	  L = spots H
+   --  Inputs
+   --  	  H: ChainComplex 
 	       
-     Outputs
-     	  L:List
-     Description
-     	  Text 
-	       Returns the sorted homological degrees of a chain complex 
-	       which the computer explicitly remembers. 	    	      
-///
-  doc ///
-     Key
-  	  spots
-     Headline
-     	  the sorted integer keys of a hash table.
-     Usage
-     	  L = spots H
-     Inputs
-     	  H: HashTable
+--     Outputs
+  --   	  L:List
+    -- Description
+     --	  Text 
+--	       Returns the sorted homological degrees of a chain complex 
+--	       which the computer explicitly remembers. 	    	      
+--///
+ -- doc ///
+   --  Key
+  --	  spots
+    -- Headline
+     --	  the sorted integer keys of a hash table.
+    -- Usage
+    -- 	  L = spots H
+    -- Inputs
+    -- 	  H: HashTable
 	       
-     Outputs
-     	  L:List
-     Description
-     	  Text 
-	       Returns the sorted integer keys of a hash table.	      
-///
+     --Outputs
+     --	  L:List
+     --Description
+     --	  Text 
+--	       Returns the sorted integer keys of a hash table.	      
+--///
 
   doc ///
      Key
@@ -2299,6 +2304,100 @@ all(for i from 0 to 5 list all(keys support E^i, j -> isIsomorphism rpqIsomorphi
 )
 ///
 
+TEST ///
+restart
+needsPackage "SpectralSequences";
+needsPackage "SimplicialComplexes"; 
+needsPackage "ChainComplexExtras";
+debug SpectralSequences;
+
+-- The following example is taken from p. 127, Fig 7.2 of 
+-- Zomorodian's "Topology for computing"
+
+
+A = ZZ [s,t,u,v,w] ;
+d0 = simplicialComplex {s};
+d1 = simplicialComplex {s,t} ;
+d2 = simplicialComplex {s,t,u} ;
+d3 = simplicialComplex {s*t, u} ;
+d4 = simplicialComplex {s*t, u, v} ;
+d5 = simplicialComplex {s*t, u, v, w} ;
+d6 = simplicialComplex {s*t, s*w ,u, v} ;
+d7 = simplicialComplex {s*t, s*w ,t * w, u, v} ;
+d8 = simplicialComplex {s*t, s*w ,t * w, u * v};
+d9 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v};
+d10 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u};
+d11 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w};
+d12 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u};
+d13 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w};
+d14 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w};
+d15 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u};
+d16 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v};
+d17 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v, s*t*w};
+L = reverse {d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17};
+K = filteredComplex (L, ReducedHomology => false);
+E = prune spectralSequence K
+assert(
+all(for i from 0 to 12 list all(keys support E^i, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,i)
+), i -> i == true)
+)
+///
+
+TEST ///
+restart
+needsPackage "SpectralSequences";
+A = QQ[a,b,c,d];
+D = simplicialComplex {a*d*c, a*b, a*c, b*c};
+F2D = D;
+F1D = simplicialComplex {a*c, d};
+F0D = simplicialComplex {a,d};
+K = filteredComplex({F2D, F1D, F0D},ReducedHomology => false);
+E = spectralSequence(K);
+e = prune E;
+assert(
+all(for i from 0 to 12 list all(keys support E^i, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,i)
+), i -> i == true)
+)
+assert(
+all(for i from 0 to 12 list all(keys support e^i, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,i)
+), i -> i == true)
+)
+///
+
+TEST ///
+restart
+needsPackage"SpectralSequences";
+B = QQ[a_0..a_2,b_0..b_2,c_0..c_2,d_0..d_2];
+l1 = {a_0*b_0*b_1*c_1,a_0*b_0*c_0*c_1,a_0*a_1*b_1*c_1,b_0*b_1*c_1*d_1,b_0*c_0*c_1*d_2,a_0*a_1*c_1*d_2,a_0*c_0*c_1*d_2,b_0*c_1*d_1*d_2};
+l2 = {b_1*c_1*c_2*a_2,b_1*c_1*a_1*a_2,b_1*b_2*c_2*a_2,c_1*c_2*a_2*d_1,c_1*a_1*a_2*d_2,b_1*b_2*a_2*d_2,b_1*a_1*a_2*d_2,c_1*a_2*d_1*d_2};
+l3 = {c_2*a_2*a_0*b_0,c_2*a_2*b_2*b_0,c_2*c_0*a_0*b_0,a_2*a_0*b_0*d_1,a_2*b_2*b_0*d_2,c_2*c_0*b_0*d_2,c_2*b_2*b_0*d_2,a_2*b_0*d_1*d_2};
+l4 = {a_0*b_0*b_1*d_1,a_0*b_1*d_0*d_1,b_1*c_1*c_2*d_1,b_1*c_2*d_0*d_1,a_0*a_2*c_2*d_1,a_0*c_2*d_0*d_1};
+l5 = {a_0*b_1*d_0*d_2,a_0*a_1*b_1*d_2,b_1*c_2*d_0*d_2,b_1*b_2*c_2*d_2,a_0*c_2*d_0*d_2,a_0*c_0*c_2*d_2};
+D = simplicialComplex(join(l1,l2,l3,l4,l5));		    
+f1l1 = {a_0*b_0*b_1,a_0*a_1*b_1,a_0*c_0*c_1,a_0*a_1*c_1,a_0*a_1*d_2,d_1*d_2,b_0*b_1*c_1,b_0*c_0*c_1,b_0*b_1*d_1,b_0*d_1*d_2,c_1*d_1*d_2,c_0*c_1*d_2};
+f1l2 = {b_1*a_1*a_2,b_1*b_2*a_2,c_1*c_2*a_2,c_1*a_1*a_2,a_1*a_2*d_2,a_2*d_1*d_2,b_1*c_1*c_2,b_1*b_2*c_2,b_1*b_2*d_2,d_1*d_2,c_1*d_1*d_2,c_1*c_2*d_1};
+f1l3 = {a_2*a_0*b_0,a_2*b_2*b_0, c_2*a_2*a_0,c_2*c_0*a_0,a_2*a_0*d_1,a_2*d_1*d_2,b_2*b_0*c_2,c_2*c_0*b_0,b_2*b_0*d_2,b_0*d_1*d_2,c_2*c_0*d_2,d_1*d_2};
+f1l4 = {a_0*b_0*b_1,a_0*a_2,a_0*a_2*c_2,c_1*c_2,a_0*d_0*d_1,a_0*a_2*d_1,b_1*c_1*c_2,b_0*b_1,b_0*b_1*d_1,b_1*d_0*d_1,c_1*c_2*d_1,c_2*d_0*d_1}
+f1l5 = {a_0*a_1*b_1,b_1*b_2,a_0*c_0*c_2,a_0*a_1,a_0*d_0*d_2,a_0*a_1*d_2,b_1*b_2*c_2,c_0*c_2,b_1*d_0*d_2,b_1*b_2*d_2,c_2*d_0*d_2,c_0*c_2*d_2};
+F1D = simplicialComplex(join(f1l1,f1l2,f1l3,f1l4,f1l5));		    
+f0l1 = {a_0*a_1,b_0*b_1,c_0*c_1,d_1*d_2};
+f0l2 = {a_1*a_2,b_1*b_2,c_1*c_2,d_1*d_2};
+f0l3 = {a_0*a_2,b_0*b_2,c_0*c_2,d_1*d_2};
+f0l4 = {a_0*a_2,b_0*b_1,c_1*c_2,d_0*d_1};
+f0l5 = {a_0*a_1,b_1*b_2,c_0*c_2,d_0*d_2};
+F0D = simplicialComplex(join(f0l1,f0l2,f0l3,f0l4,f0l5)); 
+K = filteredComplex({D,F1D,F0D},ReducedHomology => false);
+E = spectralSequence K ;
+e = prune spectralSequence K;
+assert(
+all(for i from 0 to 12 list all(keys support E^i, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,i)
+), i -> i == true)
+)		    
+assert(
+all(for i from 0 to 12 list all(keys support e^i, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,i)
+), i -> i == true)
+)
+///
 end
 
 
@@ -2312,69 +2411,45 @@ viewHelp SpectralSequences
 ------------------------------------------
 -- New scratch examples trying to illustrate the new experimental types --
 
---- I wonder how hard it would be to make double chain complexes?
--- the following shows that maybe it is not so hard now that we have
--- the data types page and pageMap.
----
 restart
-needsPackage"SpectralSequences"
-C = new DoubleChainComplex
-keys C.dd
-C.dd.xx
-C.dd.yy
+needsPackage"SpectralSequences";
+A = QQ[x,y,z,w]
+I = coker gens monomialCurveIdeal(A,{1,2,3})
+---
+hilbertPolynomial(A^0) == 0
+hilbertPolynomial(I) != 0
+hilbertPolynomial(A^0) != 0
+------
+--
+H = complete res I
+J = koszul matrix ({{x^2, x* y , y^2, z* w}})
+K = (filteredComplex H) ** J ;
+E = prune spectralSequence K
+e = spectralSequence K
+E^0
+E^1
+E^2
+E^2 .dd
+E^3
+E^3 .dd
+E^infinity
+prunningMaps(E^2)
+basis(0,E^0)
+hilbertPolynomial(E^2)
+hilbertPolynomial(e^2)
+hilbertPolynomial(E^0)
+hilbertPolynomial(E^1)
+hilbertPolynomial(e^1)
+k = (filteredComplex J) ** H ;
+F = prune spectralSequence k ;
+f = spectralSequence k ; 
+F^0
+F^1
+f^1
+F^infinity
+hilbertPolynomial(F^2)
 
-A = QQ[x]
-C
-C.ring = A
-keys C.dd
 
-
-C#{0,0} = A^1
-
-C#{1,0} = A^1
-
-C#{0,1} = A^1 
-
-C#{1,1} = A^1
-
-C.dd.degree
-
-C
-
-C.dd.yy #{0,1} = map(C_{0,0}, C_{0,1}, id_(A^1))
-
-C.dd.yy #{1,1} = map(C_{1,0}, C_{1,1}, id_(A^1))
-
-C.dd.xx #{1,1} = map(C_{0,1}, C_{1,1}, id_(A^1))
-
-C.dd.xx #{1,0} = map(C_{1,0}, C_{0,0}, - id_(A^1))
-
-C.dd.xx
-C.dd.yy
-
-C.dd.yy _{0,1}
-C.dd.yy _{0,0}
-C.dd.yy_{10,10}
-C.dd.xx_{1,1}
-C.dd.xx
-C.dd.xx_{0,1}
-
-C
-
-(C.dd.xx #{1,0}) * (C.dd.yy #{1,1}) == - (C.dd.yy #{0,1}) * (C.dd.xx #{1,1})
-
-C.dd.yy.degree = {0,-1}
-C.dd.yy
-
-C.dd.xx.degree = {-1,0}
-
-C.dd.xx
-
-spots(C.dd.yy)
-
-keys C.dd.yy
-
-(C.dd).yy
 
 
 restart
@@ -2391,6 +2466,8 @@ P + 3
 3 + P
 P - 3
 - P + 3
+P - P
+peek oo
 
 ----
 ----
@@ -2416,35 +2493,6 @@ E^1
 prunningMaps(E^1)
 
 ---
----
-restart
-needsPackage "SpectralSequences";
-A = QQ[x,y,z,w]
-I = coker gens monomialCurveIdeal(A,{1,2,3})
-hilbertPolynomial(A^0) == 0
-hilbertPolynomial(I) != 0
-hilbertPolynomial(A^0) != 0
-------
---
-H = complete res I
-J = coker gens monomialCurveIdeal(A,{1,3,4})
-F = complete res J
-E = prune spectralSequence ((filteredComplex H) ** F)
-K = (filteredComplex H) ** F
-basis(0,E^0)
-basis(0,E^0_{0,0})
-basis(0,E^0)
-basis(0,E^1)
-basis(0,(prune HH K_infinity)_1)
-prune HH K_infinity
-Hilb = hilbertPolynomial(E^0)
-Hilb_{0,0}
-Hilb_{1,0}
-hilbertPolynomial(E^infinity)
-E^infinity
-prune HH K_infinity
-hilbertPolynomial (HH K_infinity) _0
------
 --
 restart
 needsPackage "SpectralSequences";
@@ -2471,6 +2519,49 @@ basis({0,0},E^1)
 -- using the this picture we deduce that the spectral sequence (corresponding to sheaves)
 -- degenerates at the E^1 page.
 ---
+
+-------------------------
+--- I wonder how hard it would be to make double chain complexes?
+-- the following shows that maybe it is not so hard now that we have
+-- the data types page and pageMap.
+---------
+restart
+needsPackage"SpectralSequences"
+C = new DoubleChainComplex
+keys C.dd
+C.dd.xx
+C.dd.yy
+A = QQ[x]
+C
+C.ring = A
+keys C.dd
+C#{0,0} = A^1
+C#{1,0} = A^1
+C#{0,1} = A^1 
+C#{1,1} = A^1
+C.dd.degree
+C
+C.dd.yy #{0,1} = map(C_{0,0}, C_{0,1}, id_(A^1))
+C.dd.yy #{1,1} = map(C_{1,0}, C_{1,1}, id_(A^1))
+C.dd.xx #{1,1} = map(C_{0,1}, C_{1,1}, id_(A^1))
+C.dd.xx #{1,0} = map(C_{1,0}, C_{0,0}, - id_(A^1))
+C.dd.xx
+C.dd.yy
+C.dd.yy _{0,1}
+C.dd.yy _{0,0}
+C.dd.yy_{10,10}
+C.dd.xx_{1,1}
+C.dd.xx
+C.dd.xx_{0,1}
+C
+(C.dd.xx #{1,0}) * (C.dd.yy #{1,1}) == - (C.dd.yy #{0,1}) * (C.dd.xx #{1,1})
+C.dd.yy.degree = {0,-1}
+C.dd.yy
+C.dd.xx.degree = {-1,0}
+C.dd.xx
+spots(C.dd.yy)
+keys C.dd.yy
+(C.dd).yy
 
 -------------------------------------------
 --- end of experimental scratch examples.
@@ -2738,9 +2829,7 @@ prune HH k_infinity
 -- needs to be clarified.  
 restart
 needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
+--debug SpectralSequences;
 -- the following scripts are used in this example.
 
 
