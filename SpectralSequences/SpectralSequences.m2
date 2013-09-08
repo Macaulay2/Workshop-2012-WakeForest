@@ -958,44 +958,42 @@ undocumented {computeErModules,
     (spectralSequencePageMap,FilteredComplex,ZZ)
     }
 
-doc ///
-     Key 
-          SpectralSequences
-     Headline 
-         a package for working with spectral sequences associated to filtered complexes
-    Description
-    	 Text 
-	      This package allows users to compute of spectral sequences
-	      associated to separated and exhaustive filtrations 
-	      of bounded chain complexes.	    
-	      For an overview of how to create and manipulate filtered complexes 
-	      see @TO"filtered complexes"@.	  
-	      For an overview of how to create and manipulate spectral sequences see
-	      @TO"spectral sequences"@.	    
-	      For an overview of how to create and manipulate spectral sequence pages see
-	      @TO"spectral sequence page"@.
-	      associated to a filtered complex.  
-	      
-	      Below are some examples which illustrate this package.
-	      
-	      $\bullet$ @TO"Computing the Serre Spectral Sequence associated to a Hopf Fibration"@
-	      
-	      $\bullet$ @TO "Balancing Tor"@
-	      
-	      $\bullet$ @TO "Spectral sequences and hypercohomology calculations"@
-	      
-	      $\bullet$ @TO "Spectral sequences and connecting morphisms"@
-	      
-	      $\bullet$ @TO "Spectral sequences and non-Koszul syzygies"@
-	      
-	      $\bullet$ @TO "A spectral sequence which fails to degenerate quickly"@
-///	
+document { 
+  Key => SpectralSequences,
+  Headline => "a package for working with filtered complexes and spectral sequences",
+  "Every filtered chain complex determines a spectral sequence; 
+  this correspondence is functorial.",
+  PARA{},     
+  "This ", EM "Macaulay2", " package is designed to
+  to compute spectral sequences which arise from separated and exhaustive filtrations
+  of bounded chain complexes.",
+ -- UL { 
+   -- {"David A. Cox, John B. Little, Hal Schenck, ", 
+     -- HREF("http://www.cs.amherst.edu/~dac/toric.html", EM "Toric varieties"), 
+     -- ", Graduate Studies in Mathematics 124. American Mathematical Society, 
+     -- Providence RI, 2011.  ISBN: 978-0-8218-4817-7"},
+ -- SUBSECTION "Contributors",
+ -- "The following people have generously contributed code or worked on our code.",
+ -- UL {
+   -- {HREF("http://www.math.duke.edu/~psa/","Paul Aspinwall")},
+   -- {HREF("http://www2.math.su.se/~cberkesc/","Christine Berkesch")},
+   -- {HREF("http://page.mi.fu-berlin.de/rbirkner/indexen.htm","René Birkner")},
+   -- {HREF("http://www.warwick.ac.uk/staff/D.Maclagan/","Diane Maclagan")},
+   -- {HREF("http://www.math.uiuc.edu/~asecele2/","Alexandra Seceleanu")},},
+  SUBSECTION "Some examples which illustrate this package",
+  UL {
+    TO "Computing the Serre Spectral Sequence associated to a Hopf Fibration",
+    TO "Balancing Tor",
+    TO "Spectral sequences and connecting morphisms",
+    TO "Spectral sequences and non-Koszul syzygies",
+    TO "A spectral sequence which fails to degenerate quickly"},
+  }
 
   doc ///
     Key
       "A spectral sequence which fails to degenerate quickly"
-    Headline
-     	  nonzero maps on higher page numbers
+   -- Headline
+     --	  nonzero maps on higher page numbers
     Description
     	  Text
 	       The following example is taken from p. 127, Fig 7.2 of 
@@ -1054,8 +1052,8 @@ doc ///
   doc ///
     Key
       "Spectral sequences and non-Koszul syzygies"
-    Headline
-     	  using spectral sequences to compute non-Koszul syzygies
+  --  Headline
+    -- 	  using spectral sequences to compute non-Koszul syzygies
     Description
     	  Text
 	       We illustrate some aspects of the paper 
@@ -1102,8 +1100,8 @@ doc ///
      doc ///
      Key
        "Spectral sequences and connecting morphisms"
-     Headline
-          using spectral sequences to compute connecting morphisms
+    -- Headline
+    --      using spectral sequences to compute connecting morphisms
      Description
      	  Text
 	       If $0 \rightarrow A \rightarrow B \rightarrow C \rightarrow 0$ is a 
@@ -1455,8 +1453,8 @@ doc ///
 doc ///
      Key
           "filtered complexes and spectral sequences from simplicial complexes"
-     Headline
-     	  making filtered complexes and spectral sequences from simplicial complexes
+   --  Headline
+    -- 	  making filtered complexes and spectral sequences from simplicial complexes
      Description
      	  Text	 	    
 	    To make a filtered complex from a list of simplicial 
@@ -2280,7 +2278,9 @@ needsPackage "SpectralSequences";
 A = QQ[a,b,c];
 C = new ChainComplex;
 C.ring = A;
-filtererdComplex C
+K = filteredComplex C;
+assert(K_0 == C);
+assert(K_1 == C);
 ///    
 
 TEST ///
@@ -2294,27 +2294,25 @@ F0D = simplicialComplex {a,b,c};
 K = filteredComplex({F2D,F1D,F0D}, ReducedHomology => false);
 E = prune spectralSequence K;
 e = spectralSequence K;
-assert(
-all(for i from 0 to 5 list all(keys support E^i, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,i)
-), i -> i == true)
-)
-assert(
-all(for i from 0 to 5 list all(keys support E^i, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,i)
-), i -> i == true)
-)
+assert(all(keys support E^0, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,0)))
+assert(all(keys support E^1, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,1)))
+assert(all(keys support E^2, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,2)))
+assert(all(keys support E^3, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,3)))
+assert(all(keys support E^4, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,4)))
+assert(all(keys support E^5, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,5)))
+assert(all(keys support e^0, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,0)))
+assert(all(keys support e^1, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,1)))
+assert(all(keys support e^2, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,2)))
+assert(all(keys support e^3, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,3)))
+assert(all(keys support e^4, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,4)))
+assert(all(keys support e^5, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,5)))
 ///
 
 TEST ///
 restart
 needsPackage "SpectralSequences";
-needsPackage "SimplicialComplexes"; 
-needsPackage "ChainComplexExtras";
-debug SpectralSequences;
-
 -- The following example is taken from p. 127, Fig 7.2 of 
 -- Zomorodian's "Topology for computing"
-
-
 A = ZZ [s,t,u,v,w] ;
 d0 = simplicialComplex {s};
 d1 = simplicialComplex {s,t} ;
@@ -2337,10 +2335,33 @@ d17 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w,
 L = reverse {d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17};
 K = filteredComplex (L, ReducedHomology => false);
 E = prune spectralSequence K
-assert(
-all(for i from 0 to 12 list all(keys support E^i, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,i)
-), i -> i == true)
-)
+e = spectralSequence K
+assert(all(keys support E^0, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,0)))
+assert(all(keys support E^1, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,1)))
+assert(all(keys support E^2, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,2)))
+assert(all(keys support E^3, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,3)))
+assert(all(keys support E^4, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,4)))
+assert(all(keys support E^5, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,5)))
+assert(all(keys support E^6, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,6)))
+assert(all(keys support E^7, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,7)))
+assert(all(keys support E^8, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,8)))
+assert(all(keys support E^9, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,9)))
+assert(all(keys support E^10, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,10)))
+assert(all(keys support E^11, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,11)))
+assert(all(keys support E^12, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,12)))
+assert(all(keys support e^0, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,0)))
+assert(all(keys support e^1, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,1)))
+assert(all(keys support e^2, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,2)))
+assert(all(keys support e^3, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,3)))
+assert(all(keys support e^4, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,4)))
+assert(all(keys support e^5, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,5)))
+assert(all(keys support e^6, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,6)))
+assert(all(keys support e^7, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,7)))
+assert(all(keys support e^8, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,8)))
+assert(all(keys support e^9, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,9)))
+assert(all(keys support e^10, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,10)))
+assert(all(keys support e^11, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,11)))
+assert(all(keys support e^12, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,12)))
 ///
 
 TEST ///
@@ -2354,14 +2375,32 @@ F0D = simplicialComplex {a,d};
 K = filteredComplex({F2D, F1D, F0D},ReducedHomology => false);
 E = spectralSequence(K);
 e = prune E;
-assert(
-all(for i from 0 to 12 list all(keys support E^i, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,i)
-), i -> i == true)
-)
-assert(
-all(for i from 0 to 12 list all(keys support e^i, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,i)
-), i -> i == true)
-)
+assert(all(keys support E^0, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,0)))
+assert(all(keys support E^1, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,1)))
+assert(all(keys support E^2, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,2)))
+assert(all(keys support E^3, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,3)))
+assert(all(keys support E^4, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,4)))
+assert(all(keys support E^5, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,5)))
+assert(all(keys support E^6, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,6)))
+assert(all(keys support E^7, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,7)))
+assert(all(keys support E^8, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,8)))
+assert(all(keys support E^9, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,9)))
+assert(all(keys support E^10, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,10)))
+assert(all(keys support E^11, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,11)))
+assert(all(keys support E^12, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,12)))
+assert(all(keys support e^0, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,0)))
+assert(all(keys support e^1, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,1)))
+assert(all(keys support e^2, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,2)))
+assert(all(keys support e^3, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,3)))
+assert(all(keys support e^4, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,4)))
+assert(all(keys support e^5, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,5)))
+assert(all(keys support e^6, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,6)))
+assert(all(keys support e^7, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,7)))
+assert(all(keys support e^8, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,8)))
+assert(all(keys support e^9, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,9)))
+assert(all(keys support e^10, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,10)))
+assert(all(keys support e^11, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,11)))
+assert(all(keys support e^12, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,12)))
 ///
 
 TEST ///
@@ -2387,17 +2426,34 @@ f0l4 = {a_0*a_2,b_0*b_1,c_1*c_2,d_0*d_1};
 f0l5 = {a_0*a_1,b_1*b_2,c_0*c_2,d_0*d_2};
 F0D = simplicialComplex(join(f0l1,f0l2,f0l3,f0l4,f0l5)); 
 K = filteredComplex({D,F1D,F0D},ReducedHomology => false);
-E = spectralSequence K ;
+E = spectralSequence K;
 e = prune spectralSequence K;
-assert(
-all(for i from 0 to 12 list all(keys support E^i, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,i)
-), i -> i == true)
-)		    
-assert(
-all(for i from 0 to 12 list all(keys support e^i, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,i)
-), i -> i == true)
-)
+assert(all(keys support E^0, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,0)))
+assert(all(keys support E^1, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,1)))
+assert(all(keys support E^2, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,2)))
+assert(all(keys support E^3, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,3)))
+assert(all(keys support E^4, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,4)))
+assert(all(keys support E^5, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,5)))
+assert(all(keys support E^6, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,6)))
+assert(all(keys support E^7, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,7)))
+assert(all(keys support E^8, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,8)))
+assert(all(keys support E^9, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,9)))
+assert(all(keys support E^10, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,10)))
+assert(all(keys support E^11, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,11)))
+assert(all(keys support e^0, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,0)))
+assert(all(keys support e^1, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,1)))
+assert(all(keys support e^2, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,2)))
+assert(all(keys support e^3, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,3)))
+assert(all(keys support e^4, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,4)))
+assert(all(keys support e^5, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,5)))
+assert(all(keys support e^6, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,6)))
+assert(all(keys support e^7, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,7)))
+assert(all(keys support e^8, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,8)))
+assert(all(keys support e^9, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,9)))
+assert(all(keys support e^10, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,10)))
+assert(all(keys support e^11, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,11)))
 ///
+
 end
 
 
