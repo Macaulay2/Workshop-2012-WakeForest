@@ -29,10 +29,8 @@ doc ///
       Text
          All noncommutative rings have this as an ancestor type.  It is the parent of the
 	 types @ TO NCPolynomialRing @ and @ TO NCQuotientRing @. 
-	 
       Text
-         In addition to defining a ring as a quotient of a @ TO NCPolynomialRing @, some common ways to create NCRings include @ TO SkewPolynomialRing @, @ TO endomorphismRing @, and @ TO oreExtension @.
-      
+         In addition to defining a ring as a quotient of a @ TO NCPolynomialRing @, some common ways to create NCRings include @ TO SkewPolynomialRing @, @ TO endomorphismRing @, and @ TO oreExtension @.      
       Example
          A = QQ{x,y,z}
 	 f = y*z + z*y - x^2
@@ -44,9 +42,8 @@ doc ///
 	 C = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w}) 
 	 sigma = ncMap(C,C,{y,z,w,x})
 	 D = oreExtension(C,sigma,a)
-
-     SeeAlso
-       "Basic operations on noncommutative algebras"
+     Subnodes
+         "Basic operations on noncommutative algebras"
 ///
 
 doc ///
