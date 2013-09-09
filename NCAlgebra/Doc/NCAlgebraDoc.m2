@@ -28,7 +28,25 @@ doc ///
    Description
       Text
          All noncommutative rings have this as an ancestor type.  It is the parent of the
-	 types @ TO NCPolynomialRing @ and @ TO NCQuotientRing @.
+	 types @ TO NCPolynomialRing @ and @ TO NCQuotientRing @. 
+	 
+      Text
+         In addition to defining a ring as a quotient of a @ TO NCPolynomialRing @, some common ways to create NCRings include @ TO SkewPolynomialRing @, @ TO endomorphismRing @, and @ TO oreExtension @.
+      
+      Example
+         A = QQ{x,y,z}
+	 f = y*z + z*y - x^2
+	 g = x*z + z*x - y^2
+	 h = z^2 - x*y - y*x
+     	 I=ncIdeal{f,g,h}
+	 B=A/I
+	 
+	 C = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w}) 
+	 sigma = ncMap(C,C,{y,z,w,x})
+	 D = oreExtension(C,sigma,a)
+
+     SeeAlso
+       "Basic operations on noncommutative algebras"
 ///
 
 doc ///
@@ -62,6 +80,31 @@ doc ///
    Headline
       Type of a matrix over a noncommutative ring.
    Description
+      Text
+         This is the type of a matrix over a noncommutative ring. 
+      Text
+         Common ways to make a matrix include
+      Text
+         Common ways to get information about matrices
+
+         ring NCMatrix
+	 entries NCMatrix
+
+      Text
+         Common operations on matrices:
+	 
+	 NCMatrix + NCMatrix
+	 NCMatrix - NCMatrix 
+	 NCMatrix * NCMatrix
+	 NCMatrix * Matrix
+	 NCMatrix % NCGroebnerBasis
+	 NCMatrix ^ ZZ 
+	 NCMatrix | NCMatrix
+	 NCMatrix || NCMatrix
+	 NCMatrix * NCRingElement
+	 lift NCMatrix
+	 transpose NCMatrix
+
       Example
          A = QQ{a,b,c,d}
 	 M = ncMatrix {{a,b,c,d}}
@@ -85,8 +128,6 @@ doc ///
 	 Y = NB | 2*NB
 	 Z = X || NB
 
-      Text
-        This is the type of a matrix over a noncommutative graded ring. 
 ///
 
 
