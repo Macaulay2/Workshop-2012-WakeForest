@@ -9,6 +9,7 @@ newPackage("NCAlgebra",
 	  {Name => "Andrew Conner",
 	   HomePage => "http://www.math.wfu.edu/Faculty/Conner.html",
 	   Email => "connerab@wfu.edu"}},
+     AuxiliaryFiles => true,
      DebuggingMode => true
      )
 
@@ -48,6 +49,7 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          minimizeRelations,checkHomRelations,
          skewPolynomialRing,
 	 abelianization,
+	 skewAbelianization,
 	 oppositeRing,
          quadraticClosure,
 	 homogDual,
@@ -58,7 +60,10 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
 MAXDEG = 40
 MAXSIZE = 40
 
-bergmanPath = "/usr/local/bergman1.001"
+-- Andy's bergman path
+--bergmanPath = "/usr/local/bergman1.001"
+-- Frank's bergman path
+bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
@@ -725,8 +730,6 @@ basis (ZZ,NCLeftIdeal) := opts -> (n,I) -> (
    minGens := mingens image VasCoeffs;
    ncMatrix{terms}*minGens
 )
-
-
 ------------------------------------------------
 
 -------------------------------------------
@@ -1038,6 +1041,24 @@ abelianization NCRing := B -> (
    R := coefficientRing B;
    gensI := gens ideal B;
    abB := R [ gens B ];
+   if gensI == {} then
+      abB
+   else (
+      phi := ambient ncMap(abB,B,gens abB);
+      abI := ideal flatten entries mingens ideal ((gensI) / phi);
+      if abI == 0 then
+         abB
+      else
+         abB/abI
+   )
+)
+
+skewAbelianization = method()
+skewAbelianization NCRing := B -> (
+   gensB := gens B;
+   R := coefficientRing B;
+   gensI := gens ideal B;
+   abB := R [ gens B, SkewCommutative => true];
    if gensI == {} then
       abB
    else (
@@ -1679,7 +1700,6 @@ leftMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
    nBasis := flatten entries basis(n,B);
    nmBasis := flatten entries basis(n+m,B);
    leftMultiplicationMap(f,nBasis,nmBasis)
-
 )
 
 leftMultiplicationMap(NCRingElement,List,List) := (f,fromBasis,toBasis) -> (
@@ -1691,7 +1711,6 @@ leftMultiplicationMap(NCRingElement,List,List) := (f,fromBasis,toBasis) -> (
    sparseCoeffs(f*fromBasis, Monomials=>toBasis)
 
 )
-
 
 rightMultiplicationMap = method()
 rightMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
@@ -1714,10 +1733,6 @@ rightMultiplicationMap(NCRingElement,List,List) := (f,fromBasis,toBasis) -> (
    sparseCoeffs(fromBasis*f, Monomials=>toBasis)
 
 )
-
-
-
-
 
 centralElements = method()
 centralElements(NCRing,ZZ) := (B,n) -> (
@@ -2508,7 +2523,7 @@ wallTiming = f -> (
 ------------------------------------------------------------
 
 --- include the documentation
-load "Doc/NCAlgebraDoc.m2"
+load "NCAlgebra/NCAlgebraDoc.m2"
 
 end
 
@@ -2573,4 +2588,5 @@ ncgb=ncGroebnerBasis(I,InstallGB=>true)
 restart
 uninstallPackage "NCAlgebra"
 installPackage "NCAlgebra"
+needsPackage "NCAlgebra"
 viewHelp "NCAlgebra"

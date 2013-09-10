@@ -1,7 +1,5 @@
 beginDocumentation()
 
-
-
 -------------------------
 ----- Types
 -------------------------
@@ -9,8 +7,6 @@ beginDocumentation()
 doc ///
   Key
     NCAlgebra
-  Headline
-    Data types and basic functions for noncommutative algebras.
   Description
     Text
       This package is used to define and manipulate noncommutative algebras.  Many of the
@@ -30,7 +26,7 @@ doc ///
          All noncommutative rings have this as an ancestor type.  It is the parent of the
 	 types @ TO NCPolynomialRing @ and @ TO NCQuotientRing @. 
       Text
-         In addition to defining a ring as a quotient of a @ TO NCPolynomialRing @, some common ways to create NCRings include @ TO SkewPolynomialRing @, @ TO endomorphismRing @, and @ TO oreExtension @.      
+         In addition to defining a ring as a quotient of a @ TO NCPolynomialRing @, some common ways to create NCRings include @ TO skewPolynomialRing @, @ TO endomorphismRing @, and @ TO oreExtension @.      
       Example
          A = QQ{x,y,z}
 	 f = y*z + z*y - x^2
@@ -42,8 +38,8 @@ doc ///
 	 C = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w}) 
 	 sigma = ncMap(C,C,{y,z,w,x})
 	 D = oreExtension(C,sigma,a)
-     Subnodes
-         "Basic operations on noncommutative algebras"
+   Subnodes
+     "Basic operations on noncommutative algebras"
 ///
 
 doc ///
@@ -174,8 +170,10 @@ doc ///
 	Igb = ncGroebnerBasis I
 	normalFormBergman(z^17,Igb)
 
-        A=QQ{a, b, c, d, e, f, g, h}
-	I = gbFromOutputFile(A,"UghABCgb6.txt", ReturnIdeal=>true);
+	{*
+        --- This doesn't work in help generator because it can't find the file.
+	A=QQ{a, b, c, d, e, f, g, h}
+	I = gbFromOutputFile(A,"NCAlgebra/UghABCgb6.txt", ReturnIdeal=>true);
 	B=A/I
 	F = a^7+b^7+c^7+d^7+e^7+f^7+g^7+h^7;
 	bas=basis(2,B);
@@ -183,7 +181,7 @@ doc ///
 	XA = apply(X, x -> promote(x,A));
 	use A
 	XA_{0,1,2,3,4}
-
+	*}
 
       Text
         stuff
@@ -500,6 +498,8 @@ doc ///
       (skewPolynomialRing,Ring,ZZ,List)
       abelianization
       (abelianization,NCRing)
+      skewAbelianization
+      (skewAbelianization,NCRing)
    Headline
       Methods for working with skew polynomial rings.
    Description
