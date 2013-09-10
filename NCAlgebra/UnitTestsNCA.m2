@@ -527,13 +527,19 @@ f1 = y*z + z*y - x^2
 f2 = x*z + z*x - y^2
 f3 = z^2 - x*y - y*x
 I = ncIdeal {f1,f2,f3}
-Igb = twoSidedNCGroebnerBasisBergman I
-wallTiming(() -> normalFormBergman(z^17,Igb))
-time remainderFunction(z^17,Igb)
 B = A / I
-g = -y^3-x*y*z+y*x*z+x^3
-isCentral g
-dims := hilbertBergman(B,DegreeLimit=>100)
+hs = hilbertBergman(B,DegreeLimit=>10)
+
+restart
+debug needsPackage "NCAlgebra"
+A = QQ{x,y,z}
+setWeights(A,{2,2,2})
+f1 = y*z + z*y - x^2
+f2 = x*z + z*x - y^2
+f3 = z^2 - x*y - y*x
+I = ncIdeal {f1,f2,f3}
+B = A/I
+hs = hilbertBergman(B,DegreeLimit=>20)
 
 -----------
 -- this doesn't work since it is not homogeneous unless you use degree q = 0, which is not allowed.

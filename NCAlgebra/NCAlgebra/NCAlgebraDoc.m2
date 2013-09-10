@@ -38,8 +38,8 @@ doc ///
 	 C = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w}) 
 	 sigma = ncMap(C,C,{y,z,w,x})
 	 D = oreExtension(C,sigma,a)
-   Subnodes
-     "Basic operations on noncommutative algebras"
+   SeeAlso
+      "Basic operations on noncommutative algebra"
 ///
 
 doc ///
@@ -152,23 +152,23 @@ doc ///
       InstallGB
       ReturnIdeal
    Headline
-      Type of a groebner basis for an ideal in a noncommutative ring
+      Type of a Groebner basis for an ideal in a noncommutative ring
    Description
-      Example
-        R = QQ[a,b,c,d]/ideal{a*b+c*d}
-	A = R {x,y,z}
-	I = ncIdeal {a*x*y,b*z^2}
-	Igb = ncGroebnerBasis(I, InstallGB=>true)
-	c*z^2 % Igb 
-	b*z^2 % Igb
+     Example
+       R = QQ[a,b,c,d]/ideal{a*b+c*d}
+       A = R {x,y,z}
+       I = ncIdeal {a*x*y,b*z^2}
+       Igb = ncGroebnerBasis(I, InstallGB=>true)
+       c*z^2 % Igb 
+       b*z^2 % Igb
 
-        A = QQ{x,y,z}
-	p = y*z + z*y - x^2
-	q = x*z + z*x - y^2
-	r = z^2 - x*y - y*x
-	I = ncIdeal {p,q,r}
-	Igb = ncGroebnerBasis I
-	normalFormBergman(z^17,Igb)
+       A = QQ{x,y,z}
+       p = y*z + z*y - x^2
+       q = x*z + z*x - y^2
+       r = z^2 - x*y - y*x
+       I = ncIdeal {p,q,r}
+       Igb = ncGroebnerBasis I
+       normalFormBergman(z^17,Igb)
 
 	{*
         --- This doesn't work in help generator because it can't find the file.
@@ -183,8 +183,8 @@ doc ///
 	XA_{0,1,2,3,4}
 	*}
 
-      Text
-        stuff
+     Text
+       stuff
 ///
 
 doc ///
