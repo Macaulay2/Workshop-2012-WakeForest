@@ -14,7 +14,6 @@ newPackage("NCAlgebra",
      )
 
 export { NCRing, NCQuotientRing, NCPolynomialRing,
-         -- generatorSymbols, weights,  -- can I get away with not exporting these somehow?
          NCRingElement, isReduced,
          NCGroebnerBasis, ncGroebnerBasis, maxNCGBDegree, minNCGBDegree,
          NCIdeal, NCLeftIdeal, NCRightIdeal,
@@ -40,8 +39,6 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          rightMultiplicationMap,
          rightKernel,
          NCMatrix, ncMatrix,
- --        NCMonomial,
- --        monList,
          isCentral,
          ncMap,
          functionHash,
@@ -54,7 +51,6 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
 	 oppositeRing,
          quadraticClosure,
 	 homogDual,
- --	 wallTiming,
 	 sparseCoeffs
 }
 
@@ -608,7 +604,7 @@ homogDual NCIdeal := I -> (
    J:=ncIdeal flatten entries dualGens
 )
 
---basisAsCoeffs = method()
+-- basisAsCoeffs = method()
 -- basisAsCoeffs (ZZ, NCIdeal) :=  (n,I) -> (
 -- R:=ring I;
 -- idealGens:=select(I.generators, g->degree g <= n);
@@ -638,9 +634,6 @@ homogDual NCIdeal := I -> (
 -- if desired, multiply by toBasis to revert to ring variables.
 -- )
 
-
-
-
 basis (ZZ,NCIdeal) := opts -> (n,I) -> (
    -- Input: An NCIdeal I and a degree n.
    -- Output: A basis for I in degree n. 
@@ -659,8 +652,6 @@ basis (ZZ,NCIdeal) := opts -> (n,I) -> (
    minGens := mingens image VasCoeffs;
    ncMatrix{terms}*minGens
 )
-
-
 
 ------------------------------------------------
 
@@ -688,7 +679,6 @@ ring NCRightIdeal := I -> I.ring
 
 NCRightIdeal + NCRightIdeal := (I,J) -> ncRightIdeal (gens I | gens J)
 
-
 basis (ZZ,NCRightIdeal) := opts -> (n,I) -> (
    R:=ring I;
    idealGens:=select(I.generators, g->degree g <= n);
@@ -705,7 +695,6 @@ basis (ZZ,NCRightIdeal) := opts -> (n,I) -> (
    minGens := mingens image VasCoeffs;
    ncMatrix{terms}*minGens
 )
-
 
 ------------------------------------------------
 

@@ -1,3 +1,14 @@
+undocumented {(net,NCGroebnerBasis),
+              (net,NCIdeal),
+	      (net,NCLeftIdeal),
+	      (net,NCRightIdeal),
+	      (net,NCRing),
+	      (net,NCRingElement),
+	      (net,NCMatrix),
+	      (net,NCQuotientRing),
+	      (NewFromMethod,NCPolynomialRing,List),
+	      (NewFromMethod,NCQuotientRing,List)}
+
 beginDocumentation()
 
 -------------------------
@@ -19,6 +30,7 @@ doc ///
 doc ///
    Key
       NCRing
+      (generators, NCRing)
    Headline
       Type of a noncommutative ring.
    Description
@@ -26,7 +38,8 @@ doc ///
          All noncommutative rings have this as an ancestor type.  It is the parent of the
 	 types @ TO NCPolynomialRing @ and @ TO NCQuotientRing @. 
       Text
-         In addition to defining a ring as a quotient of a @ TO NCPolynomialRing @, some common ways to create NCRings include @ TO skewPolynomialRing @, @ TO endomorphismRing @, and @ TO oreExtension @.      
+         In addition to defining a ring as a quotient of a @ TO NCPolynomialRing @, some common ways to create
+	 NCRings include @ TO skewPolynomialRing @, @ TO endomorphismRing @, and @ TO oreExtension @.      
       Example
          A = QQ{x,y,z}
 	 f = y*z + z*y - x^2
@@ -34,17 +47,17 @@ doc ///
 	 h = z^2 - x*y - y*x
      	 I=ncIdeal{f,g,h}
 	 B=A/I
-	 
 	 C = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w}) 
 	 sigma = ncMap(C,C,{y,z,w,x})
 	 D = oreExtension(C,sigma,a)
    SeeAlso
-      "Basic operations on noncommutative algebra"
+      "Basic operations on noncommutative algebras"
 ///
 
 doc ///
    Key
       NCPolynomialRing
+      (ideal, NCPolynomialRing)
    Headline
       Type of a noncommutative polynomial ring.
    Description
@@ -56,6 +69,9 @@ doc ///
 doc ///
    Key
       NCQuotientRing
+      (symbol /, NCPolynomialRing, NCIdeal)
+      (ambient, NCQuotientRing)
+      (ideal, NCQuotientRing)
    Headline
       Type of a noncommutative ring.
    Description
@@ -70,6 +86,34 @@ doc ///
       NCMatrix
       ncMatrix
       (ncMatrix,List)
+      (symbol -, NCMatrix)
+      (symbol %, NCMatrix, NCGroebnerBasis)
+      (symbol *, NCMatrix, Matrix)
+      (symbol *, Matrix, NCMatrix)
+      (symbol *, NCMatrix, NCMatrix)
+      (symbol *, NCMatrix, NCRingElement)
+      (symbol *, NCRingElement, NCMatrix)
+      (symbol *, NCMatrix, RingElement)
+      (symbol *, NCMatrix, QQ)
+      (symbol *, NCMatrix, ZZ)
+      (symbol *, RingElement, NCMatrix)
+      (symbol *, QQ, NCMatrix)
+      (symbol *, ZZ, NCMatrix)
+      (symbol +, NCMatrix, NCMatrix)
+      (symbol -, NCMatrix, NCMatrix)
+      (symbol |, NCMatrix, NCMatrix)
+      (symbol ||, NCMatrix, NCMatrix)
+      (symbol //, NCMatrix, NCMatrix)
+      (symbol ==, NCMatrix, NCMatrix)
+      (symbol ==, NCMatrix, ZZ)
+      (symbol ==, ZZ, NCMatrix)
+      (symbol ^, NCMatrix, List)
+      (symbol _, NCMatrix, List)
+      (symbol ^, NCMatrix, ZZ)
+      (transpose, NCMatrix)
+      (lift, NCMatrix)
+      (ring, NCMatrix)
+      
    Headline
       Type of a matrix over a noncommutative ring.
    Description
@@ -127,6 +171,15 @@ doc ///
 doc ///
    Key
       NCRingElement
+      (degree, NCRingElement)
+      (ring, NCRingElement)
+      (terms, NCRingElement)
+      (support, NCRingElement)
+      (monomials, NCRingElement)
+      (leadMonomial,NCRingElement)
+      (leadCoefficient, NCRingElement)
+      (leadTerm, NCRingElement)
+      (isConstant, NCRingElement)
    Headline
       Type of an element in a noncommutative ring.
    Description
@@ -142,11 +195,14 @@ doc ///
       ncGroebnerBasis
       (ncGroebnerBasis,List)
       (ncGroebnerBasis,NCIdeal)
+      (generators, NCGroebnerBasis)
       gbFromOutputFile
       (gbFromOutputFile,NCPolynomialRing,String)
       twoSidedNCGroebnerBasisBergman
       (twoSidedNCGroebnerBasisBergman,List)
       (twoSidedNCGroebnerBasisBergman,NCIdeal)
+      NumModuleVars
+      [twoSidedNCGroebnerBasisBergman,NumModuleVars]
       CacheBergmanGB
       ClearDenominators
       InstallGB
@@ -189,9 +245,18 @@ doc ///
 
 doc ///
    Key
-      NCIdeal
       NCLeftIdeal
+      ncLeftIdeal
       NCRightIdeal
+      (ring, NCRightIdeal)
+      (ring, NCLeftIdeal)
+      (ncLeftIdeal,List)
+      (ncLeftIdeal,NCRingElement)
+      ncRightIdeal
+      (ncRightIdeal,List)
+      (ncRightIdeal,NCRingElement)
+      (generators, NCRightIdeal)
+      (generators, NCLeftIdeal)
    Headline
       Type of an ideal in a noncommutative ring.
    Description
@@ -201,16 +266,13 @@ doc ///
 
 doc ///
    Key
+      NCIdeal
       ncIdeal
       (ncIdeal,List)
       (ncIdeal,NCRingElement)
-      ncLeftIdeal
-      (ncLeftIdeal,List)
-      (ncLeftIdeal,NCRingElement)
-      ncRightIdeal
-      (ncRightIdeal,List)
-      (ncRightIdeal,NCRingElement)
-
+      (symbol +, NCIdeal, NCIdeal)
+      (ring, NCIdeal)
+      (generators, NCIdeal)
    Headline
       Creates an ideal in a noncommutative ring.
    Description
@@ -220,6 +282,38 @@ doc ///
         stuff
 ///
 
+
+doc ///
+   Key
+      (basis, ZZ, NCIdeal)
+      (basis, ZZ, NCRightIdeal)
+      (basis, ZZ, NCLeftIdeal)
+      (basis, ZZ, NCRing)
+   Headline
+      Determines whether the input defines a homogeneous object.
+   Description
+      Example
+      -- need to finish unit tests
+      Text
+        stuff
+///
+
+doc ///
+   Key
+      (isHomogeneous, NCIdeal)
+      (isHomogeneous, NCRightIdeal)
+      (isHomogeneous, NCLeftIdeal)
+      (isHomogeneous, NCRing)
+      (isHomogeneous, NCMatrix)
+      (isHomogeneous, NCRingElement)
+   Headline
+      Determines whether the input defines a homogeneous object.
+   Description
+      Example
+      -- need to finish unit tests
+      Text
+        stuff
+///
 
 doc ///
    Key

@@ -528,7 +528,7 @@ f2 = x*z + z*x - y^2
 f3 = z^2 - x*y - y*x
 I = ncIdeal {f1,f2,f3}
 B = A / I
-hs = hilbertBergman(B,DegreeLimit=>10)
+hs = hilbertBergman(B,DegreeLimit=>25)
 
 restart
 debug needsPackage "NCAlgebra"
@@ -540,6 +540,7 @@ f3 = z^2 - x*y - y*x
 I = ncIdeal {f1,f2,f3}
 B = A/I
 hs = hilbertBergman(B,DegreeLimit=>20)
+--------------------------------------------
 
 -----------
 -- this doesn't work since it is not homogeneous unless you use degree q = 0, which is not allowed.
@@ -765,9 +766,13 @@ restart
 debug needsPackage "NCAlgebra"
 A=QQ{a, b, c, d, e, f, g, h}
 -- this got very slow all of a sudden!
-I = gbFromOutputFile(A,"UghABCgb6.txt", ReturnIdeal=>true);
+I = gbFromOutputFile(A,"NCAlgebra/UghABCgb6.txt", ReturnIdeal=>true);
 Igb = ncGroebnerBasis I;
 B=A/I;
+M1 = ncMatrix {gens B};
+M2 = rightKernel(M1,1)
+--- call that takes too long!!!  Shouldn't call Bergman again for NF.
+M3 = rightKernel(M2,4)
 
 M2=ncMatrix{{-b,-f,-c,0,0,0,-g,0,0,0,0,-h,0,0,0,0},
     {a,0,c-f,0,0,0,0,d-g,0,0,0,e,e-h,0,0,0},
