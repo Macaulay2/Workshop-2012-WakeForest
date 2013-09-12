@@ -326,9 +326,13 @@ complex := (T,p) ->
 	       inducedMap(H, complex(H,i)), Shift => -P)
      )
 
-prune FilteredComplex := FilteredComplex => opts -> F -> 
-  new FilteredComplex from 
-  apply(keys F, p -> if class p =!= Symbol then p => prune F#p else p => F#p)
+-- Do we really want to prune a filtered complex??  What do we mean by a minimal presentation
+-- of a filtered complex??
+-- comment out for now.
+
+-- prune FilteredComplex := FilteredComplex => opts -> F -> 
+--  new FilteredComplex from 
+--  apply(keys F, p -> if class p =!= Symbol then p => prune F#p else p => F#p)
 
 --
 -- Pages and Sequences --
@@ -366,9 +370,7 @@ InfiniteSequence ^ ZZ := Page => (E,r) -> ("Hi" )
 PageMap = new Type of MutableHashTable
 PageMap.synonym = "page map"
 
--- spots might need to be improved.  This will work for now.
 
--- spots = method()
 PageMap _ List := Matrix => (f,i) ->  if f#?i then f#i else (
       de := f.degree;
       so := (f.source)_i;
@@ -394,7 +396,7 @@ net PageMap := f -> (
 	  stack v
 )
 
--- need to write PageMap _ List
+
 
 -- at present there are no constructors for pageMap
 --------------------------------------------------------------------------------
@@ -845,6 +847,36 @@ basis (List,SpectralSequencePage) := opts -> (deg,E) -> (
 
 beginDocumentation()
 
+undocumented {page, prunningMaps, spots, (degree, Page),
+    (symbol ^, InfiniteSequence, InfiniteNumber),
+    (symbol ^, InfiniteSequence, ZZ),
+    (symbol _, InfiniteSequence, InfiniteNumber),
+    (symbol ^, InfiniteSequence, ZZ),
+    (symbol _, InfiniteSequence, ZZ),
+    (net, FilteredComplex),
+    (net, InfiniteSequence),
+    (net, Page),
+    (net, PageMap),
+    (net, SpectralSequencePage),
+    (net, SpectralSequence),
+    (symbol _, Page, List),
+    (page, List, List, Page),
+    (page, SpectralSequencePage),
+    (symbol _, PageMap, List),
+    (ring, Page),
+    (spectralSequencePageMap, FilteredComplex, ZZ),
+    (spots, FilteredComplex),
+    (spots, PageMap),
+    (spots, SpectralSequencePageMap),
+    (support, SpectralSequencePage),
+   spots,  ReducedHomology, Shift, sourcePruningMap, targetPruningMap,
+   pageMap,
+   (describe, InfiniteSequence),
+   (describe, SpectralSequence),
+   (expression, InfiniteSequence),
+   (expression, SpectralSequence),
+   spectralSequencePageMap    
+    }
 
 document { 
   Key => SpectralSequences,
@@ -1879,7 +1911,7 @@ doc ///
      doc ///
      Key
      	  (symbol _, SpectralSequence, ZZ)
-	  (symbol _, SpectralSequence, InfiniteNumber)
+--	  (symbol _, SpectralSequence, InfiniteNumber)
      Headline
      	  the kth page of a spectral sequence
      Usage
@@ -1893,6 +1925,26 @@ doc ///
      	  Text 
 	      Returns the kth page of the spectral sequence.
      ///
+
+--doc ///
+--     Key
+--     	  (basis, ZZ, SpectralSequencePage)
+--	  (basis, List, SpectralSequencePage)
+--     Headline
+--     	  basis or generating set of all or part of a spectral sequence page
+--     Usage
+--     	  P = basis(n, E)
+--     Inputs
+--     	  n:ZZ
+--	  E:SpectralSequencePage
+--     Outputs
+ --    	  P:Page
+ --    Description
+--    	  Text 
+--	      Finds a basis or generating set for a given (multi) degree of 
+--	      every module on the spectral sequence page.	      
+  --   ///
+
      
      doc ///
      Key
