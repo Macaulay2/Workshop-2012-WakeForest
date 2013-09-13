@@ -648,14 +648,14 @@ ErMaps(FilteredComplex,ZZ,ZZ,ZZ) := Matrix => opts -> (K,p,q,r) -> (if opts.Prun
 -- compute the homology at the pq spot on the rth page.
 rpqHomology = method()
 
-rpqHomology(HashTable,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
+rpqHomology(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
       (ker(E^r .dd_{p,q})) / (image(E^r .dd_{p+r,q-r+1}) )
       )
 
 -- compute the isomorphism of the homology at the pq spot
 -- on the r-th page and the module on at the pq spot on the r+1-th page.
 rpqIsomorphism = method()
-rpqIsomorphism(HashTable,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
+rpqIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
     if E.Prune == false then 
 inducedMap(source (E^(r+1) .dd_{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filteredComplex _infinity _(p+q)))
     else
@@ -663,7 +663,7 @@ inducedMap(source (E^(r+1) .dd_{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filtere
   ) 
 
 rpqPruneIsomorphism = method()
-rpqPruneIsomorphism(HashTable,ZZ,ZZ,ZZ) := (E,p,q,r) -> (    
+rpqPruneIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (    
     M := rpqHomology(E,p,q,r);
     f := inducedMap(target (E^(r + 1) .dd_{p,q}) .cache.sourcePruningMap,
 	    M, (E^r .dd_{p,q}).cache.sourcePruningMap);
@@ -811,7 +811,7 @@ ProjectiveHilbertPolynomial - ZZ := (P, N) -> P - hilbertPolynomial N
 ZZ - ProjectiveHilbertPolynomial := (P,N) -> hilbertPolynomial P - N
 
 
-hilbertPolynomial(SpectralSequencePage) := Page => o -> (E) -> (
+hilbertPolynomial (SpectralSequencePage) := Page => o -> (E) -> (
     P := new Page;
     apply(spots E .dd, i -> P#i = hilbertPolynomial(E_i));
     P
@@ -832,6 +832,7 @@ basis (ZZ,SpectralSequencePage) := opts -> (deg,E) -> (
     apply(spots E.dd, i -> P#i = basis(deg,E_i));
     P
     )
+
 basis (List,SpectralSequencePage) := opts -> (deg,E) -> (
     P := new Page;
     apply(spots E.dd, i -> P#i = basis(deg,E_i));
@@ -840,8 +841,8 @@ basis (List,SpectralSequencePage) := opts -> (deg,E) -> (
 
 -----------------------------------------------------------
 -----------------------------------------------------------
------------------------------------------------------------------------
------------------------------------------------------------------------
+-----------------------------------------------------------
+-----------------------------------------------------------
 
 
 
@@ -869,37 +870,35 @@ undocumented {page, prunningMaps, spots, (degree, Page),
     (spots, PageMap),
     (spots, SpectralSequencePageMap),
     (support, SpectralSequencePage),
-   spots,  ReducedHomology, Shift, sourcePruningMap, targetPruningMap,
+   spots,  ReducedHomology, sourcePruningMap, targetPruningMap,
    pageMap,
    (describe, InfiniteSequence),
    (describe, SpectralSequence),
    (expression, InfiniteSequence),
    (expression, SpectralSequence),
-   spectralSequencePageMap    
+   spectralSequencePageMap,
+   (support,ChainComplex),
+   (truncate, ChainComplex,ZZ),
+   rpqIsomorphism, Shift,
+   prunningMaps, (prunningMaps, SpectralSequencePage)    
     }
 
 document { 
   Key => SpectralSequences,
   Headline => "a package for working with filtered complexes and spectral sequences",
-  "Every filtered chain complex determines a spectral sequence; 
+  "Every filtered chain complex determines a spectral sequence and 
   this correspondence is functorial.",
   PARA{},     
-  "This ", EM "Macaulay2", " package is designed to
-  to compute spectral sequences which arise from separated and exhaustive filtrations
-  of bounded chain complexes.",
- -- UL { 
-   -- {"David A. Cox, John B. Little, Hal Schenck, ", 
-     -- HREF("http://www.cs.amherst.edu/~dac/toric.html", EM "Toric varieties"), 
-     -- ", Graduate Studies in Mathematics 124. American Mathematical Society, 
-     -- Providence RI, 2011.  ISBN: 978-0-8218-4817-7"},
+  "This ", EM "Macaulay2", " package allows users to compute spectral sequences which arise from separated and exhaustive filtrations
+   bounded chain complexes.",
  -- SUBSECTION "Contributors",
  -- "The following people have generously contributed code or worked on our code.",
  -- UL {
-   -- {HREF("http://www.math.duke.edu/~psa/","Paul Aspinwall")},
-   -- {HREF("http://www2.math.su.se/~cberkesc/","Christine Berkesch")},
-   -- {HREF("http://page.mi.fu-berlin.de/rbirkner/indexen.htm","René Birkner")},
-   -- {HREF("http://www.warwick.ac.uk/staff/D.Maclagan/","Diane Maclagan")},
-   -- {HREF("http://www.math.uiuc.edu/~asecele2/","Alexandra Seceleanu")},},
+   -- {HREF("","")},
+   -- {HREF("","")},
+   -- {HREF("","")},
+   -- {HREF("","")},
+   -- {HREF("","")},},
   SUBSECTION "Some examples which illustrate this package",
   UL {
     TO "Computing the Serre Spectral Sequence associated to a Hopf Fibration",
@@ -908,6 +907,678 @@ document {
     TO "Spectral sequences and non-Koszul syzygies",
     TO "A spectral sequence which fails to degenerate quickly"},
   }
+
+--------------------------------------------
+-- Documentation of methods and functions --
+--------------------------------------------
+
+--
+-- Types
+--
+
+    doc ///
+     Key
+     	  FilteredComplex
+     Headline
+     	  the type of all filtered complexes
+     Description
+     	  Text	 
+	     This is a data type for storing information associated to separated and exhaustive filtrations of bounded chain complexes.
+	     For an overview of how to create and manipulate filtered complexes 
+	     see @TO"filtered complexes"@.	  
+	     For an overview of how to create and manipulate spectral sequences see
+	     @TO"spectral sequences"@.	    
+	     For an overview of how to create and manipulate spectral sequence pages see
+	     @TO"spectral sequence page"@.
+///
+
+doc ///
+     Key
+     	  SpectralSequencePage
+     Headline
+     	  the type of all spectral sequence pages
+     Description
+     	  Text
+	       This is a data type for working with spectral sequence pages.	  
+	       For an overview of how to create and manipulate filtered complexes 
+	       see @TO"filtered complexes"@.	  
+	       For an overview of how to create and manipulate spectral sequences see
+	       @TO"spectral sequences"@.	    
+	       For an overview of how to create and manipulate spectral sequence pages see
+	       @TO"spectral sequence page"@.
+///	       
+
+doc ///
+     Key
+     	  InfiniteSequence
+     Headline
+     	  the type of all spectral sequence pages
+     Description
+     	  Text
+	       This is a data type for working with infinte sequences.
+///	       
+
+
+doc ///
+     Key
+     	  Page
+     Headline
+     	  the type of all pages
+     Description
+     	  Text
+	       This is a data type for working with doubly indexed tables.
+///	       
+
+doc ///
+     Key
+     	  PageMap
+     Headline
+     	  the type of all page maps
+     Description
+     	  Text
+	       This is a data type for working with doubly indexed maps.
+///	       
+
+doc ///
+     Key
+     	  SpectralSequencePageMap
+     Headline
+     	  the type of all spectral sequence page maps
+     Description
+     	  Text
+	       This is a data type for working with the maps on a spectral sequence page.
+///	       
+
+
+--- functions and methods --- 
+  doc ///
+          Key
+       	    filteredComplex
+          Headline
+	       make a filtered complex
+     	  Usage
+	       K = filteredComplex L
+	  Inputs
+	       L:List       	  
+		    	 or 
+	       L:ChainComplex 
+	       	    	 or
+     	       L:SpectralSequence			 
+	       ReducedHomology => Boolean	       	  	    
+	       Shift => ZZ
+	  Outputs 
+	       K: FilteredComplex
+	  Description
+	       Text
+	       	    This is the primative filtered complex constructor.     
+///	       
+
+  doc ///
+     Key 
+      (filteredComplex, List)
+     Headline 
+      obtain a filtered complex from a list of chain complex maps or a nested list of simplicial complexes
+     Usage 
+       K = filteredComplex L 
+     Inputs 
+	  L: List
+	  ReducedHomology => Boolean
+	  Shift => ZZ
+     Outputs 
+       K: FilteredComplex
+     Description
+      	  Text  
+       	    We can make a filtered complex from a list of chain complex maps as follows.
+	    We first need to load the relavent packages.
+          Example
+	       needsPackage "SpectralSequences"	    
+	       needsPackage "ChainComplexExtras"
+     	  Text
+	       We then make a chain complex.
+     	  Example	       	 
+	       R = QQ[x,y,z,w]
+	       d2 = matrix(R,{{1},{0}})
+	       d1 = matrix(R,{{0,1}})
+	       C = chainComplex({d1,d2}) 
+	  Text
+	      We now make the modules of the another chain complex which we will label D.
+	  Example      
+	       D_2 = image matrix(R,{{1}})
+	       D_1 = image matrix(R,{{1,0},{0,0}})
+	       D_0 = image matrix(R,{{1}})
+	       D = chainComplex({inducedMap(D_0,D_1,C.dd_1),inducedMap(D_1,D_2,C.dd_2)})
+     	  Text
+	       Now make a chain complex map.
+     	  Example	       	     
+	       d = chainComplexMap(C,D,apply(spots C, i-> inducedMap(C_i,D_i,id_C _i)))
+	       isChainComplexMap d
+	       d == chainComplexMap(C,D,{inducedMap(C_0,D_0,id_(C_0)),inducedMap(C_1,D_1,id_(C_1)),inducedMap(C_2,D_2,id_(C_2))})
+     	  Text
+	       We now make the modules of another chain complex which we will label E.	     
+     	  Example	      
+               E_2 = image matrix(R,{{0}})
+	       E_1 = image matrix(R,{{1,0},{0,0}})
+	       E_0 = image matrix(R,{{1}})
+	       E = chainComplex({inducedMap(E_0,E_1,C.dd_1),inducedMap(E_1,E_2,C.dd_2)})
+     	  Text
+	       Now make a chain complex map.
+     	  Example	      	       
+	       e = chainComplexMap(C,E,apply(spots C, i->inducedMap(C_i,D_i, id_C _i)))
+     	  Text 
+	       Now make a filtered complex from a list of chain complex maps.
+     	  Example	       	       
+	       K = filteredComplex({d,e})
+	  Text
+	     We can make a filtered complex, with a specified minimum filtration degree
+             from a list of ChainComplexMaps by using the Shift option.
+      	  Example	       	     
+	       L = filteredComplex({d,e},Shift => 1)
+	       M = filteredComplex({d,e},Shift => -1)	      	    
+	  Text
+	    We can make a filtered complex from a nested list of simplicial 
+     	    complexes as follows
+     	  Example
+	      needsPackage "SimplicialComplexes"; 	     
+	      D = simplicialComplex {x*y*z, x*y, y*z, w*z}
+	      E = simplicialComplex {x*y, w}
+	      F = simplicialComplex {x,w}
+	      K = filteredComplex{D,E,F}
+	  Text
+     	     If we want the resulting complexes to correspond to the non-reduced homology
+     	     of the simpicial complexes we can do the following.
+     	  Example 
+	     filteredComplex({D,E,F}, ReducedHomology => false)
+     SeeAlso
+     	  "maps between chain complexes"
+///
+
+doc ///
+     Key 
+          (filteredComplex, ChainComplex)
+     Headline 
+         obtain a filtered complex from a chain complex
+     Usage 
+         K = filteredComplex C 
+     Inputs 
+	  C: ChainComplex
+-- these options don't do anything for this constructor.
+	  ReducedHomology => Boolean	       	  	    
+	  Shift => ZZ
+     Outputs
+          K: FilteredComplex
+     Description	  
+     	  Text
+	     Produces the filtered complex obtained by succesively truncating the complex.
+	  Example 
+	    needsPackage "SpectralSequences"
+	    A = QQ[x,y]
+	    C = koszul vars A
+	    K = filteredComplex C
+     SeeAlso 
+	  (truncate, ChainComplex,ZZ)
+    /// 
+
+doc ///
+     Key 
+          (filteredComplex, SpectralSequence)
+     Headline 
+         obtain the filtered complex associated to the spectral sequence
+     Usage 
+         K = filteredComplex E 
+     Inputs 
+	  E: SpectralSequence
+-- these options don't do anything for this constructor.
+	  ReducedHomology => Boolean	       	  	    
+	  Shift => ZZ
+     Outputs
+          K: FilteredComplex
+     Description	  
+     	  Text
+	     Produces the filtered complex which determined the spectral sequence.
+	  Example 
+	    needsPackage "SpectralSequences";
+	    A = QQ[a,b,c,d];
+	    D = simplicialComplex {a*d*c, a*b, a*c, b*c};
+	    F2D = D
+	    F1D = simplicialComplex {a*c, d}
+	    F0D = simplicialComplex {a,d}
+	    K = filteredComplex {F2D, F1D, F0D}
+	    E = spectralSequence(K) ;
+    	    C = filteredComplex E ;
+    /// 
+
+
+doc ///
+     Key
+  	  (basis, List, SpectralSequencePage)
+	  (basis, ZZ, SpectralSequencePage)
+     Headline
+     	  generators of a particular
+     Usage
+     	  B = basis(L, E)
+     Inputs
+     	  L:List
+	  E:SpectralSequencePage
+     Outputs
+     	 B:Matrix
+     	 -- The method oputs a page.  However I get an error if I try to document it like this
+	 -- B:Page
+     Description
+     	  Text 
+	       Returns generators for the requested (multi)degree of the spectral sequence page.
+    ///
+  
+doc ///
+     Key
+  	  (hilbertPolynomial, SpectralSequencePage)
+     Headline
+     	  the Hilbert polynomial of a spectral sequence page
+     Usage
+     	  H = hilbertPolynomial(E)
+     Inputs
+	  E:SpectralSequencePage
+     Outputs
+     	 H:Page
+     	 -- The method oputs a page.  However I get an error if I try to document it like this
+	 -- B:Page
+     Description
+     	  Text 
+	       Returns the Hilbert polynomials of all modules of the spectral sequence page
+    ///
+
+doc ///
+     Key
+  	  (chainComplex, FilteredComplex)
+     Headline
+     	  the ambient chain complex of a filtered complex
+     Usage
+     	  C = chainComplex K
+     Inputs
+     	  K:FilteredComplex
+     Outputs
+     	  C:ChainComplex
+     Description
+     	  Text 
+	       Returns the ambient chain complex of the filtered complex.	       
+    ///
+
+doc ///
+     Key
+  	  (minimalPresentation, SpectralSequence)
+	  (prune, SpectralSequence)
+     Headline
+     	  a minimal presentation of a spectral sequence
+     Usage
+     	  E = minimalPresentation e
+     Inputs
+     	  e:SpectralSequence
+     Outputs
+     	  E:SpectralSequence
+     Description
+     	  Text 
+	       Returns a minimal presentation of the spectral sequence.
+    ///
+
+doc ///
+     Key
+  	  (minimalPresentation, SpectralSequencePage)
+	  (prune, SpectralSequencePage)
+     Headline
+     	  a minimal presentation of a spectral sequence page
+     Usage
+     	  E = minimalPresentation e
+     Inputs
+     	  e:SpectralSequencePage
+     Outputs
+     	  E:SpectralSequencePage
+     Description
+     	  Text 
+	       Returns a minimal presentation of the spectral sequence page.
+    ///
+
+
+doc ///
+     Key
+     	  (spectralSequence, FilteredComplex)
+	  spectralSequence
+     Headline
+     	  construct a spectral sequence from a filtered complex
+     Usage
+     	  E = spectralSequence K
+     Inputs
+     	  K:FilteredComplex
+	       A filtered complex
+     Outputs
+     	  E:SpectralSequence
+     Description
+     	  Text 
+	       Returns the spectral sequence associated to the filtered complex.
+    ///
+    doc ///
+     Key
+     	   (Hom, FilteredComplex, ChainComplex)
+	   (Hom, ChainComplex, FilteredComplex)
+     Headline
+     	  the filtered complex Hom complex
+     Usage
+     	  f = Hom(K,C)
+     Inputs
+     	  K:FilteredComplex
+	  C:ChainComplex
+     Outputs
+     	  f:FilteredComplex
+     Description
+     	  Text 
+	      Returns the filtrations of the Hom complex determined by the double complex  
+    ///
+    doc ///
+     Key
+     	   (chainComplex, SpectralSequence)
+     Headline
+     	  the underlying chain complex of a Spectral Sequence
+     Usage
+     	  K = chainComplex E
+     Inputs
+     	  E:SpectralSequence
+     Outputs
+     	  K:ChainComplex
+     Description
+     	  Text 
+	       Returns the underlying chain complex of a spectral sequence.
+    ///
+
+ doc ///
+     Key
+     	  (spectralSequencePage, FilteredComplex, ZZ)
+	  spectralSequencePage
+     Headline
+     	  construct a spectral sequence page from a filtered complex
+     Usage
+     	  E = spectralSequencePage(K,r)
+     Inputs
+     	  K:FilteredComplex
+	       A filtered complex
+	  r:ZZ
+     Outputs
+     	  E:SpectralSequencePage
+     Description
+     	  Text 
+	       Returns the rth page of the spectral sequence determined by K.
+     ///
+ 
+    
+     doc ///
+     Key
+     	  (symbol _, SpectralSequence, ZZ)
+--	  (symbol _, SpectralSequence, InfiniteNumber)
+     Headline
+     	  the kth page of a spectral sequence
+     Usage
+     	  P = E_k
+     Inputs
+     	  E:SpectralSequence
+	  k:ZZ
+     Outputs
+     	  P: SpectralSequencePage
+     Description
+     	  Text 
+	      Returns the kth page of the spectral sequence.
+     ///
+
+     doc ///
+     Key
+     	  (symbol _, SpectralSequencePageMap, List)
+     Headline
+     	  The {p,q}th map on of a spectral sequence page 
+     Usage
+     	  d = D _L
+     Inputs
+     	  D:SpectralSequencePageMap
+	  L:List
+	      A list L = \{p,q\} of integers.
+     Outputs
+     	  d: Matrix
+     Description
+     	  Text 
+	      Returns the p,q th map on a spectral sequence page.
+     ///
+
+doc ///
+     Key
+     	  (symbol ^, SpectralSequencePageMap, List)
+     Headline
+     	  the {p,q}th map on of a spectral sequence page 
+     Usage
+     	  d = D ^L
+     Inputs
+     	  D:SpectralSequencePageMap
+	  L:List
+	      A list L = p,q of integers.
+     Outputs
+     	  d: Matrix
+     Description
+     	  Text 
+	      Returns the p,q th map on a spectral sequence page.
+     ///
+         
+     
+doc ///
+     Key
+     	  (symbol ^, SpectralSequence, ZZ)
+--	  (symbol ^, SpectralSequence, InfiniteNumber)
+     Headline
+     	  the kth page of a spectral sequence
+     Usage
+     	  P = E^k
+     Inputs
+     	  E:SpectralSequence
+	  k:ZZ
+     Outputs
+     	  P: SpectralSequencePage
+     Description
+     	  Text 
+	      Returns the kth page of the spectral sequence.
+     ///
+
+doc ///
+     Key
+--     	  (symbol ^, SpectralSequence, ZZ)
+	  (symbol ^, SpectralSequence, InfiniteNumber)
+	  (symbol _, SpectralSequence, InfiniteNumber)
+     Headline
+     	  the infinity page of a spectral sequence
+     Usage
+     	  P = E^k
+     Inputs
+     	  E:SpectralSequence
+	  k:InfiniteNumber
+     Outputs
+     	  P: Page
+     Description
+     	  Text 
+	      Returns the infinity page a spectral sequence.
+     ///
+
+  doc ///
+     Key
+     	  (symbol ^, SpectralSequencePage, List)
+     Headline
+     	  the module in the i,j position on the page
+     Usage
+     	  M = P^L
+     Inputs
+     	  P:SpectralSequencePage
+	  L:List
+	       A list L = \{i,j\} of integers
+     Outputs
+     	  M:Module
+     Description
+     	  Text 
+	       Returns the module in the \{i,j\}   position in the spectral sequence page. 
+	       (Using cohomological indexing conventions.)  
+    ///
+
+doc ///
+     Key
+     	  (symbol _, SpectralSequencePage, List)
+	  
+     Headline
+     	  the module in the i,j position on the page
+     Usage
+     	  M = P_L
+     Inputs
+     	  P:SpectralSequencePage
+	  L:List
+	       A list L = \{i,j\} of integers
+     Outputs
+     	  M:Module
+     Description
+     	  Text 
+	       Returns the module in the \{i,j\} \ position in the spectral sequence page. 
+	       (Using homological indexing conventions.)  
+    ///
+
+
+doc ///
+     Key
+     	   (symbol **, ChainComplex, FilteredComplex)
+	   (symbol **, FilteredComplex, ChainComplex)
+     Headline
+     	  filtered tensor product of complexes
+     Usage
+     	  KK = C ** K
+	  KK = K ** C
+     Inputs
+     	  C:ChainComplex
+	  K:FilteredComplex
+     Outputs
+     	  KK:FilteredComplex
+     Description
+     	  Text 
+	       Returns the two filtrations of K_infty ** C determined by the double complex
+    ///
+ doc ///
+     Key
+     	  (inducedMap, FilteredComplex, ZZ)
+     Headline
+     	  the i th inclusion map in a filtered complex
+     Usage
+     	  f = inducedMap(K,i)
+     Inputs
+     	  K:FilteredComplex
+	  i:ZZ
+     Outputs
+     	  f:ChainComplexMap
+     Description
+     	  Text 
+	       Returns the chain complex map specifying the inclusion of the i piece 
+	       of the filtered
+	       complex to the ambeint chain complex.
+    ///
+doc ///
+     Key
+          (symbol _, FilteredComplex, ZZ)
+	  (symbol _, FilteredComplex, InfiniteNumber)
+     Headline
+     	  the filtered pieces
+     Usage
+     	  C = K _ j
+     Inputs
+     	  K:FilteredComplex
+	  j:ZZ 
+	       an integer, infinity, or -infinity
+     Outputs
+     	  C:ChainComplex
+     Description
+     	  Text 
+	       Returns the chain complex in (homological) filtration degree j.  
+	       The relationship	$K _ j = K ^{(-j)}$ holds.       
+     SeeAlso    
+     	  (symbol ^, FilteredComplex, ZZ)           
+    ///
+
+doc ///
+     Key
+          (symbol ^, FilteredComplex, ZZ)
+	  (symbol ^, FilteredComplex, InfiniteNumber)
+     Headline
+     	  the filtered pieces
+     Usage
+     	  C = K ^  j
+     Inputs
+     	  K:FilteredComplex
+	  j:ZZ 
+	       an integer, infinity, or -infinity
+     Outputs
+     	  C:ChainComplex
+     Description
+     	  Text 
+	       Returns the chain complex in (cohomological) filtration degree j.
+	       The relationship $K ^ j = K _{(-j)}$ holds.
+     SeeAlso
+     	  (symbol _, FilteredComplex, ZZ)	       
+    ///
+
+
+  doc ///
+     Key
+     	  connectingMorphism
+     Headline
+          use spectral sequences to compute connecting morphisms
+     Usage 
+         g = connectingMorphism(f, n)
+     Inputs
+         f:ChainComplexMap
+	 n:ZZ	 
+     Outputs
+         g:Matrix 
+     Description
+          Text
+	       Given a morphism $f: A \rightarrow B$ of chain complexes
+	       returns the connecting map $H_{n+1}( coker f) \rightarrow H_n (im f)$.
+///
+
+doc ///
+     Key
+     	  (connectingMorphism, ChainComplexMap,ZZ)
+     Headline
+          use spectral sequences to compute connecting morphisms
+     Usage 
+         g = connectingMorphism(f, n)
+     Inputs
+         f:ChainComplexMap
+	 n:ZZ	 
+     Outputs
+         g:Matrix 
+     Description
+          Text
+	       Given a morphism $f: A \rightarrow B$ of chain complexes
+	       returns the connecting map $H_{n+1}( coker f) \rightarrow H_n (im f)$.
+///
+
+doc ///
+     Key
+     	  (rpqIsomorphism, SpectralSequence, ZZ, ZZ, ZZ)
+     Headline
+          the homology isomorphism
+     Usage 
+         g = rpqIsomorphism(SpectralSequence, ZZ, ZZ, ZZ)
+     Inputs
+         E:SpectralSequence
+	 p:ZZ
+	 q:ZZ
+	 r:ZZ	 
+     Outputs
+         g:Matrix 
+     Description
+          Text
+	       Computes the isomorphism $ker d^r_{p,q} / image d^r_{p + r, q - r + 1} \rightarrow E^r_{p,q}$
+///
+
+
+---
+-- Examples
+---
 
   doc ///
     Key
@@ -1073,7 +1744,7 @@ document {
      Key
        "Spectral sequences and hypercohomology calculations"
      Headline
-     	  illustrating how to use spectral sequences to compute hypercohomology
+     	  using spectral sequences to compute hypercohomology
      Description
      	  Text
 	       If $\mathcal{F}$ is a coherent sheaf on a smooth toric variety $X$,
@@ -1325,33 +1996,6 @@ doc ///
 
 
 
---
--- Types
---
-
-    doc ///
-     Key
-     	  FilteredComplex
-     Headline
-     	  the type of all FilteredComplexes
-     Description
-     	  Text	 
-	     This is a data type for storing information associated to separated and exhaustive filtrations of bounded chain complexes.
-	     For an overview of how to create and manipulate filtered complexes 
-	     see @TO"filtered complexes"@.	  
-	     For an overview of how to create and manipulate spectral sequences see
-	     @TO"spectral sequences"@.	    
-	     For an overview of how to create and manipulate spectral sequence pages see
-	     @TO"spectral sequence page"@.
-	     
-	  --     The type FilteredComplex is a data type for storing information associated
-	  --     to separated and exhaustive filtrations of a chain complex.
-     	     -- A filtered complex is a nested family of chain complexes 
-	     -- $K : \dots \supseteq K_n \supseteq K_{n-1} \supseteq  
-	     -- \dots$ such that the following holds:	      
-	     -- 1.  There exists an integer $m$ such that $K_n = K_m$ for all $n \geq m$.	    
-	     -- 2.  There exists an integer $l$ such that $K_n = 0$ for all $n \leq l$.
-///
 
 doc ///
      Key
@@ -1546,33 +2190,6 @@ doc ///
      	  how to create and manipluate spectral sequences
 ///	  	  
 	       
-doc ///
-     Key
-     	  SpectralSequencePage
-     Headline
-     	  the type of all spectral sequence pages
-     Description
-     	  Text
-	       This is a data type for working with spectral sequence pages.	  
---	       The SpectralSequences package provides effective computation of spectral sequences
---	       associated to separated and exhaustive filtrations of a chain complex.	    
-	       For an overview of how to create and manipulate filtered complexes 
-	       see @TO"filtered complexes"@.	  
-	       For an overview of how to create and manipulate spectral sequences see
-	       @TO"spectral sequences"@.	    
-	       For an overview of how to create and manipulate spectral sequence pages see
-	       @TO"spectral sequence page"@.
-	    
-	       
-	    --   A spectral sequence page (or sheet) with page number r (for a 
-	--	    fixed integer r $\geq$ 0) is 
-	  --     collection $E^r:=\{E^r_{p,q}, d^r_{p,q}\}_{p,q\in \ZZ}$ such that:	       
-	    --   1. $E^r_{p,q}$ are
-	     --  modules,	       
-	      -- 2. $d^r_{p,q}:E^r_{p,q}\rightarrow E^r_{p-r,q+r-1}$ are homomorphisms,	       
-	     --  3. and $d^r_{p,q} d^r_{p+r,q-r+1}=0$.
-	       
-///	       
 
 doc ///
      Key
@@ -1584,633 +2201,6 @@ doc ///
 	       Here we explain how to create and manipluate spectral sequence pages.
 ///	  	  
 
---- functions and methods ---
-
--- truncate a filtered complex documentation --
-doc ///
-     Key
-     	  (truncate, ChainComplex,ZZ)
-     Headline
-     	  truncate a filitered complex.
-     Usage
-     	  K = truncate(C,p)
-     Inputs
-     	  C:ChainComplex
-	  p:ZZ
-     Outputs
-     	  K:ChainComplex  
-     Description
-     	  Text 
-	    
-	 Example
-	  A=QQ[x,y]  
-	  I=ideal vars A 
-	  C=res I
-	  truncate(C,0)
-	  truncate(C,-1)
-	  truncate(C,-2)
-	  truncate(C,-3)
-	  truncate(C,1)
-	  truncate(C,2)
-	  truncate(C,3)
-	  truncate(C,10)
-	  truncate(C,-10)
-	  	  
-  ///
-  
---doc ///
---     Key
---     	  (spectralSequencePageMap, FilteredChainComplex, ZZ)
---     Headline
---     	  The maps on a spectral sequence page
---     Usage
---     	  d = spectralSequencePageMap(K,r)
---     Inputs
---     	  K:FilteredChainComplex
---	  r:ZZ
---     Outputs
---     	  d:SpectralSequencePageMap
---     Description
---     	  Text 
---	      Returns the maps on the rth page of the spectral sequence determined by K.	  
---  ///
-
-
- 
-  doc ///
-          Key
-       	    filteredComplex
-          Headline
-	       make a filtered complex
-     	  Usage
-	       K=filteredComplex L
-	  Inputs
-	       L:List       	  
-		    	 or 
-	       L:ChainComplex 
-	       	    	 or
-     	       L:SpectralSequence			 
-	       ReducedHomology =>Boolean	       	  	    
-	       Shift => ZZ
-	  Outputs 
-	       K: FilteredComplex
-	  Description
-	       Text
-	       	    This is the primative filteredComplex constructor.
-	       
-///	       
-
-  doc ///
-     Key 
-      (filteredComplex,List)
-     Headline 
-      obtain a filtered complex from a list of chain complex maps or a nested list of simplicial complexes
-     Usage 
-       K = filteredComplex L 
-     Inputs 
-	  L: List
-	  ReducedHomology =>Boolean
-	  Shift => ZZ
-     Outputs 
-       K: FilteredComplex
-     Description
-      	  Text  
-       	    We can make a filtered complex from a list of chain complex maps as follows.
-	    We first need to load the relavent packages.
-          Example
-	       needsPackage "SpectralSequences"	    
-	       needsPackage "ChainComplexExtras"
-     	  Text
-	       We then make a chain complex.
-     	  Example	       	 
-	       R = QQ[x,y,z,w]
-	       d2 = matrix(R,{{1},{0}})
-	       d1 = matrix(R,{{0,1}})
-	       C = chainComplex({d1,d2}) 
-	  Text
-	      We now make the modules of the another chain complex which we will label D.
-	  Example      
-	       D_2 = image matrix(R,{{1}})
-	       D_1 = image matrix(R,{{1,0},{0,0}})
-	       D_0 = image matrix(R,{{1}})
-	       D = chainComplex({inducedMap(D_0,D_1,C.dd_1),inducedMap(D_1,D_2,C.dd_2)})
-     	  Text
-	       Now make a chain complex map.
-     	  Example	       	     
-	       d = chainComplexMap(C,D,apply(spots C, i-> inducedMap(C_i,D_i,id_C _i)))
-	       isChainComplexMap d
-	       d == chainComplexMap(C,D,{inducedMap(C_0,D_0,id_(C_0)),inducedMap(C_1,D_1,id_(C_1)),inducedMap(C_2,D_2,id_(C_2))})
-     	  Text
-	       We now make the modules of another chain complex which we will label E.	     
-     	  Example	      
-               E_2 = image matrix(R,{{0}})
-	       E_1 = image matrix(R,{{1,0},{0,0}})
-	       E_0 = image matrix(R,{{1}})
-	       E = chainComplex({inducedMap(E_0,E_1,C.dd_1),inducedMap(E_1,E_2,C.dd_2)})
-     	  Text
-	       Now make a chain complex map.
-     	  Example	      	       
-	       e = chainComplexMap(C,E,apply(spots C, i->inducedMap(C_i,D_i, id_C _i)))
-     	  Text 
-	       Now make a filtered complex from a list of chain complex maps.
-     	  Example	       	       
-	       K = filteredComplex({d,e})
-	  Text
-	     We can make a filtered complex, with a specified minimum filtration degree
-             from a list of ChainComplexMaps by using the Shift option.
-      	  Example	       	     
-	       L = filteredComplex({d,e},Shift =>1)
-	       M = filteredComplex({d,e},Shift =>-1)	      	    
-	  Text
-	    We can make a filtered complex from a nested list of simplicial 
-     	    complexes as follows
-     	  Example
-	      needsPackage "SimplicialComplexes"; 	     
-	      D = simplicialComplex {x*y*z, x*y, y*z, w*z}
-	      E = simplicialComplex {x*y, w}
-	      F = simplicialComplex {x,w}
-	      K = filteredComplex{D,E,F}
-	  Text
-     	     If we want the resulting complexes to correspond to the non-reduced homology
-     	     of the simpicial complexes we can do the following.
-     	  Example 
-	     filteredComplex({D,E,F}, ReducedHomology => false)
-     SeeAlso
-     	  "maps between chain complexes"
-///
-
-doc ///
-     Key 
-          (filteredComplex,ChainComplex)
-     Headline 
-         obtain a filtered complex from a chain complex
-     Usage 
-         K = filteredComplex C 
-     Inputs 
-	  C: ChainComplex
--- these options don't do anything for this constructor.
-	  ReducedHomology =>Boolean	       	  	    
-	  Shift => ZZ
-     Outputs
-          K: FilteredComplex
-     Description	  
-     	  Text
-	     Produces the filtered complex obtained by succesively truncating the complex.
-	  Example 
-	    needsPackage "SpectralSequences"
-	    A = QQ[x,y]
-	    C = koszul vars A
-	    K = filteredComplex C
-     SeeAlso 
-	  (truncate, ChainComplex,ZZ)
-	  
-    /// 
-
-doc ///
-     Key 
-          (filteredComplex,SpectralSequence)
-     Headline 
-         obtain the filtered complex associated to the spectral sequence
-     Usage 
-         K = filteredComplex E 
-     Inputs 
-	  E: SpectralSequence
--- these options don't do anything for this constructor.
-	  ReducedHomology => Boolean	       	  	    
-	  Shift => ZZ
-     Outputs
-          K: FilteredComplex
-     Description	  
-     	  Text
-	     Produces the filtered complex which determined the spectral sequence.
-	  Example 
-	    needsPackage "SpectralSequences";
-	    A = QQ[a,b,c,d];
-	    D = simplicialComplex {a*d*c, a*b, a*c, b*c};
-	    F2D = D
-	    F1D = simplicialComplex {a*c, d}
-	    F0D = simplicialComplex {a,d}
-	    K = filteredComplex {F2D, F1D, F0D}
-	    E = spectralSequence(K) ;
-    	    C = filteredComplex E ;
-    /// 
-
-
-doc ///
-     Key
-  	  (chainComplex, FilteredComplex)
-     Headline
-     	  The ambient chain complex of a filtered complex
-     Usage
-     	  C = chainComplex K
-     Inputs
-     	  K:FilteredComplex
-     Outputs
-     	  C:ChainComplex
-     Description
-     	  Text 
-	       Returns the ambient chain complex of the filtered complex.
-	       
-    ///
-  
-doc ///
-     Key
-     	  (spectralSequence, FilteredComplex)
-	  spectralSequence
-     Headline
-     	  construct a spectralSequence from a filtered complex
-     Usage
-     	  E = spectralSequence K
-     Inputs
-     	  K:FilteredComplex
-	       A filtered complex
-     Outputs
-     	  E:SpectralSequence
-     Description
-     	  Text 
-	       Returns the spectral sequence associated to the filtered complex.
-    ///
-    doc ///
-     Key
-     	   (Hom, FilteredComplex, ChainComplex)
-	   (Hom, ChainComplex, FilteredComplex)
-     Headline
-     	  the filtered complex Hom complex
-     Usage
-     	  f = Hom(K,C)
-     Inputs
-     	  K:FilteredComplex
-	  C:ChainComplex
-     Outputs
-     	  f:FilteredComplex
-     Description
-     	  Text 
-	      Returns the filtrations of the Hom complex determined by the double complex  
-    ///
-    doc ///
-     Key
-     	   (chainComplex, SpectralSequence)
-     Headline
-     	  the underlying chain complex of a Spectral Sequence
-     Usage
-     	  K = chainComplex E
-     Inputs
-     	  E:SpectralSequence
-     Outputs
-     	  K:ChainComplex
-     Description
-     	  Text 
-	       Returns the underlying chain complex of a spectral sequence.
-    ///
-
- doc ///
-     Key
-     	  (spectralSequencePage, FilteredComplex, ZZ)
-	  spectralSequencePage
-     Headline
-     	  construct a SpectralSequencePage from a filtered complex
-     Usage
-     	  E = spectralSequencePage(K,r)
-     Inputs
-     	  K:FilteredComplex
-	       A filtered complex
-	  r:ZZ
-     Outputs
-     	  E:SpectralSequencePage
-     Description
-     	  Text 
-	       Returns the rth page of the spectral sequence determined by K.
-     ///
- 
-doc ///
-     Key 
-          (support,ChainComplex)
-     Headline 
-         compute the support of a chain complex
-     Usage 
-         L = support C 
-     Inputs 
-	  C: ChainComplex
-     Outputs
-          L: List
-     Description	  
-     	  Text
-	     Produces a list consisting of those the homological degrees for which 
-	     the corresponding module is non-zero.
-	  Example 
-	    needsPackage "SpectralSequences"
-	    A = QQ[x,y]
-	    C = res ideal vars A
-	    L = support C
-	    D = koszul vars A
-	    M = support D
-     SeeAlso
-      	  (spots, ChainComplex) 
-    /// 
-    
-     doc ///
-     Key
-     	  (symbol _, SpectralSequence, ZZ)
---	  (symbol _, SpectralSequence, InfiniteNumber)
-     Headline
-     	  the kth page of a spectral sequence
-     Usage
-     	  P = E_k
-     Inputs
-     	  E:SpectralSequence
-	  k:ZZ
-     Outputs
-     	  P: SpectralSequencePage
-     Description
-     	  Text 
-	      Returns the kth page of the spectral sequence.
-     ///
-
---doc ///
---     Key
---     	  (basis, ZZ, SpectralSequencePage)
---	  (basis, List, SpectralSequencePage)
---     Headline
---     	  basis or generating set of all or part of a spectral sequence page
---     Usage
---     	  P = basis(n, E)
---     Inputs
---     	  n:ZZ
---	  E:SpectralSequencePage
---     Outputs
- --    	  P:Page
- --    Description
---    	  Text 
---	      Finds a basis or generating set for a given (multi) degree of 
---	      every module on the spectral sequence page.	      
-  --   ///
-
-     
-     doc ///
-     Key
-     	  (symbol _, SpectralSequencePageMap, List)
-     Headline
-     	  The {p,q}th map on of a spectral sequence page 
-     Usage
-     	  d = D _L
-     Inputs
-     	  D:SpectralSequencePageMap
-	  L:List
-	      A list L = \{p,q\} of integers.
-     Outputs
-     	  d: Matrix
-     Description
-     	  Text 
-	      Returns the \{p,q\}th map on a spectral sequence page.
-     ///
-
-doc ///
-     Key
-     	  (symbol ^, SpectralSequencePageMap, List)
-     Headline
-     	  the {p,q}th map on of a spectral sequence page 
-     Usage
-     	  d = D ^L
-     Inputs
-     	  D:SpectralSequencePageMap
-	  L:List
-	      A list L = \{p,q\} of integers.
-     Outputs
-     	  d: Matrix
-     Description
-     	  Text 
-	      Returns the \{p,q\}th map on a spectral sequence page.
-     ///
-         
-     
-doc ///
-     Key
-     	  (symbol ^, SpectralSequence, ZZ)
-	  (symbol ^, SpectralSequence, InfiniteNumber)
-     Headline
-     	  the kth page of a spectral sequence
-     Usage
-     	  P = E^k
-     Inputs
-     	  E:SpectralSequence
-	  k:ZZ
-     Outputs
-     	  P: SpectralSequencePage
-     Description
-     	  Text 
-	      Returns the kth page of the spectral sequence.
-     ///
-
-
-  doc ///
-     Key
-     	  (symbol ^, SpectralSequencePage, List)
-     Headline
-     	  the module in the i,j position on the page
-     Usage
-     	  M = P^L
-     Inputs
-     	  P:SpectralSequencePage
-	  L:List
-	       A list L = \{i,j\} of integers
-     Outputs
-     	  M:Module
-     Description
-     	  Text 
-	       Returns the module in the \{i,j\}   position in the spectral sequence page. 
-	       (Using cohomological indexing conventions.)  
-    ///
-
-doc ///
-     Key
-     	  (symbol _, SpectralSequencePage, List)
-	  
-     Headline
-     	  the module in the i,j position on the page
-     Usage
-     	  M = P_L
-     Inputs
-     	  P:SpectralSequencePage
-	  L:List
-	       A list L = \{i,j\} of integers
-     Outputs
-     	  M:Module
-     Description
-     	  Text 
-	       Returns the module in the \{i,j\} \ position in the spectral sequence page. 
-	       (Using homological indexing conventions.)  
-    ///
-
-
-doc ///
-     Key
-     	   (symbol **, ChainComplex, FilteredComplex)
-	   (symbol **, FilteredComplex, ChainComplex)
-     Headline
-     	  filtered Tensor product of complexes
-     Usage
-     	  KK = C ** K
-	  KK = K ** C
-     Inputs
-     	  C:ChainComplex
-	  K:FilteredComplex
-     Outputs
-     	  KK:FilteredComplex
-     Description
-     	  Text 
-	       Returns the two filtrations of K_infty ** C determined by the double complex
-    ///
- doc ///
-     Key
-     	  (inducedMap, FilteredComplex, ZZ)
-     Headline
-     	  the ith inclusion map in a filtered complex
-     Usage
-     	  f = inducedMap(K,i)
-     Inputs
-     	  K:FilteredComplex
-	  i:ZZ
-     Outputs
-     	  f:ChainComplexMap
-     Description
-     	  Text 
-	       Returns the chain complex map specifying the inclusion of the i piece 
-	       of the filtered
-	       complex to the ambeint chain complex.
-    ///
-doc ///
-     Key
-          (symbol _, FilteredComplex, ZZ)
-	  (symbol _, FilteredComplex, InfiniteNumber)
-     Headline
-     	  the filtered pieces
-     Usage
-     	  C = K _ j
-     Inputs
-     	  K:FilteredComplex
-	  j:ZZ 
-	       an integer, infinity, or -infinity
-     Outputs
-     	  C:ChainComplex
-     Description
-     	  Text 
-	       Returns the chain complex in (homological) filtration degree j.  
-	       The relationship	$K _ j = K ^{(-j)}$ holds.
-	       
-     SeeAlso    
-     	  (symbol ^, FilteredComplex, ZZ)           
-    ///
-
-doc ///
-     Key
-          (symbol ^, FilteredComplex, ZZ)
-	  (symbol ^, FilteredComplex, InfiniteNumber)
-     Headline
-     	  the filtered pieces
-     Usage
-     	  C = K ^  j
-     Inputs
-     	  K:FilteredComplex
-	  j:ZZ 
-	       an integer, infinity, or -infinity
-     Outputs
-     	  C:ChainComplex
-     Description
-     	  Text 
-	       Returns the chain complex in (cohomological) filtration degree j.
-	       The relationship $K ^ j = K _{(-j)}$ holds.
-     SeeAlso
-     	  (symbol _, FilteredComplex, ZZ)	       
-    ///
-
-
-  --  doc ///
- --    Key
- -- 	  (spots, FilteredComplex)
-  --   Headline
-   --  	  the sorted filtration degrees of a filtered complex 
-   --  Usage
-    -- 	  L = spots H
-    -- Inputs
-   --  	  H: FilteredComplex 
-	       
-   --  Outputs
-    -- 	  L:List
-    -- Description
-     --	  Text 
---	       Returns the sorted filtration degrees of a filtered complex
---	       which the computer explicitly remembers. 	    	      
---///
-  
- -- doc ///
-   --  Key
-  --	  (spots, ChainComplex)
-    -- Headline
-     --	  the sorted filtration degrees of a chain complex 
-   --  Usage
-   --  	  L = spots H
-   --  Inputs
-   --  	  H: ChainComplex 
-	       
---     Outputs
-  --   	  L:List
-    -- Description
-     --	  Text 
---	       Returns the sorted homological degrees of a chain complex 
---	       which the computer explicitly remembers. 	    	      
---///
- -- doc ///
-   --  Key
-  --	  spots
-    -- Headline
-     --	  the sorted integer keys of a hash table.
-    -- Usage
-    -- 	  L = spots H
-    -- Inputs
-    -- 	  H: HashTable
-	       
-     --Outputs
-     --	  L:List
-     --Description
-     --	  Text 
---	       Returns the sorted integer keys of a hash table.	      
---///
-
-  doc ///
-     Key
-     	  connectingMorphism
-     Headline
-          use spectral sequences to compute connecting morphisms
-     Usage 
-         g = connectingMorphism(f, n)
-     Inputs
-         f:ChainComplexMap
-	 n:ZZ	 
-     Outputs
-         g:Matrix 
-     Description
-          Text
-	       Given a morphism $f: A \rightarrow B$ of chain complexes
-	       returns the connecting map $H_{n+1}( coker f) \rightarrow H_n (im f)$.
-///
-
-doc ///
-     Key
-     	  (connectingMorphism, ChainComplexMap,ZZ)
-     Headline
-          use spectral sequences to compute connecting morphisms
-     Usage 
-         g = connectingMorphism(f, n)
-     Inputs
-         f:ChainComplexMap
-	 n:ZZ	 
-     Outputs
-         g:Matrix 
-     Description
-          Text
-	       Given a morphism $f: A \rightarrow B$ of chain complexes
-	       returns the connecting map $H_{n+1}( coker f) \rightarrow H_n (im f)$.
-///
 
 TEST ///
 restart;
