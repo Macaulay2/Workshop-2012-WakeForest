@@ -107,9 +107,6 @@ spots = method()
 spots ChainComplex := List => (
   C -> sort select(keys C,i -> class i === ZZ))
 
-spots FilteredComplex := List => (
-  K -> sort select(keys K, i -> class i === ZZ))
-
 max HashTable := K -> max spots K
 min HashTable := K -> min spots K
 
@@ -163,6 +160,9 @@ filteredComplex(List) := FilteredComplex => opts -> L -> (
  P := {(#maps-opts.Shift) => C} | apply (#maps,  p -> #maps - (p+1) -opts.Shift => image maps#p);
   if (last P)#1 != Z then P = P | {(-1-opts.Shift) => Z};
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
+
+spots FilteredComplex := List => (
+  K -> sort select(keys K, i -> class i === ZZ))
 
 
 FilteredComplex _ InfiniteNumber :=
@@ -387,7 +387,7 @@ Page = new Type of MutableHashTable
 Page.synonym = "Page"
 Page.GlobalAssignHook = globalAssignFunction
 Page.GlobalReleaseHook = globalReleaseFunction
-describe E := E -> net expression E
+describe Page := E -> net expression E
 
 new Page := Page => (cl) -> (
      C := newClass(Page,new MutableHashTable); -- sigh
@@ -612,7 +612,7 @@ pruneEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
      f 
      )
 
-ErMaps = method(Options =>{Prune => false})
+ErMaps = method(Options => {Prune => false})
 ErMaps(FilteredComplex,ZZ,ZZ,ZZ) := Matrix => opts -> (K,p,q,r) -> (if opts.Prune == false then
      epqrMaps(K,p,q,r)
      else   pruneEpqrMaps(K,p,q,r))
@@ -648,7 +648,7 @@ rpqPruneIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
 SpectralSequencePageMap = new Type of PageMap
 SpectralSequencePageMap.synonym = "spectral sequence page map"
 SpectralSequencePageMap.synonym = "spectral sequence page map"
-SpectralSequencePageMao.GlobalAssignHook = globalAssignFunction
+SpectralSequencePageMap.GlobalAssignHook = globalAssignFunction
 SpectralSequencePageMap.GlobalReleaseHook = globalReleaseFunction
 describe SpectralSequencePageMap := d -> net expression d
 
