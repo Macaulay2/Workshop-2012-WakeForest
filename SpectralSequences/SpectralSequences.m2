@@ -101,6 +101,21 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 -- CODE
 --------------------------------------------------------------------------------
 
+-- since things are mutable we don't want to cache spots
+spots = method()
+
+spots ChainComplex := List => (
+  C -> sort select(keys C,i -> class i === ZZ))
+
+spots FilteredComplex := List => (
+  K -> sort select(keys K, i -> class i === ZZ))
+
+max HashTable := K -> max spots K
+min HashTable := K -> min spots K
+
+support ChainComplex := List => (
+     C -> sort select (spots C, i -> C_i != 0))
+
 -------------------------------------------------------------------------------------
 -- filtered complexes
 -------------------------------------------------------------------------------------
@@ -139,36 +154,15 @@ filteredComplex(List) := FilteredComplex => opts -> L -> (
  )
   else (
     maps = L;
-    if any(#maps, p-> class maps#p =!= ChainComplexMap) then (
+    if any(#maps, p -> class maps#p =!= ChainComplexMap) then (
       error "expected sequence of chain complexes");
     C = target maps#0;-- By default the ambient chain complex is target of first map.
-    if any(#maps, p-> target maps#p != C) then (
+    if any(#maps, p -> target maps#p != C) then (
       error "expected all map to have the same target"));     
   Z := image map(C, C, i -> 0*id_(C#i)); -- make zero subcomplex as a subcomplex of ambient complex 
  P := {(#maps-opts.Shift) => C} | apply (#maps,  p -> #maps - (p+1) -opts.Shift => image maps#p);
   if (last P)#1 != Z then P = P | {(-1-opts.Shift) => Z};
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
-
--- we need to be careful with spots here!!  
--- ChainComplexes are new types of GradedModules, which are new types of MutableHashTables.
--- As such the keys of a ChainComplex are mutable.  So we probably do not
--- want to cache spots of a chain complex.
--- The keys of a FilteredComplex are not mutable, so it is OK to cache them.
--- Similarly, the support of a chain complex should not be cached, as the keys of the chain complex are not mutable.
-
-spots = method()
-
-spots ChainComplex := List => (
-  C -> sort select(keys C,i -> class i === ZZ))
-
-spots FilteredComplex := List => (
-  K -> sort select(keys K, i -> class i === ZZ))
-
-max HashTable := K -> max spots K
-min HashTable := K -> min spots K
-
-support ChainComplex := List => (
-     C -> sort select (spots C, i -> C_i != 0))
 
 
 FilteredComplex _ InfiniteNumber :=
@@ -199,12 +193,7 @@ net FilteredComplex := K -> (
 -- constructing filtered complexes ---------------------------------------------
 --------------------------------------------------------------------------------
 
-
--- Can/Should we add options??  e.g. ker and image to return
--- the truncated complex with ker d_p in degree 0 and zero in degrees > p 
--- or the truncated complex with image d_{p+1} in degree p and zero in degrees < p ??
-
--- the following method truncates a chain complex 
+-- truncate a chain complex at a given homological degree 
 truncate(ChainComplex,ZZ):= (C,q) ->( 
      if q == 0 then return C 
      else (
@@ -225,7 +214,6 @@ truncate(ChainComplex,ZZ):= (C,q) ->(
      K)
 
 
-
 -- make the filtered complex associated to the "naive truncation of a chain complex"
 filteredComplex ChainComplex := FilteredComplex => opts-> C->( complete C; 
      	       n := max support C;
@@ -240,13 +228,11 @@ filteredComplex ChainComplex := FilteredComplex => opts-> C->( complete C;
 
 
 --produce the "x-filtration" of the tensor product complex.
-
 FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> ( 
      xTensormodules := (p,q,T)->(apply( (T#q).cache.indices,
      i-> if (i#0) <=p then  
      image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
      else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
-
      xTensorComplex := (T,p) ->(K := new ChainComplex;
 		    K.ring = T.ring;
 		    for i from min T to max T do (
@@ -257,7 +243,6 @@ FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> (
 			 directSum(xTensormodules(p,i,T)),T.dd_i));
        	       K
 		    );
-
      	  N := max support K_infinity;
 	  P := min support K_infinity;
 	  T := K_infinity ** C;
@@ -265,7 +250,6 @@ filteredComplex(reverse for i from P to (N-1) list
      inducedMap(T, xTensorComplex(T,i)), Shift => -P)
 	  )
 
- 
 --produce the "y-filtration" of the tensor product complex.
 ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> ( 
      yTensorModules := (p,q,T)->(apply( (T#q).cache.indices,
@@ -329,7 +313,6 @@ complex := (T,p) ->
 -- Do we really want to prune a filtered complex??  What do we mean by a minimal presentation
 -- of a filtered complex??
 -- comment out for now.
-
 -- prune FilteredComplex := FilteredComplex => opts -> F -> 
 --  new FilteredComplex from 
 --  apply(keys F, p -> if class p =!= Symbol then p => prune F#p else p => F#p)
@@ -338,6 +321,7 @@ complex := (T,p) ->
 -- Pages and Sequences --
 --
 
+-- should we use infinite sequence or Book??
 InfiniteSequence = new Type of MutableHashTable
 InfiniteSequence.synonym = "infinite sequence"
 InfiniteSequence.GlobalAssignHook = globalAssignFunction
@@ -353,9 +337,6 @@ expression InfiniteSequence := E -> stack(
 
 ----------------------------------------------------------------------------
 
--- should we use infinite sequence or Book??
---InfiniteSequence ^ ZZ := Page => (E,r) -> E#r
-
 InfiniteSequence _ InfiniteNumber :=
 InfiniteSequence _ ZZ := Page => (E,r) -> ( if E#?r then E^r else E.infinity )
 
@@ -369,7 +350,9 @@ InfiniteSequence ^ ZZ := Page => (E,r) -> ("Hi" )
 
 PageMap = new Type of MutableHashTable
 PageMap.synonym = "page map"
-
+PageMap.GlobalAssignHook = globalAssignFunction
+PageMap.GlobalReleaseHook = globalReleaseFunction
+describe PageMap := d -> net expression d
 
 PageMap _ List := Matrix => (f,i) ->  if f#?i then f#i else (
       de := f.degree;
@@ -396,8 +379,6 @@ net PageMap := f -> (
 	  stack v
 )
 
-
-
 -- at present there are no constructors for pageMap
 --------------------------------------------------------------------------------
 -- Pages
@@ -406,7 +387,7 @@ Page = new Type of MutableHashTable
 Page.synonym = "Page"
 Page.GlobalAssignHook = globalAssignFunction
 Page.GlobalReleaseHook = globalReleaseFunction
-
+describe E := E -> net expression E
 
 new Page := Page => (cl) -> (
      C := newClass(Page,new MutableHashTable); -- sigh
@@ -436,7 +417,7 @@ makeRow(ZZ,ZZ,ZZ,Page) := (maxP,minP,q,E)->(L := {};
 
 Page _ List := (E,L) -> ( if E#?L then E#L else (ring E)^0 )
 
--- at present there are no constructors for Page.
+-- at present there are no advanced constructors for Page.
 
 page = method (Options => {Prune => false})
 
@@ -530,7 +511,7 @@ SpectralSequencePage = new Type of Page
 SpectralSequencePage.synonym = "spectral sequence page"
 SpectralSequencePage.GlobalAssignHook = globalAssignFunction
 SpectralSequencePage.GlobalReleaseHook = globalReleaseFunction
-
+describe SpectralSequencePage := E -> net expression E
 
 spectralSequencePage = method (Options =>{Prune => false})
 
@@ -548,8 +529,8 @@ minimalPresentation SpectralSequencePage := prune SpectralSequencePage := Spectr
      spectralSequencePage(E.filteredComplex, E.number, Prune =>true)
      )
 
-SpectralSequencePage _ List := Module => (E,i)-> ( source(E.dd _i) 
-		    )
+SpectralSequencePage _ List := Module => (E,i)-> ( source(E.dd _i) )
+		    
 
 SpectralSequencePage ^ List := Module => (E,i)-> (E_(-i))    
 
@@ -588,34 +569,27 @@ support SpectralSequencePage := E ->(
 -- individual terms on a page of a spectral sequence
 -- WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS.
 ---------------------------------------------------------------------
--- By default of the primitative homological constructor above, 
---the maximum integer key
+-- By default the maximum integer key
 -- of the filtered complex corresponds to the ambient complex.
--- This is used in the formula's below.
-
--- the formula's below are the homological versions of the ones in I.2.4 of Danilov's 
--- treatment of spectral sequences in Shafarevich's Encyolpaedia of 
+-- This is used in the formulas below.
+-- the formulas below are the homological versions of the ones in I.2.4 of Danilov's 
+-- treatment of spectral sequences in Shafarevich's Encyclopedia of 
 -- Math Algebraic Geometry II.  
 -- In any event it is easy enough to prove directly that they satisfy the requirments 
 -- for a spectral sequence.
 
 zpq := (K,p,q,r)->(
 ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1), 
-     K_p _ (p+q), K_(infinity).dd_(p+q), Verify => false)
---     K_p _ (p+q), K_(infinity).dd_(p+q))
-     )
-
-
+     K_p _ (p+q), K_(infinity).dd_(p+q), Verify => false))
 
 bpq := (K,p,q,r) ->(
-    ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q))
-      )
+    ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q)))
 
 -- compute the pq modules on the rth page
 epq = method()
-epq(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r)->(  ((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)) )
+epq(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r)->(((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)))
 
--- the following will compute the pq maps on the rth page explicitly.
+-- the pq maps on the rth page.
 epqrMaps = method()
 epqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
      inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),(K_infinity).dd_(p+q), Verify => false))
@@ -623,8 +597,8 @@ epqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
 
 -- prune the pq maps on the rth page. --
 --  "sourcePruningMap",
---"targetPruningMap"
---- the above can probably just be replaced by prune d --- except I want to cache the 
+-- "targetPruningMap"
+--- the following could be replaced by prune d --- except I want to cache the 
 -- pruning maps.  --
 
 pruneEpqrMaps = method()
@@ -639,20 +613,17 @@ pruneEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
      )
 
 ErMaps = method(Options =>{Prune => false})
-
-
 ErMaps(FilteredComplex,ZZ,ZZ,ZZ) := Matrix => opts -> (K,p,q,r) -> (if opts.Prune == false then
      epqrMaps(K,p,q,r)
      else   pruneEpqrMaps(K,p,q,r))
 
--- compute the homology at the pq spot on the rth page.
+-- the homology at the pq spot on the rth page.
 rpqHomology = method()
-
 rpqHomology(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
       (ker(E^r .dd_{p,q})) / (image(E^r .dd_{p+r,q-r+1}) )
       )
 
--- compute the isomorphism of the homology at the pq spot
+-- the isomorphism of the homology at the pq spot
 -- on the r-th page and the module on at the pq spot on the r+1-th page.
 rpqIsomorphism = method()
 rpqIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
@@ -670,9 +641,17 @@ rpqPruneIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
 	inverse((E^(r + 1) .dd_{p,q}) .cache.sourcePruningMap) * f    
   ) 
 
+---
+-- Spectral Sequence Page Maps
+---
 
 SpectralSequencePageMap = new Type of PageMap
 SpectralSequencePageMap.synonym = "spectral sequence page map"
+SpectralSequencePageMap.synonym = "spectral sequence page map"
+SpectralSequencePageMao.GlobalAssignHook = globalAssignFunction
+SpectralSequencePageMap.GlobalReleaseHook = globalReleaseFunction
+describe SpectralSequencePageMap := d -> net expression d
+
 
 spots SpectralSequencePageMap := List => (
   K ->  select(keys K, i -> class i === List))
@@ -691,7 +670,6 @@ spectralSequencePageMap(FilteredComplex,ZZ) := SpectralSequencePageMap => opts -
 		    symbol filteredComplex => K, 
 		    symbol Prune => opts.Prune})
       )
-
 
 
 SpectralSequencePageMap _ List := Matrix => (d,i)-> (if (d)#?i then d#i 
@@ -809,7 +787,7 @@ ProjectiveHilbertPolynomial + ZZ := (P, N) -> P + hilbertPolynomial N
 ZZ + ProjectiveHilbertPolynomial := (P,N) -> hilbertPolynomial P + N
 ProjectiveHilbertPolynomial - ZZ := (P, N) -> P - hilbertPolynomial N
 ZZ - ProjectiveHilbertPolynomial := (P,N) -> hilbertPolynomial P - N
-
+---
 
 hilbertPolynomial (SpectralSequencePage) := Page => o -> (E) -> (
     P := new Page;
@@ -886,11 +864,9 @@ undocumented {page, prunningMaps, spots, (degree, Page),
 document { 
   Key => SpectralSequences,
   Headline => "a package for working with filtered complexes and spectral sequences",
-  "Every filtered chain complex determines a spectral sequence and 
-  this correspondence is functorial.",
-  PARA{},     
-  "This ", EM "Macaulay2", " package allows users to compute spectral sequences which arise from separated and exhaustive filtrations
-   bounded chain complexes.",
+  "Every filtered chain complex determines a spectral sequence;     
+  this ", EM "Macaulay2", " package allows users to compute spectral sequences which arise from separated and exhaustive filtrations
+  of bounded chain complexes.",
  -- SUBSECTION "Contributors",
  -- "The following people have generously contributed code or worked on our code.",
  -- UL {
@@ -952,7 +928,7 @@ doc ///
      Key
      	  InfiniteSequence
      Headline
-     	  the type of all spectral sequence pages
+     	  the type of all infinite sequences
      Description
      	  Text
 	       This is a data type for working with infinte sequences.
@@ -1153,7 +1129,7 @@ doc ///
   	  (basis, List, SpectralSequencePage)
 	  (basis, ZZ, SpectralSequencePage)
      Headline
-     	  generators of a particular
+     	  generators of a particular degree
      Usage
      	  B = basis(L, E)
      Inputs
@@ -1259,7 +1235,7 @@ doc ///
      	   (Hom, FilteredComplex, ChainComplex)
 	   (Hom, ChainComplex, FilteredComplex)
      Headline
-     	  the filtered complex Hom complex
+     	  the filtered Hom complex
      Usage
      	  f = Hom(K,C)
      Inputs
@@ -1329,7 +1305,7 @@ doc ///
      Key
      	  (symbol _, SpectralSequencePageMap, List)
      Headline
-     	  The {p,q}th map on of a spectral sequence page 
+     	  The p,q th map on of a spectral sequence page 
      Usage
      	  d = D _L
      Inputs
@@ -1347,13 +1323,13 @@ doc ///
      Key
      	  (symbol ^, SpectralSequencePageMap, List)
      Headline
-     	  the {p,q}th map on of a spectral sequence page 
+     	  the p,q th map on of a spectral sequence page 
      Usage
      	  d = D ^L
      Inputs
      	  D:SpectralSequencePageMap
 	  L:List
-	      A list L = p,q of integers.
+	      A list L = \{p,q\} of integers.
      Outputs
      	  d: Matrix
      Description
@@ -1698,7 +1674,7 @@ doc ///
 	       If $0 \rightarrow A \rightarrow B \rightarrow C \rightarrow 0$ is a 
 	       short exact sequence of chain complexes, then the connecting morphism
 	       $H_i(C) \rightarrow H_{i - 1}(A)$ can relized as a suitable map
-	       on the $E^1$ of a spectral sequences determined by a suitably defined
+	       on the $E^1$ of a spectral sequence determined by a suitably defined
 	       two step filtration of $B$.
 	       
 	       In this example, we illustrate how these constructions can be used to 
