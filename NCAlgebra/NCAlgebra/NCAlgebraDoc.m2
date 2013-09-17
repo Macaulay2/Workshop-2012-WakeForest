@@ -5,7 +5,10 @@ undocumented {(net,NCGroebnerBasis),
 	      (net,NCRing),
 	      (net,NCRingElement),
 	      (net,NCMatrix),
+	      (net,NCRingMap),
+	      (expression, NCMatrix),
 	      (net,NCQuotientRing),
+	      functionHash,
 	      (NewFromMethod,NCPolynomialRing,List),
 	      (NewFromMethod,NCQuotientRing,List)}
 
@@ -31,6 +34,10 @@ doc ///
    Key
       NCRing
       (generators, NCRing)
+      (numgens, NCRing)
+      (isCommutative, NCRing)
+      (use, NCRing)
+      (coefficientRing, NCRing)
    Headline
       Type of a noncommutative ring.
    Description
@@ -40,16 +47,52 @@ doc ///
       Text
          In addition to defining a ring as a quotient of a @ TO NCPolynomialRing @, some common ways to create
 	 NCRings include @ TO skewPolynomialRing @, @ TO endomorphismRing @, and @ TO oreExtension @.      
+      
+         Let's consider a three dimensional Sklyanin algebra.  We first define the tensor algebra:
       Example
          A = QQ{x,y,z}
+      Text
+         Then input the defining relations, and put them in an ideal:
+      Example
 	 f = y*z + z*y - x^2
 	 g = x*z + z*x - y^2
 	 h = z^2 - x*y - y*x
      	 I=ncIdeal{f,g,h}
+      Text
+         Next, define the quotient ring (as well as try a few functions on this new ring).  Note that
+	 when the quotient ring is defined, a call is made to Bergman to compute the Groebner basis
+	 of I (out to a certain degree, should the Groebner basis be infinite).
+      Example
 	 B=A/I
-	 C = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w}) 
+	 generators B
+	 numgens B
+	 isCommutative B
+	 coefficientRing B
+      Text
+	 As we can see, x is an element of B.
+      Example
+         x
+      Text
+         If we define a new ring containing x, x is now part of that new ring
+      Example
+      	 C = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w}) 
+         x
+      Text
+         We can 'go back' to B using the command @ TO (use, NCRing) @.
+      Example
+	 use B
+	 x
+	 use C
+      Text
+         We can also create an Ore extension.  First define a @ TO NCRingMap @ with @ TO ncMap @.
+      Example
 	 sigma = ncMap(C,C,{y,z,w,x})
+      Text
+         Then call the command @ TO oreExtension @.
+      Example
 	 D = oreExtension(C,sigma,a)
+	 generators D
+	 numgens D
    SeeAlso
       "Basic operations on noncommutative algebras"
 ///
@@ -113,7 +156,7 @@ doc ///
       (transpose, NCMatrix)
       (lift, NCMatrix)
       (ring, NCMatrix)
-      
+      (entries, NCMatrix)
    Headline
       Type of a matrix over a noncommutative ring.
    Description
@@ -174,12 +217,17 @@ doc ///
       (degree, NCRingElement)
       (ring, NCRingElement)
       (terms, NCRingElement)
+      (size, NCRingElement)
       (support, NCRingElement)
       (monomials, NCRingElement)
       (leadMonomial,NCRingElement)
       (leadCoefficient, NCRingElement)
       (leadTerm, NCRingElement)
       (isConstant, NCRingElement)
+      (toString, NCRingElement)
+      (symbol *, NCRingElement, List)
+      (symbol *, List, NCRingElement)
+      (baseName, NCRingElement)
    Headline
       Type of an element in a noncommutative ring.
    Description
@@ -195,6 +243,9 @@ doc ///
       ncGroebnerBasis
       (ncGroebnerBasis,List)
       (ncGroebnerBasis,NCIdeal)
+      (symbol %, NCRingElement, NCGroebnerBasis)
+      (symbol %, QQ, NCGroebnerBasis)
+      (symbol %, ZZ, NCGroebnerBasis)
       (generators, NCGroebnerBasis)
       gbFromOutputFile
       (gbFromOutputFile,NCPolynomialRing,String)
@@ -257,6 +308,8 @@ doc ///
       (ncRightIdeal,NCRingElement)
       (generators, NCRightIdeal)
       (generators, NCLeftIdeal)
+      (symbol +, NCRightIdeal, NCRightIdeal)
+      (symbol +, NCLeftIdeal, NCLeftIdeal)
    Headline
       Type of an ideal in a noncommutative ring.
    Description
@@ -354,6 +407,7 @@ doc ///
       assignDegrees
       (assignDegrees,NCMatrix)
       (assignDegrees,NCMatrix,List,List)
+      [rightKernelBergman,DegreeLimit]
    Headline
       Methods for computing kernels of matrices over noncommutative rings using Bergman
    Description
@@ -425,6 +479,8 @@ doc ///
       normalElements
  --     (normalElements, NCRingMap, ZZ) -- does this key exist?
       (normalElements, NCQuotientRing, ZZ, Symbol, Symbol)
+      (normalElements, NCRingMap, ZZ)
+      (isNormal, NCRingElement)
    Headline
       Computes normal monomials and components of the variety of normal elements in a given degree.
    Description
@@ -443,8 +499,6 @@ doc ///
       Text
         This is the type of a matrix over a noncommutative graded ring.
 ///
-
-
 
 doc ///
    Key
@@ -466,6 +520,8 @@ doc ///
       rightKernel
       (rightKernel,NCMatrix,ZZ)
       NumberOfBins
+      [rightKernel,NumberOfBins]
+      [rightKernel,Verbosity]
    Headline
       Method for computing kernels of matrices over noncommutative rings in a given degree without using Bergman
    Description
@@ -503,6 +559,7 @@ doc ///
       sparseCoeffs
       (sparseCoeffs,List)
       (sparseCoeffs,NCRingElement)
+      [sparseCoeffs,Monomials]
    Headline
       Converts ring elements into vectors over the coefficient ring.
    Description
@@ -520,12 +577,23 @@ doc ///
 
 doc ///
    Key
+      NCRingMap
       ncMap
       (ncMap,NCRing,NCRing,List)
       (ncMap,Ring,NCRing,List)
-      functionHash
+      (ambient, NCRingMap)
+      (isHomogeneous, NCRingMap)
+      (isWellDefined, NCRingMap)
+      (symbol /, List, NCRingMap)
+      (matrix, NCRingMap)
+      (symbol @@, NCRingMap, NCRingMap)
+      (symbol SPACE, NCRingMap, NCRingElement)
+      (symbol SPACE, NCRingMap, NCMatrix)
+      (symbol _, NCRingMap, ZZ)
+      (source, NCRingMap)
+      (target, NCRingMap)
    Headline
-      Creates a map of noncommutative rings.
+      Creates a map from a non-commutative ring.
    Description
       Text
          stuff
@@ -534,7 +602,10 @@ doc ///
 doc ///
    Key
       oreExtension
-      oreIdeal
+      (oreExtension,NCRing,NCRingMap,NCRingMap,NCRingElement)
+      (oreExtension,NCRing,NCRingMap,NCRingMap,Symbol)
+      (oreExtension,NCRing,NCRingMap,NCRingElement)
+      (oreExtension,NCRing,NCRingMap,Symbol)
    Headline
       Creates an Ore extension of a noncommutative ring.
    Description
@@ -542,6 +613,24 @@ doc ///
          B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
 	 sigma = ncMap(B,B,{y,z,w,x})
 	 C = oreExtension(B,sigma,a)
+      Text
+         stuff
+///
+
+doc ///
+   Key
+      oreIdeal
+      (oreIdeal,NCRing,NCRingMap,NCRingMap,NCRingElement)
+      (oreIdeal,NCRing,NCRingMap,NCRingMap,Symbol)
+      (oreIdeal,NCRing,NCRingMap,NCRingElement)
+      (oreIdeal,NCRing,NCRingMap,Symbol)
+   Headline
+      Creates the defining ideal of an Ore extension of a noncommutative ring.
+   Description
+      Example
+         B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
+	 sigma = ncMap(B,B,{y,z,w,x})
+	 C = oreIdeal(B,sigma,a)
       Text
          stuff
 ///
@@ -632,6 +721,10 @@ doc ///
       normalFormBergman
       (normalFormBergman,List,NCGroebnerBasis)
       (normalFormBergman,NCRingElement,NCGroebnerBasis)
+      [normalFormBergman,CacheBergmanGB]
+      [normalFormBergman,ClearDenominators]
+      [normalFormBergman,NumModuleVars]
+      [normalFormBergman,DegreeLimit]
    Headline
       Calls Bergman for a normal form calculation.
    Description
@@ -654,6 +747,7 @@ doc ///
    Key
       hilbertBergman
       (hilbertBergman, NCQuotientRing)
+      [hilbertBergman,DegreeLimit]
       DegreeVariable
    Headline
       Calls Bergman for a Hilbert series calculation.

@@ -14,7 +14,7 @@ newPackage("NCAlgebra",
      )
 
 export { NCRing, NCQuotientRing, NCPolynomialRing,
-         NCRingElement, isReduced,
+         NCRingMap, NCRingElement, isReduced,
          NCGroebnerBasis, ncGroebnerBasis, maxNCGBDegree, minNCGBDegree,
          NCIdeal, NCLeftIdeal, NCRightIdeal,
          ncIdeal, ncLeftIdeal, ncRightIdeal,
@@ -58,6 +58,7 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
 protect generatorSymbols
 protect weights
 protect monList
+protect functionHash
 --- options for non-exported functions
 protect BergmanRing
 protect MaxLoops
