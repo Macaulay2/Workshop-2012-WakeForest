@@ -75,9 +75,9 @@ MAXDEG = 40
 MAXSIZE = 40
 
 -- Andy's bergman path
---bergmanPath = "/usr/local/bergman1.001"
+bergmanPath = "/usr/local/bergman1.001"
 -- Frank's bergman path
-bergmanPath = "~/bergman"
+--bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
@@ -956,7 +956,7 @@ sparseCoeffs List := opts -> L -> (
   l:=length L;
   if l>1 then
      for i from 1 to l-1 do (
-        if not isHomogeneous L#i then error "Extected a homogeneous element.";
+        if not isHomogeneous L#i then error "Expected a homogeneous element.";
         if (L#i) !=0 then (
         termsF = pairs (L#i).terms;
         newCoeffs := (apply(termsF, (k,v) -> if v!=0 then (mons#k,i) => v));
@@ -980,6 +980,68 @@ sparseCoeffs List := opts -> L -> (
 --   coeffs
    --(ncMatrix {mons},coeffs)
 --)
+
+
+{*
+simplify NCRingElement := x -> (
+   B:=x.ring;
+   if class B === NCQuotientRing then (
+       I := B.ideal;
+       Igb := (I.cache)#gb;
+       A:=I.ring
+   )
+   else (
+       << "Element of the free algebra." << endl; 
+       return x
+   )
+   if not isHomogeneous x then error "Expected a homogeneous element.";    
+   d := degree x;
+   basA := flatten entries basis(d,A);       -- take a basis in the parent ring
+   NFbasA := normalFormBergman(basA, Igb);   -- put all elements in normal form
+   xInA := promote(x,A)%Igb;
+   Xterms := x.terms;
+   -- now I want to start looping: I'll find the element that matches x the best and subtract it.
+   -- then I'll repeat until either no improvements can be made or 100 passes.
+   -- maybe we should keep track of each thing so we can ultimately determine which is shortest.
+   
+   thisX := xInA;
+   nextX := thisX;
+   improvementVector := 0;
+   maxImprovement :=0;
+   bestPositions := 0;
+   i=0;
+   
+   
+   while i<100   do (
+   i=i+1;
+   improvementVector = apply(NFbasA, y-> ( 
+	Ykeys := keys y.terms;
+	preMatches := select(Ykeys, k-> (Xterms)#?k);
+	goods := select(preMatches, k-> ((y#k/abs(y#k)) == (Xterms#k)/abs(Xterms#k)));
+        2*(#goods)-(#preMatches)
+	));
+
+   -- want to grab the y with the largest absolute improvement. If it's positive, subtract. etc.
+   
+   maxImprovement = max(apply(improvementVector, y->abs(y)));
+   if maxImprovement == 0 then (
+	<< "Done." << endl
+   ) else (
+   bestPositions = position(improvementVector, y-> abs(y)==maxImprovement);
+   -- I'm worried we could end up looping here, adding and subtracting the same thing over and over.
+   
+   nextX = if improvementVector#(first bestPositions) == maxImprovement then (
+	     	  thisX-NFbasA#(first bestPositions)
+	) else (
+	     	  thisX+NFbasA#(first bestPositions)
+	);
+  
+   );
+   )
+
+)     
+*}
+
 
 monomials NCRingElement := opts -> f -> (
     ncMatrix {apply(sort keys f.terms, mon -> putInRing(mon,1))}
@@ -1362,8 +1424,10 @@ normalFormBergman (List, NCGroebnerBasis) := opts -> (fList, ncgb) -> (
    fList = fList_nonzeroIndices;
    -- if there are no nonzero entries left, then return
    if fList == {} then return fList;
-   nonzeroIndices = set nonzeroIndices;
-   zeroIndices := (set (0..(fListLen-1)) - nonzeroIndices);
+      nonzeroIndices = set nonzeroIndices;
+      zeroIndices := if #fList==#nonzeroIndices then {} 
+                     else 
+                        (set (0..(fListLen-1)) - nonzeroIndices);
    A := (first fList).ring;
    if not A#BergmanRing then 
       error << "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
@@ -1379,7 +1443,9 @@ normalFormBergman (List, NCGroebnerBasis) := opts -> (fList, ncgb) -> (
    tempNFInput := temporaryFileName() | ".binf";         -- nf input file
    -- (**) clear denominators first, since Bergman doesn't like fractions
    newFList := apply(fList, f -> clearDenominators f);
+   << "Writing bergman input file." << endl;
    writeNFInputFile(newFList / first,ncgb,{tempGBInput,tempNFInput},opts#DegreeLimit,UsePreviousGBOutput=>usePreviousGBOutput);
+   << "Writing bergman init file." << endl;
    writeNFInitFile(tempInit,tempGBInput,tempNFInput,tempOutput);
    stderr << "--Calling Bergman for NF calculation for " << #nonzeroIndices << " elements." << endl;
    runCommand("bergman -i " | tempInit | " -on-error exit --silent > " | tempTerminal);
