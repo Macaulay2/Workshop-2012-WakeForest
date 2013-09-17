@@ -40,9 +40,9 @@ doc ///
       (coefficientRing, NCRing)
    Headline
       Type of a noncommutative ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          All noncommutative rings have this as an ancestor type.  It is the parent of the
@@ -107,8 +107,9 @@ doc ///
    Headline
       Type of a noncommutative polynomial ring.
    Usage
-   Inputs
-   Outputs
+      A = QQ{x,y}
+   --Inputs
+   --Outputs
    Description
       Text
          This is the type of a noncommutative polynomial ring over a commutative
@@ -123,9 +124,9 @@ doc ///
       (ideal, NCQuotientRing)
    Headline
       Type of a noncommutative ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          This is the type of a quotient of a tensor algebra by a two-sided ideal.
@@ -168,26 +169,31 @@ doc ///
       (entries, NCMatrix)
    Headline
       Type of a matrix over a noncommutative ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          This is the type of a matrix over a noncommutative ring. 
       Text
          Common ways to make a matrix include
+      Code
+         UL {TO (ncMatrix, List),
+	     TO (basis, ZZ, NCRing),
+	     TO (rightKernel, NCMatrix, ZZ),
+	     TO (rightKernelBergman, NCMatrix)}
       Text
          Common ways to get information about matrices
-
-         ring NCMatrix
-	 entries NCMatrix
-
+      Code
+         UL {TO (ring, NCMatrix),
+	     TO (entries, NCMatrix)}
       Text
          Common operations on matrices:
-	 
-	 NCMatrix + NCMatrix
-	 NCMatrix - NCMatrix 
-	 NCMatrix * NCMatrix
+      Code
+         UL {TO (symbol +, NCMatrix,NCMatrix),
+	     TO (symbol -, NCMatrix,NCMatrix),
+             TO (symbol *, NCMatrix,NCMatrix)}
+      Text
 	 NCMatrix * Matrix
 	 NCMatrix % NCGroebnerBasis
 	 NCMatrix ^ ZZ 
@@ -242,9 +248,9 @@ doc ///
       (baseName, NCRingElement)
    Headline
       Type of an element in a noncommutative ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
         This is the type of an element in a noncommutative graded ring.
@@ -275,9 +281,9 @@ doc ///
       ReturnIdeal
    Headline
       Type of a Groebner basis for an ideal in a noncommutative ring
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
      Example
        R = QQ[a,b,c,d]/ideal{a*b+c*d}
@@ -330,9 +336,9 @@ doc ///
       (symbol +, NCLeftIdeal, NCLeftIdeal)
    Headline
       Type of an ideal in a noncommutative ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
         This is the type of an ideal in a noncommutative graded ring.
@@ -349,9 +355,9 @@ doc ///
       (generators, NCIdeal)
    Headline
       Creates an ideal in a noncommutative ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Example
       -- need to finish unit tests
@@ -368,9 +374,9 @@ doc ///
       (basis, ZZ, NCRing)
    Headline
       Determines whether the input defines a homogeneous object.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Example
       -- need to finish unit tests
@@ -388,9 +394,9 @@ doc ///
       (isHomogeneous, NCRingElement)
    Headline
       Determines whether the input defines a homogeneous object.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Example
       -- need to finish unit tests
@@ -440,9 +446,9 @@ doc ///
       [rightKernelBergman,DegreeLimit]
    Headline
       Methods for computing kernels of matrices over noncommutative rings using Bergman
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Example
          A = QQ{x,y,z}
@@ -464,8 +470,6 @@ doc ///
          stuff
 ///
 
-
-
 doc ///
    Key
       isLeftRegular
@@ -474,9 +478,9 @@ doc ///
       (isRightRegular,NCRingElement,ZZ)
    Headline
       Determines if a given (homogeneous) element is regular in a given degree.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          stuff
@@ -491,9 +495,9 @@ doc ///
       (centralElements, NCRing, ZZ)
    Headline
       Methods for finding/checking central elements.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Example
         A = QQ{x,y,z}
@@ -522,9 +526,9 @@ doc ///
       (isNormal, NCRingElement)
    Headline
       Computes normal monomials and components of the variety of normal elements in a given degree.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          stuff
@@ -537,9 +541,9 @@ doc ///
       (normalAutomorphism,NCRingElement)
    Headline
       Computes the automorphism determined by a normal homogeneous element.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
         This is the type of a matrix over a noncommutative graded ring.
@@ -555,9 +559,9 @@ doc ///
       (rightMultiplicationMap,NCRingElement,List,List)
    Headline
       Computes a matrix for left or right multiplication by a homogeneous element.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          stuff
@@ -572,9 +576,9 @@ doc ///
       [rightKernel,Verbosity]
    Headline
       Method for computing kernels of matrices over noncommutative rings in a given degree without using Bergman
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          stuff
@@ -588,9 +592,9 @@ doc ///
       (quadraticClosure,NCQuotientRing)
    Headline
       Creates the subideal generated by quadratic elements of a given ideal.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          stuff
@@ -603,9 +607,9 @@ doc ///
       (homogDual,NCQuotientRing)
    Headline
       Computes the dual of a pure homogeneous ideal.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          stuff
@@ -619,9 +623,9 @@ doc ///
       [sparseCoeffs,Monomials]
    Headline
       Converts ring elements into vectors over the coefficient ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Example
          A=QQ{a, b, c, d, e, f, g, h}
@@ -654,9 +658,9 @@ doc ///
       (target, NCRingMap)
    Headline
       Creates a map from a non-commutative ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          stuff
@@ -671,9 +675,9 @@ doc ///
       (oreExtension,NCRing,NCRingMap,Symbol)
    Headline
       Creates an Ore extension of a noncommutative ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Example
          B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
@@ -692,9 +696,9 @@ doc ///
       (oreIdeal,NCRing,NCRingMap,Symbol)
    Headline
       Creates the defining ideal of an Ore extension of a noncommutative ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Example
          B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
@@ -715,9 +719,9 @@ doc ///
       (checkHomRelations,List,List)
    Headline
       Methods for creating endomorphism rings of modules over a commutative ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Example
          Q = QQ[a,b,c]
@@ -757,9 +761,9 @@ doc ///
       (skewAbelianization,NCRing)
    Headline
       Methods for working with skew polynomial rings.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Example
          R = QQ[q]/ideal{q^4+q^3+q^2+q+1}
@@ -786,9 +790,9 @@ doc ///
       (oppositeRing,NCRing)
    Headline
       Creates the opposite ring of a noncommutative ring.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
         stuff
@@ -805,9 +809,9 @@ doc ///
       [normalFormBergman,DegreeLimit]
    Headline
       Calls Bergman for a normal form calculation.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          stuff
@@ -818,10 +822,10 @@ doc ///
       isReduced
    Headline
       Determines if a given element is in normal form with respect to a groebner basis.
-   Usage
-      isReduced
-   Inputs
-   Outputs
+   --Usage
+   --   isReduced
+   --Inputs
+   --Outputs
    Description
       Text
          stuff
@@ -836,9 +840,9 @@ doc ///
       DegreeVariable
    Headline
       Calls Bergman for a Hilbert series calculation.
-   Usage
-   Inputs
-   Outputs
+   --Usage
+   --Inputs
+   --Outputs
    Description
       Text
          stuff

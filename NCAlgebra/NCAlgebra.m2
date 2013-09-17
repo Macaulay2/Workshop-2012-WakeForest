@@ -75,9 +75,9 @@ MAXDEG = 40
 MAXSIZE = 40
 
 -- Andy's bergman path
-bergmanPath = "/usr/local/bergman1.001"
+-- bergmanPath = "/usr/local/bergman1.001"
 -- Frank's bergman path
---bergmanPath = "~/bergman"
+bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
@@ -1419,15 +1419,14 @@ nfFromTerminalFile (NCRing,String) := (A,tempTerminal) -> (
 normalFormBergman = method(Options => options twoSidedNCGroebnerBasisBergman)
 normalFormBergman (List, NCGroebnerBasis) := opts -> (fList, ncgb) -> (
    -- don't send zero elements to bergman, or an error occurs
+   oldFList := fList;
    fListLen := #fList;
    nonzeroIndices := positions(fList, f -> f != 0);
    fList = fList_nonzeroIndices;
    -- if there are no nonzero entries left, then return
    if fList == {} then return fList;
-      nonzeroIndices = set nonzeroIndices;
-      zeroIndices := if #fList==#nonzeroIndices then {} 
-                     else 
-                        (set (0..(fListLen-1)) - nonzeroIndices);
+   nonzeroIndices = set nonzeroIndices;
+   numZeroIndices := fListLen - #nonzeroIndices;
    A := (first fList).ring;
    if not A#BergmanRing then 
       error << "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
@@ -1454,7 +1453,7 @@ normalFormBergman (List, NCGroebnerBasis) := opts -> (fList, ncgb) -> (
    nfList := nfFromTerminalFile(A,tempTerminal);
    -- (**) then put denominators back
    nfList = apply(#nfList, i -> ((newFList#i#1)^(-1))*nfList#i);
-   functionMingle(nfList,toList((#zeroIndices):0), i -> member(i,nonzeroIndices))
+   functionMingle(nfList,toList(numZeroIndices:0), i -> member(i,nonzeroIndices))
 )
 
 normalFormBergman (NCRingElement, NCGroebnerBasis) := opts -> (f,ncgb) ->
@@ -2570,7 +2569,6 @@ getMatrixGB NCMatrix := opts -> M -> (
                                          CacheBergmanGB=>false);
    M.cache#"matrixGB" = mGB;
    M.cache#"gbDegree" = opts#DegreeLimit;
-
    mGB
 )
 
