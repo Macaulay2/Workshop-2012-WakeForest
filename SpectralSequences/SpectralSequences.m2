@@ -58,7 +58,7 @@ export {
   "SpectralSequencePage", 
   "spectralSequencePage",
 --  "rpqHomology",
-  "rpqIsomorphism",
+  "homologyIsomorphism",
   "Shift",
   "ReducedHomology",
   --"project",
@@ -78,7 +78,7 @@ export {
    "pageMap", 
    "page" ,
 --   "next",
-  "prunningMaps"
+  "prunningMaps", "xHom", "yHom"
 --  "DoubleChainComplex",
 --  "DoubleChainComplexMap", 
 --  "xx", "yy"
@@ -100,6 +100,9 @@ ReverseDictionary = value Core#"private dictionary"#"ReverseDictionary"
 --------------------------------------------------------------------------------
 -- CODE
 --------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+-- ChainComplexExtraExtras 
+--------------------------------------------------------------------------------------
 
 -- since things are mutable we don't want to cache spots
 spots = method()
@@ -107,585 +110,13 @@ spots = method()
 spots ChainComplex := List => (
   C -> sort select(keys C,i -> class i === ZZ))
 
-max HashTable := K -> max spots K
-min HashTable := K -> min spots K
+max ChainComplex := K -> max spots K
+min ChainComplex := K -> min spots K
 
 support ChainComplex := List => (
      C -> sort select (spots C, i -> C_i != 0))
 
--------------------------------------------------------------------------------------
--- filtered complexes
--------------------------------------------------------------------------------------
-FilteredComplex = new Type of HashTable
-FilteredComplex.synonym = "filtered chain complex"
 
-
--- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
--- defining inclusion maps C=F_(n+1)C > F_(n-1)C > ... > F_0 C 
--- of subcomplexes of a chain complex (or simplicial complexes) 
--- and produces a filtered complex with integer keys the
--- corresponing chain complex.
--- If F_0C is not zero then by default F_(-1)C is added and is 0.
--- THIS IS THE CONVENTION WE WANT BY DEFAULT.  SEE 
--- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
--- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
-
-filteredComplex = method(Options => {
-    Shift => 0,
-    ReducedHomology => true, Left => false, Right => false, symbol Hom => false})
-
-filteredComplex(List) := FilteredComplex => opts -> L -> (
-  local maps;
-  local C;
-  if #L === 0 
-  then error "expected at least one chain complex map or simplicial complex";
-  if all(#L, p -> class L#p === SimplicialComplex) then (
-    kk := coefficientRing L#0;
-    if opts.ReducedHomology == true then (
-    C = chainComplex L#0; -- By default the ambient simplicial complex is the first element of the list
-    maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
-        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
-    else (C = truncate(chainComplex L#0,1); -- By default the ambient simplicial complex is the first element of the list
-    maps = apply(#L-1, p -> map(C, truncate(chainComplex L#(p+1),1), 
-        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))   
- )
-  else (
-    maps = L;
-    if any(#maps, p -> class maps#p =!= ChainComplexMap) then (
-      error "expected sequence of chain complexes");
-    C = target maps#0;-- By default the ambient chain complex is target of first map.
-    if any(#maps, p -> target maps#p != C) then (
-      error "expected all map to have the same target"));     
-  Z := image map(C, C, i -> 0*id_(C#i)); -- make zero subcomplex as a subcomplex of ambient complex 
- P := {(#maps-opts.Shift) => C} | apply (#maps,  p -> #maps - (p+1) -opts.Shift => image maps#p);
-  if (last P)#1 != Z then P = P | {(-1-opts.Shift) => Z};
-  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
-
-spots FilteredComplex := List => (
-  K -> sort select(keys K, i -> class i === ZZ))
-
-
-FilteredComplex _ InfiniteNumber :=
-FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
-  if K#?p then K#p 
-  else if p < min K then K#(min K) 
---  else if p > max K then image id_(K#(max K))
-  else if p > max K then K#(max K)
-  )
-
-FilteredComplex ^ InfiniteNumber :=
-FilteredComplex ^ ZZ := ChainComplex => (K,p) -> K_(-p)
-
-chainComplex FilteredComplex := ChainComplex => K -> K_infinity
-
--- Returns the inclusion map from the pth subcomplex to the top
-inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
-  if not K.cache#?inducedMaps then K.cache.inducedMaps = new MutableHashTable;
-  if not K.cache.inducedMaps#?p then K.cache.inducedMaps#p = inducedMap(K_infinity, K_p);
-  K.cache.inducedMaps#p)
-
-
-net FilteredComplex := K -> (
-  v := between("", apply(spots K, p -> p | " : " | net K_p));
-  if #v === 0 then "0" else stack v)
-
---------------------------------------------------------------------------------
--- constructing filtered complexes ---------------------------------------------
---------------------------------------------------------------------------------
-
--- truncate a chain complex at a given homological degree 
-truncate(ChainComplex,ZZ):= (C,q) ->( 
-     if q == 0 then return C 
-     else (
-	  m:= min support C;
-	  n:=max support C;
-	  l:=length C;
-	  if q < -l or q > l then return image(0*id_C)
-	  else  K:=new ChainComplex;
-	        K.ring=C.ring;
-	  	if q < 0 then for i from min C + 1 to max C do (
-	             if i <= n + q then K.dd_i = C.dd_i 
-	       	     else if i-1 > n + q then K.dd_i = inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-	       	     else K.dd_i = inducedMap(C_(i-1), 0*C_i, C.dd_i) ) 
-	  	else for i from min C+1  to max C do (
-	       	     if i-1 >= q + m then K.dd_i = C.dd_i 
-	       	     else if i < q + m then K.dd_i = inducedMap(0*C_(i-1),0*C_i,C.dd_i)
-	       	     else K.dd_i = map(0*C_(i-1), C_i, 0*C.dd_i) )); 		
-     K)
-
-
--- make the filtered complex associated to the "naive truncation of a chain complex"
-filteredComplex ChainComplex := FilteredComplex => opts-> C->( complete C; 
-     	       n := max support C;
-     	       m := min support C;
-	       p := length C;
-	       if p > 0 then (
-     	       H := for i from 1 to p list inducedMap(C,truncate(C,-i));
-     	      filteredComplex(H,Shift => -m) )
-	      else filteredComplex {id_C} 
-	      -- now the constructor supports the zero chain complex
-	      )
-
-
---produce the "x-filtration" of the tensor product complex.
-FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> ( 
-     xTensormodules := (p,q,T)->(apply( (T#q).cache.indices,
-     i-> if (i#0) <=p then  
-     image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
-     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
-     xTensorComplex := (T,p) ->(K := new ChainComplex;
-		    K.ring = T.ring;
-		    for i from min T to max T do (
-		    if T#?(i-1) then
-		    K.dd_i = inducedMap(
-			 directSum(xTensormodules(p,i-1,T)
-			      ),
-			 directSum(xTensormodules(p,i,T)),T.dd_i));
-       	       K
-		    );
-     	  N := max support K_infinity;
-	  P := min support K_infinity;
-	  T := K_infinity ** C;
-filteredComplex(reverse for i from P to (N-1) list 
-     inducedMap(T, xTensorComplex(T,i)), Shift => -P)
-	  )
-
---produce the "y-filtration" of the tensor product complex.
-ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> ( 
-     yTensorModules := (p,q,T)->(apply( (T#q).cache.indices,
-     i-> if (i#1) <=p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
-     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
-    yTensorComplex := (T,p) -> (K := new ChainComplex;
-		    K.ring = T.ring;
-		    for i from min T to max T do (
-		    if T#?(i-1) then
-	     	    K.dd_i = inducedMap(directSum(yTensorModules(p,i-1,T)),
-			 directSum(yTensorModules(p,i,T)),T.dd_i));
-	       K
-	       );
-    	  N := max support K_infinity;
-	  P := min support K_infinity;
-	  T := C ** K_infinity;
-	   filteredComplex(reverse for i from P to (N -1) list 
-	       inducedMap(T, yTensorComplex(T,i)), Shift => -P)
-     )
-
--- produce the "x-filtration" of the Hom complex.
-Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
-modules := (p,q,T)->(apply( (T#q).cache.indices,
-     i-> if (i#0) <= p - q then  
-     image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
-     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
-     complex := (T,p) -> 
-     	       (K := new ChainComplex;
-		    K.ring = T.ring;
-		    for i from min T to max T do (
-		    if T#?(i-1) then
-		    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
-	       K
-	       );
-     N := max support K_infinity;
-     P := min support K_infinity;
-     H := Hom(K_infinity,C);
-     filteredComplex(reverse for i from P to (N-1) list inducedMap(H, complex(H,i)), Shift => -P)	 
-      )
-
--- produce the "y-filtration" of the Hom complex.
-Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (    
-modules := (p,q,T)->(apply( (T#q).cache.indices,
-     i-> if (i#1) <= p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
-     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
-complex := (T,p) ->
-     (K := new ChainComplex;
-		    K.ring = T.ring;
-		    for i from min T to max T do (
-		    if T#?(i-1) then
-	     	    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
-	       K
-	       );
-     N := max support K_infinity;
-     P := min support K_infinity;
-     H := Hom(C,K_infinity);
-     filteredComplex(reverse for i from P to (N -1) list 
-	       inducedMap(H, complex(H,i)), Shift => -P)
-     )
-
--- Do we really want to prune a filtered complex??  What do we mean by a minimal presentation
--- of a filtered complex??
--- comment out for now.
--- prune FilteredComplex := FilteredComplex => opts -> F -> 
---  new FilteredComplex from 
---  apply(keys F, p -> if class p =!= Symbol then p => prune F#p else p => F#p)
-
---
--- Pages and Sequences --
---
-
--- should we use infinite sequence or Book??
-InfiniteSequence = new Type of MutableHashTable
-InfiniteSequence.synonym = "infinite sequence"
-InfiniteSequence.GlobalAssignHook = globalAssignFunction
-InfiniteSequence.GlobalReleaseHook = globalReleaseFunction
-describe InfiniteSequence := E -> net expression E
-net InfiniteSequence := E -> (
-  if hasAttribute(E, ReverseDictionary) 
-  then toString getAttribute(E, ReverseDictionary) 
-  else net expression E)
-expression InfiniteSequence := E -> stack(
-  "  .-.  ", " (o o) ", " | O \\   Unnamed infinite sequence! ..ooOOOooooOO", 
-  "  \\   \\  ", "   `~~~` ")
-
-----------------------------------------------------------------------------
-
-InfiniteSequence _ InfiniteNumber :=
-InfiniteSequence _ ZZ := Page => (E,r) -> ( if E#?r then E^r else E.infinity )
-
-InfiniteSequence ^ InfiniteNumber :=
-InfiniteSequence ^ ZZ := Page => (E,r) -> ("Hi" )
-
-
---------------------------------------------------------------------------------
--- PageMap
---------------------------------------------------------------------------------
-
-PageMap = new Type of MutableHashTable
-PageMap.synonym = "page map"
-PageMap.GlobalAssignHook = globalAssignFunction
-PageMap.GlobalReleaseHook = globalReleaseFunction
-describe PageMap := d -> net expression d
-
-PageMap _ List := Matrix => (f,i) ->  if f#?i then f#i else (
-      de := f.degree;
-      so := (f.source)_i;
-      ta := (f.target)_(i+de);
-      map(ta,so,0))
-
-
-spots PageMap := List => (
-  K) ->  (select(keys K, i -> class i === List) )
-
-lineOnTop := (s) -> concatenate(width s : "-") || s
-
-net PageMap := f -> (
-     v := between("",
-	  apply(spots f, 
-     	       i -> horizontalJoin(
-		         net (i + f.degree), " : " , net (target f#i), " <--",
-		         lineOnTop net f#i,
-		         "-- ", net source f#i, " : ", net i
-		    )
-	       )
-	       );
-	  stack v
-)
-
--- at present there are no constructors for pageMap
---------------------------------------------------------------------------------
--- Pages
---------------------------------------------------------------------------------
-Page = new Type of MutableHashTable
-Page.synonym = "Page"
-Page.GlobalAssignHook = globalAssignFunction
-Page.GlobalReleaseHook = globalReleaseFunction
-describe Page := E -> net expression E
-
-new Page := Page => (cl) -> (
-     C := newClass(Page,new MutableHashTable); -- sigh
-     C.cache = new CacheTable;
-     b := C.dd = new PageMap;
-     b.degree = {};
-     b.source = b.target = C;
-     C)
-ring Page := C -> C.ring
-degree Page := C -> C.dd.degree
-
-net Page := E -> (
-    L := select(keys E, i -> class i === List and E#i !=0);
-    maxQ := max(apply(L, i->i#1)); 
-    minQ := min(apply(L, i-> i#1)); 
-    maxP := max(apply(L, i->i#0));
-    minP := min(apply(L,i->i#0));
-    K := while maxQ >= minQ list makeRow(maxP,minP, maxQ, E) do maxQ = maxQ-1;
-    netList K)
-
-makeRow = method()
-makeRow(ZZ,ZZ,ZZ,Page) := (maxP,minP,q,E)->(L := {};
-      apply(minP .. maxP, i-> 
-	   if E#?{i,q} then L = append(L, stack(net E#{i,q}, "  ", net {i,q}))
-	   else L = append(L, stack(net 0, " ", net {i,q})));
-       L)
-
-Page _ List := (E,L) -> ( if E#?L then E#L else (ring E)^0 )
-
--- at present there are no advanced constructors for Page.
-
-page = method (Options => {Prune => false})
-
--- given {minP, maxP, Page} make a page.  the idea here is to make the needed keys
--- we then can make entries nonzero as needed.
-page(List,List,Page) := Page => opts -> (L,M,E) -> (
-    if E.?ring then (
-    minP := L#0;
-    maxP := L#1;
-    minQ := M#0;
-    maxQ := M#1;
-  --  E := new Page;
-  --  E.ring = A;
-    for i from minP to maxP do (
-	for j from minQ to maxQ do (
-	    E#{i,j} = (E.ring)^0;
-    )
-);
-E) else error "page does not have a ring"
-)
-
-
---------------------------------------------------------------------------------
--- spectral sequences 
---------------------------------------------------------------------------------
-SpectralSequence = new Type of InfiniteSequence
-SpectralSequence.synonym = "spectral sequence"
-SpectralSequence.GlobalAssignHook = globalAssignFunction
-SpectralSequence.GlobalReleaseHook = globalReleaseFunction
-describe SpectralSequence := E -> net expression E
-net SpectralSequence := E -> (
-  if hasAttribute(E, ReverseDictionary) 
-  then toString getAttribute(E, ReverseDictionary) 
-  else net expression E)
-expression SpectralSequence := E -> stack(
-  "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ..ooOOOooooOO", 
-  "  \\   \\  ", "   `~~~` ")
-
-
-spectralSequence = method (Options =>{Prune => false})
-
-spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
-     new SpectralSequence from {
-	  symbol filteredComplex => K,
-	  symbol zero => K.zero,
-	  symbol cache => CacheTable,
-     	  symbol Prune => opts.Prune}
-     )
-
-SpectralSequence ^ InfiniteNumber:=
-  SpectralSequence ^ ZZ := SpectralSequencePage => (E,r) -> (
-      -- the case that r is an infinite number has been rewritten
-      -- and also returns a page --- with no maps!
-      -- this fixes an earlier bug.  
-      if class r === InfiniteNumber then (
-    if r < 0 then error "expected an infinite number bigger than zero"
-    else (
-	myList := {};
-	K := E.filteredComplex;
-	s := max K - min K + 1;
-	H := new Page;
-	    for p from min K to max K do (
-	  	for q from -p + min K_(infinity) to max K_(infinity) do (
-	       	    if E.Prune == false then H#{p,q} = epq(K,p,q,s)
-	       	    else H#{p,q} = prune epq(K,p,q,s)
-	       );
-    	   ); 
-       ); 
-H
-)
-      else (
-       if E#?r then E#r else (
-       E#r = spectralSequencePage(E.filteredComplex,r, Prune => E.Prune);); 
-       E#r
-       )
-       )
-
-SpectralSequence _ InfiniteNumber :=
-SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r )
-
-minimalPresentation SpectralSequence := prune SpectralSequence := SpectralSequence  => opts -> (E) -> (
-	  spectralSequence(E.filteredComplex, Prune => true)
-	  )
-
-----------------------------------------------------------------------------
-
---------------------------------------------------------------------------------
--- spectral sequence pages
---------------------------------------------------------------------------------
-SpectralSequencePage = new Type of Page
-SpectralSequencePage.synonym = "spectral sequence page"
-SpectralSequencePage.GlobalAssignHook = globalAssignFunction
-SpectralSequencePage.GlobalReleaseHook = globalReleaseFunction
-describe SpectralSequencePage := E -> net expression E
-
-spectralSequencePage = method (Options =>{Prune => false})
-
-spectralSequencePage(FilteredComplex, ZZ) := SpectralSequencePage => opts ->  (K,r) ->( 
-new SpectralSequencePage from 
- {symbol filteredComplex=> K, 
-       symbol Prune => opts.Prune,
-       symbol number => r,
-       symbol dd => spectralSequencePageMap(K,r, Prune => opts.Prune), 
-       symbol zero => (ring K_infinity)^0,
-       symbol cache => CacheTable}
-  )
-
-minimalPresentation SpectralSequencePage := prune SpectralSequencePage := SpectralSequencePage  => opts -> (E) -> (
-     spectralSequencePage(E.filteredComplex, E.number, Prune =>true)
-     )
-
-SpectralSequencePage _ List := Module => (E,i)-> ( source(E.dd _i) )
-		    
-
-SpectralSequencePage ^ List := Module => (E,i)-> (E_(-i))    
-
--- view the modules on a Spectral Sequence Page.  We are refering to these
--- as the support of the page.
-
-support SpectralSequencePage := E ->(
-     new HashTable from apply(spots E.dd, i-> i=> source E.dd #i) )
- 
-page SpectralSequencePage := Page => opts -> E -> ( 
-    	K := E.filteredComplex;
-	s := E.number;
-    H := new Page;
-	    for p from min K to max K do (
-	  	for q from -p + min K_(infinity) to max K_(infinity) do (
-	       	    if E.Prune == false then H#{p,q} = epq(K,p,q,s)
-	       	    else H#{p,q} = prune epq(K,p,q,s)
-	       )
-	   );
-    H
-    )
-
--- the following two methods are used to view the modules 
--- on the r th page in grid form.  
--- this method is called in net of spectral sequence page.
--- it would be good to delete the zero rows.
-
-net SpectralSequencePage := E -> (page E)
-
-support SpectralSequencePage := E ->(
-     new Page from apply(spots E.dd, i-> i=> source E.dd #i) )
-
-
-------------------------------------------------------------------------
--- below are the methods which compute the
--- individual terms on a page of a spectral sequence
--- WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS.
----------------------------------------------------------------------
--- By default the maximum integer key
--- of the filtered complex corresponds to the ambient complex.
--- This is used in the formulas below.
--- the formulas below are the homological versions of the ones in I.2.4 of Danilov's 
--- treatment of spectral sequences in Shafarevich's Encyclopedia of 
--- Math Algebraic Geometry II.  
--- In any event it is easy enough to prove directly that they satisfy the requirments 
--- for a spectral sequence.
-
-zpq := (K,p,q,r)->(
-ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1), 
-     K_p _ (p+q), K_(infinity).dd_(p+q), Verify => false))
-
-bpq := (K,p,q,r) ->(
-    ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q)))
-
--- compute the pq modules on the rth page
-epq = method()
-epq(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r)->(((zpq(K,p,q,r)+bpq(K,p,q,r)) / bpq(K,p,q,r)))
-
--- the pq maps on the rth page.
-epqrMaps = method()
-epqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
-     inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),(K_infinity).dd_(p+q), Verify => false))
-
-
--- prune the pq maps on the rth page. --
---  "sourcePruningMap",
--- "targetPruningMap"
---- the following could be replaced by prune d --- except I want to cache the 
--- pruning maps.  --
-
-pruneEpqrMaps = method()
-pruneEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> ( 
-     d := epqrMaps(K,p,q,r);
-     N := minimalPresentation(source d);
-     M := minimalPresentation(target d);
-     f := inverse(M.cache.pruningMap)* d * (N.cache.pruningMap);
-     f.cache #(symbol sourcePruningMap) = N.cache.pruningMap;
-     f.cache #(symbol targetPruningMap) = M.cache.pruningMap;
-     f 
-     )
-
-ErMaps = method(Options => {Prune => false})
-ErMaps(FilteredComplex,ZZ,ZZ,ZZ) := Matrix => opts -> (K,p,q,r) -> (if opts.Prune == false then
-     epqrMaps(K,p,q,r)
-     else   pruneEpqrMaps(K,p,q,r))
-
--- the homology at the pq spot on the rth page.
-rpqHomology = method()
-rpqHomology(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
-      (ker(E^r .dd_{p,q})) / (image(E^r .dd_{p+r,q-r+1}) )
-      )
-
--- the isomorphism of the homology at the pq spot
--- on the r-th page and the module on at the pq spot on the r+1-th page.
-rpqIsomorphism = method()
-rpqIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
-    if E.Prune == false then 
-inducedMap(source (E^(r+1) .dd_{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filteredComplex _infinity _(p+q)))
-    else
-    rpqPruneIsomorphism(E,p,q,r)
-  ) 
-
-rpqPruneIsomorphism = method()
-rpqPruneIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (    
-    M := rpqHomology(E,p,q,r);
-    f := inducedMap(target (E^(r + 1) .dd_{p,q}) .cache.sourcePruningMap,
-	    M, (E^r .dd_{p,q}).cache.sourcePruningMap);
-	inverse((E^(r + 1) .dd_{p,q}) .cache.sourcePruningMap) * f    
-  ) 
-
----
--- Spectral Sequence Page Maps
----
-
-SpectralSequencePageMap = new Type of PageMap
-SpectralSequencePageMap.synonym = "spectral sequence page map"
-SpectralSequencePageMap.synonym = "spectral sequence page map"
-SpectralSequencePageMap.GlobalAssignHook = globalAssignFunction
-SpectralSequencePageMap.GlobalReleaseHook = globalReleaseFunction
-describe SpectralSequencePageMap := d -> net expression d
-
-
-spots SpectralSequencePageMap := List => (
-  K ->  select(keys K, i -> class i === List))
-
-spectralSequencePageMap = method(Options =>{Prune => false})
-
-spectralSequencePageMap(FilteredComplex,ZZ) := SpectralSequencePageMap => opts ->
- (K,r) -> (myList:={};
-           for p from min K to max K do (
-		for q from -p + min K_(infinity) to max K_(infinity) -p do (
-	       	     myList = 
-		     append(myList, {p,q} => ErMaps(K,p,q,r, Prune => opts.Prune)) ));
-	       new SpectralSequencePageMap from 
-	       join (myList, {symbol cache =>  new CacheTable,
-		    symbol degree => {-r,r-1}, 
-		    symbol filteredComplex => K, 
-		    symbol Prune => opts.Prune})
-      )
-
-
-SpectralSequencePageMap _ List := Matrix => (d,i)-> (if (d)#?i then d#i 
-     	  else  
-	       if d.Prune == false then 
-	            epqrMaps(d.filteredComplex,i#0,i#1,- d.degree #0) 
-     	       else
-	       	    pruneEpqrMaps(d.filteredComplex,i#0,i#1,- d.degree #0) 	       	    		    
-		    )
-
-SpectralSequencePageMap ^ List := Matrix => (d,i)-> (d_(-i))    
-
-
-------------------------------------------------------------------------------------
--- ChainComplexExtraExtras 
---------------------------------------------------------------------------------------
 
   -- Computes the graded pieces of the total complex of a Hom double complex 
 -- (just as a graded module, so no maps!)
@@ -760,7 +191,601 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 	  F#i.cache.components#(F#i.cache.indexComponents#k),
 	  if j === k then C_(j#0) ** f_(j#1) 
 	  else 0)))))
+
+-- truncate a chain complex at a given homological degree 
+truncate(ChainComplex,ZZ):= (C,q) ->( 
+     if q == 0 then return C 
+     else (
+	  m:= min support C;
+	  n:=max support C;
+	  l:=length C;
+	  if q < -l or q > l then return image(0*id_C)
+	  else  K:=new ChainComplex;
+	        K.ring=C.ring;
+	  	if q < 0 then for i from min C + 1 to max C do (
+	             if i <= n + q then K.dd_i = C.dd_i 
+	       	     else if i-1 > n + q then K.dd_i = inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+	       	     else K.dd_i = inducedMap(C_(i-1), 0*C_i, C.dd_i) ) 
+	  	else for i from min C+1  to max C do (
+	       	     if i-1 >= q + m then K.dd_i = C.dd_i 
+	       	     else if i < q + m then K.dd_i = inducedMap(0*C_(i-1),0*C_i,C.dd_i)
+	       	     else K.dd_i = map(0*C_(i-1), C_i, 0*C.dd_i) )); 		
+     K)
+
 ----------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------
+-- filtered complexes
+-------------------------------------------------------------------------------------
+FilteredComplex = new Type of HashTable
+FilteredComplex.synonym = "filtered chain complex"
+
+spots FilteredComplex := List => (
+  K -> sort select(keys K, i -> class i === ZZ))
+
+max FilteredComplex := K -> max spots K
+min FilteredComplex := K -> min spots K
+
+support FilteredComplex := List => (
+     K -> sort select (spots K, i -> K#i != 0))
+
+
+
+FilteredComplex _ InfiniteNumber :=
+FilteredComplex _ ZZ := ChainComplex => (K,p) -> (
+  if K#?p then K#p 
+  else if p < min K then K#(min K) 
+  else if p > max K then K#(max K)
+  )
+
+FilteredComplex ^ InfiniteNumber :=
+FilteredComplex ^ ZZ := ChainComplex => (K,p) -> K_(-p)
+
+chainComplex FilteredComplex := ChainComplex => K -> K_infinity
+
+-- Returns the inclusion map from the pth subcomplex to the top
+inducedMap (FilteredComplex, ZZ) := ChainComplexMap => opts -> (K,p) -> (
+  if not K.cache#?inducedMaps then K.cache.inducedMaps = new MutableHashTable;
+  if not K.cache.inducedMaps#?p then K.cache.inducedMaps#p = inducedMap(K_infinity, K_p);
+  K.cache.inducedMaps#p)
+
+
+net FilteredComplex := K -> (
+  v := between("", apply(spots K, p -> p | " : " | net K_p));
+  if #v === 0 then "0" else stack v)
+
+
+-- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
+-- defining inclusion maps C=F_(n+1)C > F_(n-1)C > ... > F_0 C 
+-- of subcomplexes of a chain complex (or simplicial complexes) 
+-- and produces a filtered complex with integer keys the
+-- corresponing chain complex.
+-- If F_0C is not zero then by default F_(-1)C is added and is 0.
+-- THIS IS THE CONVENTION WE WANT BY DEFAULT.  SEE 
+-- THE HOPF FIBRATION EXAMPLE.  TO GET THE CORRECT INDICIES ON THE E2 PAGE
+-- WE WANT THE ZERO COMPLEX TO HAVE "FILTRATION DEGREE -1".
+
+filteredComplex = method(Options => {
+    Shift => 0,
+    ReducedHomology => true, Left => false, Right => false, symbol Hom => false})
+
+filteredComplex(List) := FilteredComplex => opts -> L -> (
+  local maps;
+  local C;
+  if #L === 0 
+  then error "expected at least one chain complex map or simplicial complex";
+  if all(#L, p -> class L#p === SimplicialComplex) then (
+    kk := coefficientRing L#0;
+    if opts.ReducedHomology == true then (
+    C = chainComplex L#0; -- By default the ambient simplicial complex is the first element of the list
+    maps = apply(#L-1, p -> map(C, chainComplex L#(p+1), 
+        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))
+    else (C = truncate(chainComplex L#0,1); -- By default the ambient simplicial complex is the first element of the list
+    maps = apply(#L-1, p -> map(C, truncate(chainComplex L#(p+1),1), 
+        i -> sub(contract(transpose faces(i,L#0), faces(i,L#(p+1))), kk))))   
+ )
+  else (
+    maps = L;
+    if any(#maps, p -> class maps#p =!= ChainComplexMap) then (
+      error "expected sequence of chain complexes");
+    C = target maps#0;-- By default the ambient chain complex is target of first map.
+    if any(#maps, p -> target maps#p != C) then (
+      error "expected all map to have the same target"));     
+  Z := image map(C, C, i -> 0*id_(C#i)); -- make zero subcomplex as a subcomplex of ambient complex 
+ P := {(#maps-opts.Shift) => C} | apply (#maps,  p -> #maps - (p+1) -opts.Shift => image maps#p);
+  if (last P)#1 != Z then P = P | {(-1-opts.Shift) => Z};
+  return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
+
+
+--------------------------------------------------------------------------------
+-- constructing filtered complexes ---------------------------------------------
+--------------------------------------------------------------------------------
+
+
+
+-- make the filtered complex associated to the "naive truncation of a chain complex"
+filteredComplex ChainComplex := FilteredComplex => opts-> C->( complete C; 
+    n := max support C;
+    m := min support C;
+    p := length C;
+    if p > 0 then (
+    H := for i from 1 to p list inducedMap(C,truncate(C,-i));
+    filteredComplex(H,Shift => -m) )
+    else filteredComplex {id_C} -- now the constructor supports the zero chain complex
+	      )
+
+
+--produce the "x-filtration" of the tensor product complex.
+FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> ( 
+     xTensormodules := (p,q,T)->(apply( (T#q).cache.indices,
+     i-> if (i#0) <=p then  
+     image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+     xTensorComplex := (T,p) ->(K := new ChainComplex;
+		    K.ring = T.ring;
+		    for i from min T to max T do (
+		    if T#?(i-1) then
+		    K.dd_i = inducedMap(
+			 directSum(xTensormodules(p,i-1,T)
+			      ),
+			 directSum(xTensormodules(p,i,T)),T.dd_i));
+       	       K
+		    );
+     	  N := max support K_infinity;
+	  P := min support K_infinity;
+	  T := K_infinity ** C;
+filteredComplex(reverse for i from P to (N-1) list 
+     inducedMap(T, xTensorComplex(T,i)), Shift => -P)
+	  )
+
+--produce the "y-filtration" of the tensor product complex.
+ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> ( 
+     yTensorModules := (p,q,T)->(apply( (T#q).cache.indices,
+     i-> if (i#1) <=p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+    yTensorComplex := (T,p) -> (K := new ChainComplex;
+		    K.ring = T.ring;
+		    for i from min T to max T do (
+		    if T#?(i-1) then
+	     	    K.dd_i = inducedMap(directSum(yTensorModules(p,i-1,T)),
+			 directSum(yTensorModules(p,i,T)),T.dd_i));
+	       K
+	       );
+    	  N := max support K_infinity;
+	  P := min support K_infinity;
+	  T := C ** K_infinity;
+	   filteredComplex(reverse for i from P to (N -1) list 
+	       inducedMap(T, yTensorComplex(T,i)), Shift => -P)
+     )
+
+-- produce the "x-filtration" of the Hom complex.
+Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
+xHom(K, C)
+      )
+
+-- produce the "y-filtration" of the Hom complex.
+Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (    
+yHom(C, K)
+     )
+
+-- below seems to be clearer now ... -- and seems to work correctly ?!--
+
+-- produce the "x-filtration" of the Hom complex.
+xmodules := (n, d, H)->(
+    -- want components {p,q} = Hom(-p, q) with p + q = d and p <= n
+     apply( (H#d).cache.indices,
+     i -> if  - (i#0) <= n then  
+     image (id_(((H#d).cache.components)#(((H#d).cache.indexComponents)#i)))
+     else image(0* id_(((H#d).cache.components)#(((H#d).cache.indexComponents)#i)))) );
+
+
+xComplex := (T,n) -> 
+     	       (K := new ChainComplex;
+		    K.ring = T.ring;
+		    for i from min T to max T do (
+		    if T#?(i-1) then
+		    K.dd_i = inducedMap(directSum(xmodules(n,i-1,T)),directSum(xmodules(n,i,T)),T.dd_i));
+	       K
+	       )
+
+xHom = method()
+xHom(FilteredComplex, ChainComplex) := FilteredComplex => (K,C) -> (
+     N := - max support K_infinity;
+     P := - min support K_infinity;
+     H := Hom(K_infinity,C);
+     filteredComplex(reverse for i from N to P - 1 list inducedMap(H, xComplex(H,i)), 
+	 Shift => -N)
+    )
+
+ymodules := (n, d, H)->(
+    -- want components {p,q} = Hom(-p, q) with p + q = d and q <= n
+     apply( (H#d).cache.indices,
+     i -> if   (i#1) <= n then  
+     image (id_(((H#d).cache.components)#(((H#d).cache.indexComponents)#i)))
+     else image(0* id_(((H#d).cache.components)#(((H#d).cache.indexComponents)#i)))) );
+
+
+yComplex := (T,n) -> 
+     	       (K := new ChainComplex;
+		    K.ring = T.ring;
+		    for i from min T to max T do (
+		    if T#?(i-1) then
+		    K.dd_i = inducedMap(directSum(ymodules(n,i-1,T)),directSum(ymodules(n,i,T)),T.dd_i));
+	       K
+	       )
+
+
+yHom = method()
+yHom(ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> (
+     N :=  max support K_infinity;
+     P :=  min support K_infinity;
+     H := Hom(C, K_infinity);
+     filteredComplex(reverse for i from P to N - 1 list inducedMap(H, yComplex(H,i)), 
+	 Shift => - P)
+    )
+
+------------------------------------
+-- Pages and Sequences --
+------------------------------------
+
+
+--------------------------------------------------------------------------------
+-- Pages
+--------------------------------------------------------------------------------
+Page = new Type of MutableHashTable
+Page.synonym = "Page"
+Page.GlobalAssignHook = globalAssignFunction
+Page.GlobalReleaseHook = globalReleaseFunction
+describe Page := E -> net expression E
+
+new Page := Page => (cl) -> (
+     C := newClass(Page,new MutableHashTable); -- sigh
+     C.cache = new CacheTable;
+     b := C.dd = new PageMap;
+     b.degree = {};
+     b.source = b.target = C;
+     C)
+ring Page := C -> C.ring
+degree Page := C -> C.dd.degree
+
+net Page := E -> (
+    L := select(keys E, i -> class i === List and E#i !=0);
+    maxQ := max(apply(L, i->i#1)); 
+    minQ := min(apply(L, i-> i#1)); 
+    maxP := max(apply(L, i->i#0));
+    minP := min(apply(L,i->i#0));
+    K := while maxQ >= minQ list makeRow(maxP, minP, maxQ, E) do maxQ = maxQ-1;
+   -- netList(K, Boxes => false)
+   netList K
+    )
+
+makeRow = method()
+makeRow(ZZ,ZZ,ZZ,Page) := (maxP,minP,q,E)->(L := {};
+      apply(minP .. maxP, i-> 
+	   if E#?{i,q} then L = append(L, stack(net E#{i,q}, "  ", net {i,q}))
+	   else L = append(L, stack(net 0, " ", net {i,q})));
+       L)
+
+Page _ List := (E,L) -> ( if E#?L then E#L else (ring E)^0 )
+
+
+spots Page := List => ( 
+    P -> select(keys P, i -> class i === List and all(i, j -> class j === ZZ))
+    )
+
+
+page = method (Options => {Prune => false})
+
+support Page := List => (
+     P -> sort select (spots P, i -> P#i != 0))
+
+-- at present there are no advanced constructors for page.
+
+-- given {minP, maxP, Page} make a page.  the idea here is to make the needed keys
+-- we then can make entries nonzero as needed.
+
+-- this present method is mainly for testing code.  It might have other uses later. --
+page(List,List,Page) := Page => opts -> (L,M,E) -> (
+    if E.?ring then (
+    minP := L#0;
+    maxP := L#1;
+    minQ := M#0;
+    maxQ := M#1;
+  --  E := new Page;
+  --  E.ring = A;
+    for i from minP to maxP do (
+	for j from minQ to maxQ do (
+	    E#{i,j} = (E.ring)^0;
+    )
+);
+E) else error "page does not have a ring"
+)
+
+
+--------------------------------------------------------------------------------
+-- PageMap
+--------------------------------------------------------------------------------
+
+PageMap = new Type of MutableHashTable
+PageMap.synonym = "page map"
+PageMap.GlobalAssignHook = globalAssignFunction
+PageMap.GlobalReleaseHook = globalReleaseFunction
+describe PageMap := d -> net expression d
+
+
+spots PageMap := List => ( 
+    d -> select(keys d, i -> class i === List and all(i, j -> class j === ZZ))
+    )
+
+support PageMap := List => (
+     d -> sort select (spots d, i -> d#i != 0))
+
+
+PageMap _ List := Matrix => (f,i) ->  if f#?i then f#i else (
+      de := f.degree;
+      so := (f.source)_i;
+      ta := (f.target)_(i+de);
+      map(ta,so,0))
+
+
+
+lineOnTop := (s) -> concatenate(width s : "-") || s
+
+net PageMap := f -> (
+     v := between("",
+	  apply(spots f, 
+     	       i -> horizontalJoin(
+		         net (i + f.degree), " : " , net (target f#i), " <--",
+		         lineOnTop net f#i,
+		         "-- ", net source f#i, " : ", net i
+		    )
+	       )
+	       );
+	  stack v
+)
+
+-- at present there are no constructors for pageMap
+
+
+--------------------------------------------------------------------------------
+-- spectral sequences 
+--------------------------------------------------------------------------------
+SpectralSequence = new Type of MutableHashTable
+SpectralSequence.synonym = "spectral sequence"
+SpectralSequence.GlobalAssignHook = globalAssignFunction
+SpectralSequence.GlobalReleaseHook = globalReleaseFunction
+describe SpectralSequence := E -> net expression E
+net SpectralSequence := E -> (
+  if hasAttribute(E, ReverseDictionary) 
+  then toString getAttribute(E, ReverseDictionary) 
+  else net expression E)
+expression SpectralSequence := E -> stack(
+  "  .-.  ", " (o o) ", " | O \\   Unnamed spectral sequence! ..ooOOOooooOO", 
+  "  \\   \\  ", "   `~~~` ")
+
+
+spectralSequence = method (Options =>{Prune => false})
+
+spectralSequence FilteredComplex := SpectralSequence => opts -> K -> (
+     new SpectralSequence from {
+	  symbol filteredComplex => K,
+	  symbol cache => CacheTable,
+     	  symbol Prune => opts.Prune}
+     )
+
+SpectralSequence ^ InfiniteNumber:=
+  SpectralSequence ^ ZZ := SpectralSequencePage => (E,r) -> (
+      -- the case that r is an infinite number has been rewritten
+      -- and also returns a page --- with no maps!
+      -- this fixes an earlier bug.  
+      if class r === InfiniteNumber then (
+    if r < 0 then error "expected an infinite number bigger than zero"
+    else (
+	myList := {};
+	K := E.filteredComplex;
+	s := max K - min K + 1;
+	H := new Page;
+	    for p from min K to max K do (
+	  	for q from -p + min K_(infinity) to max K_(infinity) do (
+	       	    if E.Prune == false then H#{p,q} = epq(K,p,q,s)
+	       	    else H#{p,q} = prune epq(K,p,q,s)
+	       );
+    	   ); 
+       ); 
+H
+)
+      else (
+       if E#?r then E#r else (
+       E#r = spectralSequencePage(E.filteredComplex,r, Prune => E.Prune);); 
+       E#r
+       )
+       )
+
+SpectralSequence _ InfiniteNumber :=
+SpectralSequence _ ZZ := SpectralSequencePage => (E,r) -> ( E^r )
+
+minimalPresentation SpectralSequence := prune SpectralSequence := SpectralSequence  => opts -> (E) -> (
+	  spectralSequence(E.filteredComplex, Prune => true)
+	  )
+
+----------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- spectral sequence pages
+--------------------------------------------------------------------------------
+SpectralSequencePage = new Type of Page
+SpectralSequencePage.synonym = "spectral sequence page"
+SpectralSequencePage.GlobalAssignHook = globalAssignFunction
+SpectralSequencePage.GlobalReleaseHook = globalReleaseFunction
+describe SpectralSequencePage := E -> net expression E
+
+spectralSequencePage = method (Options =>{Prune => false})
+
+spectralSequencePage(FilteredComplex, ZZ) := SpectralSequencePage => opts ->  (K,r) ->( 
+new SpectralSequencePage from 
+ {symbol filteredComplex=> K, 
+       symbol Prune => opts.Prune,
+       symbol number => r,
+       symbol dd => spectralSequencePageMap(K,r, Prune => opts.Prune), 
+       symbol cache => CacheTable}
+  )
+
+minimalPresentation SpectralSequencePage := prune SpectralSequencePage := SpectralSequencePage  => opts -> (E) -> (
+     spectralSequencePage(E.filteredComplex, E.number, Prune =>true)
+     )
+
+SpectralSequencePage _ List := Module => (E,i)-> ( source(E.dd _i) )
+		    
+
+SpectralSequencePage ^ List := Module => (E,i)-> (E_(-i))    
+
+-- view the modules on a Spectral Sequence Page.  We are refering to these
+-- as the support of the page.
+-- is this what we want??  Or do we only want to view the nonzero modules?
+
+support SpectralSequencePage := E ->(
+     new HashTable from apply(spots E.dd, i -> i=> source E.dd #i) )
+ 
+page SpectralSequencePage := Page => opts -> E -> ( 
+    	K := E.filteredComplex;
+	s := E.number;
+    H := new Page;
+	    for p from min K to max K do (
+	  	for q from -p + min K_(infinity) to max K_(infinity) do (
+	       	    if E.Prune == false then H#{p,q} = epq(K,p,q,s)
+	       	    else H#{p,q} = prune epq(K,p,q,s)
+	       )
+	   );
+    H
+    )
+
+-- the following two methods are used to view the modules 
+-- on the r th page in grid form.  
+-- this method is called in net of spectral sequence page.
+-- it would be good to delete the zero rows.
+
+net SpectralSequencePage := E -> (page E)
+
+support SpectralSequencePage := E ->(
+     new Page from apply(spots E.dd, i-> i=> source E.dd #i) )
+
+
+------------------------------------------------------------------------
+-- below are the methods which compute the
+-- individual terms on a page of a spectral sequence
+-- WE ARE USING HOMOLOGICAL INDEXING CONVENTIONS.
+---------------------------------------------------------------------
+-- By default the maximum integer key
+-- of the filtered complex corresponds to the ambient complex.
+-- This is used in the formulas below.
+-- the formulas below are the homological versions of the ones in I.2.4 of Danilov's 
+-- treatment of spectral sequences in Shafarevich's Encyclopedia of 
+-- Math Algebraic Geometry II.  
+-- In any event it is easy enough to prove directly that they satisfy the requirments 
+-- for a spectral sequence.
+
+cycles := (K,p,q,r)->(
+ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1), 
+     K_p _ (p+q), K_(infinity).dd_(p+q), Verify => false))
+
+boundaries := (K,p,q,r) ->(
+    ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q)))
+
+-- compute the pq modules on the rth page
+epq = method()
+epq(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r)->(((cycles(K,p,q,r) + boundaries(K,p,q,r)) / boundaries(K,p,q,r)))
+
+-- the pq maps on the rth page.
+epqrMaps = method()
+epqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
+     inducedMap(epq(K,p-r,q+r-1,r), epq(K,p,q,r),(K_infinity).dd_(p+q), Verify => false))
+
+
+-- prune the pq maps on the rth page. --
+--  "sourcePruningMap",
+-- "targetPruningMap"
+--- the following could be replaced by prune d --- except I want to cache the 
+-- pruning maps.  --
+
+pruneEpqrMaps = method()
+pruneEpqrMaps(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> ( 
+     d := epqrMaps(K,p,q,r);
+     N := minimalPresentation(source d);
+     M := minimalPresentation(target d);
+     f := inverse(M.cache.pruningMap)* d * (N.cache.pruningMap);
+     f.cache #(symbol sourcePruningMap) = N.cache.pruningMap;
+     f.cache #(symbol targetPruningMap) = M.cache.pruningMap;
+     f 
+     )
+
+ErMaps = method(Options => {Prune => false})
+ErMaps(FilteredComplex,ZZ,ZZ,ZZ) := Matrix => opts -> (K,p,q,r) -> (if opts.Prune == false then
+     epqrMaps(K,p,q,r)
+     else   pruneEpqrMaps(K,p,q,r))
+
+-- the homology at the pq spot on the rth page.
+rpqHomology = method()
+rpqHomology(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
+      (ker(E^r .dd_{p,q})) / (image(E^r .dd_{p+r,q-r+1}) )
+      )
+
+-- the isomorphism of the homology at the pq spot
+-- on the r-th page and the module on at the pq spot on the r+1-th page.
+homologyIsomorphism = method()
+homologyIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (
+    if E.Prune == false then 
+inducedMap(source (E^(r+1) .dd_{p,q}),rpqHomology(E,p,q,r), id_(E^(r+1) .filteredComplex _infinity _(p+q)))
+    else
+    rpqPruneIsomorphism(E,p,q,r)
+  ) 
+
+rpqPruneIsomorphism = method()
+rpqPruneIsomorphism(SpectralSequence,ZZ,ZZ,ZZ) := (E,p,q,r) -> (    
+    M := rpqHomology(E,p,q,r);
+    f := inducedMap(target (E^(r + 1) .dd_{p,q}) .cache.sourcePruningMap,
+	    M, (E^r .dd_{p,q}).cache.sourcePruningMap);
+	inverse((E^(r + 1) .dd_{p,q}) .cache.sourcePruningMap) * f    
+  ) 
+
+---
+-- Spectral Sequence Page Maps
+---
+
+SpectralSequencePageMap = new Type of PageMap
+SpectralSequencePageMap.synonym = "spectral sequence page map"
+SpectralSequencePageMap.synonym = "spectral sequence page map"
+SpectralSequencePageMap.GlobalAssignHook = globalAssignFunction
+SpectralSequencePageMap.GlobalReleaseHook = globalReleaseFunction
+describe SpectralSequencePageMap := d -> net expression d
+
+
+
+spectralSequencePageMap = method(Options =>{Prune => false})
+
+spectralSequencePageMap(FilteredComplex,ZZ) := SpectralSequencePageMap => opts ->
+ (K,r) -> (myList:={};
+           for p from min K to max K do (
+		for q from -p + min K_(infinity) to max K_(infinity) -p do (
+	       	     myList = 
+		     append(myList, {p,q} => ErMaps(K,p,q,r, Prune => opts.Prune)) ));
+	       new SpectralSequencePageMap from 
+	       join (myList, {symbol cache =>  new CacheTable,
+		    symbol degree => {-r,r-1}, 
+		    symbol filteredComplex => K, 
+		    symbol Prune => opts.Prune})
+      )
+
+
+SpectralSequencePageMap _ List := Matrix => (d,i)-> (if (d)#?i then d#i 
+     	  else  
+	       if d.Prune == false then 
+	            epqrMaps(d.filteredComplex,i#0,i#1,- d.degree #0) 
+     	       else
+	       	    pruneEpqrMaps(d.filteredComplex,i#0,i#1,- d.degree #0) 	       	    		    
+		    )
+
+SpectralSequencePageMap ^ List := Matrix => (d,i)-> (d_(-i))    
+
 
 -- auxlillary spectral sequence stuff.  
 
@@ -794,7 +819,6 @@ hilbertPolynomial (SpectralSequencePage) := Page => o -> (E) -> (
     apply(spots E .dd, i -> P#i = hilbertPolynomial(E_i));
     P
     )
--- perhaps I should make a HilbertPolynomialPage as a new type of Page ?? --
 
 prunningMaps = method()
 prunningMaps(SpectralSequencePage) := (E) -> ( if E.Prune == false then error "page is not prunned"
@@ -826,39 +850,33 @@ basis (List,SpectralSequencePage) := opts -> (deg,E) -> (
 
 beginDocumentation()
 
-undocumented {page, prunningMaps, spots, (degree, Page),
-    (symbol ^, InfiniteSequence, InfiniteNumber),
-    (symbol ^, InfiniteSequence, ZZ),
-    (symbol _, InfiniteSequence, InfiniteNumber),
-    (symbol ^, InfiniteSequence, ZZ),
-    (symbol _, InfiniteSequence, ZZ),
+undocumented {page, prunningMaps, --spots, 
+    (degree, Page),
     (net, FilteredComplex),
-    (net, InfiniteSequence),
     (net, Page),
     (net, PageMap),
     (net, SpectralSequencePage),
     (net, SpectralSequence),
     (symbol _, Page, List),
-    (page, List, List, Page),
+  --  (page, List, List, Page),
     (page, SpectralSequencePage),
     (symbol _, PageMap, List),
     (ring, Page),
     (spectralSequencePageMap, FilteredComplex, ZZ),
     (spots, FilteredComplex),
     (spots, PageMap),
-    (spots, SpectralSequencePageMap),
+ --   (spots, SpectralSequencePageMap),
     (support, SpectralSequencePage),
    spots,  ReducedHomology, sourcePruningMap, targetPruningMap,
    pageMap,
-   (describe, InfiniteSequence),
    (describe, SpectralSequence),
-   (expression, InfiniteSequence),
    (expression, SpectralSequence),
    spectralSequencePageMap,
    (support,ChainComplex),
    (truncate, ChainComplex,ZZ),
-   rpqIsomorphism, Shift,
-   prunningMaps, (prunningMaps, SpectralSequencePage)    
+   homologyIsomorphism, Shift,
+   --prunningMaps, 
+   (prunningMaps, SpectralSequencePage)    
     }
 
 document { 
@@ -1008,7 +1026,6 @@ doc ///
 	    We first need to load the relavent packages.
           Example
 	       needsPackage "SpectralSequences"	    
-	       needsPackage "ChainComplexExtras"
      	  Text
 	       We then make a chain complex.
      	  Example	       	 
@@ -1053,8 +1070,7 @@ doc ///
 	  Text
 	    We can make a filtered complex from a nested list of simplicial 
      	    complexes as follows
-     	  Example
-	      needsPackage "SimplicialComplexes"; 	     
+     	  Example	     
 	      D = simplicialComplex {x*y*z, x*y, y*z, w*z}
 	      E = simplicialComplex {x*y, w}
 	      F = simplicialComplex {x,w}
@@ -1137,8 +1153,6 @@ doc ///
 	  E:SpectralSequencePage
      Outputs
      	 B:Matrix
-     	 -- The method oputs a page.  However I get an error if I try to document it like this
-	 -- B:Page
      Description
      	  Text 
 	       Returns generators for the requested (multi)degree of the spectral sequence page.
@@ -1155,8 +1169,6 @@ doc ///
 	  E:SpectralSequencePage
      Outputs
      	 H:Page
-     	 -- The method oputs a page.  However I get an error if I try to document it like this
-	 -- B:Page
      Description
      	  Text 
 	       Returns the Hilbert polynomials of all modules of the spectral sequence page
@@ -1286,7 +1298,6 @@ doc ///
      doc ///
      Key
      	  (symbol _, SpectralSequence, ZZ)
---	  (symbol _, SpectralSequence, InfiniteNumber)
      Headline
      	  the kth page of a spectral sequence
      Usage
@@ -1341,7 +1352,6 @@ doc ///
 doc ///
      Key
      	  (symbol ^, SpectralSequence, ZZ)
---	  (symbol ^, SpectralSequence, InfiniteNumber)
      Headline
      	  the kth page of a spectral sequence
      Usage
@@ -1358,7 +1368,6 @@ doc ///
 
 doc ///
      Key
---     	  (symbol ^, SpectralSequence, ZZ)
 	  (symbol ^, SpectralSequence, InfiniteNumber)
 	  (symbol _, SpectralSequence, InfiniteNumber)
      Headline
@@ -1534,11 +1543,11 @@ doc ///
 
 doc ///
      Key
-     	  (rpqIsomorphism, SpectralSequence, ZZ, ZZ, ZZ)
+     	  (homologyIsomorphism, SpectralSequence, ZZ, ZZ, ZZ)
      Headline
           the homology isomorphism
      Usage 
-         g = rpqIsomorphism(SpectralSequence, ZZ, ZZ, ZZ)
+         g = homologyIsomorphism(SpectralSequence, ZZ, ZZ, ZZ)
      Inputs
          E:SpectralSequence
 	 p:ZZ
@@ -1569,8 +1578,6 @@ doc ///
 	       As we will see below, the spectral sequences has nonzero maps on higher page numbers.
      	  Example
 	        needsPackage "SpectralSequences";
-		needsPackage "SimplicialComplexes"; 
-		needsPackage "ChainComplexExtras";
 		A = ZZ [s,t,u,v,w] ;
 		d0 = simplicialComplex {s} ;
 		d1 = simplicialComplex {s,t} ;
@@ -1619,8 +1626,6 @@ doc ///
   doc ///
     Key
       "Spectral sequences and non-Koszul syzygies"
-  --  Headline
-    -- 	  using spectral sequences to compute non-Koszul syzygies
     Description
     	  Text
 	       We illustrate some aspects of the paper 
@@ -1667,8 +1672,6 @@ doc ///
      doc ///
      Key
        "Spectral sequences and connecting morphisms"
-    -- Headline
-    --      using spectral sequences to compute connecting morphisms
      Description
      	  Text
 	       If $0 \rightarrow A \rightarrow B \rightarrow C \rightarrow 0$ is a 
@@ -1693,7 +1696,6 @@ doc ///
 	      isomorphism.
 	  Example   
 	        needsPackage "SpectralSequences";
-                needsPackage "ChainComplexExtras";
                 R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]; -- PP^1 x PP^1
 		B = intersect(ideal(a_0,a_1),ideal(b_0,b_1)) ; -- irrelevant ideal
 		B = B_*/(x -> x^5)//ideal ; -- Suitably high Frobenius power of B
@@ -1748,7 +1750,6 @@ doc ///
 	       vector spaces.
     	  Example
 	         needsPackage "SpectralSequences";
-		 needsPackage "ChainComplexExtras";
 	         -- C \subseteq PP^1 x PP^1 type (3,3)
 		 -- Use hypercohomology to compute HH OO_C(1,0) 
 		 R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]; -- PP^1 x PP^1
@@ -1783,7 +1784,6 @@ doc ///
 		    by K.V. Madahar and K.S Sarkaria. Geom Dedicata, 2000.
 	       Example
 	       	    needsPackage "SpectralSequences"
-		    needsPackage "SimplicialComplexes"
      	       Text
 	       	    We first need to make the relavant simplicial complexes
 		    as described on page 110 of the paper.  The
@@ -1851,7 +1851,6 @@ doc ///
 		    We will want to prune the page afterwards.
      	       Example		    		    
 		    E0page = E^0
-		    --new HashTable from apply(keys E0page.dd, i-> i=> E0page.dd #i)
      	       Text
 	       	    Here are the maps.
      	       Example		    		    
@@ -1861,12 +1860,10 @@ doc ///
      	       Example		    		    
 		    minimalE0page = minimalPresentation(E0page)  
 		    minimalE0page.dd
-		 --   apply(spots E0page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,0))
      	       Text
 	       	    Now try the $E^1$ page.  
      	       Example		       	       	    
 		    E1page = E^1
-		    --new HashTable from apply(keys E1page.dd, i-> i=>  E1page.dd #i)
      	       Text 
 	       	    Here are the maps.
      	       Example		    		    
@@ -1876,12 +1873,10 @@ doc ///
      	       Example		    		    
 		    minimalE1page = minimalPresentation(E1page)  
 		    minimalE1page.dd
-		  --  apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,1))
      	       Text
 	       	    Now try the $E^2$ page.
      	       Example		    		    
 		    E2page = E^2
-		    --new HashTable from apply(keys E2page.dd, i-> i=> E2page.dd #i)
      	       Text
 	       	    Here are the maps.
      	       Example		    		    
@@ -1891,7 +1886,7 @@ doc ///
      	       Example		    		    
 		    minimalE2page = minimalPresentation(E2page)  
 		    minimalE2page.dd
-		    apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,2))
+		    apply(spots E1page.dd, i->  isIsomorphism homologyIsomorphism(E,i#0,i#1,2))
      	       Text		    
 		    Note that the modules on the E_2 page appear to have been computed correctly.  
 		    The statement of the Serre spectral sequence, see for example Theorem 1.3 p. 8 of 
@@ -1905,8 +1900,6 @@ doc ///
 		    E3page.dd
 		    minimalE3page = minimalPresentation(E3page)  
 		    minimalE3page.dd
-		    --new HashTable from apply(keys E3page.dd, i-> i=> E3page.dd #i)
-		 --   apply(spots E1page.dd, i->  isIsomorphism rpqIsomorphism(E,i#0,i#1,3))
      	       Text		    
 		   The E_3 page appears to have been computed correctly.		
 ///	       
@@ -2200,18 +2193,18 @@ F0D = simplicialComplex {a,b,c};
 K = filteredComplex({F2D,F1D,F0D}, ReducedHomology => false);
 E = prune spectralSequence K;
 e = spectralSequence K;
-assert(all(keys support E^0, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,0)))
-assert(all(keys support E^1, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,1)))
-assert(all(keys support E^2, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,2)))
-assert(all(keys support E^3, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,3)))
-assert(all(keys support E^4, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,4)))
-assert(all(keys support E^5, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,5)))
-assert(all(keys support e^0, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,0)))
-assert(all(keys support e^1, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,1)))
-assert(all(keys support e^2, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,2)))
-assert(all(keys support e^3, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,3)))
-assert(all(keys support e^4, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,4)))
-assert(all(keys support e^5, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,5)))
+assert(all(keys support E^0, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,0)))
+assert(all(keys support E^1, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,1)))
+assert(all(keys support E^2, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,2)))
+assert(all(keys support E^3, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,3)))
+assert(all(keys support E^4, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,4)))
+assert(all(keys support E^5, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,5)))
+assert(all(keys support e^0, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,0)))
+assert(all(keys support e^1, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,1)))
+assert(all(keys support e^2, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,2)))
+assert(all(keys support e^3, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,3)))
+assert(all(keys support e^4, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,4)))
+assert(all(keys support e^5, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,5)))
 ///
 
 TEST ///
@@ -2242,32 +2235,32 @@ L = reverse {d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d1
 K = filteredComplex (L, ReducedHomology => false);
 E = prune spectralSequence K
 e = spectralSequence K
-assert(all(keys support E^0, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,0)))
-assert(all(keys support E^1, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,1)))
-assert(all(keys support E^2, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,2)))
-assert(all(keys support E^3, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,3)))
-assert(all(keys support E^4, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,4)))
-assert(all(keys support E^5, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,5)))
-assert(all(keys support E^6, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,6)))
-assert(all(keys support E^7, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,7)))
-assert(all(keys support E^8, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,8)))
-assert(all(keys support E^9, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,9)))
-assert(all(keys support E^10, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,10)))
-assert(all(keys support E^11, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,11)))
-assert(all(keys support E^12, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,12)))
-assert(all(keys support e^0, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,0)))
-assert(all(keys support e^1, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,1)))
-assert(all(keys support e^2, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,2)))
-assert(all(keys support e^3, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,3)))
-assert(all(keys support e^4, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,4)))
-assert(all(keys support e^5, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,5)))
-assert(all(keys support e^6, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,6)))
-assert(all(keys support e^7, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,7)))
-assert(all(keys support e^8, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,8)))
-assert(all(keys support e^9, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,9)))
-assert(all(keys support e^10, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,10)))
-assert(all(keys support e^11, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,11)))
-assert(all(keys support e^12, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,12)))
+assert(all(keys support E^0, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,0)))
+assert(all(keys support E^1, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,1)))
+assert(all(keys support E^2, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,2)))
+assert(all(keys support E^3, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,3)))
+assert(all(keys support E^4, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,4)))
+assert(all(keys support E^5, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,5)))
+assert(all(keys support E^6, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,6)))
+assert(all(keys support E^7, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,7)))
+assert(all(keys support E^8, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,8)))
+assert(all(keys support E^9, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,9)))
+assert(all(keys support E^10, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,10)))
+assert(all(keys support E^11, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,11)))
+assert(all(keys support E^12, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,12)))
+assert(all(keys support e^0, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,0)))
+assert(all(keys support e^1, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,1)))
+assert(all(keys support e^2, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,2)))
+assert(all(keys support e^3, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,3)))
+assert(all(keys support e^4, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,4)))
+assert(all(keys support e^5, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,5)))
+assert(all(keys support e^6, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,6)))
+assert(all(keys support e^7, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,7)))
+assert(all(keys support e^8, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,8)))
+assert(all(keys support e^9, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,9)))
+assert(all(keys support e^10, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,10)))
+assert(all(keys support e^11, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,11)))
+assert(all(keys support e^12, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,12)))
 ///
 
 TEST ///
@@ -2281,32 +2274,32 @@ F0D = simplicialComplex {a,d};
 K = filteredComplex({F2D, F1D, F0D},ReducedHomology => false);
 E = spectralSequence(K);
 e = prune E;
-assert(all(keys support E^0, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,0)))
-assert(all(keys support E^1, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,1)))
-assert(all(keys support E^2, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,2)))
-assert(all(keys support E^3, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,3)))
-assert(all(keys support E^4, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,4)))
-assert(all(keys support E^5, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,5)))
-assert(all(keys support E^6, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,6)))
-assert(all(keys support E^7, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,7)))
-assert(all(keys support E^8, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,8)))
-assert(all(keys support E^9, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,9)))
-assert(all(keys support E^10, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,10)))
-assert(all(keys support E^11, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,11)))
-assert(all(keys support E^12, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,12)))
-assert(all(keys support e^0, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,0)))
-assert(all(keys support e^1, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,1)))
-assert(all(keys support e^2, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,2)))
-assert(all(keys support e^3, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,3)))
-assert(all(keys support e^4, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,4)))
-assert(all(keys support e^5, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,5)))
-assert(all(keys support e^6, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,6)))
-assert(all(keys support e^7, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,7)))
-assert(all(keys support e^8, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,8)))
-assert(all(keys support e^9, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,9)))
-assert(all(keys support e^10, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,10)))
-assert(all(keys support e^11, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,11)))
-assert(all(keys support e^12, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,12)))
+assert(all(keys support E^0, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,0)))
+assert(all(keys support E^1, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,1)))
+assert(all(keys support E^2, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,2)))
+assert(all(keys support E^3, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,3)))
+assert(all(keys support E^4, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,4)))
+assert(all(keys support E^5, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,5)))
+assert(all(keys support E^6, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,6)))
+assert(all(keys support E^7, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,7)))
+assert(all(keys support E^8, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,8)))
+assert(all(keys support E^9, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,9)))
+assert(all(keys support E^10, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,10)))
+assert(all(keys support E^11, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,11)))
+assert(all(keys support E^12, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,12)))
+assert(all(keys support e^0, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,0)))
+assert(all(keys support e^1, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,1)))
+assert(all(keys support e^2, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,2)))
+assert(all(keys support e^3, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,3)))
+assert(all(keys support e^4, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,4)))
+assert(all(keys support e^5, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,5)))
+assert(all(keys support e^6, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,6)))
+assert(all(keys support e^7, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,7)))
+assert(all(keys support e^8, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,8)))
+assert(all(keys support e^9, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,9)))
+assert(all(keys support e^10, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,10)))
+assert(all(keys support e^11, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,11)))
+assert(all(keys support e^12, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,12)))
 ///
 
 TEST ///
@@ -2334,30 +2327,33 @@ F0D = simplicialComplex(join(f0l1,f0l2,f0l3,f0l4,f0l5));
 K = filteredComplex({D,F1D,F0D},ReducedHomology => false);
 E = spectralSequence K;
 e = prune spectralSequence K;
-assert(all(keys support E^0, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,0)))
-assert(all(keys support E^1, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,1)))
-assert(all(keys support E^2, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,2)))
-assert(all(keys support E^3, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,3)))
-assert(all(keys support E^4, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,4)))
-assert(all(keys support E^5, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,5)))
-assert(all(keys support E^6, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,6)))
-assert(all(keys support E^7, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,7)))
-assert(all(keys support E^8, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,8)))
-assert(all(keys support E^9, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,9)))
-assert(all(keys support E^10, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,10)))
-assert(all(keys support E^11, j -> isIsomorphism rpqIsomorphism(E,j#0,j#1,11)))
-assert(all(keys support e^0, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,0)))
-assert(all(keys support e^1, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,1)))
-assert(all(keys support e^2, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,2)))
-assert(all(keys support e^3, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,3)))
-assert(all(keys support e^4, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,4)))
-assert(all(keys support e^5, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,5)))
-assert(all(keys support e^6, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,6)))
-assert(all(keys support e^7, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,7)))
-assert(all(keys support e^8, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,8)))
-assert(all(keys support e^9, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,9)))
-assert(all(keys support e^10, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,10)))
-assert(all(keys support e^11, j -> isIsomorphism rpqIsomorphism(e,j#0,j#1,11)))
+assert(all(keys support E^0, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,0)))
+assert(all(keys support E^1, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,1)))
+assert(all(keys support E^2, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,2)))
+assert(all(keys support E^3, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,3)))
+assert(all(keys support E^4, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,4)))
+assert(all(keys support E^5, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,5)))
+assert(all(keys support E^6, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,6)))
+assert(all(keys support E^7, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,7)))
+assert(all(keys support E^8, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,8)))
+assert(all(keys support E^9, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,9)))
+assert(all(keys support E^10, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,10)))
+assert(all(keys support E^11, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,11)))
+assert(all(keys support E^12, j -> isIsomorphism homologyIsomorphism(E,j#0,j#1,12)))
+assert(all(keys support e^0, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,0)))
+assert(all(keys support e^1, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,1)))
+assert(all(keys support e^2, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,2)))
+assert(all(keys support e^3, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,3)))
+assert(all(keys support e^4, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,4)))
+assert(all(keys support e^5, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,5)))
+assert(all(keys support e^6, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,6)))
+assert(all(keys support e^7, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,7)))
+assert(all(keys support e^8, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,8)))
+assert(all(keys support e^9, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,9)))
+assert(all(keys support e^10, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,10)))
+assert(all(keys support e^11, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,11)))
+assert(all(keys support e^12, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,12)))
+
 ///
 
 
