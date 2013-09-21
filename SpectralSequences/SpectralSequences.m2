@@ -315,22 +315,30 @@ filteredComplex ChainComplex := FilteredComplex => opts-> C->( complete C;
 	      )
 
 
+-- perhaps the following code is clearer now?? It probably should be combined into one method... --
+
 --produce the "x-filtration" of the tensor product complex.
-FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> ( 
-     xTensormodules := (p,q,T)->(apply( (T#q).cache.indices,
-     i-> if (i#0) <=p then  
-     image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
-     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
-     xTensorComplex := (T,p) ->(K := new ChainComplex;
+xTensormodules := (n, d, T)->(
+    -- want {p,q} = p ** q such that p + q = d and p <= n
+    apply( (T#d).cache.indices,
+     i-> if (i#0) <= n then  
+     image (id_(((T#d).cache.components)#(((T#d).cache.indexComponents)#i)))
+     else image(0* id_(((T#d).cache.components)#(((T#d).cache.indexComponents)#i)))) )
+
+xTensorComplex := (T, n) ->(K := new ChainComplex;
 		    K.ring = T.ring;
 		    for i from min T to max T do (
 		    if T#?(i-1) then
 		    K.dd_i = inducedMap(
-			 directSum(xTensormodules(p,i-1,T)
+			 directSum(xTensormodules(n,i-1,T)
 			      ),
-			 directSum(xTensormodules(p,i,T)),T.dd_i));
+			 directSum(xTensormodules(n,i,T)),T.dd_i));
        	       K
-		    );
+		    )
+
+xTensor = method()
+		
+xTensor(FilteredComplex, ChainComplex) := FilteredComplex => (K,C) -> ( 
      	  N := max support K_infinity;
 	  P := min support K_infinity;
 	  T := K_infinity ** C;
@@ -338,25 +346,42 @@ filteredComplex(reverse for i from P to (N-1) list
      inducedMap(T, xTensorComplex(T,i)), Shift => -P)
 	  )
 
+FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> ( 
+xTensor(K, C)
+)
+
+
 --produce the "y-filtration" of the tensor product complex.
-ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> ( 
-     yTensorModules := (p,q,T)->(apply( (T#q).cache.indices,
-     i-> if (i#1) <=p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
-     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
-    yTensorComplex := (T,p) -> (K := new ChainComplex;
+
+yTensorModules := (n, d, T)->(
+    -- want {p,q} = p ** q such that p + q = d and q <= n --
+    apply( (T#d).cache.indices,
+     i-> if (i#1) <= n then  image (id_(((T#d).cache.components)#(((T#d).cache.indexComponents)#i)))
+     else image(0* id_(((T#d).cache.components)#(((T#d).cache.indexComponents)#i)))) )
+
+
+yTensorComplex := (T, n) -> (K := new ChainComplex;
 		    K.ring = T.ring;
 		    for i from min T to max T do (
 		    if T#?(i-1) then
-	     	    K.dd_i = inducedMap(directSum(yTensorModules(p,i-1,T)),
-			 directSum(yTensorModules(p,i,T)),T.dd_i));
+	     	    K.dd_i = inducedMap(directSum(yTensorModules(n,i-1,T)),
+			 directSum(yTensorModules(n,i,T)),T.dd_i));
 	       K
-	       );
+	       )
+	   
+
+yTensor = method()
+yTensor(ChainComplex, FilteredComplex) := FilteredComplex => (C, K) -> (
     	  N := max support K_infinity;
 	  P := min support K_infinity;
 	  T := C ** K_infinity;
 	   filteredComplex(reverse for i from P to (N -1) list 
 	       inducedMap(T, yTensorComplex(T,i)), Shift => -P)
      )
+
+ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> ( 
+    yTensor(C, K)
+    )
 
 -- produce the "x-filtration" of the Hom complex.
 Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
