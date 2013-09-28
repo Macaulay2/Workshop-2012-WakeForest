@@ -78,7 +78,7 @@ export {
    "pageMap", 
    "page" ,
 --   "next",
-  "prunningMaps", "xHom", "yHom"
+  "prunningMaps", "xHom", "yHom", "xTensor", "yTensor"
 --  "DoubleChainComplex",
 --  "DoubleChainComplexMap", 
 --  "xx", "yy"
@@ -267,7 +267,7 @@ net FilteredComplex := K -> (
 
 filteredComplex = method(Options => {
     Shift => 0,
-    ReducedHomology => true, Left => false, Right => false, symbol Hom => false})
+    ReducedHomology => true})
 
 filteredComplex(List) := FilteredComplex => opts -> L -> (
   local maps;
@@ -292,8 +292,18 @@ filteredComplex(List) := FilteredComplex => opts -> L -> (
     if any(#maps, p -> target maps#p != C) then (
       error "expected all map to have the same target"));     
   Z := image map(C, C, i -> 0*id_(C#i)); -- make zero subcomplex as a subcomplex of ambient complex 
- P := {(#maps-opts.Shift) => C} | apply (#maps,  p -> #maps - (p+1) -opts.Shift => image maps#p);
-  if (last P)#1 != Z then P = P | {(-1-opts.Shift) => Z};
+   --   P :=  {(#maps-opts.Shift) => C} ; 
+   P := {};
+-- apply (#maps,  p -> #maps - (p+1) -opts.Shift => image maps#p); 
+ myList := {};
+ for p from 0 to #maps - 1 do (
+	 if(image maps#p != C) then 
+	 myList = myList |
+	  {#maps - (p+1) -opts.Shift => image maps#p};
+	  );
+  if myList != {} then (P = {(#maps-opts.Shift) => C} | myList)
+  else P = { - opts.Shift => C} ;
+  if (last P)#1 != Z then (P = P | {(-1-opts.Shift) => Z});
   return new FilteredComplex from P | {symbol zero => (ring C)^0, symbol cache =>  new CacheTable})
 
 
@@ -308,90 +318,148 @@ filteredComplex ChainComplex := FilteredComplex => opts-> C->( complete C;
     n := max support C;
     m := min support C;
     p := length C;
-    if p > 0 then (
+    if p > 0  then (
     H := for i from 1 to p list inducedMap(C,truncate(C,-i));
-    filteredComplex(H,Shift => -m) )
-    else filteredComplex {id_C} -- now the constructor supports the zero chain complex
+    filteredComplex( H, Shift => - m) )
+    else filteredComplex {map(C, image(0 * id_C), id_C)}--{map(C, id_C} -- now the constructor supports the zero chain complex
 	      )
 
 
--- perhaps the following code is clearer now?? It probably should be combined into one method... --
-
 --produce the "x-filtration" of the tensor product complex.
-xTensormodules := (n, d, T)->(
-    -- want {p,q} = p ** q such that p + q = d and p <= n
-    apply( (T#d).cache.indices,
-     i-> if (i#0) <= n then  
-     image (id_(((T#d).cache.components)#(((T#d).cache.indexComponents)#i)))
-     else image(0* id_(((T#d).cache.components)#(((T#d).cache.indexComponents)#i)))) )
-
-xTensorComplex := (T, n) ->(K := new ChainComplex;
+FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> ( 
+     xTensormodules := (p,q,T)->(apply( (T#q).cache.indices,
+     i-> if (i#0) <=p then  
+     image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+     xTensorComplex := (T,p) ->(K := new ChainComplex;
 		    K.ring = T.ring;
 		    for i from min T to max T do (
 		    if T#?(i-1) then
 		    K.dd_i = inducedMap(
-			 directSum(xTensormodules(n,i-1,T)
+			 directSum(xTensormodules(p,i-1,T)
 			      ),
-			 directSum(xTensormodules(n,i,T)),T.dd_i));
+			 directSum(xTensormodules(p,i,T)),T.dd_i));
        	       K
-		    )
-
-xTensor = method()
-		
-xTensor(FilteredComplex, ChainComplex) := FilteredComplex => (K,C) -> ( 
+		    );
+		     supp := support K_infinity;
+     -- try to handle the boundary cases --
+     if supp != {} and #supp > 1 then (		
      	  N := max support K_infinity;
 	  P := min support K_infinity;
 	  T := K_infinity ** C;
 filteredComplex(reverse for i from P to (N-1) list 
-     inducedMap(T, xTensorComplex(T,i)), Shift => -P)
-	  )
-
-FilteredComplex ** ChainComplex := FilteredComplex => (K,C) -> ( 
-xTensor(K, C)
-)
-
+     inducedMap(T, xTensorComplex(T,i)), Shift => -P) 
+ )
+    else ( if #supp == 1 then
+	(
+	P := min supp;
+	T := K_infinity ** C;
+	filteredComplex( {inducedMap(T, xTensorComplex(T, P))}, Shift => - P + 1)
+	)
+	else( T:= K_infinity ** C;
+	    filteredComplex({id_T})
+	    )
+	)
+     )
+--
+--     	  N := max support K_infinity;
+--	  P := min support K_infinity;
+--	  T := K_infinity ** C;
+--filteredComplex(reverse for i from P to (N-1) list 
+--     inducedMap(T, xTensorComplex(T,i)), Shift => -P)
+--	  )
 
 --produce the "y-filtration" of the tensor product complex.
-
-yTensorModules := (n, d, T)->(
-    -- want {p,q} = p ** q such that p + q = d and q <= n --
-    apply( (T#d).cache.indices,
-     i-> if (i#1) <= n then  image (id_(((T#d).cache.components)#(((T#d).cache.indexComponents)#i)))
-     else image(0* id_(((T#d).cache.components)#(((T#d).cache.indexComponents)#i)))) )
-
-
-yTensorComplex := (T, n) -> (K := new ChainComplex;
+ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> ( 
+     yTensorModules := (p,q,T)->(apply( (T#q).cache.indices,
+     i-> if (i#1) <=p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+    yTensorComplex := (T,p) -> (K := new ChainComplex;
 		    K.ring = T.ring;
 		    for i from min T to max T do (
 		    if T#?(i-1) then
-	     	    K.dd_i = inducedMap(directSum(yTensorModules(n,i-1,T)),
-			 directSum(yTensorModules(n,i,T)),T.dd_i));
+	     	    K.dd_i = inducedMap(directSum(yTensorModules(p,i-1,T)),
+			 directSum(yTensorModules(p,i,T)),T.dd_i));
 	       K
-	       )
-	   
-
-yTensor = method()
-yTensor(ChainComplex, FilteredComplex) := FilteredComplex => (C, K) -> (
-    	  N := max support K_infinity;
+	       );
+	   supp := support K_infinity;
+	        -- try to handle the boundary cases --
+     if supp != {} and #supp > 1 then (		
+     	  N := max support K_infinity;
 	  P := min support K_infinity;
 	  T := C ** K_infinity;
-	   filteredComplex(reverse for i from P to (N -1) list 
-	       inducedMap(T, yTensorComplex(T,i)), Shift => -P)
-     )
+filteredComplex(reverse for i from P to (N-1) list 
+     inducedMap(T, yTensorComplex(T,i)), Shift => -P) 
+ )
+    else ( if #supp == 1 then
+	(
+	P := min supp;
+	T := C ** K_infinity;
+	filteredComplex( {inducedMap(T, yTensorComplex(T, P))}, Shift => - P + 1)
+	)
+	else( T:= C ** K_infinity ;
+	    filteredComplex({id_T})
+	    )
+	)
+     )	   
+--    	  N := max support K_infinity;
+--	  P := min support K_infinity;
+--	  T := C ** K_infinity;
+--	   filteredComplex(reverse for i from P to (N -1) list 
+--	       inducedMap(T, yTensorComplex(T,i)), Shift => -P)
+--     )
 
-ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> ( 
-    yTensor(C, K)
-    )
+
+--
+-- this is the "old" Hom code. -- I think there is a bug / error in the x filtration --
+-- xHom below might be a possible fix... everything needs to be thought about and 
+-- checked carefully --
 
 -- produce the "x-filtration" of the Hom complex.
 Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
-xHom(K, C)
+modules := (p,q,T)->(apply( (T#q).cache.indices,
+     i-> if (i#0) <= p - q then  
+     image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+     complex := (T,p) -> 
+     	       (K := new ChainComplex;
+		    K.ring = T.ring;
+		    for i from min T to max T do (
+		    if T#?(i-1) then
+		    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
+	       K
+	       );
+     N := max support K_infinity;
+     P := min support K_infinity;
+     H := Hom(K_infinity,C);
+     filteredComplex(reverse for i from P to (N-1) list inducedMap(H, complex(H,i)), Shift => -P)	 
       )
 
 -- produce the "y-filtration" of the Hom complex.
 Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (    
-yHom(C, K)
+modules := (p,q,T)->(apply( (T#q).cache.indices,
+     i-> if (i#1) <= p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+complex := (T,p) ->
+     (K := new ChainComplex;
+		    K.ring = T.ring;
+		    for i from min T to max T do (
+		    if T#?(i-1) then
+	     	    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
+	       K
+	       );
+     N := max support K_infinity;
+     P := min support K_infinity;
+     H:= Hom(C,K_infinity);
+     filteredComplex(reverse for i from P to (N -1) list 
+	       inducedMap(H, complex(H,i)), Shift => -P)
      )
+
+---
+---
+-- here are possible / rewrites of filtered Hom complex...  perhaps this is clearer than
+-- above, but also the x-filtration might be what we want ... need to think about it 
+-- more carefully ...
 
 -- below seems to be clearer now ... -- and seems to work correctly ?!--
 
@@ -656,7 +724,7 @@ new SpectralSequencePage from
   )
 
 minimalPresentation SpectralSequencePage := prune SpectralSequencePage := SpectralSequencePage  => opts -> (E) -> (
-     spectralSequencePage(E.filteredComplex, E.number, Prune =>true)
+     spectralSequencePage(E.filteredComplex, E.number, Prune => true)
      )
 
 SpectralSequencePage _ List := Module => (E,i)-> ( source(E.dd _i) )
@@ -709,7 +777,7 @@ support SpectralSequencePage := E ->(
 -- In any event it is easy enough to prove directly that they satisfy the requirments 
 -- for a spectral sequence.
 
-cycles := (K,p,q,r)->(
+cycles := (K,p,q,r) ->(
 ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1), 
      K_p _ (p+q), K_(infinity).dd_(p+q), Verify => false))
 
@@ -2384,10 +2452,72 @@ assert(all(keys support e^12, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,1
 
 end
 
+---
+-- scratch code --
+---
+
+-- Now are trying to start debuging --
+-- and check all the boundary cases --
+ 
 restart
 uninstallPackage"SpectralSequences"
 installPackage"SpectralSequences"
 installPackage("SpectralSequences", RemakeAllDocumentation => true)
 check "SpectralSequences";
+-- not sure why one of the checks fails ...
 
-viewHelp SpectralSequences
+restart
+needsPackage"SpectralSequences"
+
+-- these examples show that the few added lines to the 
+-- filtered complex constructor handles the case of a one term complex
+-- and the zero complex the way that we want it to
+
+A = QQ[x]
+M = A^1
+D = M[0]
+C = new ChainComplex
+C.ring = A
+E = koszul vars A
+filteredComplex D
+filteredComplex C
+filteredComplex E
+d = (filteredComplex D) ** D
+
+e = spectralSequence d
+e^0
+e^0 .dd
+e^infinity
+e = prune spectralSequence d
+e^0
+e^0 . dd
+-- maybe we are displaying two many maps ??
+
+
+d = D ** (filteredComplex D)
+e = spectralSequence d
+e^0
+e^1 
+e^1 .dd
+
+c = C ** (filteredComplex C)
+e = spectralSequence c
+e^0
+-- so there is a bug here that needs to be fixed ...
+-- again need to handle the case that min K_infinity is an infinity number etc --
+min c_infinity
+
+(filteredComplex C) ** C
+
+
+
+--the following shows that there might be an error in the filtered Hom code
+E
+Hom(filteredComplex E, E)
+Hom(E, filteredComplex E)
+-- the middle piece should be different
+--compare with 
+xHom(filteredComplex E, E)
+yHom(E, filteredComplex E)
+-- so the xHom and yHom might be a fix
+-- need to check the shift ...
