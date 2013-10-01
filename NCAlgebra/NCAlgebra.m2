@@ -2659,6 +2659,47 @@ A=R{x,y,z}
 I=ncIdeal{z*z+q^2*x*y-q*y*x,q*y*z+q^2*x*x-z*y,q*y*y+z*x-q^2*x*z,x^2*z-q*y*x*y,q^2*x*y*x-x^2*y-y^2*z-q*y*x^2}
 ncgb=ncGroebnerBasis(I,InstallGB=>true)
 
+--- Ellen's examples
+restart
+debug needsPackage "NCAlgebra"
+gamma = -1_QQ
+A2 = skewPolynomialRing(QQ,(-1)_QQ,{a,c})
+setWeights(A2, {1,3})
+sigma3 = ncMap(A2,A2,{a,-c})
+delta3 = ncMap(A2,A2,{-gamma*c,-gamma*a^2*c})
+I3 = oreIdeal(A2,sigma3,delta3,b)
+setWeights(ring I3, {1,3,2})
+A3 = (ring I3)/I3
+isHomogeneous A3
+sigma4 = ncMap(A3,A3,{-a,c,-b-gamma*a^2})
+w = b^2+gamma*a^2*b
+delta4 = ncMap(A3,A3,{gamma*w,(2*b+gamma*a^2)*w,promote(0,A3)})
+I4 = oreIdeal(A3,sigma4,delta4,d)
+setWeights(ring I4, {1,3,2,3})
+isHomogeneous I4
+A4 = (ring I4)/I4
+f = d*c - d^2 - b*(b^2+gamma*a^2*b)
+rightKernelBergman ncMatrix {{f}} -- bug if kernel is zero
+ker sparseCoeffs {a*f,f*a} -- element is not normal
+isHomogeneous f
+-- bug?
+isNormal(f)  -- should only take vars that have right degree...
+----
+g = promote(f,ambient A4)
+I5 = I4 + ncIdeal{g}
+B = (ring I4)/I5
+k = ncMatrix {{a,b,d}}
+assignDegrees k
+M1 = rightKernelBergman k
+M2 = rightKernelBergman M1
+----- better presentation
+restart
+debug needsPackage "NCAlgebra"
+A = QQ{a,b,d}
+setWeights(A,{1,2,3})
+c = b*a-a*b
+I = ncIdeal {c*a+a*c, b*c+c*b-a^2*c, d*a+b^2+a*d-a^2*b, d*c-2*b^3+2*b*a^2*b-c*d+a^2*b^2-a^4*b, d*b+b*d-a^2*d}
+
 ----
 restart
 uninstallPackage "NCAlgebra"
