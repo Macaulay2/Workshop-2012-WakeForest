@@ -33,16 +33,8 @@ doc ///
 doc ///
    Key
       NCRing
-      (generators, NCRing)
-      (numgens, NCRing)
-      (isCommutative, NCRing)
-      (use, NCRing)
-      (coefficientRing, NCRing)
    Headline
       Type of a noncommutative ring.
-   --Usage
-   --Inputs
-   --Outputs
    Description
       Text
          All noncommutative rings have this as an ancestor type.  It is the parent of the
@@ -101,42 +93,320 @@ doc ///
 ///
 
 doc ///
+  Key
+    (generators, NCRing)
+  Headline
+    The list of algebra generators of an NCRing
+  Usage
+    gensA = generators A
+  Inputs
+    A : NCRing
+  Outputs
+    gensA : List
+  Description
+    Text
+       This function returns the generators of an NCRing as a list.  As usual,
+       gens is a synonym for generators.
+    Example
+       A = QQ{x,y,z}
+       generators A
+       gens A
+///
+
+doc ///
+  Key
+    (numgens, NCRing)
+  Headline
+    The number of algebra generators of an NCRing
+  Usage
+    numgensA = numgens A
+  Inputs
+    A : NCRing
+  Outputs
+    numgensA : ZZ
+  Description
+    Text
+       This function returns the number of generators of an NCRing.
+    Example
+       A = QQ{x,y,z}
+       numgens A
+///
+
+doc ///
+  Key
+    (isCommutative, NCRing)
+  Headline
+    Returns whether an NCRing is commutative
+  Usage
+    isComm = isCommutative A
+  Inputs
+    A : NCRing
+  Outputs
+    isComm : Boolean
+  Description
+    Text
+       This function returns whether an NCRing is commutative
+    Example
+       A = QQ{x,y,z}
+       isCommutative A
+       B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z})
+       isCommutative B
+       C = skewPolynomialRing(QQ,1_QQ,{x,y,z})
+       isCommutative C
+///
+
+doc ///
+  Key
+    (coefficientRing, NCRing)
+  Headline
+    Returns the base ring of an NCRing
+  Usage
+    k = coefficientRing NCRing
+  Inputs
+    A : NCRing
+  Outputs
+    k : Ring
+  Description
+    Text
+       This function returns the base ring of an NCRing
+    Example
+       A = QQ{x,y,z}
+       coefficientRing A
+       R = ZZ/101[a,b,c,d]/(ideal(a^2-b^2))
+       B = R{x,y,z}
+       coefficientRing B
+///
+
+doc ///
+  Key
+     (use, NCRing)
+  Headline
+     Brings the variables of a particular NCRing in scope
+  Usage
+    use A
+  Inputs
+    A : NCRing
+  Description
+    Text
+       This function brings the variables of a particular NCRing in scope.
+       For an illustration:
+    Example
+       A = QQ{x,y,z}
+       coefficientRing A
+       B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z})
+       x
+    Text
+       As you can see, at this point the interpreter treats x,y and z as elements of B.  To go back to
+       A, we run the command use A:
+    Example
+       use A
+       x
+///
+
+doc ///
    Key
       NCPolynomialRing
-      (ideal, NCPolynomialRing)
    Headline
       Type of a noncommutative polynomial ring.
    Usage
       A = QQ{x,y}
-   --Inputs
-   --Outputs
    Description
       Text
          This is the type of a noncommutative polynomial ring over a commutative
-	 ring R (i.e. a tensor algebra over R)
+	 ring R (i.e. a tensor algebra over R).  It has parent type @ TO NCRing @.
+      Example
+         A = QQ{x,y}
+///
+
+doc ///
+   Key
+      (ideal, NCPolynomialRing)
+   Headline
+      The defining ideal of an NCPolynomialRing
+   Usage
+      I = ideal A
+   Inputs
+      A : NCPolynomialRing
+--   Outputs
+--      I : NCIdeal
+   Description
+      Text
+         This returns the defining ideal of an NCPolynomialRing, which 
+	 will be the zero ideal in the noncommutative polynomial ring.
+      Example
+         A = QQ{x,y}
+	 ideal A
 ///
 
 doc ///
    Key
       NCQuotientRing
-      (symbol /, NCPolynomialRing, NCIdeal)
-      (ambient, NCQuotientRing)
-      (ideal, NCQuotientRing)
    Headline
       Type of a noncommutative ring.
-   --Usage
-   --Inputs
-   --Outputs
    Description
       Text
          This is the type of a quotient of a tensor algebra by a two-sided ideal.
-      
+    
          At this point, one cannot define quotients of quotients.
 ///
 
 doc ///
    Key
+     (symbol /, NCPolynomialRing, NCIdeal)
+   Headline
+     Construct a NCQuotientRing
+   Usage
+     B = A/I
+   Inputs
+     A : NCPolynomialRing
+     I : NCIdeal
+   Outputs
+     B : NCQuotientRing
+   Description
+      Text
+         This is one way to create a quotient of the tensor algebra modulo some relations.
+    
+         At this point, one cannot define quotients of quotients.
+	 
+	 If the base ring is QQ or a finite field of order p, then Bergman is called to compute a
+	 Groebner basis.
+	 
+	 If not, then one has a couple of options.  The first is to take the defining ideal of the algebra, and provide a
+	 Groebner Basis by calling @ TO ncGroebnerBasis @ with the InstallGB flag set to true.  Of course, if this generating
+	 set is not a Groebner basis, then you will get incorrect results upon calls to functions like @ TO (basis, ZZ, NCRing) @.
+	 
+	 The alternative is to use the built in commands @ TO skewPolynomialRing @ and @ TO oreExtension @ which
+	 has the same effect as above occuring behind the scenes.  Just be careful using these commands to create your
+	 ring if your base ring is not a field Bergman can work with, as the generating sets created may not be a Groebner
+	 basis for the defining ideal (this is more often a problem for @ TO oreExtension @ than @ TO skewPolynomialRing @).
+      Example
+         A = QQ{x,y,z}
+         f = y*z + z*y - x^2
+	 g = x*z + z*x - y^2
+	 h = z^2 - x*y - y*x
+     	 I=ncIdeal{f,g,h}
+    	 B = A/I
+         z^2
+	 R = toField(QQ[a]/ideal(a^4+a^3+a^2+a+1))
+	 C = skewPolynomialRing(R,a,{x,y,z})
+	 y*x
+///
+
+doc ///
+   Key
+     (ambient, NCQuotientRing)
+   Headline
+     Ambient ring of an NCQuotientRing
+   Usage
+     A = ambient B 
+   Inputs
+     B : NCQuotientRing
+   Outputs
+     A : NCPolynomialRing
+   Description
+      Text
+         Returns the ambient ring of an @ TO NCQuotientRing @.  
+	 
+	 As quotients of NCQuotientRings are added, this will return the top-level ambient ring.
+	 
+      Example
+         B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z})
+	 A = ambient B
+///
+
+doc ///
+   Key
+     (ideal, NCQuotientRing)
+   Headline
+     Defining ideal of an NCQuotientRing in its ambient ring
+   Usage
+     I = ideal B
+   Inputs
+     B : NCQuotientRing
+--   Outputs
+--     I : NCIdeal
+   Description
+      Text
+         This returns the defining ideal of an NCQuotientRing in its ambient ring.  As of now,
+	 this is always an ideal in an NCPolynomialRing, but when quotients of @ TO NCQuotientRing @s
+	 are added, this will no longer be the case.
+      Example
+         B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z})
+	 A = ambient B
+	 I = ideal B
+	 ring I === A
+///
+
+doc ///
+   Key
       NCMatrix
+   Headline
+      Type of a matrix over a noncommutative ring.
+   Description
+      Text
+         This is the type of a matrix over a noncommutative ring.  These represent homomorphisms between two free modules in
+	 chosen bases (whether you think of it as a map of left or right modules is up you).  Modules themselves are not
+	 implemented yet in the @ TO NCAlgebra @ package, but are slated for a later release.
+      Text
+         Common ways to make (and use) a matrix include
+      Code
+         UL {TO (ncMatrix, List),
+	     TO (basis, ZZ, NCRing),
+	     TO (rightKernel, NCMatrix, ZZ),
+	     TO (rightKernelBergman, NCMatrix)}
+      Text
+         Common ways to get information about matrices
+      Code
+         UL {TO (ring, NCMatrix),
+	     TO (entries, NCMatrix)}
+      Text
+         Common operations on matrices:
+      Code
+         UL {TO (symbol +, NCMatrix,NCMatrix),
+	     TO (symbol -, NCMatrix,NCMatrix),
+	     TO (symbol %, NCMatrix,NCGroebnerBasis),
+             TO (symbol *, NCMatrix,NCMatrix),
+	     TO (symbol *, NCMatrix,NCRingElement),
+	     TO (symbol *, NCMatrix,RingElement),
+	     TO (symbol //, NCMatrix,NCMatrix),
+	     TO (symbol _, NCMatrix,List),
+	     TO (symbol ==, NCMatrix, NCMatrix),
+	     TO (symbol |, NCMatrix,NCMatrix),
+	     TO (symbol ||, NCMatrix,NCMatrix),
+	     TO (symbol ^, NCMatrix,List),
+	     TO (symbol ^, NCMatrix,ZZ),
+	     }
+      Text
+         This is the type of a matrix with entries in an NCRing.  Many of the basic operations
+	 one can perform on a @ TO Matrix @ are also allowed with an @ TO NCMatrix @.  Some
+	 examples of creating and using them are given below.
+      Example
+         A = QQ{a,b,c,d}
+	 M = ncMatrix {{a,b,c,d}}
+	 N = ncMatrix {{M,2*M,3*M},{4*M,5*M,6*M}}
+
+         A = QQ{x,y,z}
+	 f = y*z + z*y - x^2
+	 g = x*z + z*x - y^2
+	 h = z^2 - x*y - y*x
+	 I = ncIdeal {f,g,h}
+	 Igb = ncGroebnerBasis I
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(A,A,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 Nred = N^3 % Igb
+	 B = A/I
+	 phi = ncMap(B,A,gens B)
+	 NB = phi N
+	 N3B = NB^3
+	 X = NB + 3*NB
+	 Y = NB | 2*NB
+	 Z = X || NB
+
+///
+
+doc ///
+   Key
       ncMatrix
       (ncMatrix,List)
       (symbol -, NCMatrix)
@@ -168,41 +438,10 @@ doc ///
       (ring, NCMatrix)
       (entries, NCMatrix)
    Headline
-      Type of a matrix over a noncommutative ring.
-   --Usage
-   --Inputs
-   --Outputs
+      This command does...
    Description
       Text
-         This is the type of a matrix over a noncommutative ring. 
-      Text
-         Common ways to make a matrix include
-      Code
-         UL {TO (ncMatrix, List),
-	     TO (basis, ZZ, NCRing),
-	     TO (rightKernel, NCMatrix, ZZ),
-	     TO (rightKernelBergman, NCMatrix)}
-      Text
-         Common ways to get information about matrices
-      Code
-         UL {TO (ring, NCMatrix),
-	     TO (entries, NCMatrix)}
-      Text
-         Common operations on matrices:
-      Code
-         UL {TO (symbol +, NCMatrix,NCMatrix),
-	     TO (symbol -, NCMatrix,NCMatrix),
-             TO (symbol *, NCMatrix,NCMatrix)}
-      Text
-	 NCMatrix * Matrix
-	 NCMatrix % NCGroebnerBasis
-	 NCMatrix ^ ZZ 
-	 NCMatrix | NCMatrix
-	 NCMatrix || NCMatrix
-	 NCMatrix * NCRingElement
-	 lift NCMatrix
-	 transpose NCMatrix
-
+         This command does...
       Example
          A = QQ{a,b,c,d}
 	 M = ncMatrix {{a,b,c,d}}
@@ -225,9 +464,7 @@ doc ///
 	 X = NB + 3*NB
 	 Y = NB | 2*NB
 	 Z = X || NB
-
 ///
-
 
 doc ///
    Key
@@ -423,7 +660,6 @@ doc ///
 	 k = x^2 + y^2 + z^2
 	 j*k
 	 k^3
-
       Text
          Here will go an extended example
 ///
@@ -715,8 +951,6 @@ doc ///
       endomorphismRingGens
        minimizeRelations
       (minimizeRelations,List)
-      checkHomRelations
-      (checkHomRelations,List,List)
    Headline
       Methods for creating endomorphism rings of modules over a commutative ring.
    --Usage
@@ -731,7 +965,6 @@ doc ///
          B = endomorphismRing(M,X);
          gensI = gens ideal B;
          gensIMin = minimizeRelations(gensI);
-         checkHomRelations(gensIMin,B.cache.endomorphismRingGens)
 
          Q = QQ[a,b,c,d]
          R = Q/ideal{a*b+c*d}
@@ -740,7 +973,6 @@ doc ///
          B = endomorphismRing(M,Y);
          gensI = gens ideal B;
          gensIMin = minimizeRelations(gensI);
-         checkHomRelations(gensIMin,B.cache.endomorphismRingGens);
 
       Text
          stuff

@@ -44,7 +44,7 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          functionHash,
          oreExtension,oreIdeal,
          endomorphismRing,endomorphismRingGens,
-         minimizeRelations,checkHomRelations,
+         minimizeRelations,
          skewPolynomialRing,
 	 abelianization,
 	 skewAbelianization,
@@ -2602,10 +2602,17 @@ load "NCAlgebra/NCAlgebraDoc.m2"
 
 end
 
---- bug fix/performance improvements
+--- bug fix/performance/interface improvements
 ------------------------------------
+--- ***** Bug in output of NCRingElements!  See the example in the NCPolynomialRing / NCIdeal doc node.
 --- Make homogeneous maps interface more streamlined.
----   May require implementation of modules to do properly
+--- toM2Ring with Exterior option instead of 'abelianization' and 'skewAbelianization'
+--- fromM2Ring should create an NCRing from an M2 ring for Bergman access
+--- skewPolynomialRing with NCRing bases
+--- threeDimSklyanin(Ring,List,DegreeLimit=>)
+
+--- additions in the near future
+------------------------------------
 --- Finish right mingens
 --- Finish left kernels and mingens etc (opposite ring now done)
 --- Make sure that trivial ideals are handled correctly
