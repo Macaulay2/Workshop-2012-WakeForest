@@ -21,7 +21,8 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          twoSidedNCGroebnerBasisBergman,
          gbFromOutputFile,
          CacheBergmanGB,
-         ClearDenominators,
+         setWeights,
+	 ClearDenominators,
          NumModuleVars,
 	 InstallGB,
          ReturnIdeal,
@@ -275,7 +276,7 @@ Ring List := (R, varList) -> (
 
 net NCRing := A -> net A.CoefficientRing | net A.generators
 
-ideal NCPolynomialRing := A ->
+ideal NCPolynomialRing := NCIdeal => A ->
    new NCIdeal from new HashTable from {(symbol ring) => A,
                                         (symbol generators) => {},
                                         (symbol cache) => new CacheTable from {}}
@@ -389,7 +390,7 @@ net NCQuotientRing := B -> net (B.ambient) |
 			   net take(B.ideal.generators,10) |
 			   net if (#(B.ideal.generators) > 10) then " + More..." else ""
 
-ideal NCQuotientRing := B -> B.ideal;
+ideal NCQuotientRing := NCIdeal => B -> B.ideal;
 ambient NCQuotientRing := B -> B.ambient;
 
 
@@ -920,7 +921,7 @@ baseName NCRingElement := x -> (
    A.generatorSymbols#pos
 )
 
-ring NCRingElement := f -> f.ring
+ring NCRingElement := NCRing => f -> f.ring
 
 
 sparseCoeffs = method(Options => {Monomials => null})
@@ -1042,7 +1043,6 @@ simplify NCRingElement := x -> (
 )     
 *}
 
-
 monomials NCRingElement := opts -> f -> (
     ncMatrix {apply(sort keys f.terms, mon -> putInRing(mon,1))}
 )
@@ -1071,7 +1071,7 @@ leadMonomialForGB = f -> (
       (leadNCMonomial f, leadMonomial leadCoefficient f)
 )
 leadCoefficient NCRingElement := f -> if size f == 0 then 0 else (pairs (leadTerm f).terms)#0#1;
-isConstant NCRingElement := f -> f.terms === hashTable {} or (#(f.terms) == 1 and f.terms#?{})
+isConstant NCRingElement := f -> f.terms === hashTable {} or (#(f.terms) == 1 and f.terms#?(ncMonomial({},ring f)))
 isHomogeneous NCRingElement := f -> (
     B := ring f;
     if f == promote(0,B) then true
@@ -1090,8 +1090,8 @@ support NCRingElement := f -> (
    apply(varSymbols, v -> putInRing({v},f.ring,1))
 )
 
-NCRingElement * List := (f,xs) -> apply(xs, x -> f*x);
-List * NCRingElement := (xs,f) -> apply(xs, x -> x*f);
+NCRingElement * List := List => (f,xs) -> apply(xs, x -> f*x);
+List * NCRingElement := List => (xs,f) -> apply(xs, x -> x*f);
 
 isCentral = method()
 isCentral (NCRingElement, NCGroebnerBasis) := (f,ncgb) -> (
@@ -2288,9 +2288,9 @@ ncMatrix List := ncEntries -> (
    assignDegrees retVal
 )
 
-ring NCMatrix := M -> M.ring
+ring NCMatrix := NCRing => M -> M.ring
 
-lift NCMatrix := opts -> M -> ncMatrix applyTable(M.matrix, entry -> promote(entry,(M.ring.ambient)))
+lift NCMatrix := NCMatrix => opts -> M -> ncMatrix applyTable(M.matrix, entry -> promote(entry,(M.ring.ambient)))
 
 NCMatrix * NCMatrix := (M,N) -> (
    if M.ring =!= N.ring then error "Expected matrices over the same ring.";
@@ -2605,6 +2605,7 @@ end
 --- bug fix/performance/interface improvements
 ------------------------------------
 --- ***** Bug in output of NCRingElements!  See the example in the NCPolynomialRing / NCIdeal doc node.
+--- ***** Hilbert series doesn't work with generators of different degrees
 --- Make homogeneous maps interface more streamlined.
 --- toM2Ring with Exterior option instead of 'abelianization' and 'skewAbelianization'
 --- fromM2Ring should create an NCRing from an M2 ring for Bergman access
@@ -2623,7 +2624,6 @@ end
 --- Proper handling of rings generated in several positive degrees
 ---    This goes for things such as basis, etc, as well.
 --- fix coefficients to return a pair again.
---- 3d sklyanin generator (following Artin-Schelter)
 
 --- other things to add or work on in due time
 -----------------------------------

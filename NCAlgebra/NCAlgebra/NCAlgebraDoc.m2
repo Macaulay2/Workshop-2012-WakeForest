@@ -34,7 +34,7 @@ doc ///
    Key
       NCRing
    Headline
-      Type of a noncommutative ring.
+      Type of a noncommutative ring
    Description
       Text
          All noncommutative rings have this as an ancestor type.  It is the parent of the
@@ -207,7 +207,7 @@ doc ///
    Key
       NCPolynomialRing
    Headline
-      Type of a noncommutative polynomial ring.
+      Type of a noncommutative polynomial ring
    Usage
       A = QQ{x,y}
    Description
@@ -227,8 +227,8 @@ doc ///
       I = ideal A
    Inputs
       A : NCPolynomialRing
---   Outputs
---      I : NCIdeal
+   Outputs
+      I : NCIdeal
    Description
       Text
          This returns the defining ideal of an NCPolynomialRing, which 
@@ -242,7 +242,7 @@ doc ///
    Key
       NCQuotientRing
    Headline
-      Type of a noncommutative ring.
+      Type of a noncommutative ring
    Description
       Text
          This is the type of a quotient of a tensor algebra by a two-sided ideal.
@@ -323,8 +323,8 @@ doc ///
      I = ideal B
    Inputs
      B : NCQuotientRing
---   Outputs
---     I : NCIdeal
+   Outputs
+     I : NCIdeal
    Description
       Text
          This returns the defining ideal of an NCQuotientRing in its ambient ring.  As of now,
@@ -341,7 +341,7 @@ doc ///
    Key
       NCMatrix
    Headline
-      Type of a matrix over a noncommutative ring.
+      Type of a matrix over a noncommutative ring
    Description
       Text
          This is the type of a matrix over a noncommutative ring.  These represent homomorphisms between two free modules in
@@ -378,75 +378,443 @@ doc ///
 	     }
       Text
          This is the type of a matrix with entries in an NCRing.  Many of the basic operations
-	 one can perform on a @ TO Matrix @ are also allowed with an @ TO NCMatrix @.  Some
-	 examples of creating and using them are given below.
+	 one can perform on a @ TO Matrix @ are also allowed with an @ TO NCMatrix @, and
+	 the behavior of the functions should be similar to the corresponding 'usual' command.
+	 Some examples of creating and using NCMatrices are given below.
       Example
          A = QQ{a,b,c,d}
 	 M = ncMatrix {{a,b,c,d}}
 	 N = ncMatrix {{M,2*M,3*M},{4*M,5*M,6*M}}
 
-         A = QQ{x,y,z}
+         B = QQ{x,y,z}
 	 f = y*z + z*y - x^2
 	 g = x*z + z*x - y^2
 	 h = z^2 - x*y - y*x
 	 I = ncIdeal {f,g,h}
 	 Igb = ncGroebnerBasis I
 	 M = ncMatrix {{x, y, z}}
-	 sigma = ncMap(A,A,{y,z,x})
+	 sigma = ncMap(B,B,{y,z,x})
 	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
 	 Nred = N^3 % Igb
-	 B = A/I
-	 phi = ncMap(B,A,gens B)
-	 NB = phi N
-	 N3B = NB^3
-	 X = NB + 3*NB
-	 Y = NB | 2*NB
-	 Z = X || NB
-
+	 C = B/I
+	 phi = ncMap(C,B,gens C)
+	 NC = phi N
+	 N3C = NC^3
+	 X = NC + 3*NC
+	 Y = NC | 2*NC
+	 Z = X || NC
 ///
 
 doc ///
    Key
       ncMatrix
       (ncMatrix,List)
-      (symbol -, NCMatrix)
-      (symbol %, NCMatrix, NCGroebnerBasis)
-      (symbol *, NCMatrix, Matrix)
-      (symbol *, Matrix, NCMatrix)
-      (symbol *, NCMatrix, NCMatrix)
-      (symbol *, NCMatrix, NCRingElement)
-      (symbol *, NCRingElement, NCMatrix)
-      (symbol *, NCMatrix, RingElement)
-      (symbol *, NCMatrix, QQ)
-      (symbol *, NCMatrix, ZZ)
-      (symbol *, RingElement, NCMatrix)
-      (symbol *, QQ, NCMatrix)
-      (symbol *, ZZ, NCMatrix)
-      (symbol +, NCMatrix, NCMatrix)
-      (symbol -, NCMatrix, NCMatrix)
-      (symbol |, NCMatrix, NCMatrix)
-      (symbol ||, NCMatrix, NCMatrix)
-      (symbol //, NCMatrix, NCMatrix)
-      (symbol ==, NCMatrix, NCMatrix)
-      (symbol ==, NCMatrix, ZZ)
-      (symbol ==, ZZ, NCMatrix)
-      (symbol ^, NCMatrix, List)
-      (symbol _, NCMatrix, List)
-      (symbol ^, NCMatrix, ZZ)
-      (transpose, NCMatrix)
-      (lift, NCMatrix)
-      (ring, NCMatrix)
-      (entries, NCMatrix)
    Headline
-      This command does...
+      Create an NCMatrix
+   Usage
+      M = ncMatrix entriesList
+   Inputs
+      entriesList : List
+   Outputs
+      M : NCMatrix
    Description
       Text
-         This command does...
+         This command creates an NCMatrix.  As with the @ TO matrix @ command, the user
+	 may provide this matrix as a doubly nested list of NCRingElements, or as a
+	 doubly nested list of NCMatrices.
       Example
          A = QQ{a,b,c,d}
 	 M = ncMatrix {{a,b,c,d}}
 	 N = ncMatrix {{M,2*M,3*M},{4*M,5*M,6*M}}
+///
 
+doc ///
+   Key
+      (symbol -, NCMatrix, NCMatrix)
+   Headline
+      Subtract NCMatrices
+   Usage
+      L = M - N
+   Inputs
+     M : NCMatrix
+     N : NCMatrix
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This subtracts NCMatrices.
+      Example
+         A = QQ{x,y,z}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(A,A,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 N' = ncMatrix {{sigma sigma M}, {sigma M}, {M}}
+	 N - N'
+///
+
+doc ///
+   Key
+      (symbol -, NCMatrix)
+   Headline
+      Negates NCMatrices
+   Usage
+     L = -M
+   Inputs
+     M : NCMatrix
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This negates NCMatrices.
+      Example
+         A = QQ{x,y,z}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(A,A,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 -N
+///
+
+doc ///
+   Key
+      (symbol +, NCMatrix, NCMatrix)
+   Headline
+      Add NCMatrices
+   Usage
+      L = M + N
+   Inputs
+     M : NCMatrix
+     N : NCMatrix
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This adds NCMatrices.
+      Example
+         A = QQ{x,y,z}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(A,A,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 N' = ncMatrix {{sigma sigma M}, {sigma M}, {M}}
+	 N + N'
+///
+
+doc ///
+   Key
+      (symbol %, NCMatrix, NCGroebnerBasis)
+   Headline
+      Reduces the entries of an NCMatrix with respect to an NCGroebnerBasis
+   Usage
+      L = M % Igb
+   Inputs
+     M : NCMatrix
+     Igb : NCGroebnerBasis
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command reduces the entries of an NCMatrix with respect to an NCGroebnerBasis.
+      Example
+         A = QQ{x,y,z}
+	 f = y*z + z*y - x^2
+	 g = x*z + z*x - y^2
+	 h = z^2 - x*y - y*x
+	 I = ncIdeal {f,g,h}
+	 Igb = ncGroebnerBasis I
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(A,A,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 N3 = N^3
+	 N3red = N3 % Igb
+///
+
+doc ///
+   Key
+      (symbol *, NCMatrix, NCMatrix)
+   Headline
+      Product of NCMatrices
+   Usage
+      L = M*N
+   Inputs
+     M : NCMatrix
+     N : NCMatrix
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command allows for the product of composable NCMatrices (or ordinary matrices over the base).
+      Example
+         A = QQ{x,y,z}
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(B,B,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 N' = ncMatrix {{sigma sigma M}, {sigma M}, {M}}
+	 N*N'
+	 N'*N
+///
+
+doc ///
+   Key
+      (symbol *, NCMatrix, Matrix)
+   Headline
+      Product of NCMatrices
+   Usage
+      L = M*N
+   Inputs
+     M : NCMatrix
+     N : Matrix
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command allows for the product of composable NCMatrices (or ordinary matrices over the base).
+      Example
+         A = QQ{x,y,z}
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(B,B,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+         L = map(QQ^3,QQ^3,{{2,0,0},{1,2,0},{1,2,3}})
+	 N*L
+///
+
+doc ///
+   Key
+      (symbol *, NCMatrix, NCRingElement)
+   Headline
+      Product of NCMatrices
+   Usage
+      L = M*f
+   Inputs
+     M : NCMatrix
+     f : NCRingElement
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command allows for the scalar multiplication of an NCMatrix by an NCRingElement on the right.
+      Example
+         A = QQ{x,y,z}
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(B,B,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 N*x^2
+///
+
+doc ///
+   Key
+      (symbol *, NCMatrix, RingElement)
+   Headline
+      Product of NCMatrices
+   Usage
+      L = M*f
+   Inputs
+     M : NCMatrix
+     N : RingElement
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command allows for the scaling of an NCMatrix by an element in the base ring.
+      Example
+         R = frac(QQ[a])
+	 B = skewPolynomialRing(R,a,{x,y,z})
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(B,B,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+    	 N*a
+///
+
+doc ///
+   Key
+      (symbol *, NCMatrix, QQ)
+   Headline
+      Product of NCMatrices
+   Usage
+      L = M*a
+   Inputs
+     M : NCMatrix
+     a : QQ
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command allows for the scaling of an @ TO NCMatrix @ by an element in @ TO QQ @.
+      Example
+         A = QQ{x,y,z}
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(B,B,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 N*(1/2)
+///
+
+doc ///
+   Key
+      (symbol *, NCMatrix, ZZ)
+   Headline
+      Product of NCMatrices
+   Usage
+      L = M*a
+   Inputs
+     M : NCMatrix
+     a : ZZ
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command allows for the scaling of an @ TO NCMatrix @ by an element in @ TO ZZ @.
+      Example
+         A = QQ{x,y,z}
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(B,B,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 N*3
+///
+
+doc ///
+   Key
+      (symbol *, Matrix, NCMatrix)
+   Headline
+      Product of NCMatrices
+   Usage
+      L = N*M
+   Inputs
+     N : Matrix
+     M : NCMatrix
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command allows for the product of composable NCMatrices (or ordinary matrices over the base).
+      Example
+         A = QQ{x,y,z}
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(B,B,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+         L = map(QQ^3,QQ^3,{{2,0,0},{1,2,0},{1,2,3}})
+	 L*N
+///
+
+doc ///
+   Key
+      (symbol *, NCRingElement, NCMatrix)
+   Headline
+      Product of NCMatrices
+   Usage
+      L = f*M
+   Inputs
+     f : NCRingElement
+     M : NCMatrix
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command allows for the scalar multiplication of an NCMatrix by an NCRingElement on the left.
+      Example
+         A = QQ{x,y,z}
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(B,B,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 x^2*N
+///
+
+doc ///
+   Key
+      (symbol *, RingElement, NCMatrix)
+   Headline
+      Product of NCMatrices
+   Usage
+      L = f*M
+   Inputs
+     f : RingElement
+     M : NCMatrix
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command allows for the scaling of an NCMatrix by an element in the base ring.
+      Example
+         R = frac(QQ[a])
+	 B = skewPolynomialRing(R,a,{x,y,z})
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(B,B,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+    	 a*N
+///
+
+doc ///
+   Key
+      (symbol *, QQ, NCMatrix)
+   Headline
+      Product of NCMatrices
+   Usage
+      L = a*M
+   Inputs
+     a : QQ
+     M : NCMatrix
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command allows for the scaling of an @ TO NCMatrix @ by an element in @ TO QQ @.
+      Example
+         A = QQ{x,y,z}
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(B,B,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 (1/2)*N
+///
+
+doc ///
+   Key
+      (symbol *, ZZ, NCMatrix)
+   Headline
+      Product of NCMatrices
+   Usage
+      L = a*M
+   Inputs
+     a : ZZ
+     M : NCMatrix
+   Outputs
+     L : NCMatrix
+   Description
+      Text
+         This command allows for the scaling of an @ TO NCMatrix @ by an element in @ TO ZZ @.
+      Example
+         A = QQ{x,y,z}
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(B,B,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 3*N
+///
+
+doc ///
+   Key
+      (symbol ==, NCMatrix, NCMatrix)
+      (symbol ==, NCMatrix, ZZ)
+      (symbol ==, ZZ, NCMatrix)
+   Headline
+      Test equality of matrices
+   Usage
+      isEqual = M == N
+   Inputs
+      M : NCMatrix
+      N : NCMatrix
+   Outputs
+      isEqual : Boolean
+   Description
+      Text
+         This command tests equality for matrices.  If one of the inputs is an integer, then the test
+	 only will work if the integer is zero.  Below, we test the well-definedness of the exponentiation
+	 operation using Groebner bases.
+      Example
          A = QQ{x,y,z}
 	 f = y*z + z*y - x^2
 	 g = x*z + z*x - y^2
@@ -461,43 +829,616 @@ doc ///
 	 phi = ncMap(B,A,gens B)
 	 NB = phi N
 	 N3B = NB^3
-	 X = NB + 3*NB
-	 Y = NB | 2*NB
-	 Z = X || NB
+	 (phi Nred) == N3B
+///
+
+doc ///
+   Key
+      (symbol |, NCMatrix, NCMatrix)
+   Headline
+      Join NCMatrices horizontally
+   Usage
+      L = M | N
+   Inputs
+      M : NCMatrix
+      N : NCMatrix
+   Outputs
+      L : NCMatrix
+   Description
+      Text
+         This command joins NCMatrices horizontally.
+      Example
+         A = QQ{a,b,c,d}
+	 M = ncMatrix {{a,b,c,d},{b,c,d,a}}
+	 N = M | 2*M | -3*M
+///
+
+doc ///
+   Key
+      (symbol ||, NCMatrix, NCMatrix)
+   Headline
+      Join NCMatrices vertically
+   Usage
+      L = M || N
+   Inputs
+      M : NCMatrix
+      N : NCMatrix
+   Outputs
+      L : NCMatrix
+   Description
+      Text
+         This command joins NCMatrices vertically.
+      Example
+         A = QQ{a,b,c,d}
+	 M = ncMatrix {{a,b,c,d},{b,c,d,a}}
+	 N = M || 2*M || -3*M
+///
+
+doc ///
+   Key
+      (symbol ^, NCMatrix, List)
+   Headline
+      Select some rows of an NCMatrix
+   Usage
+      L = M^rows
+   Inputs
+      M : NCMatrix
+      rows : List
+   Outputs
+      L : NCMatrix
+   Description
+      Text
+         This command selects some rows of an NCMatrix.
+      Example
+         A = QQ{a,b,c,d}
+	 M = ncMatrix {{a,b,c,d},{b,c,d,a}}
+	 N = M || 2*M || -3*M
+	 N^{0,3,4}
+///
+
+doc ///
+   Key
+      (symbol _, NCMatrix, List)
+   Headline
+      Select some columns of an NCMatrix
+   Usage
+      L = M_cols
+   Inputs
+      M : NCMatrix
+      cols : List
+   Outputs
+      L : NCMatrix
+   Description
+      Text
+         This command selects some columns of an NCMatrix.
+      Example
+         A = QQ{a,b,c,d}
+	 M = ncMatrix {{a,b,c,d},{b,c,d,a}}
+	 N = M || 2*M || -3*M
+	 N_{0,2}
+///
+
+doc ///
+   Key
+      (symbol ^, NCMatrix, ZZ)
+   Headline
+      Exponentiate an NCMatrix
+   Usage
+      L = M^n
+   Inputs
+      M : NCMatrix
+      n : ZZ
+   Outputs
+      L : NCMatrix
+   Description
+      Text
+         This exponentiates an NCMatrix.  It should be remarked that the matrix is reduced
+	 with the GB of the ring it is over on each iteration of the product.  If your algebra
+	 is significantly smaller than the tensor algebra, this is a large savings.
+	 The input is assumed to be a nonnegative integer at this time.
+      Example
+         A = QQ{x,y,z}
+	 M = ncMatrix {{x, y, z}}
+	 sigma = ncMap(A,A,{y,z,x})
+	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
+	 N^3
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 NB = promote(N,B)
+	 NB^3
+///
+
+doc ///
+   Key
+      (symbol //, NCMatrix, NCMatrix)
+   Headline
+      Factor one map through another
+   Usage
+      L = M // N
+   Inputs
+      M : NCMatrix
+      N : NCMatrix
+   Outputs
+      L : NCMatrix
+   Description
+      Text
+         This command factors one map through another.  One nice application
+	 of this is to compute twisted matrix factorizations.  
+	 If the maps input are homogeneous, then the degrees must match up for the command to work.
+
+         If M does not factor through N, then the return value L is such that M - N*L is the reduction
+	 of M modulo a Groebner basis for the image of N.
+
+	 Here is an example of doing so over a PI Sklyanin algebra.
+      Example
+         A = QQ{x,y,z}
+	 g = 2*(-y^3-x*y*z+y*x*z+x^3)
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x} -- this is the Sklyanin
+	 J = (ideal B) + ncIdeal {g}
+	 B' = A/J -- Factor of sklyanin
+	 BprimeToB = ncMap(B,B',gens B) -- way to lift back from B' to B
+	 k = ncMatrix {{x,y,z}}
+	 assignDegrees k
+	 M = BprimeToB rightKernelBergman rightKernelBergman k  -- second syzygy of k over B
+      Text
+         At this point, M is maximal Cohen-Macaulay B'-module,
+	 and hence the projective dimension of M as a B-module
+	 is 1.  Since M is a B' module, multiplication by g on the
+	 complex that gives the resolution over B is null homotopic.  This means
+	 we may factor the map f through f times the identity.  We do so below.
+      Example
+	 gId = g*(ncMatrix applyTable(entries id_(ZZ^4), i -> promote(i,B)))
+	 assignDegrees(gId,{2,2,2,3},{5,5,5,6});
+	 -- now factor through g*id
+	 M' = gId // M
+	 M*M' == gId
+///
+
+doc ///
+   Key
+      (transpose, NCMatrix)
+   Headline
+      Transposes an NCMatrix
+   Usage
+      L = transpose M
+   Inputs
+      M : NCMatrix
+   Outputs
+      L : NCMatrix
+   Description
+      Text
+         This command transposes an NCMatrix
+      Example
+         A = QQ{a,b,c,d}
+	 M = ncMatrix {{a,b,c,d},{b,c,d,a}}
+	 N = M || 2*M || -3*M
+	 transpose N
+///
+
+doc ///
+   Key
+      (ring, NCMatrix)
+   Headline
+      Gives the ring of the NCMatrix
+   Usage
+      L = ring M
+   Inputs
+      M : NCMatrix
+   Outputs
+      L : NCRing
+   Description
+      Text
+         This command returns the ring over which the NCMatrix is defined.
+      Example
+         A = QQ{a,b,c,d}
+	 M = ncMatrix {{a,b,c,d},{b,c,d,a}}
+    	 ring M
+///
+
+doc ///
+   Key
+      (entries, NCMatrix)
+   Headline
+      Returns the entries of the NCMatrix
+   Usage
+      L = entries M
+   Inputs
+      M : NCMatrix
+   Outputs
+      L : List
+   Description
+      Text
+         Returns the entries of the NCMatrix as a doubly nested list.
+      Example
+         A = QQ{a,b,c,d}
+	 M = ncMatrix {{a,b,c,d},{b,c,d,a}}
+	 N = M || 2*M || -3*M
+	 entries N
+///
+
+doc ///
+   Key
+      (lift, NCMatrix)
+   Headline
+      Lifts an NCMatrix
+   Usage
+      L = lift M
+   Inputs
+      M : NCMatrix
+   Outputs
+      L : NCMatrix
+   Description
+      Text
+         This command lifts an NCMatrix to a matrix over its @ TO ambient @ NCRing.
+      Example
+         A = QQ{x,y,z,w}
+	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 M = ncMatrix {{x,y,z,w},{y,z,w,x}}
+	 N = M || 2*M || -3*M
+	 ring N
+	 ring lift N
 ///
 
 doc ///
    Key
       NCRingElement
-      (degree, NCRingElement)
-      (ring, NCRingElement)
-      (terms, NCRingElement)
-      (size, NCRingElement)
-      (support, NCRingElement)
-      (monomials, NCRingElement)
-      (leadMonomial,NCRingElement)
-      (leadCoefficient, NCRingElement)
-      (leadTerm, NCRingElement)
-      (isConstant, NCRingElement)
-      (toString, NCRingElement)
-      (symbol *, NCRingElement, List)
-      (symbol *, List, NCRingElement)
-      (baseName, NCRingElement)
    Headline
-      Type of an element in a noncommutative ring.
+      Type of an element in a noncommutative ring
    --Usage
    --Inputs
    --Outputs
    Description
       Text
-        This is the type of an element in a noncommutative graded ring.
+        This is the type of an element in a noncommutative graded ring.  One can deal with these elements
+	in much the same way as in the commutative case.  See @ TO RingElement @ for details.
+///
+
+doc ///
+   Key
+      (degree, NCRingElement)
+   Headline
+      Returns the degree of an NCRingElement
+   Usage
+     d = degree f
+   Inputs
+     f : NCRingElement
+   Outputs
+     d : ZZ
+   Description
+      Text
+        Returns the degree of an NCRingElement.  At the moment, multigraded NCRings are not supported.
+      Example
+        A = QQ{x,y,z,w}
+        f = x^2+y^2+z^3
+	degree f
+        isHomogeneous f
+	setWeights(A,{3,3,2,1})
+	degree f
+	isHomogeneous f
+///
+
+doc ///
+   Key
+      (ring, NCRingElement)
+   Headline
+      Returns the NCRing of an NCRingElement
+   Usage
+     A = ring f
+   Inputs
+     f : NCRingElement
+   Outputs
+     A : NCRing
+   Description
+      Text
+        Returns the ring of an NCRingElement
+      Example
+        A = QQ{x,y,z,w}
+        f = x^2+y^2+z^3
+        ring f
+///
+
+doc ///
+   Key
+      (terms, NCRingElement)
+   Headline
+      Returns the terms of an NCRingElement
+   Usage
+     t = terms f
+   Inputs
+     f : NCRingElement
+   Outputs
+     t : List
+   Description
+      Text
+        Returns the list of terms that make up the NCRingElement.  It is a list of
+	NCRingElements.
+      Example
+        A = QQ{x,y,z,w}
+        f = 2*x^2+y^2+z^3
+        t = terms f
+        first t
+///
+
+doc ///
+   Key
+      (size, NCRingElement)
+   Headline
+      Returns the number of terms of an NCRingElement
+   Usage
+     n = size f
+   Inputs
+     f : NCRingElement
+   Outputs
+     n : ZZ
+   Description
+      Text
+        Returns the number of terms of an NCRingElement.
+      Example
+        A = QQ{x,y,z,w}
+        f = x^2+y^2+z^3
+        size f
+///
+
+doc ///
+   Key
+      (support, NCRingElement)
+   Headline
+      Returns the variables appearing in the NCRingElement
+   Usage
+     sup = support f
+   Inputs
+     f : NCRingElement
+   Outputs
+     sup : List
+   Description
+      Text
+        Returns the variables appearing in f (as elements of the ring of f).
+      Example
+        A = QQ{x,y,z,w}
+        f = x^2+y^2+z^3
+        sup = support f
+	first sup
+///
+
+doc ///
+   Key
+      (monomials, NCRingElement)
+   Headline
+      Returns the monomials appearing in the NCRingElement
+   Usage
+     mons = support f
+   Inputs
+     f : NCRingElement
+   Outputs
+     mons : NCMatrix
+   Description
+      Text
+        Returns the monomials appearing in NCRingElement as an NCMatrix.
+      Example
+        A = QQ{x,y,z,w}
+        f = x^2+y^2+z^3
+        mons = monomials f
+///
+
+doc ///
+   Key
+      (leadMonomial, NCRingElement)
+   Headline
+      Returns the lead monomial of an NCRingElement
+   Usage
+     mon = leadMonomial f
+   Inputs
+     f : NCRingElement
+   Outputs
+     mon : NCRingElement
+   Description
+      Text
+        Returns the lead monomial of an NCRingElement (as an NCRingElement).
+      Example
+        A = QQ{x,y,z,w}
+        f = x^2+y^2+z^3
+        mon = leadMonomial f
+///
+
+doc ///
+   Key
+      (leadCoefficient, NCRingElement)
+   Headline
+      Returns the lead monomial of an NCRingElement
+   Usage
+     coeff = leadCoefficient f
+   Inputs
+     f : NCRingElement
+   Outputs
+     coeff : RingElement
+   Description
+      Text
+        Returns the lead coefficient of an NCRingElement (as an element of the base).
+      Example
+        A = QQ{x,y,z,w}
+        f = x^2+y^2+z^3
+        coeff = leadCoefficient f
+///
+
+doc ///
+   Key
+      (leadTerm, NCRingElement)
+   Headline
+      Returns the lead term of an NCRingElement
+   Usage
+     coeff = leadTerm f
+   Inputs
+     f : NCRingElement
+   Outputs
+     coeff : NCRingElement
+   Description
+      Text
+        Returns the lead term of an NCRingElement (as an NCRingElement).
+      Example
+        A = QQ{x,y,z,w}
+        f = x^2+y^2+2*z^3
+        coeff = leadTerm f
+///
+
+doc ///
+   Key
+     (isConstant, NCRingElement)
+   Headline
+     Returns whether the NCRingElement is constant
+   Usage
+     t = isConstant f
+   Inputs
+     f : NCRingElement
+   Outputs
+     t : Boolean
+   Description
+      Text
+        Returns whether the NCRingElement is constant.
+      Example
+        A = QQ{x,y,z,w}
+        f = x^2+y^2+2*z^3
+        isConstant f
+	g = promote(1,A)
+	isConstant g
+///
+
+doc ///
+   Key
+     (baseName, NCRingElement)
+   Headline
+     Returns the base name of a generator of an NCRing
+   Usage
+     name = baseName f
+   Inputs
+     f : NCRingElement
+   Description
+      Text
+        Returns the base name of a generator of an NCRing.  This could be something of type
+	@ TO IndexedVariable @ or a @ TO Symbol @.
+      Example
+        A = QQ{x,y,z,w}
+        baseName x
+	B = QQ{p_1..p_6}
+	baseName p_1
+///
+
+doc ///
+   Key
+      (toString, NCRingElement)
+   Headline
+      Converts an NCRingElement to a string
+   Usage
+     str = toString f
+   Inputs
+     f : NCRingElement
+   Outputs
+     str : String
+   Description
+      Text
+        Converts an NCRingElement to a string.  This should be readable by both Macaulay2 as well as Bergman.
+      Example
+        A = QQ{x,y,z,w}
+        f = x^2+y^2+z^3
+        toString f
+///
+
+doc ///
+   Key
+      (symbol *, List, NCRingElement)
+   Headline
+      Scales a list by an NCRingElement on the right
+   Usage
+     xsf = xs*f
+   Inputs
+     xs : List
+     f : NCRingElement
+   Outputs
+     xsf : List
+   Description
+      Text
+        Scales a list by an NCRingElement on the right.
+      Example
+        A = QQ{x,y}
+        f = x^2+y^2
+        bas = flatten entries basis(3,A)
+	bas*f
+///
+
+doc ///
+   Key
+      (symbol *, NCRingElement, List)
+   Headline
+      Scales a list by an NCRingElement on the left
+   Usage
+     fxs = f*xs
+   Inputs
+     f : NCRingElement
+     xs : List
+   Outputs
+     xsf : List
+   Description
+      Text
+        Scales a list by an NCRingElement on the right.
+      Example
+        A = QQ{x,y}
+        f = x^2+y^2
+        bas = flatten entries basis(3,A)
+	f*bas
 ///
 
 doc ///
    Key
       NCGroebnerBasis
-      maxNCGBDegree
-      minNCGBDegree
+   Headline
+      Type of a Groebner basis for an NCIdeal in an NCRing.
+   Description
+     Text
+       This is the type for a Groebner basis of an ideal in the tensor algebra.
+       One can provide one using the @ TO InstallGB @ option of @ TO ncGroebnerBasis @
+       if you happen to know it.
+       
+       One also canhave Macaulay2 call Bergman and have it computed via the function
+       @ TO twoSidedNCGroebnerBasisBergman @.  This command is automatically called when defining
+       a quotient ring, if the defining ideal does not yet have a cached Groebner basis.
+       
+       You can also install one from a Bergman output file if you have that handy; see
+       @ TO gbFromOutputFile @.
+       
+       Below are a couple of examples.
+     Example
+       R = QQ[a,b,c,d]/ideal{a*b+c*d}
+       A = R {x,y,z}
+       I = ncIdeal {a*x*y,b*z^2}
+       Igb = ncGroebnerBasis(I, InstallGB=>true)
+       c*z^2 % Igb 
+       b*z^2 % Igb
+
+       A = QQ{x,y,z}
+       p = y*z + z*y - x^2
+       q = x*z + z*x - y^2
+       r = z^2 - x*y - y*x
+       I = ncIdeal {p,q,r}
+       Igb = ncGroebnerBasis I
+       normalFormBergman(z^17,Igb)
+
+	{*
+        --- This doesn't work in help generator because it can't find the file.
+	A=QQ{a, b, c, d, e, f, g, h}
+	I = gbFromOutputFile(A,"NCAlgebra/UghABCgb6.txt", ReturnIdeal=>true);
+	B=A/I
+	F = a^7+b^7+c^7+d^7+e^7+f^7+g^7+h^7;
+	bas=basis(2,B);
+	X = flatten entries (F*bas);
+	XA = apply(X, x -> promote(x,A));
+	use A
+	XA_{0,1,2,3,4}
+	*}
+
+     Text
+       stuff
+///
+
+doc ///
+   Key
       ncGroebnerBasis
       (ncGroebnerBasis,List)
       (ncGroebnerBasis,NCIdeal)
@@ -512,8 +1453,12 @@ doc ///
       (twoSidedNCGroebnerBasisBergman,NCIdeal)
       NumModuleVars
       [twoSidedNCGroebnerBasisBergman,NumModuleVars]
+      [ncGroebnerBasis,DegreeLimit]
+      maxNCGBDegree
+      minNCGBDegree
       CacheBergmanGB
       ClearDenominators
+      [ncGroebnerBasis,InstallGB]
       InstallGB
       ReturnIdeal
    Headline
@@ -572,7 +1517,7 @@ doc ///
       (symbol +, NCRightIdeal, NCRightIdeal)
       (symbol +, NCLeftIdeal, NCLeftIdeal)
    Headline
-      Type of an ideal in a noncommutative ring.
+      Type of an ideal in a noncommutative ring
    --Usage
    --Inputs
    --Outputs
@@ -591,7 +1536,7 @@ doc ///
       (ring, NCIdeal)
       (generators, NCIdeal)
    Headline
-      Creates an ideal in a noncommutative ring.
+      Creates an ideal in a noncommutative ring
    --Usage
    --Inputs
    --Outputs
@@ -610,7 +1555,23 @@ doc ///
       (basis, ZZ, NCLeftIdeal)
       (basis, ZZ, NCRing)
    Headline
-      Determines whether the input defines a homogeneous object.
+      Returns the basis of an NC object.
+   --Usage
+   --Inputs
+   --Outputs
+   Description
+      Example
+      -- need to finish unit tests
+      Text
+        stuff
+///
+
+doc ///
+   Key
+     setWeights
+     (setWeights,NCRing,List)
+   Headline
+      Set a nonstandard grading for a NCRing.
    --Usage
    --Inputs
    --Outputs
@@ -630,7 +1591,7 @@ doc ///
       (isHomogeneous, NCMatrix)
       (isHomogeneous, NCRingElement)
    Headline
-      Determines whether the input defines a homogeneous object.
+      Determines whether the input defines a homogeneous object
    --Usage
    --Inputs
    --Outputs
@@ -713,7 +1674,7 @@ doc ///
       isRightRegular
       (isRightRegular,NCRingElement,ZZ)
    Headline
-      Determines if a given (homogeneous) element is regular in a given degree.
+      Determines if a given (homogeneous) element is regular in a given degree
    --Usage
    --Inputs
    --Outputs
@@ -730,7 +1691,7 @@ doc ///
       centralElements
       (centralElements, NCRing, ZZ)
    Headline
-      Methods for finding/checking central elements.
+      Methods for finding/checking central elements
    --Usage
    --Inputs
    --Outputs
@@ -761,7 +1722,7 @@ doc ///
       (normalElements, NCRingMap, ZZ)
       (isNormal, NCRingElement)
    Headline
-      Computes normal monomials and components of the variety of normal elements in a given degree.
+      Computes normal monomials and components of the variety of normal elements in a given degree
    --Usage
    --Inputs
    --Outputs
@@ -776,7 +1737,7 @@ doc ///
       normalAutomorphism
       (normalAutomorphism,NCRingElement)
    Headline
-      Computes the automorphism determined by a normal homogeneous element.
+      Computes the automorphism determined by a normal homogeneous element
    --Usage
    --Inputs
    --Outputs
@@ -794,7 +1755,7 @@ doc ///
       (rightMultiplicationMap,NCRingElement,ZZ)
       (rightMultiplicationMap,NCRingElement,List,List)
    Headline
-      Computes a matrix for left or right multiplication by a homogeneous element.
+      Computes a matrix for left or right multiplication by a homogeneous element
    --Usage
    --Inputs
    --Outputs
@@ -827,7 +1788,7 @@ doc ///
       (quadraticClosure,NCIdeal)
       (quadraticClosure,NCQuotientRing)
    Headline
-      Creates the subideal generated by quadratic elements of a given ideal.
+      Creates the subideal generated by quadratic elements of a given ideal
    --Usage
    --Inputs
    --Outputs
@@ -842,7 +1803,7 @@ doc ///
       (homogDual,NCIdeal)
       (homogDual,NCQuotientRing)
    Headline
-      Computes the dual of a pure homogeneous ideal.
+      Computes the dual of a pure homogeneous ideal
    --Usage
    --Inputs
    --Outputs
@@ -858,7 +1819,7 @@ doc ///
       (sparseCoeffs,NCRingElement)
       [sparseCoeffs,Monomials]
    Headline
-      Converts ring elements into vectors over the coefficient ring.
+      Converts ring elements into vectors over the coefficient ring
    --Usage
    --Inputs
    --Outputs
@@ -893,7 +1854,7 @@ doc ///
       (source, NCRingMap)
       (target, NCRingMap)
    Headline
-      Creates a map from a non-commutative ring.
+      Creates a map from a non-commutative ring
    --Usage
    --Inputs
    --Outputs
@@ -910,7 +1871,7 @@ doc ///
       (oreExtension,NCRing,NCRingMap,NCRingElement)
       (oreExtension,NCRing,NCRingMap,Symbol)
    Headline
-      Creates an Ore extension of a noncommutative ring.
+      Creates an Ore extension of a noncommutative ring
    --Usage
    --Inputs
    --Outputs
@@ -931,7 +1892,7 @@ doc ///
       (oreIdeal,NCRing,NCRingMap,NCRingElement)
       (oreIdeal,NCRing,NCRingMap,Symbol)
    Headline
-      Creates the defining ideal of an Ore extension of a noncommutative ring.
+      Creates the defining ideal of an Ore extension of a noncommutative ring
    --Usage
    --Inputs
    --Outputs
@@ -952,7 +1913,7 @@ doc ///
        minimizeRelations
       (minimizeRelations,List)
    Headline
-      Methods for creating endomorphism rings of modules over a commutative ring.
+      Methods for creating endomorphism rings of modules over a commutative ring
    --Usage
    --Inputs
    --Outputs
@@ -973,7 +1934,6 @@ doc ///
          B = endomorphismRing(M,Y);
          gensI = gens ideal B;
          gensIMin = minimizeRelations(gensI);
-
       Text
          stuff
 ///
@@ -992,7 +1952,7 @@ doc ///
       skewAbelianization
       (skewAbelianization,NCRing)
    Headline
-      Methods for working with skew polynomial rings.
+      Methods for working with skew polynomial rings
    --Usage
    --Inputs
    --Outputs
@@ -1021,7 +1981,7 @@ doc ///
       oppositeRing
       (oppositeRing,NCRing)
    Headline
-      Creates the opposite ring of a noncommutative ring.
+      Creates the opposite ring of a noncommutative ring
    --Usage
    --Inputs
    --Outputs
@@ -1040,7 +2000,7 @@ doc ///
       [normalFormBergman,NumModuleVars]
       [normalFormBergman,DegreeLimit]
    Headline
-      Calls Bergman for a normal form calculation.
+      Calls Bergman for a normal form calculation
    --Usage
    --Inputs
    --Outputs
@@ -1053,7 +2013,7 @@ doc ///
    Key
       isReduced
    Headline
-      Determines if a given element is in normal form with respect to a groebner basis.
+      Determines if a given element is in normal form with respect to a Groebner basis
    --Usage
    --   isReduced
    --Inputs
@@ -1071,7 +2031,7 @@ doc ///
       [hilbertBergman,DegreeLimit]
       DegreeVariable
    Headline
-      Calls Bergman for a Hilbert series calculation.
+      Calls Bergman for a Hilbert series calculation
    --Usage
    --Inputs
    --Outputs
