@@ -22,7 +22,7 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          gbFromOutputFile,
          CacheBergmanGB,
          setWeights,
-	 ClearDenominators,
+	 MakeMonic,
          NumModuleVars,
 	 InstallGB,
          ReturnIdeal,
@@ -1287,7 +1287,7 @@ writeGBInitFile (String, String, String) := (tempInit, tempInput, tempOutput) ->
 
 gbFromOutputFile = method(Options => {ReturnIdeal => false,
                                       CacheBergmanGB => true,
-                                      ClearDenominators => true})
+                                      MakeMonic => true})
 gbFromOutputFile(NCPolynomialRing,String) := opts -> (A,tempOutput) -> (
    fil := openIn tempOutput;
    totalFile := get fil;
@@ -1312,7 +1312,7 @@ gbFromOutputFile(NCPolynomialRing,String) := opts -> (A,tempOutput) -> (
    if A.cache#?Dictionary then dictionaryPath = drop(dictionaryPath,1);
    -- roll back to old variables (maybe no longer in tensor algebra)
    scan(oldVarSymbols, oldVarValues, (sym,val) -> sym <- val);
-   if opts#ClearDenominators then
+   if opts#MakeMonic then
       gensList = apply(gensList, f -> (leadCoefficient f)^(-1)*f);
    (minNCGBDeg,maxNCGBDeg,minCoeffDeg,maxCoeffDeg) := getMinMaxDegrees(gensList);
    ncgb := new NCGroebnerBasis from hashTable {(symbol generators) => hashTable apply(gensList, f -> (leadMonomialForGB f,f)),
@@ -1344,7 +1344,7 @@ gbFromOutputFile(NCPolynomialRing,String) := opts -> (A,tempOutput) -> (
 
 twoSidedNCGroebnerBasisBergman = method(Options=>{DegreeLimit=>10,
                                                   NumModuleVars=>0,
-                                                  ClearDenominators=>true,
+                                                  MakeMonic=>true,
                                                   CacheBergmanGB=>true})
 twoSidedNCGroebnerBasisBergman List := opts -> fList -> twoSidedNCGroebnerBasisBergman(ncIdeal fList,opts)
 twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
@@ -1365,7 +1365,7 @@ twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
   runCommand("bergman -i " | tempInit | " -on-error exit --silent > " | tempTerminal);
   gbFromOutputFile(ring I,
                    tempOutput,
-                   ClearDenominators=>opts#ClearDenominators,
+                   MakeMonic=>opts#MakeMonic,
                    CacheBergmanGB=>opts#CacheBergmanGB)
 )
 
@@ -1741,8 +1741,7 @@ ncGroebnerBasis NCIdeal := opts -> I -> (
                                                   MaxCoeffDegree => maxCoeffDeg,
                                                   MinCoeffDegree => minCoeffDeg}
    )
-   else twoSidedNCGroebnerBasisBergman(I,
-                                       DegreeLimit => opts#DegreeLimit);
+   else twoSidedNCGroebnerBasisBergman(I, DegreeLimit => opts#DegreeLimit);
    I.cache#gb = ncgb;
    ncgb   
 )
@@ -2540,7 +2539,7 @@ NCMatrix // NCMatrix := (N,M) -> (
    CM := ring first matrixRelsM;
    matrixRelsN := buildMatrixRelations N;
    CN := ring first matrixRelsN;
-   matrixGBM := getMatrixGB(M, DegreeLimit => gbDegree, ClearDenominators => true);
+   matrixGBM := getMatrixGB(M, DegreeLimit => gbDegree, MakeMonic => true);
    B := ring M;
    colsN := #(N.source);
    rowsN := #(N.target);
@@ -2554,7 +2553,7 @@ NCMatrix // NCMatrix := (N,M) -> (
    factorMap
 )
 
-getMatrixGB = method(Options => {DegreeLimit => 10, ClearDenominators => false})
+getMatrixGB = method(Options => {DegreeLimit => 10, MakeMonic => false})
 getMatrixGB NCMatrix := opts -> M -> (
    if M.cache#?"matrixGB" and M.cache#"gbDegree" >= opts#DegreeLimit then return M.cache#"matrixGB";
    
@@ -2565,7 +2564,7 @@ getMatrixGB NCMatrix := opts -> M -> (
    mGB := twoSidedNCGroebnerBasisBergman(matrRels | ((gens ideal B) / ambBtoC),
                                          NumModuleVars => numgens C - numgens B,
                                          DegreeLimit => opts#DegreeLimit,
-                                         ClearDenominators=>opts#ClearDenominators,
+                                         MakeMonic=>opts#MakeMonic,
                                          CacheBergmanGB=>false);
    M.cache#"matrixGB" = mGB;
    M.cache#"gbDegree" = opts#DegreeLimit;
