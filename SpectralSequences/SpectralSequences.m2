@@ -54,6 +54,7 @@ export {
   "spectralSequence", 
 --  "computeErModules",
 --  "computeErMaps", 
+"ErMaps",
   "spots",
   "SpectralSequencePage", 
   "spectralSequencePage",
@@ -73,15 +74,10 @@ export {
   "targetPruningMap",
    "Page", 
    "PageMap", 
-   "InfiniteSequence", 
---   "SequenceMap", 
    "pageMap", 
    "page" ,
---   "next",
+   "InfiniteSequence",
   "prunningMaps", "xHom", "yHom", "xTensor", "yTensor"
---  "DoubleChainComplex",
---  "DoubleChainComplexMap", 
---  "xx", "yy"
   }
 
 
@@ -352,12 +348,12 @@ filteredComplex(reverse for i from P to (N-1) list
  )
     else ( if #supp == 1 then
 	(
-	P := min supp;
-	T := K_infinity ** C;
-	filteredComplex( {inducedMap(T, xTensorComplex(T, P))}, Shift => - P + 1)
+	p := min supp;
+	t := K_infinity ** C;
+	filteredComplex( {inducedMap(t, xTensorComplex(t, p))}, Shift => - p + 1)
 	)
-	else( T:= K_infinity ** C;
-	    filteredComplex({id_T})
+	else( tt:= K_infinity ** C;
+	    filteredComplex({id_tt})
 	    )
 	)
      )
@@ -393,12 +389,12 @@ filteredComplex(reverse for i from P to (N-1) list
  )
     else ( if #supp == 1 then
 	(
-	P := min supp;
-	T := C ** K_infinity;
-	filteredComplex( {inducedMap(T, yTensorComplex(T, P))}, Shift => - P + 1)
+	p := min supp;
+	t := C ** K_infinity;
+	filteredComplex( {inducedMap(t, yTensorComplex(t, p))}, Shift => - p + 1)
 	)
-	else( T:= C ** K_infinity ;
-	    filteredComplex({id_T})
+	else( tt:= C ** K_infinity ;
+	    filteredComplex({id_tt})
 	    )
 	)
      )	   
@@ -482,20 +478,35 @@ xComplex := (T,n) ->
 	       )
 
 xHom = method()
-xHom(FilteredComplex, ChainComplex) := FilteredComplex => (K,C) -> (
+xHom(FilteredComplex, ChainComplex) := FilteredComplex => (K,C) -> (    
+    	   supp := support K_infinity;
+	        -- try to handle the boundary cases --
+     if supp != {} and #supp > 1 then (		
      N := - max support K_infinity;
      P := - min support K_infinity;
      H := Hom(K_infinity,C);
      filteredComplex(reverse for i from N to P - 1 list inducedMap(H, xComplex(H,i)), 
-	 Shift => -N)
+	 Shift => - N)
+     )
+ else ( if #supp == 1 then
+	(
+	p := min supp;
+	h := Hom(K_infinity , C);
+	filteredComplex( {inducedMap(h, xComplex(h, p))}, Shift =>  p + 1 )
+	)
+    	else( hhh:= Hom(K_infinity , C) ;
+	    filteredComplex({id_hhh})
+	    )
+	)
     )
 
-ymodules := (n, d, H)->(
+ymodules := (n, d, H) -> (
     -- want components {p,q} = Hom(-p, q) with p + q = d and q <= n
      apply( (H#d).cache.indices,
      i -> if   (i#1) <= n then  
      image (id_(((H#d).cache.components)#(((H#d).cache.indexComponents)#i)))
-     else image(0* id_(((H#d).cache.components)#(((H#d).cache.indexComponents)#i)))) );
+     else image(0* id_(((H#d).cache.components)#(((H#d).cache.indexComponents)#i)))) 
+ )
 
 
 yComplex := (T,n) -> 
@@ -510,11 +521,25 @@ yComplex := (T,n) ->
 
 yHom = method()
 yHom(ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> (
+     supp := support K_infinity;
+	        -- try to handle the boundary cases --
+     if supp != {} and #supp > 1 then (		
      N :=  max support K_infinity;
      P :=  min support K_infinity;
      H := Hom(C, K_infinity);
      filteredComplex(reverse for i from P to N - 1 list inducedMap(H, yComplex(H,i)), 
 	 Shift => - P)
+     )
+  else ( if #supp == 1 then
+	(
+	p := min supp;
+	h := Hom(C , K_infinity );
+	filteredComplex( {inducedMap(h, yComplex(h, p))}, Shift =>  - p  + 1 )
+	)
+    	else( hhh:= Hom(C, K_infinity) ;
+	    filteredComplex({id_hhh})
+	    )
+	) 
     )
 
 ------------------------------------
@@ -743,12 +768,15 @@ page SpectralSequencePage := Page => opts -> E -> (
     	K := E.filteredComplex;
 	s := E.number;
     H := new Page;
+    -- again trying to handle the case of the zero complex --
+    if min K_(infinity) < infinity and max K_infinity > - infinity then (
 	    for p from min K to max K do (
 	  	for q from -p + min K_(infinity) to max K_(infinity) do (
 	       	    if E.Prune == false then H#{p,q} = epq(K,p,q,s)
 	       	    else H#{p,q} = prune epq(K,p,q,s)
 	       )
 	   );
+       );
     H
     )
 
@@ -857,10 +885,13 @@ spectralSequencePageMap = method(Options =>{Prune => false})
 
 spectralSequencePageMap(FilteredComplex,ZZ) := SpectralSequencePageMap => opts ->
  (K,r) -> (myList:={};
+     -- try to handle case coming from the zero complex --
+     Kmin := min K_infinity; Kmax := max K_(infinity);
+     if class Kmin < infinity  and Kmax > - infinity then (
            for p from min K to max K do (
 		for q from -p + min K_(infinity) to max K_(infinity) -p do (
 	       	     myList = 
-		     append(myList, {p,q} => ErMaps(K,p,q,r, Prune => opts.Prune)) ));
+		     append(myList, {p,q} => ErMaps(K,p,q,r, Prune => opts.Prune)) )); );
 	       new SpectralSequencePageMap from 
 	       join (myList, {symbol cache =>  new CacheTable,
 		    symbol degree => {-r,r-1}, 
@@ -2483,6 +2514,10 @@ filteredComplex D
 filteredComplex C
 filteredComplex E
 d = (filteredComplex D) ** D
+filteredComplex{id_C}
+filteredComplex{id_D}
+
+
 
 e = spectralSequence d
 e^0
@@ -2521,3 +2556,44 @@ xHom(filteredComplex E, E)
 yHom(E, filteredComplex E)
 -- so the xHom and yHom might be a fix
 -- need to check the shift ...
+
+
+-- trying to handle the boundary cases for xHom and yHom --
+
+restart
+needsPackage"SpectralSequences"
+
+A = QQ[x]
+M = A^1
+D = M[0]
+C = new ChainComplex
+C.ring = A
+H = koszul vars A
+
+xHom(filteredComplex C, C)
+yHom(C, filteredComplex C)
+
+e = spectralSequence xHom(filteredComplex C, C)
+e^0
+e^10
+
+ee = spectralSequence yHom(C, filteredComplex C)
+
+ee^0
+ee^10
+
+xHom(filteredComplex D, D)
+yHom(D, filteredComplex D)
+
+e = spectralSequence xHom(filteredComplex D, D)
+e^0
+e^10
+
+xHom(filteredComplex H, H)
+yHom(H, filteredComplex H)
+
+ee = spectralSequence yHom(H, filteredComplex H)
+
+ee^0
+ee^10
+
