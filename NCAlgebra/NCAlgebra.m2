@@ -15,7 +15,7 @@ newPackage("NCAlgebra",
 
 export { NCRing, NCQuotientRing, NCPolynomialRing,
          NCRingMap, NCRingElement, isReduced,
-         NCGroebnerBasis, ncGroebnerBasis, maxNCGBDegree, minNCGBDegree,
+         NCGroebnerBasis, ncGroebnerBasis,
          NCIdeal, NCLeftIdeal, NCRightIdeal,
          ncIdeal, ncLeftIdeal, ncRightIdeal,
          twoSidedNCGroebnerBasisBergman,
@@ -47,11 +47,11 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          endomorphismRing,endomorphismRingGens,
          minimizeRelations,
          skewPolynomialRing,
-	 abelianization,
-	 skewAbelianization,
 	 oppositeRing,
          quadraticClosure,
 	 homogDual,
+	 toM2Ring,toNCRing,
+	 isExterior,
 	 sparseCoeffs
 }
 
@@ -580,10 +580,9 @@ isHomogeneous NCIdeal := I -> all(gens I, isHomogeneous)
 
 net NCIdeal := I -> "Two-sided ideal " | net (I.generators);
 
-ring NCIdeal := I -> I.ring
+ring NCIdeal := NCRing => I -> I.ring
 
 NCIdeal + NCIdeal := (I,J) -> ncIdeal (gens I | gens J)
-
 
 quadraticClosure NCIdeal := I -> (
    -- Input: An NCIdeal I
@@ -677,7 +676,7 @@ isHomogeneous NCRightIdeal := I -> all(gens I, isHomogeneous)
 
 net NCRightIdeal := I -> "Right ideal " | net (I.generators);
 
-ring NCRightIdeal := I -> I.ring
+ring NCRightIdeal := NCRing => I -> I.ring
 
 NCRightIdeal + NCRightIdeal := (I,J) -> ncRightIdeal (gens I | gens J)
 
@@ -720,7 +719,7 @@ isHomogeneous NCLeftIdeal := I -> all(gens I, isHomogeneous)
 
 net NCLeftIdeal := I -> "Left ideal " | net (I.generators);
 
-ring NCLeftIdeal := I -> I.ring
+ring NCLeftIdeal := NCRing =>I -> I.ring
 
 NCLeftIdeal + NCLeftIdeal := (I,J) -> ncLeftIdeal (gens I | gens J)
 
@@ -1106,12 +1105,20 @@ isCentral NCRingElement := f -> (
 
 isCommutative NCRing := A -> all(gens A, x -> isCentral x)
 
-abelianization = method()
-abelianization NCRing := B -> (
+isExterior = method()
+isExterior NCRing := 
+isExterior Ring := A -> (
+   sc := apply(subsets(gens A,2), s-> s_0*s_1+s_1*s_0);
+   sq := apply(gens A, g->g^2);
+   all(sc|sq, x-> x==0)
+)
+
+toM2Ring = method(Options => {SkewCommutative => false})
+toM2Ring NCRing := opts -> B -> (
    gensB := gens B;
    R := coefficientRing B;
    gensI := gens ideal B;
-   abB := R [ gens B ];
+   abB := R [ gens B , SkewCommutative => opts#SkewCommutative];
    if gensI == {} then
       abB
    else (
@@ -1124,22 +1131,23 @@ abelianization NCRing := B -> (
    )
 )
 
-skewAbelianization = method()
-skewAbelianization NCRing := B -> (
-   gensB := gens B;
-   R := coefficientRing B;
-   gensI := gens ideal B;
-   abB := R [ gens B, SkewCommutative => true];
-   if gensI == {} then
-      abB
-   else (
-      phi := ambient ncMap(abB,B,gens abB);
-      abI := ideal flatten entries mingens ideal ((gensI) / phi);
-      if abI == 0 then
-         abB
-      else
-         abB/abI
-   )
+toNCRing = method()
+toNCRing Ring := R -> (
+   isComm := isCommutative R;
+   isExter := isExterior R;
+   if not isComm and not isExter then error "Input ring must be either strictly (-1)-skew commutative or commutative.";
+   --- generate the (skew)commutivity relations
+   Q := coefficientRing R;
+   A := Q (gens R);
+   phi := ncMap(A,ambient R,gens A);
+   commRelations := apply(subsets(gens A,2), s-> s_0*s_1+(-1)^(if isComm then -1 else 0)*s_1*s_0);
+   extRelations := if isExter then apply(gens A, s -> s^2) else {};
+   --- here is the defining ideal of the commutative algebra, inside the tensor algebra
+   I := ncIdeal (commRelations | extRelations | ((flatten entries gens ideal R) / phi));
+   commIgb := gb ideal R;
+   maxDeg := (flatten entries gens commIgb) / degree / sum // max;
+   Igb := ncGroebnerBasis(I, DegreeLimit => 2*maxDeg);
+   A/I
 )
 
 isNormal NCRingElement := f -> (
@@ -2063,8 +2071,9 @@ remainderFunction (NCRingElement,NCGroebnerBasis) := opts -> (f,ncgb) -> (
 ncMap = method()
 --- ncMap from Ring to NCRing not implemented.
 ncMap (Ring,NCRing,List) := 
+ncMap (NCRing,Ring,List) := 
 ncMap (NCRing,NCRing,List) := (B,C,imageList) -> (
-   genCSymbols := C.generatorSymbols;
+   genCSymbols := (gens C) / baseName;
    if not all(imageList / class, r -> r === B) then error "Expected a list of entries in the target ring.";
    new NCRingMap from hashTable {(symbol functionHash) => hashTable apply(#genCSymbols, i -> (genCSymbols#i,imageList#i)),
                                  (symbol source) => C,
@@ -2086,6 +2095,19 @@ NCRingMap NCRingElement := (f,x) -> (
    )
 )
 
+
+NCRingMap RingElement := (f,x) -> (
+   if x == 0 then return promote(0, target f);
+   if ring x =!= source f then error "Ring element not in source of ring map.";
+   C := ring x;
+   sum for t in terms x list (
+      coeff := leadCoefficient t;
+      mon := leadMonomial t;
+      monImage := promote(product apply(support mon, y -> (f.functionHash#(baseName y))^(degree(y,mon))),target f);
+      coeff*monImage
+   )
+)
+
 NCRingMap NCMatrix := (f,M) -> (
    newMatr := applyTable(M.matrix, x -> f x);
    newM := ncMatrix newMatr;
@@ -2103,13 +2125,15 @@ net NCRingMap := f -> (
 )
 
 ambient NCRingMap := f -> (
+--- check whether the source or target is an NCRing
    C := source f;
    ambC := ambient C;
-   genCSymbols := C.generatorSymbols;
+   genCSymbols := (gens C) / baseName;
    ncMap(target f, ambC, apply(genCSymbols, c -> f.functionHash#c))
 )
 
 isWellDefined NCRingMap := f -> (
+--- check whether the source or target is an NCRing
    defIdeal := ideal source f;
    liftf := ambient f;
    all(gens defIdeal, x -> liftf x == 0)
