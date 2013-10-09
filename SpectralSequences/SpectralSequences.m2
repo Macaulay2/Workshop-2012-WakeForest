@@ -19,7 +19,7 @@ newPackage(
   "SpectralSequences",
 --  AuxiliaryFiles => true,
   Version => "0.6",
-  Date => "8 Sept 2013",
+  Date => "9 October 2013",
   Authors => {
        {
       Name => "David Berlekamp", 
@@ -76,8 +76,8 @@ export {
    "PageMap", 
    "pageMap", 
    "page" ,
-   "InfiniteSequence",
-  "prunningMaps", "xHom", "yHom", "xTensor", "yTensor"
+  -- "InfiniteSequence",
+  "prunningMaps", "xHom", "yHom" --, "xTensor", "yTensor"
   }
 
 
@@ -192,9 +192,9 @@ ChainComplex ** ChainComplexMap := ChainComplexMap => (C,f) -> (
 truncate(ChainComplex,ZZ):= (C,q) ->( 
      if q == 0 then return C 
      else (
-	  m:= min support C;
-	  n:=max support C;
-	  l:=length C;
+	  m := min support C;
+	  n := max support C;
+	  l := length C;
 	  if q < -l or q > l then return image(0*id_C)
 	  else  K:=new ChainComplex;
 	        K.ring=C.ring;
@@ -432,7 +432,7 @@ modules := (p,q,T)->(apply( (T#q).cache.indices,
       )
 
 -- produce the "y-filtration" of the Hom complex.
-Hom (ChainComplex, FilteredComplex):= FilteredComplex => (C,K) -> (    
+Hom (ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> (    
 modules := (p,q,T)->(apply( (T#q).cache.indices,
      i-> if (i#1) <= p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
      else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
@@ -703,13 +703,17 @@ SpectralSequence ^ InfiniteNumber:=
 	K := E.filteredComplex;
 	s := max K - min K + 1;
 	H := new Page;
+	-- again trying to handle the case of the zero complex --
+    if min K_(infinity) < infinity and max K_infinity > - infinity then (
 	    for p from min K to max K do (
-	  	for q from -p + min K_(infinity) to max K_(infinity) do (
+	  	for q from - p + min K_(infinity) to max K_(infinity) do (
 	       	    if E.Prune == false then H#{p,q} = epq(K,p,q,s)
 	       	    else H#{p,q} = prune epq(K,p,q,s)
 	       );
     	   ); 
-       ); 
+       );
+   ) ;
+   
 H
 )
       else (
@@ -994,13 +998,26 @@ undocumented {page, prunningMaps, --spots,
    spots,  ReducedHomology, sourcePruningMap, targetPruningMap,
    pageMap,
    (describe, SpectralSequence),
+   (describe, SpectralSequencePage),
+      (describe, SpectralSequencePageMap),
+      ErMaps,
+      (ErMaps,FilteredComplex, ZZ, ZZ, ZZ),
+      (spots, Page),
+      (support, Page),
+      (support, PageMap),
+      (page,List, List, Page),
    (expression, SpectralSequence),
    spectralSequencePageMap,
    (support,ChainComplex),
    (truncate, ChainComplex,ZZ),
    homologyIsomorphism, Shift,
    --prunningMaps, 
-   (prunningMaps, SpectralSequencePage)    
+   (prunningMaps, SpectralSequencePage) ,
+   (describe, Page),
+   (describe, PageMap),
+   (max, FilteredComplex),
+   (min, FilteredComplex),
+   (support, FilteredComplex)
     }
 
 document { 
@@ -1066,15 +1083,15 @@ doc ///
 	       @TO"spectral sequence page"@.
 ///	       
 
-doc ///
-     Key
-     	  InfiniteSequence
-     Headline
-     	  the type of all infinite sequences
-     Description
-     	  Text
-	       This is a data type for working with infinte sequences.
-///	       
+--doc ///
+--     Key
+--     	  InfiniteSequence
+--     Headline
+--     	  the type of all infinite sequences
+--     Description
+--     	  Text
+--	       This is a data type for working with infinte sequences.
+--///	       
 
 
 doc ///
@@ -1564,7 +1581,8 @@ doc ///
      	  KK:FilteredComplex
      Description
      	  Text 
-	       Returns the two filtrations of K_infty ** C determined by the double complex
+	       Returns the two filtrations of the tensor product complex determined by 
+	       the double complex
     ///
  doc ///
      Key
@@ -1662,7 +1680,7 @@ doc ///
      Description
           Text
 	       Given a morphism $f: A \rightarrow B$ of chain complexes
-	       returns the connecting map $H_{n+1}( coker f) \rightarrow H_n (im f)$.
+	       returns the connecting map $H_{n+1}(coker f) \rightarrow H_n (im f)$.
 ///
 
 doc ///
@@ -2597,3 +2615,23 @@ ee = spectralSequence yHom(H, filteredComplex H)
 ee^0
 ee^10
 
+
+restart
+installPackage"SpectralSequences"
+needsPackage"SpectralSequences"
+A = QQ[x]
+M = A^1
+C = M[10]
+K = filteredComplex C
+E = spectralSequence K
+E^0
+E^1
+E^infinity
+c = new ChainComplex 
+c.ring = A
+k = filteredComplex c
+e = spectralSequence k
+e^0
+e^10
+e^infinity
+-- so now e^infinity of the zero complex seems to be OK.
