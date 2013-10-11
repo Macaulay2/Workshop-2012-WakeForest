@@ -1908,41 +1908,211 @@ doc ///
 doc ///
    Key
       NCIdeal
-      ncIdeal
-      (ncIdeal,List)
-      (ncIdeal,NCRingElement)
-      (symbol +, NCIdeal, NCIdeal)
-      (ring, NCIdeal)
-      (generators, NCIdeal)
    Headline
-      Creates an ideal in a noncommutative ring
-   --Usage
-   --Inputs
-   --Outputs
+      Type of a two-sided ideal in a noncommutative ring
    Description
-      Example
-      -- need to finish unit tests
       Text
-        stuff
+         This defines a right ideal in a noncommutative ring.
 ///
 
+doc ///
+   Key
+      ncIdeal
+      (ncIdeal, List)
+      (ncIdeal, NCRingElement)
+   Headline
+      Define a two-sided ideal in a noncommutative ring
+   Usage
+      I = ncIdeal fs
+   Inputs
+      fs : List
+   Outputs
+      I : NCIdeal      
+   Description
+      Text
+         This defines a two-sided ideal in a noncommutative ring.
+      Example
+         A = QQ{x,y,z}
+         p = y*z + z*y - x^2
+         q = x*z + z*x - y^2
+         r = z^2 - x*y - y*x
+         I = ncIdeal{p,q,r}
+///
+
+doc ///
+   Key
+      (generators, NCIdeal)
+   Headline
+      Returns the generators of an NCIdeal
+   Usage
+      gensI = generators I
+   Inputs
+      I : NCIdeal      
+   Outputs
+      gensI : List
+   Description
+      Text
+         Returns the generators of an NCIdeal.
+      Example
+         A = QQ{x,y,z}
+         p = y*z + z*y - x^2
+         q = x*z + z*x - y^2
+         r = z^2 - x*y - y*x
+         I = ncIdeal{p,q,r}
+	 gens I
+///
+
+doc ///
+   Key
+      (ring, NCIdeal)
+   Headline
+      Returns the ring of an NCIdeal
+   Usage
+      A = ring I
+   Inputs
+      I : NCIdeal      
+   Outputs
+      A : NCRing
+   Description
+      Text
+         Returns the ring of an NCIdeal.
+      Example
+         A = QQ{x,y,z}
+         p = y*z + z*y - x^2
+         q = x*z + z*x - y^2
+         r = z^2 - x*y - y*x
+         I = ncIdeal{p,q,r}
+         ring I
+///
+
+doc ///
+   Key
+      (symbol +, NCIdeal, NCIdeal)
+   Headline
+      Sum of NCIdeals
+   Usage
+      K = I + J
+   Inputs
+      I : NCIdeal      
+      J : NCIdeal      
+   Outputs
+      K : NCIdeal
+   Description
+      Text
+         This command sums two NCIdeals.
+      Example
+         A = QQ{x,y,z}
+         p = y*z + z*y - x^2
+         q = x*z + z*x - y^2
+         r = z^2 - x*y - y*x
+         I = ncIdeal{p,q}
+         J = ncIdeal r
+	 I + J
+///
 
 doc ///
    Key
       (basis, ZZ, NCIdeal)
-      (basis, ZZ, NCRightIdeal)
+   Headline
+      Returns a basis of an NCIdeal in a particular degree.
+   Usage
+      bas = basis(n,I)
+   Inputs
+      n : ZZ
+      I : NCIdeal
+   Outputs
+      bas : NCMatrix
+   Description
+      Text
+         This command returns a basis (or minimal generating set, if
+	 the ground ring is not a field), of a homogeneous two-sided
+	 ideal in a noncommutative ring.
+      Example
+         A = QQ{x,y,z}
+         p = y*z + z*y - x^2
+         q = x*z + z*x - y^2
+         r = z^2 - x*y - y*x
+         I = ncIdeal{p,q,r}
+	 bas = basis(3,I)
+///
+
+doc ///
+   Key
       (basis, ZZ, NCLeftIdeal)
+   Headline
+      Returns a basis of an NCLeftIdeal in a particular degree.
+   Usage
+      bas = basis(n,I)
+   Inputs
+      n : ZZ
+      I : NCLeftIdeal
+   Outputs
+      bas : NCMatrix
+   Description
+      Text
+         This command returns a basis (or minimal generating set, if
+	 the ground ring is not a field), of a homogeneous left
+	 ideal in a noncommutative ring.
+      Example
+         A = QQ{x,y,z}
+         p = y*z + z*y - x^2
+         q = x*z + z*x - y^2
+         r = z^2 - x*y - y*x
+         I = ncLeftIdeal{p,q,r}
+	 bas = basis(3,I)
+///
+
+doc ///
+   Key
+      (basis, ZZ, NCRightIdeal)
+   Headline
+      Returns a basis of an NCRightIdeal in a particular degree.
+   Usage
+      bas = basis(n,I)
+   Inputs
+      n : ZZ
+      I : NCIdeal
+   Outputs
+      bas : NCMatrix
+   Description
+      Text
+         This command returns a basis (or minimal generating set, if
+	 the ground ring is not a field), of a homogeneous right
+	 ideal in a noncommutative ring.
+      Example
+         A = QQ{x,y,z}
+         p = y*z + z*y - x^2
+         q = x*z + z*x - y^2
+         r = z^2 - x*y - y*x
+         I = ncRightIdeal{p,q,r}
+	 bas = basis(3,I)
+///
+
+doc ///
+   Key
       (basis, ZZ, NCRing)
    Headline
-      Returns the basis of an NC object.
-   --Usage
-   --Inputs
-   --Outputs
+      Returns a basis of an NCRing in a particular degree.
+   Usage
+      bas = basis(n,B)
+   Inputs
+      n : ZZ
+      I : NCRing
+   Outputs
+      bas : NCMatrix
    Description
-      Example
-      -- need to finish unit tests
       Text
-        stuff
+         This command returns a basis (or minimal generating set, if
+	 the ground ring is not a field), of a graded noncommutative
+         ring.
+      Example
+         A = QQ{x,y,z}
+         p = y*z + z*y - x^2
+         q = x*z + z*x - y^2
+         r = z^2 - x*y - y*x
+         I = ncIdeal{p,q,r}
+	 B = A/I
+	 bas = basis(4,B)
 ///
 
 doc ///
