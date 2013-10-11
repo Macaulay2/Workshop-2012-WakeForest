@@ -314,7 +314,7 @@ NCPolynomialRing / NCIdeal := (A, I) -> (
    promote (A,B) := (f,B) -> new B from {(symbol ring) => B,
             	    	    	    	 (symbol isReduced) => f.isReduced,
                                          (symbol cache) => new CacheTable from {},
-                                         (symbol terms) => promoteHash(f.terms,B)};
+                                         (symbol terms) => promoteHash((f % ncgb).terms,B)};
                                      
    promote (B,A) := (f,A) -> new A from {(symbol ring) => A,
             	    	    	    	 (symbol isReduced) => f.isReduced,
