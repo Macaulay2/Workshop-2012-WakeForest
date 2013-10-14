@@ -137,7 +137,7 @@ doc ///
     (isCommutative, NCRing)
     isExterior
     (isExterior, NCRing)
---    (isExterior, Ring)
+    (isExterior, Ring)
   Headline
     Returns whether an NCRing is commutative
   Usage
@@ -2071,7 +2071,7 @@ doc ///
       bas = basis(n,I)
    Inputs
       n : ZZ
-      I : NCIdeal
+      I : NCRightIdeal
    Outputs
       bas : NCMatrix
    Description
@@ -2236,7 +2236,6 @@ doc ///
 doc ///
    Key
       normalElements
- --     (normalElements, NCRingMap, ZZ) -- does this key exist?
       (normalElements, NCQuotientRing, ZZ, Symbol, Symbol)
       (normalElements, NCRingMap, ZZ)
       (isNormal, NCRingElement)
@@ -2369,6 +2368,7 @@ doc ///
       (matrix, NCRingMap)
       (symbol @@, NCRingMap, NCRingMap)
       (symbol SPACE, NCRingMap, NCRingElement)
+      (symbol SPACE, NCRingMap, RingElement)
       (symbol SPACE, NCRingMap, NCMatrix)
       (symbol _, NCRingMap, ZZ)
       (source, NCRingMap)
@@ -2430,7 +2430,7 @@ doc ///
       endomorphismRing
       (endomorphismRing,Module,Symbol)
       endomorphismRingGens
-       minimizeRelations
+      minimizeRelations
       (minimizeRelations,List)
    Headline
       Methods for creating endomorphism rings of modules over a commutative ring
@@ -2492,13 +2492,11 @@ doc ///
 
 doc ///
    Key
-      skewPolynomialRing
       (skewPolynomialRing,Ring,QQ,List)
       (skewPolynomialRing,Ring,ZZ,List)
       (skewPolynomialRing,Ring,RingElement,List)
    Headline
-      Methods for working defining a skew polynomial ring where the skewing factor
-      is the same for each pair of elements.
+      Methods for defining a skew polynomial ring via a scaling factor
    --Usage
    --Inputs
    --Outputs
@@ -2526,9 +2524,10 @@ doc ///
    Key
       toM2Ring
       (toM2Ring,NCRing)
+      [toM2Ring, SkewCommutative]
    Headline
       Compute the abelianization of an NCRing and returns a PolynomialRing. 
-   Usage
+   --Usage
    --Inputs
    --Outputs
    Description
@@ -2652,7 +2651,7 @@ doc ///
      A : NCQuotientRing
      d : ZZ
    Outputs
-     hseries : ZZ[T]
+     hseries : PolynomialRing
    Description
       Text
          This method calls the bergman function ncpbhgroebner to compute the Hilbert

@@ -635,7 +635,7 @@ homogDual NCIdeal := I -> (
 -- if desired, multiply by toBasis to revert to ring variables.
 -- )
 
-basis (ZZ,NCIdeal) := opts -> (n,I) -> (
+basis (ZZ,NCIdeal) := NCMatrix => opts -> (n,I) -> (
    -- Input: An NCIdeal I and a degree n.
    -- Output: A basis for I in degree n. 
    R:=ring I;
@@ -680,7 +680,7 @@ ring NCRightIdeal := NCRing => I -> I.ring
 
 NCRightIdeal + NCRightIdeal := (I,J) -> ncRightIdeal (gens I | gens J)
 
-basis (ZZ,NCRightIdeal) := opts -> (n,I) -> (
+basis (ZZ,NCRightIdeal) := NCMatrix => opts -> (n,I) -> (
    R:=ring I;
    idealGens:=select(I.generators, g->degree g <= n);
    varsList:=gens R;
@@ -723,7 +723,7 @@ ring NCLeftIdeal := NCRing =>I -> I.ring
 
 NCLeftIdeal + NCLeftIdeal := (I,J) -> ncLeftIdeal (gens I | gens J)
 
-basis (ZZ,NCLeftIdeal) := opts -> (n,I) -> (
+basis (ZZ,NCLeftIdeal) := NCMatrix => opts -> (n,I) -> (
    R:=ring I;
    idealGens:=select(I.generators, g->degree g <= n);
    varsList:=gens R;
@@ -1760,7 +1760,7 @@ net NCGroebnerBasis := ncgb -> (
 ZZ % NCGroebnerBasis := (n,ncgb) -> n
 QQ % NCGroebnerBasis := (n,ncgb) -> n
 
-basis(ZZ,NCRing) := opts -> (n,B) -> (
+basis(ZZ,NCRing) := NCMatrix => opts -> (n,B) -> (
    ncgbGens := if class B === NCQuotientRing then pairs (ncGroebnerBasis B.ideal).generators else {};
    basisList := {ncMonomial({},B)};
    varsList := B.generatorSymbols;
