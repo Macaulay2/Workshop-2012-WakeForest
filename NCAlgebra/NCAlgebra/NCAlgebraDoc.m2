@@ -2466,23 +2466,29 @@ doc ///
       (skewPolynomialRing,Ring,Matrix,List)
    Headline
       Defines a skew polynomial ring via a skewing matrix
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      B = skewPolynomialRing(R,M,L)
+   Inputs
+      R : Ring
+      M : Matrix
+      L : List
+   Outputs
+      B : Ring
    Description
+      Text
+         This method constructs a skew polynomial ring with coefficients in the ring R
+	 and generators from the list L. A valid input matrix is a square matrix over R
+	 with at least #L rows such that M_ij = M_ji^(-1) and M_ii=1. The relations of the 
+	 resulting ring have the form g_i*g_j - M_ij*g_j*g_i.  
       Example
          R = QQ[q]/ideal{q^4+q^3+q^2+q+1}
-         B = skewPolynomialRing(R,q,{x,y,z,w})
+	 M = matrix{{1,q,q},{q^4,1,1},{q^4,1,1}}
+         B = skewPolynomialRing(R,M,{x,y,z})
          x*y == q*y*x
-         C = skewPolynomialRing(QQ,1_QQ, {x,y,z,w})
+	 N = matrix{{1,1,1,1},{1,1,1,1},{1,1,1,1},{1,1,1,1}}
+	 C = skewPolynomialRing(QQ,promote(N,QQ), {a,b,c,d})
          isCommutative C
          isCommutative B
-         --abC = abelianization C
-         --abC' = abelianization ambient C
-         abC = toM2Ring C
-	 abC' = toM2Ring ambient C
-	 ideal abC == 0
-         ideal abC' == 0
          Bop = oppositeRing B
          y*x == q*x*y
       Text
@@ -2527,10 +2533,18 @@ doc ///
       [toM2Ring, SkewCommutative]
    Headline
       Compute the abelianization of an NCRing and returns a PolynomialRing. 
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      Ab = toM2Ring(A,SkewCommutative => true)
+   Inputs
+      A : NCRing
+      SkewCommutative : Boolean
+   Outputs
+      Ab : PolynomialRing
    Description
+      Text
+         This method takes an NCRing and returns the quotient of a commutative polynomial
+	 ring (or an exterior algebra, if SkewCommutative=>true) on the same generators 
+	 by the defining relations of the input ring. 
       Example
 
       Text

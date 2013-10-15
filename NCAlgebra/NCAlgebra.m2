@@ -76,9 +76,9 @@ MAXDEG = 40
 MAXSIZE = 40
 
 -- Andy's bergman path
--- bergmanPath = "/usr/local/bergman1.001"
+bergmanPath = "/usr/local/bergman1.001"
 -- Frank's bergman path
-bergmanPath = "~/bergman"
+-- bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
@@ -1357,7 +1357,7 @@ twoSidedNCGroebnerBasisBergman = method(Options=>{DegreeLimit=>10,
 twoSidedNCGroebnerBasisBergman List := opts -> fList -> twoSidedNCGroebnerBasisBergman(ncIdeal fList,opts)
 twoSidedNCGroebnerBasisBergman NCIdeal := opts -> I -> (
   if not I.ring#BergmanRing then
-     error << "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
+     error "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
   -- call Bergman for this, at the moment
   tempInit := temporaryFileName() | ".init";      -- init file
   tempInput := temporaryFileName() | ".bi";       -- gb input file
@@ -1437,7 +1437,7 @@ normalFormBergman (List, NCGroebnerBasis) := opts -> (fList, ncgb) -> (
    numZeroIndices := fListLen - #nonzeroIndices;
    A := (first fList).ring;
    if not A#BergmanRing then 
-      error << "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
+      error "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
    -- prepare the call to Bergman
    tempInit := temporaryFileName() | ".init";            -- init file
    usePreviousGBOutput := ncgb.cache#?"bergmanGBFile";
@@ -1511,9 +1511,9 @@ hilbertBergman = method(Options => {DegreeLimit => 10  -- DegreeLimit = 0 means 
 hilbertBergman NCQuotientRing := opts -> B -> (
   -- Is the result already here? Check the cache and return if so.
   if not B#BergmanRing then 
-     error << "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
+     error "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
   if (gens B) / degree // max != 1 or (gens B) / degree // min != 1 then
-     error << "Bergman currently only computes Hilbert series correctly for standard graded algebras." << endl;
+     error "Bergman currently only computes Hilbert series correctly for standard graded algebras." << endl;
   -- prepare the call to bergman
   tempInit := temporaryFileName() | ".init";      -- init file
   tempInput := temporaryFileName() | ".bi";       -- gb input file
@@ -2191,7 +2191,7 @@ validSkewMatrix Matrix := M -> (
    rows := numgens source M;
    cols := numgens target M;
    if rows != cols then return false;
-   invOffDiag := all(apply(rows, i -> all apply(toList(i..cols-1), j -> isUnit M_i_j and isUnit M_j_i and (M_j_i)^(-1) == M_i_j)));
+   invOffDiag := all(apply(rows, i -> all(apply(toList(i..cols-1), j -> isUnit M_i_j and isUnit M_j_i and (M_j_i)^(-1) == M_i_j),b->b==true)),c->c==true);
    oneOnDiag := all(rows, i -> M_i_i == 1);
    invOffDiag and oneOnDiag
 )
@@ -2204,7 +2204,7 @@ skewPolynomialRing (Ring,Matrix,List) := (R,skewMatrix,varList) -> (
    A := R varList;
    gensA := gens A;
    I := ncIdeal apply(subsets(numgens A, 2), p -> 
-            (gensA_(p#0))*(gensA_(p#0)) - (skewMatrix_(p#0)_(p#1))*(gensA_(p#1))*(gensA_(p#0)));
+            (gensA_(p#0))*(gensA_(p#1)) - (skewMatrix_(p#0)_(p#1))*(gensA_(p#1))*(gensA_(p#0)));
    Igb := ncGroebnerBasis(I, InstallGB=>A#BergmanRing);
    B := A/I;
    B
@@ -2650,6 +2650,8 @@ end
 
 --- other things to add or work on in due time
 -----------------------------------
+--- notation to refer to a certain graded piece of an algebra e.g. A_3
+--- a dimension function for graded pieces dim(A,17)
 --- Dare I say it, Diamond Lemma?
 --- Make Quotients of Quotients work.
 --- NCRingMap kernels (to a certain degree)  -- Not sure I can do this with
