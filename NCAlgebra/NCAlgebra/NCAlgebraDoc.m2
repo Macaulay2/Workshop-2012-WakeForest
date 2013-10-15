@@ -2717,10 +2717,6 @@ doc ///
    Key
       normalFormBergman
       (normalFormBergman,List,NCGroebnerBasis)
-      [normalFormBergman,CacheBergmanGB]
-      [normalFormBergman,MakeMonic]
-      [normalFormBergman,NumModuleVars]
-      [normalFormBergman,DegreeLimit]
    Headline
       Calls Bergman for a normal form calculation
    Usage
@@ -2798,7 +2794,6 @@ doc ///
       hilbertBergman
       (hilbertBergman, NCQuotientRing)
       [hilbertBergman,DegreeLimit]
-      DegreeVariable                     -- don't know how to document this
    Headline
       Calls Bergman to compute the Hilbert series of an NCQuotientRing
    Usage

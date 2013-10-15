@@ -28,7 +28,7 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          ReturnIdeal,
          NumberOfBins,
          normalFormBergman,
-         hilbertBergman, DegreeVariable,
+         hilbertBergman,
          rightKernelBergman,
 	 isLeftRegular,
          isRightRegular,
@@ -76,9 +76,9 @@ MAXDEG = 40
 MAXSIZE = 40
 
 -- Andy's bergman path
-bergmanPath = "/usr/local/bergman1.001"
+--bergmanPath = "/usr/local/bergman1.001"
 -- Frank's bergman path
--- bergmanPath = "~/bergman"
+bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
@@ -492,7 +492,7 @@ partialInterreduce List := opts -> relList -> (
             << "  (Pass " << numLoops+1 << ")" << endl;
          );
          redListRem := remainderFunction(redList#i,tempGb,DontUse=>redList#i);
-         if redListRem != 0 then redListRem
+	 if redListRem != 0 then redListRem
       );
       redList = (unique removeNulls redList) / removeConstants;
       numLoops = numLoops + 1;
@@ -534,7 +534,8 @@ eliminateLinearVariables List := opts -> rels -> (
 minimizeRelations = method(Options => {Verbosity => 0})
 minimizeRelations List := opts -> rels -> (
    numOldRels := -1;
-   loopRels := rels;
+   --- make the input monic
+   loopRels := apply(rels, f -> (leadCoefficient f)^(-1)*f);
    while numOldRels != #loopRels do (
       numOldRels = #loopRels;
       loopRels = eliminateLinearVariables(loopRels,opts);
@@ -1424,13 +1425,14 @@ nfFromTerminalFile (NCRing,String) := (A,tempTerminal) -> (
    retVal / (f -> promote(f,A))
 )
 
-normalFormBergman = method(Options => options twoSidedNCGroebnerBasisBergman)
+normalFormBergman = method(Options => {})
 normalFormBergman (List, NCGroebnerBasis) := opts -> (fList, ncgb) -> (
    -- don't send zero elements to bergman, or an error occurs
    oldFList := fList;
    fListLen := #fList;
    nonzeroIndices := positions(fList, f -> f != 0);
    fList = fList_nonzeroIndices;
+   maxDeg := 2*max((gens ncgb) / degree);
    -- if there are no nonzero entries left, then return
    if fList == {} then return fList;
    nonzeroIndices = set nonzeroIndices;
@@ -1451,7 +1453,7 @@ normalFormBergman (List, NCGroebnerBasis) := opts -> (fList, ncgb) -> (
    -- (**) clear denominators first, since Bergman doesn't like fractions
    newFList := apply(fList, f -> clearDenominators f);
    << "Writing bergman input file." << endl;
-   writeNFInputFile(newFList / first,ncgb,{tempGBInput,tempNFInput},opts#DegreeLimit,UsePreviousGBOutput=>usePreviousGBOutput);
+   writeNFInputFile(newFList / first,ncgb,{tempGBInput,tempNFInput},maxDeg,UsePreviousGBOutput=>usePreviousGBOutput);
    << "Writing bergman init file." << endl;
    writeNFInitFile(tempInit,tempGBInput,tempNFInput,tempOutput);
    stderr << "--Calling Bergman for NF calculation for " << #nonzeroIndices << " elements." << endl;
