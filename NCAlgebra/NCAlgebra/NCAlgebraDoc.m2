@@ -2230,9 +2230,6 @@ doc ///
          We have not yet implemented the check in a fixed degree.
 ///
 
-
-
-
 doc ///
    Key
       normalElements
@@ -2248,7 +2245,6 @@ doc ///
       Text
          stuff
 ///
-
 
 doc ///
    Key
@@ -2298,7 +2294,6 @@ doc ///
       Text
          stuff
 ///
-
 
 doc ///
    Key

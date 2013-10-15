@@ -2634,6 +2634,8 @@ end
 --- Make homogeneous maps interface more streamlined.
 --- skewPolynomialRing with NCRing bases
 --- threeDimSklyanin(Ring,List,DegreeLimit=>)
+--- Testing!
+--- Documentation!
 
 --- additions in the near future
 ------------------------------------
@@ -2657,11 +2659,10 @@ end
 --- NCRingMap kernels (to a certain degree)  -- Not sure I can do this with
 ---   Bergman, can't use block orders in bergman.
 --- anick          -- resolution
---- ncpbhgroebner  -- gb, hilbert series
 --- NCModules (?) (including module gb (via simple), hilbert series, modulebettinumbers)
 --- Work on reduction code a bit?
---- Testing!
---- Documentation!
+--- Hilbert series for modules (and sided ideals)
+--- enveloping algebras, tensor products of algebra, hochschild (co)homology?
 
 -- skylanin example from Ellen / Artin-Schelter generic Sklyanin example
 restart
