@@ -2205,7 +2205,7 @@ skewPolynomialRing (Ring,Matrix,List) := (R,skewMatrix,varList) -> (
    gensA := gens A;
    I := ncIdeal apply(subsets(numgens A, 2), p -> 
             (gensA_(p#0))*(gensA_(p#1)) - (skewMatrix_(p#0)_(p#1))*(gensA_(p#1))*(gensA_(p#0)));
-   Igb := ncGroebnerBasis(I, InstallGB=>A#BergmanRing);
+   Igb := ncGroebnerBasis(I, InstallGB=>(not A#BergmanRing));
    B := A/I;
    B
 )
@@ -2630,8 +2630,6 @@ end
 --- ***** Bug in output of NCRingElements!  See the example in the NCPolynomialRing / NCIdeal doc node.
 --- ***** Hilbert series doesn't work with generators of different degrees
 --- Make homogeneous maps interface more streamlined.
---- toM2Ring with Exterior option instead of 'abelianization' and 'skewAbelianization'
---- fromM2Ring should create an NCRing from an M2 ring for Bergman access
 --- skewPolynomialRing with NCRing bases
 --- threeDimSklyanin(Ring,List,DegreeLimit=>)
 

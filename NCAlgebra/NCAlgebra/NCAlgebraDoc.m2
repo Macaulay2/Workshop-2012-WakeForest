@@ -2479,18 +2479,19 @@ doc ///
          This method constructs a skew polynomial ring with coefficients in the ring R
 	 and generators from the list L. A valid input matrix is a square matrix over R
 	 with at least #L rows such that M_ij = M_ji^(-1) and M_ii=1. The relations of the 
-	 resulting ring have the form g_i*g_j - M_ij*g_j*g_i.  
+	 resulting ring have the form g_i*g_j - M_ij*g_j*g_i. If R is a bergman coefficient
+	 ring, an NCGroebnerBasis is computed for B.   
       Example
          R = QQ[q]/ideal{q^4+q^3+q^2+q+1}
 	 M = matrix{{1,q,q},{q^4,1,1},{q^4,1,1}}
          B = skewPolynomialRing(R,M,{x,y,z})
-         x*y == q*y*x
+         x*y == q^4*y*x
 	 N = matrix{{1,1,1,1},{1,1,1,1},{1,1,1,1},{1,1,1,1}}
 	 C = skewPolynomialRing(QQ,promote(N,QQ), {a,b,c,d})
          isCommutative C
          isCommutative B
          Bop = oppositeRing B
-         y*x == q*x*y
+         y*x == q^4*x*y
       Text
          Link to oppositeRing.
 ///
@@ -2500,26 +2501,59 @@ doc ///
    Key
       (skewPolynomialRing,Ring,QQ,List)
       (skewPolynomialRing,Ring,ZZ,List)
-      (skewPolynomialRing,Ring,RingElement,List)
    Headline
-      Methods for defining a skew polynomial ring via a scaling factor
-   --Usage
-   --Inputs
-   --Outputs
+      Defines a skew polynomial ring via a scaling factor
+   Usage
+      B = skewPolynomialRing(R,f,L)
+   Inputs
+      R : Ring
+      f : QQ
+      L : List
+   Outputs
+      B : Ring
    Description
+      Text 
+         This method constructs a skew polynomial ring with coefficient ring R
+	 and generators elements of L. The relations all have the form a*b - f*b*a
+	 where a and b are in L. If R is a bergman coefficient ring, an NCGroebnerBasis
+	 is computed for B.
       Example
-         R = QQ[q]/ideal{q^4+q^3+q^2+q+1}
-         B = skewPolynomialRing(R,q,{x,y,z,w})
-         x*y == q*y*x
-         C = skewPolynomialRing(QQ,1_QQ, {x,y,z,w})
+         B = skewPolynomialRing(QQ,2_QQ, {x,y,z,w})         
+         x*y == 2*y*x
+	 C = skewPolynomialRing(QQ,1_QQ, {x,y,z,w})
          isCommutative C
          isCommutative B
-         --abC = abelianization C
-         --abC' = abelianization ambient C
-         abC = toM2Ring C
-	 abC' = toM2Ring ambient C
-	 ideal abC == 0
-         ideal abC' == 0
+         Bop = oppositeRing B
+         y*x == 2*x*y
+      Text
+         Link to oppositeRing. Link to (skewPolynomialRing,Ring,Matrix,List).
+///
+
+doc ///
+   Key
+      (skewPolynomialRing,Ring,RingElement,List)
+   Headline
+      Defines a skew polynomial ring via a scaling factor
+   Usage
+      B = skewPolynomialRing(R,f,L)
+   Inputs
+      R : Ring
+      f : RingElement
+      L : List
+   Outputs
+      B : Ring
+   Description
+      Text
+         This method constructs a skew polynomial ring with coefficient ring R
+	 and generators elements of L. The relations all have the form a*b - f*b*a
+	 where a and b are in L. If R is a bergman coefficient ring, an NCGroebnerBasis
+	 is computed for B.      
+      Example
+         R = QQ[q]/ideal{q^4+q^3+q^2+q+1}
+         A = skewPolynomialRing(R,promote(2,R),{x,y,z,w})
+         x*y == 2*y*x
+         B = skewPolynomialRing(R,q,{x,y,z,w})
+         x*y == q*y*x
          Bop = oppositeRing B
          y*x == q*x*y
       Text
@@ -2604,10 +2638,40 @@ doc ///
 	  y*x == q*x*y 		
 ///
 
+
 doc ///
    Key
       normalFormBergman
       (normalFormBergman,List,NCGroebnerBasis)
+      [normalFormBergman,CacheBergmanGB]
+      [normalFormBergman,MakeMonic]
+      [normalFormBergman,NumModuleVars]
+      [normalFormBergman,DegreeLimit]
+   Headline
+      Calls Bergman for a normal form calculation
+   Usage
+      nfList = normalFormBergman(L,Igb,DegreeLimit=>10,NumModuleVariables=>0,MakeMonic=>true,CacheBergmanGB=>true)
+   Inputs
+      L : List
+      Igb : NCGroebnerBasis
+      CacheBergmanGB : Boolean
+      MakeMonic : Boolean
+      NumModuleVars : Boolean
+      DegreeLimit : Boolean
+   Outputs
+      nfList : List
+   Description
+      Text
+         This method takes a list of NCRingElements and calls bergman to 
+	 reduce each element to normal form relative to the given NCGroebnerBasis
+	 for the NCIdeal defining the NCRing to which the list elements belong. 
+      Example
+///
+
+
+doc ///
+   Key
+      normalFormBergman
       (normalFormBergman,NCRingElement,NCGroebnerBasis)
       [normalFormBergman,CacheBergmanGB]
       [normalFormBergman,MakeMonic]
@@ -2615,13 +2679,26 @@ doc ///
       [normalFormBergman,DegreeLimit]
    Headline
       Calls Bergman for a normal form calculation
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      nfList = normalFormBergman(f,Igb,DegreeLimit=>10,NumModuleVariables=>0,MakeMonic=>true,CacheBergmanGB=>true)
+   Inputs
+      f : NCRingElement
+      Igb : NCGroebnerBasis
+      CacheBergmanGB : Boolean
+      MakeMonic : Boolean
+      NumModuleVars : Boolean
+      DegreeLimit : Boolean
+   Outputs
+      nfList : List
    Description
       Text
-         stuff
+         This method takes a list of NCRingElements and calls bergman to 
+	 reduce each element to normal form relative to the given NCGroebnerBasis
+	 for the NCIdeal defining the NCRing to which the list elements belong.
+      Example
 ///
+
+
 
 
 doc ///
@@ -2673,6 +2750,12 @@ doc ///
 	 At this time, the output is correct only for NCRings with a standard grading -
 	 all generators have degree 1. The output is returned as a polynomial in ZZ[T].
       Example
+         A = QQ{x,y,z}
+	 f = y*z + z*y - x^2
+	 g = x*z + z*x - y^2
+	 h = z^2 - x*y - y*x
+         B = A/ncIdeal{f,g,h}
+	 hilbertBergman(B,DegreeLimit=>12)
 ///
 
 doc ///
