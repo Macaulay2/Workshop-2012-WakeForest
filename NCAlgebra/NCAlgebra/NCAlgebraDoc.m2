@@ -2552,8 +2552,8 @@ doc ///
       Text
          This method constructs a skew polynomial ring with coefficients in the ring R
 	 and generators from the list L. A valid input matrix is a square matrix over R
-	 with at least #L rows such that M_ij = M_ji^(-1) and M_ii=1. The relations of the 
-	 resulting ring have the form g_i*g_j - M_ij*g_j*g_i. If R is a bergman coefficient
+	 with at least #L rows such that M_{ij} = M_{ji}^{(-1)} and M_{ii}=1. The relations of the 
+	 resulting ring have the form g_i*g_j - M_{ij}*g_j*g_i. If R is a Bergman coefficient
 	 ring, an NCGroebnerBasis is computed for B.   
       Example
          R = QQ[q]/ideal{q^4+q^3+q^2+q+1}
@@ -2566,8 +2566,8 @@ doc ///
          isCommutative B
          Bop = oppositeRing B
          y*x == q^4*x*y
-      Text
-         Link to oppositeRing.
+   SeeAlso
+     oppositeRing
 ///
 
 
@@ -2717,6 +2717,7 @@ doc ///
    Key
       normalFormBergman
       (normalFormBergman,List,NCGroebnerBasis)
+      (normalFormBergman,NCRingElement,NCGroebnerBasis)
    Headline
       Calls Bergman for a normal form calculation
    Usage
@@ -2739,6 +2740,7 @@ doc ///
 ///
 
 
+{*
 doc ///
    Key
       (normalFormBergman,NCRingElement,NCGroebnerBasis)
@@ -2759,7 +2761,7 @@ doc ///
       Example
 ///
 
-
+*}
 
 
 doc ///
