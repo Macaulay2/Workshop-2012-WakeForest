@@ -1,5 +1,5 @@
 newPackage( "PosChar",
-Version => "1.0", Date => "August 17, 2012", Authors => {
+Version => "0.1a", Date => "October 18th, 2013", Authors => {
      {Name => "Mordechai Katzman",
      Email=> "m.katzman@sheffield.ac.uk",
      HomePage=> "http://www.katzman.staff.shef.ac.uk/"
