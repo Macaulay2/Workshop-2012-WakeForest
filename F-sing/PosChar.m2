@@ -44,6 +44,7 @@ export{
      "guessFPT",
      "isBinomial",
      "isDiagonal",
+     "isFPTPoly",
      "isFRegularPoly",
      "isFRegularQGor",
      "isSharplyFPurePoly",
@@ -987,6 +988,8 @@ tauGor = (Rg,fg,tg) -> tauQGor (Rg,1,fg,tg)
 sigmaAOverPEMinus1Poly = (fm, a1, e1) -> (
      Rm := ring fm;
      pp := char Rm;
+     m1 := 0;
+     if (a1 > pp^e1-1) then (m1 = floor((a1-1)/(pp^e1-1)); a1=((a1-1)%(pp^e1-1)) + 1 );
      fpow := fm^a1;
      IN := eR(ideal(1_Rm),e1); -- this is going to be the new value.
      -- the previous commands should use the fast power raising when Emily finishes it
@@ -1001,7 +1004,7 @@ sigmaAOverPEMinus1Poly = (fm, a1, e1) -> (
      );
 
      --return the final ideal and the HSL number of this function
-     {IP,count}
+     {IP*ideal(fm^m1),count}
 )
 
 --Computes Non-Sharply-F-pure ideals for non-polynomial rings with respect to no pair.
@@ -1270,6 +1273,33 @@ estFPT={FinalCheck=> true, Verbose=> false, MultiThread=>false, DiagonalCheck=>t
      answer
 )
 
+--isFPTPoly, determines if a given rational number is the FPT of a pair in a polynomial ring.  
+isFPTPoly ={Verbose=> false}>> o -> (f1, t1) -> (
+	pp := char ring f1;
+	funList := divideFraction(t1, pp);
+	--this writes t1 = a/(p^b(p^c-1))
+	aa := funList#0;
+	bb := funList#1;
+	cc := funList#2;
+	mySigma := ideal(f1);
+	myTau := tauPoly(f1, t1*pp^bb);
+	if (cc == 0) then
+		mySigma = (ideal(f1^(aa-1)))*((sigmaAOverPEMinus1Poly(f1, (pp-1), 1))#0)
+	else 
+		mySigma = (sigmaAOverPEMinus1Poly(f1, aa, cc))#0;
+	if (o.Verbose==true) then print "sigma Computed";
+
+	returnValue := false;
+	if ( not (isSubset(mySigma, myTau) ) ) then (
+		if (o.Verbose==true) then print "sigma is not tau";
+		if ( isSubset(ideal(sub(1, ring f1)), ethRoot(mySigma, bb) )) then (
+			if (o.Verbose==true) then print "less than fpt";
+			if (not isSubset(ideal(sub(1, ring f1)), ethRoot(myTau, bb) ))  then returnValue = true )
+	);
+	
+	returnValue
+)
+
 
 --****************************************************--
 --*****************Documentation**********************--
@@ -1285,6 +1315,24 @@ doc ///
       Text    
          This will do a lot of cool stuff someday. 
 ///
+
+doc ///
+     Key
+     	isFPTPoly 
+     Headline
+        Checks whether a given number is the FPT
+     Usage
+     	  isFPTPoly(f,t)  
+     Inputs
+         f:RingElement
+	 t:ZZ
+     Outputs
+        :Boolean
+     Description
+     	Text
+	     Returns true if t is the FPT, otherwise it returns false.
+///
+
 
 doc ///
      Key
