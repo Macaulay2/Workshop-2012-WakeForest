@@ -1892,7 +1892,7 @@ doc ///
      Description
 	Text
 	     Gives the first e digits of the non-terminating base p expansion of x in [0,1], as a fraction.
-//
+///
 
 doc ///
      Key
@@ -1994,6 +1994,7 @@ doc ///
 	Text
 	    Returns the largest exponent e such that p^e divides x.
 ///
+
 
 
 end
