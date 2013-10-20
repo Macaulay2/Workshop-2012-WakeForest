@@ -141,14 +141,15 @@ doc ///
   Headline
     Returns whether an NCRing is commutative
   Usage
-    isComm = isCommutative A
+    isCommutative A or isExterior A
   Inputs
     A : NCRing
   Outputs
-    isComm : Boolean
+    : Boolean
   Description
     Text
-       This function returns whether an NCRing is commutative
+       This function returns whether an NCRing is commutative or a quotient
+       of the exterior algebra
     Example
        A = QQ{x,y,z}
        isCommutative A
@@ -156,6 +157,8 @@ doc ///
        isCommutative B
        C = skewPolynomialRing(QQ,1_QQ,{x,y,z})
        isCommutative C
+       D = toNCRing(QQ[x,y,SkewCommutative=>true])
+       isExterior D
 ///
 
 doc ///
@@ -809,7 +812,9 @@ doc ///
       isEqual = M == N
    Inputs
       M : NCMatrix
+          or an integer
       N : NCMatrix
+          or an integer
    Outputs
       isEqual : Boolean
    Description
@@ -1430,7 +1435,7 @@ doc ///
      Text
        stuff
 ///
-
+{*
 doc ///
    Key
       [ncGroebnerBasis,InstallGB]
@@ -1455,11 +1460,11 @@ doc ///
      Igb = ncGroebnerBasis(I, DegreeLimit=>n)
    Inputs
      I : NCIdeal
-     DegreeLimit : ZZ
+     DegreeLimit => ZZ
    Outputs
      Igb : NCGroebnerBasis
 ///
-
+*}
 doc ///
    Key
       ncGroebnerBasis
@@ -1471,8 +1476,12 @@ doc ///
      Igb = ncGroebnerBasis I
    Inputs
      I : NCIdeal
-     DegreeLimit : ZZ
-     InstallGB : Boolean
+         or a @ TO List @ of NCRingElements
+     DegreeLimit => ZZ
+                  the maximum degree for the calculation of a Groebner basis
+     InstallGB => Boolean
+                  set this to true to install a NCGroebnerBasis without verifying that 
+		  it is one
    Outputs
      Igb : NCGroebnerBasis
    Description
@@ -1508,7 +1517,7 @@ doc ///
        Calls to Bergman are usually faster, except for when the polynomial is small.  See the documentation
        for @ TO (symbol %, NCRingElement, NCGroebnerBasis) @ for details on controlling when Bergman is called.
 ///
-
+{*
 doc ///
    Key
       CacheBergmanGB
@@ -1537,6 +1546,7 @@ doc ///
    Headline
       An option that specifies certain NCAlgebra functions should return an ideal rather than a Groebner basis.
 ///
+*}
 
 doc ///
    Key
@@ -1552,11 +1562,15 @@ doc ///
    Inputs
       A : NCPolynomialRing
       fileName : String
-      CacheBergmanGB : Boolean
-      MakeMonic : Boolean
-      ReturnIdeal : Boolean
+      CacheBergmanGB => Boolean
+                    specifies whether or not to cache the Groebner basis for later use
+      MakeMonic => Boolean
+                   specifies whether the Bergman output should be made monic
+      ReturnIdeal => Boolean
+                     specifies whether to return an NCIdeal or the NCGroebnerBasis
    Outputs
       Igb : NCGroebnerBasis
+            or an @ TO NCIdeal @
    Description
       Text
         This command reads in an Groebner basis from a Bergman output file.
@@ -1603,14 +1617,14 @@ doc ///
        Igb = ncGroebnerBasis I
        gens Igb
 ///
-
+{*
 doc ///
    Key
       NumModuleVars
    Headline
       An option specifying the number of module variables in the ring of the Groebner basis.
 ///
-
+*}
 doc ///
    Key
       (symbol %, NCRingElement, NCGroebnerBasis)
@@ -1622,6 +1636,7 @@ doc ///
      fred = f % Igb
    Inputs
      f : NCRingElement
+         or an integer, or a rational number
      Igb : NCGroebnerBasis
    Outputs
      fred : NCRingElement
@@ -1652,15 +1667,20 @@ doc ///
    Headline
       Calls Bergman to compute a two sided noncommutative Groebner Basis.
    Usage
-      Igb = twoSidedNCGroebnerBasisBergman I
+      twoSidedNCGroebnerBasisBergman I
    Inputs
       I : NCIdeal
-      DegreeLimit : ZZ
-      NumModuleVars : ZZ
-      CacheBergmanGB : Boolean
-      MakeMonic : Boolean
+          or a @ TO List @ of NCRingElements
+      DegreeLimit => ZZ
+                     specifies the maximum degree for the Groebner basis calculation
+      NumModuleVars => ZZ
+                     specifies the number of module variables in the ring of the Groebner basis
+      MakeMonic => Boolean
+                   specifies whether the Bergman output should be made monic
+      CacheBergmanGB => Boolean
+                    specifies whether or not to cache the Groebner basis for later use
    Outputs
-      Igb : NCGroebnerBasis
+      : NCGroebnerBasis
    Description
      Text
         This command calls the computer algebra system Bergman to
@@ -1703,7 +1723,8 @@ doc ///
    Usage
       I = ncLeftIdeal fs
    Inputs
-      fs : List
+      fs : NCRingElement
+           or a @ TO List @ of NCRingElements
    Outputs
       I : NCLeftIdeal      
    Description
@@ -1816,7 +1837,8 @@ doc ///
    Usage
       I = ncRightIdeal fs
    Inputs
-      fs : List
+      fs : NCRingElement
+           or a @ TO List @ of NCRingElements
    Outputs
       I : NCRightIdeal      
    Description
@@ -1925,7 +1947,8 @@ doc ///
    Usage
       I = ncIdeal fs
    Inputs
-      fs : List
+      fs : NCRingElement
+           or a @ TO List @ of NCRingElements
    Outputs
       I : NCIdeal      
    Description
@@ -2141,14 +2164,20 @@ doc ///
       (isHomogeneous, NCRingElement)
    Headline
       Determines whether the input defines a homogeneous object
-   --Usage
-   --Inputs
+   Usage
+      isHomogeneous x
+   Inputs
+      x : NCIdeal
+          or an @ TO NCLeftIdeal @ an @ TO NCRightIdeal @ an @ TO NCRing @ an
+	  @ TO NCMatrix @ or an @ TO NCRingElement @
    --Outputs
    Description
       Example
       -- need to finish unit tests
       Text
         stuff
+   SeeAlso
+       (isHomogeneous, NCRingMap)
 ///
 
 
@@ -2194,12 +2223,16 @@ doc ///
       (isRightRegular,NCRingElement,ZZ)
    Headline
       Determines if a given (homogeneous) element is regular in a given degree
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      isLeftRegular(x,n) or isRightRegular(x,n)
+   Inputs
+      x : NCRingElement
+      n : ZZ
+   Outputs
+      : Boolean
    Description
       Text
-         stuff
+--         stuff
 ///
 
 doc ///
@@ -2207,13 +2240,15 @@ doc ///
       isCentral
       (isCentral,NCRingElement)
       (isCentral,NCRingElement,NCGroebnerBasis)
-      centralElements
-      (centralElements, NCRing, ZZ)
    Headline
-      Methods for finding/checking central elements
-   --Usage
-   --Inputs
-   --Outputs
+      Determines if an element is central
+   Usage
+      isCentral x or isCentral(x,ncgb)
+   Inputs
+      x : NCRingElement
+      ncgb : NCGroebnerBasis
+   Outputs
+      : Boolean
    Description
       Example
         A = QQ{x,y,z}
@@ -2223,11 +2258,33 @@ doc ///
         h = x^2 + y^2 + z^2
         isCentral h
         isCentral g
+      Text
+--         We have not yet implemented the check in a fixed degree.
+///
+
+doc ///
+   Key
+      centralElements
+      (centralElements, NCRing, ZZ)
+   Headline
+      Methods for finding/checking central elements
+   Usage
+      centralElements(A,n)
+   Inputs
+      A : NCRing
+      n : ZZ
+          the homogeneous degree in which to compute central elements
+   Outputs
+      : NCMatrix
+   Description
+      Example
+        A = QQ{x,y,z}
+        I = ncIdeal { y*z + z*y - x^2,x*z + z*x - y^2,z^2 - x*y - y*x}
+        B = A/I
         centralElements(B,2)
         centralElements(B,3)
-
       Text
-         We have not yet implemented the check in a fixed degree.
+--         We have not yet implemented the check in a fixed degree.
 ///
 
 doc ///
@@ -2381,9 +2438,13 @@ doc ///
       [sparseCoeffs,Monomials]
    Headline
       Converts ring elements into vectors over the coefficient ring
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      sparseCoeffs L
+   Inputs
+      L : List
+      Monomials => List
+   Outputs
+      : Matrix
    Description
       Example
          A=QQ{a, b, c, d, e, f, g, h}
@@ -2393,37 +2454,321 @@ doc ///
 	 sparseCoeffs(F,Monomials=>bas)
 	 sparseCoeffs(toList (10:F),Monomials=>bas)
       Text
-         stuff
+--         stuff
 ///
 
 
 doc ///
-   Key
+    Key
       NCRingMap
+    Headline
+      Type of a map to or from a noncommutative ring.
+   Description
+      Text
+        As in the commutative case, a map F:R->S where R or S is an NCRing is specified by
+ 	giving the images in S of the variables of R. The target map is given first. 
+      Text
+         Common ways to make (and use) an NCRingMap include
+      Code
+         UL {TO (ncMap,Ring,NCRing,List),
+	     TO (ncMap,NCRing,Ring,List),
+	     TO (ncMap,NCRing,NCRing,List),
+       	     TO (normalElements, NCRingMap, ZZ),
+       	     TO (oreExtension,NCRing,NCRingMap,NCRingMap,NCRingElement),
+	     TO (oreExtension,NCRing,NCRingMap,NCRingMap,Symbol),
+	     TO (oreExtension,NCRing,NCRingMap,NCRingElement),
+	     TO (oreExtension,NCRing,NCRingMap,Symbol),
+       	     TO (oreIdeal,NCRing,NCRingMap,NCRingMap,NCRingElement),
+	     TO (oreIdeal,NCRing,NCRingMap,NCRingMap,Symbol),
+	     TO (oreIdeal,NCRing,NCRingMap,NCRingElement),
+	     TO (oreIdeal,NCRing,NCRingMap,Symbol)
+	     }
+      Text
+          Common ways to get information about NCRingMaps
+       Code
+         UL {TO (source,NCRingMap),
+	     TO (target,NCRingMap),
+	     TO (matrix,NCRingMap),
+	     TO (isWellDefined,NCRingMap),
+	     TO (isHomogeneous,NCRingMap),
+	     TO (symbol _, NCRingMap, ZZ)}
+	Text
+	   Common operations involving NCRingMaps
+	Code
+	   UL {TO (ambient,NCRingMap),
+	       TO (symbol /,List,NCRingMap),
+	       TO (symbol SPACE, NCRingMap, NCRingElement),
+     	       TO (symbol SPACE, NCRingMap, RingElement),
+    	       TO (symbol SPACE, NCRingMap, NCMatrix),
+	       }	
+      Example
+         A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
+	 B = QQ{a,b,c}
+	 f = ncMap(B,A,{a^3,b^2,a+b,a-b})
+	 target f
+	 source f
+	 matrix f
+      Text
+         Note that NCRingMaps need not be well-defined or homogeneous.
+         Apply a function to an element or a matrix using the usual function notation.
+	 NCRingMaps are linear and multiplicative by definition.
+      Example
+         f(w*x+2*y)
+	 isWellDefined f
+	 isHomogeneous f
+      Text
+         The user has the option to define an NCRingMap to be a derivation. Of course,
+	 such a map must have the same source and target.
+      Example
+     	 g = ncMap(B,B,{a*b,b^2,c*a*c},Derivation=>true)
+	 g(a*b)==g(a)*b+a*g(b)
+	 g(promote(1,B))
+	 g(c*a+2*b)
+
+///
+
+
+
+doc ///
+   Key
       ncMap
       (ncMap,NCRing,NCRing,List)
       (ncMap,Ring,NCRing,List)
       (ncMap,NCRing,Ring,List)
-      (ambient, NCRingMap)
-      (isHomogeneous, NCRingMap)
-      (isWellDefined, NCRingMap)
-      (symbol /, List, NCRingMap)
-      (matrix, NCRingMap)
-      (symbol @@, NCRingMap, NCRingMap)
-      (symbol SPACE, NCRingMap, NCRingElement)
-      (symbol SPACE, NCRingMap, RingElement)
-      (symbol SPACE, NCRingMap, NCMatrix)
-      (symbol _, NCRingMap, ZZ)
-      (source, NCRingMap)
-      (target, NCRingMap)
+      [ncMap,Derivation]
    Headline
-      Creates a map from a non-commutative ring
+      Make a map to or from an NCRing
+   Usage
+      f = ncMap(B,A,m)
+   Inputs
+      A : NCRing
+          or a @ TO Ring @
+      B : NCRing
+          or a @ TO Ring @
+      m : List
+      Derivation => Boolean
+   Outputs
+      f : NCRingMap
+   Description
+      Example
+         A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
+	 B = QQ{a,b,c}
+	 f = ncMap(B,A,{a^3,b^2,a+b,a-b})
+	 f(w*x+2*y)
+	 g = ncMap(B,B,{a*b,b^2,c*a*c},Derivation=>true)
+	 g(a*b)==g(a)*b+a*g(b)
+	 g(promote(1,B))
+	 g(c*a+2*b)
+///
+
+doc ///
+   Key
+      (ambient, NCRingMap)
+   Headline
+      Extends an NCRingMap to the ambient ring of the source.
+   Usage
+      g = ambient f
+   Inputs
+      f : NCRingMap
+   Outputs
+      g : NCRingMap
+   Description
+      Text
+         If f:R->S is a ring map and R=A/I is a quotient ring, this method
+	 returns the NCRingMap g:A->S obtained by composing f with the natural
+	 map. This method is called by @ TO (isWellDefined, NCRingMap) @ and can
+	 be used to determine what ideal to mod out of the target so the map
+	 becomes well-defined.
+      Example
+         A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
+	 B = QQ{w,x,y,z}/ncIdeal{w*x+x*w,w*y+y*w,x*y+y*x}
+	 f = ncMap(B,A,gens B)
+	 isWellDefined f
+	 g = ambient f
+	 (gens ideal A)/g
+///
+
+doc ///
+   Key
+      (isHomogeneous, NCRingMap)
+   Headline
+      Determines if an NCRingMap preserves the natural grading
+   Usage
+     isHomogeneous f
+   Inputs
+     f : NCRingMap
+   Outputs
+       : Boolean
+   Description
+      Text
+         This method returns true if the map f is degree 0; that is, if the 
+	 generators of the source of f are mapped to elements of the same degree
+	 in the target.
+      Example
+         A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
+	 B = QQ{w,x,y,z}/ncIdeal{w*x+x*w,w*y+y*w,x*y+y*x}
+	 f = ncMap(B,A,gens B)
+	 isHomogeneous f
+	 
+	 C = QQ{a,b,c}
+	 g = ncMap(C,A,{a^3,b^2,a+b,a-b})	 
+	 isHomogeneous g
+///
+
+doc ///
+   Key
+      (isWellDefined, NCRingMap)
+   Headline
+      Determines if an NCRingMap is well-defined.
+   Usage
+      isWellDefined f
+   Inputs
+      f : NCRingMap
+   Outputs
+      : Boolean
+   Description
+      Example
+         A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
+	 B = QQ{w,x,y,z}/ncIdeal{w*x+x*w,w*y+y*w,x*y+y*x}
+	 f = ncMap(B,A,gens B)
+	 isWellDefined f
+	 
+	 C = QQ{a,b,c}
+	 g = ncMap(C,A,{a^3,b^2,a+b,a-b})	 
+	 isWellDefined g
+///
+
+doc ///
+   Key
+      (symbol /, List, NCRingMap)
+   Headline
+      Applies an NCRingMap to each element of a list
+   Usage
+      L/f
+   Inputs
+      L : List
+      f : NCRingMap
+   Outputs
+      : List
+   Description
+      Text
+         This operation is the same thing as apply(L,x->f(x)). Note that the
+	 operation is left associative.
+      Example
+         A = QQ{x,y}
+	 f = ncMap(A,A,{x^2,y^2})
+	 g = ncMap(A,A,{x+y,y})
+	 gens A/f/g
+	 gens A/g/f
+///
+
+doc ///
+   Key
+      (matrix, NCRingMap)
+   Headline
+      The NCMatrix associated to an NCRingMap.
    --Usage
    --Inputs
    --Outputs
    Description
       Text
-         stuff
+         This is currently broken
+      Example
+         A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
+	 B = QQ[a,b,c,SkewCommutative=>true]
+	 f = ncMap(B,A,{a^3,b^2,a+b,a-b})
+	 matrix f
+///
+
+doc ///
+   Key
+      (symbol @@, NCRingMap, NCRingMap)
+   Headline
+      Compose two NCRRingMaps
+   Usage
+      f @@ g
+   Inputs
+      f : NCRingMap
+      g : NCRingMap
+   Outputs
+      : NCRingMap
+   Description
+      Example
+         A = QQ{x,y}
+	 f = ncMap(A,A,{x^2,y^2})
+	 g = ncMap(A,A,{x+y,y})
+	 gens A/f @@ g
+	 gens A/g @@ f
+///
+
+doc ///
+   Key
+      (symbol SPACE, NCRingMap, NCRingElement)
+      (symbol SPACE, NCRingMap, RingElement)
+      (symbol SPACE, NCRingMap, NCMatrix)
+   Headline
+      Apply an NCRingMap to an element or matrix
+   Usage
+      f x
+   Inputs
+      f : NCRingMap
+      x : NCRingElement
+          or a @ TO RingElement @ or an @ TO NCMatrix @
+   Outputs
+      : NCRingElement
+   Description
+      Example
+         A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
+	 B = QQ{a,b,c}
+	 f = ncMap(B,A,{a^3,b^2,a+b,a-b})
+	 f(w*x+2*y)
+	 f basis(2,A)
+
+///
+
+doc ///
+   Key
+      (symbol _, NCRingMap, ZZ)
+   Headline
+      Matrix of one homogeneous component of an NCRingMap
+   Usage
+      f_n
+   Inputs
+      f : NCRingMap
+      n : ZZ
+   Outputs
+      : NCMatrix
+   Description
+      Text
+      This function is broken
+      Example
+         A = QQ{x,y}
+	 f = ncMap(A,A,{x^2,y^2})
+	 f_2
+///
+
+doc ///
+   Key
+      (source, NCRingMap)
+   Headline
+      Source of a map
+   Description
+      Text
+         Gives the source of an @ TO NCRingMap @.
+   SeeAlso
+   	(target,NCRingMap)
+///
+
+doc ///
+   Key
+      (target, NCRingMap)
+   Headline
+      Target of a map
+   Description
+      Text
+         Gives the target of an @ TO NCRingMap @.
+   SeeAlso
+   	(source,NCRingMap)
 ///
 
 doc ///
@@ -2480,6 +2825,7 @@ doc ///
    Inputs
       M : Module
       X : Symbol
+          the base name for the indexed variables serving as generators for the output ring
    Outputs
       E : NCQuotientRing
    Description
@@ -2514,9 +2860,9 @@ doc ///
       mgens : List
    Description
       Text
-         Given a list of NCRingElements, this method produces a (possibly) shorter 
-	 or simplified list of elements which generate the same NCIdeal. Commonly used 
-	 with Link to endomorphismRing. 
+         Given a list of NCRingElements, this method produces a generating set for the
+	 NCIdeal generated by the list which (possibly) uses fewer generators and/or 
+	 fewer NCRing generators. Commonly used with Link to endomorphismRing. 
       Example
          Q = QQ[a,b,c,d]
          R = Q/ideal{a*b+c*d}
@@ -2566,51 +2912,23 @@ doc ///
 ///
 
 
+
 doc ///
    Key
+      (skewPolynomialRing,Ring,RingElement,List)
       (skewPolynomialRing,Ring,QQ,List)
       (skewPolynomialRing,Ring,ZZ,List)
    Headline
       Defines a skew polynomial ring via a scaling factor
    Usage
-      B = skewPolynomialRing(R,f,L)
-   Inputs
-      R : Ring
-      f : QQ
-      L : List
-   Outputs
-      B : Ring
-   Description
-      Text 
-         This method constructs a skew polynomial ring with coefficient ring R
-	 and generators elements of L. The relations all have the form a*b - f*b*a
-	 where a and b are in L. If R is a bergman coefficient ring, an NCGroebnerBasis
-	 is computed for B.
-      Example
-         B = skewPolynomialRing(QQ,2_QQ, {x,y,z,w})         
-         x*y == 2*y*x
-	 C = skewPolynomialRing(QQ,1_QQ, {x,y,z,w})
-         isCommutative C
-         isCommutative B
-         Bop = oppositeRing B
-         y*x == 2*x*y
-      Text
-         Link to oppositeRing. Link to (skewPolynomialRing,Ring,Matrix,List).
-///
-
-doc ///
-   Key
-      (skewPolynomialRing,Ring,RingElement,List)
-   Headline
-      Defines a skew polynomial ring via a scaling factor
-   Usage
-      B = skewPolynomialRing(R,f,L)
+      skewPolynomialRing(R,f,L)
    Inputs
       R : Ring
       f : RingElement
+          or an integer or a rational number
       L : List
    Outputs
-      B : Ring
+      : Ring
    Description
       Text
          This method constructs a skew polynomial ring with coefficient ring R
@@ -2625,33 +2943,45 @@ doc ///
          x*y == q*y*x
          Bop = oppositeRing B
          y*x == q*x*y
-      Text
-         Link to oppositeRing.
+
+         C = skewPolynomialRing(QQ,2_QQ, {x,y,z,w})         
+         x*y == 2*y*x
+	 D = skewPolynomialRing(QQ,1_QQ, {x,y,z,w})
+         isCommutative C
+         isCommutative D
+         Cop = oppositeRing C
+         y*x == 2*x*y
+   SeeAlso
+       oppositeRing
+       skewPolynomialRing      
+
 ///
+
+   
 
 doc ///
    Key
       toM2Ring
       (toM2Ring,NCRing)
-      [toM2Ring, SkewCommutative]
+      [toM2Ring,SkewCommutative]
    Headline
-      Compute the abelianization of an NCRing and returns a PolynomialRing. 
+     Compute the abelianization of an NCRing and returns a Ring.
    Usage
-      Ab = toM2Ring(A,SkewCommutative => true)
+     S = toM2Ring R 
    Inputs
-      A : NCRing
-      SkewCommutative : Boolean
+      R : NCRing
+      SkewCommutative => Boolean
    Outputs
-      Ab : PolynomialRing
+     S : Ring
    Description
       Text
          This method takes an NCRing and returns the quotient of a commutative polynomial
 	 ring (or an exterior algebra, if SkewCommutative=>true) on the same generators 
 	 by the defining relations of the input ring. 
       Example
+   SeeAlso
+      toNCRing
 
-      Text
-         Link to toNCRing.
 ///
 
 doc ///
@@ -2659,13 +2989,13 @@ doc ///
       toNCRing
       (toNCRing,Ring)
    Headline
-      Converts a PolynomialRing to an NCRing
+      Converts a Ring to an NCRing
    Usage
-      Anc = toNCRing A 
+     S = toNCRing R 
    Inputs
-      A : PolynomialRing
+      R : Ring
    Outputs
-      Anc : NCRing
+     S : NCRing
    Description
       Text
          This function converts commutative rings and quotients of 
@@ -2673,9 +3003,9 @@ doc ///
 	 error is returned if the input ring has some commutative and some
 	 skew-commutative generators.
       Example
-         
-      Text
-         Link to toM2Ring.
+ --        
+--    SeeAlso
+--       toM2Ring
 ///
 
 
@@ -2716,14 +3046,11 @@ doc ///
    Headline
       Calls Bergman for a normal form calculation
    Usage
-      nfList = normalFormBergman(L,Igb,DegreeLimit=>10,NumModuleVariables=>0,MakeMonic=>true,CacheBergmanGB=>true)
+      nfList = normalFormBergman(L,Igb)
    Inputs
-      L : List
+      L : NCRingElement
+          or a @ TO List @ of NCRingElements
       Igb : NCGroebnerBasis
-      CacheBergmanGB : Boolean
-      MakeMonic : Boolean
-      NumModuleVars : Boolean
-      DegreeLimit : ZZ
    Outputs
       nfList : List
    Description
@@ -2734,29 +3061,6 @@ doc ///
       Example
 ///
 
-
-{*
-doc ///
-   Key
-      (normalFormBergman,NCRingElement,NCGroebnerBasis)
-   Headline
-      Calls Bergman for a normal form calculation
-   Usage
-      nfList = normalFormBergman(f,Igb)
-   Inputs
-      f : NCRingElement
-      Igb : NCGroebnerBasis
-   Outputs
-      nfList : List
-   Description
-      Text
-         This method takes a list of NCRingElements and calls bergman to 
-	 reduce each element to normal form relative to the given NCGroebnerBasis
-	 for the NCIdeal defining the NCRing to which the list elements belong.
-      Example
-///
-
-*}
 
 
 doc ///
@@ -2794,10 +3098,10 @@ doc ///
    Headline
       Calls Bergman to compute the Hilbert series of an NCQuotientRing
    Usage
-     hseries = hilbertBergman(A,DegreeLimit=>d)
+     hseries = hilbertBergman(A)
    Inputs
      A : NCQuotientRing
-     d : ZZ
+     DegreeLimit => ZZ
    Outputs
      hseries : PolynomialRing
    Description

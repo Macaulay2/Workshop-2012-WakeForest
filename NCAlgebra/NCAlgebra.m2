@@ -23,6 +23,7 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          CacheBergmanGB,
          setWeights,
 	 MakeMonic,
+	 Derivation,
          NumModuleVars,
 	 InstallGB,
          ReturnIdeal,
@@ -73,12 +74,12 @@ protect UsePreviousGBOutput
 protect DontUse
 
 MAXDEG = 40
-MAXSIZE = 40
+MAXSIZE = 1000
 
 -- Andy's bergman path
---bergmanPath = "/usr/local/bergman1.001"
+bergmanPath = "/usr/local/bergman1.001"
 -- Frank's bergman path
-bergmanPath = "~/bergman"
+--bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
@@ -2070,31 +2071,51 @@ remainderFunction (NCRingElement,NCGroebnerBasis) := opts -> (f,ncgb) -> (
 ----NCRingMap Commands -----------------
 ---------------------------------------
 
-ncMap = method()
+ncMap = method(Options => {Derivation=>false})
 --- ncMap from Ring to NCRing not implemented.
 ncMap (Ring,NCRing,List) := 
 ncMap (NCRing,Ring,List) := 
-ncMap (NCRing,NCRing,List) := (B,C,imageList) -> (
+ncMap (NCRing,NCRing,List) := opts -> (B,C,imageList) -> (
    genCSymbols := (gens C) / baseName;
+   if opts#Derivation and B=!=C then error "Source and target of a derivation must be the same.";
    if not all(imageList / class, r -> r === B) then error "Expected a list of entries in the target ring.";
    new NCRingMap from hashTable {(symbol functionHash) => hashTable apply(#genCSymbols, i -> (genCSymbols#i,imageList#i)),
                                  (symbol source) => C,
-                                 (symbol target) => B}
+                                 (symbol target) => B,
+				 (symbol Derivation) => opts#Derivation}
 )
+
 
 source NCRingMap := f -> f.source
 target NCRingMap := f -> f.target
-matrix NCRingMap := opts -> f -> ncMatrix {(gens source f) / f}
+matrix NCRingMap := f -> (
+     if member(NCRing, ancestors class f.target) then
+        ncMatrix {(gens source f) / f}
+     else
+        matrix {(gens source f) / f}
+)
 --id _ NCRing := B -> ncMap(B,B,gens B)
+
 
 NCRingMap NCRingElement := (f,x) -> (
    if x == 0 then return promote(0, target f);
    if ring x =!= source f then error "Ring element not in source of ring map.";
    C := ring x;
-   sum for t in pairs x.terms list (
-      monImage := promote(product apply(t#0#monList, v -> f.functionHash#v),target f);
-      (t#1)*monImage
-   )
+   if f.Derivation then
+      sum for t in pairs x.terms list(   
+         mon := t#0#monList;
+         monImage := sum apply(# mon, j-> 
+	  product apply(replace(j,f.functionHash#(mon_j),mon), s-> 
+		 if class s===Symbol then putInRing({s},C,1) else s
+		 )
+	    );
+         promote((t#1)*monImage,C) -- an empty sum is 0, which we need to promote 
+      )
+   else
+      sum for t in pairs x.terms list (
+         monImage := promote(product apply(t#0#monList, v -> f.functionHash#v),target f);
+         (t#1)*monImage
+      )
 )
 
 
@@ -2102,12 +2123,29 @@ NCRingMap RingElement := (f,x) -> (
    if x == 0 then return promote(0, target f);
    if ring x =!= source f then error "Ring element not in source of ring map.";
    C := ring x;
-   sum for t in terms x list (
-      coeff := leadCoefficient t;
-      mon := leadMonomial t;
-      monImage := promote(product apply(support mon, y -> (f.functionHash#(baseName y))^(degree(y,mon))),target f);
-      coeff*monImage
-   )
+
+   if f.Derivation then
+      sum for t in terms x list (
+         coeff := leadCoefficient t;
+         mon := leadMonomial t;
+         supp := support leadMonomial t;
+         monImage := sum apply(# supp, j -> (
+		    d:=degree(supp_j,mon);
+		    product apply(# supp, k-> 
+			 if k==j then  
+			 -- chain rule
+                            d*(f.functionHash#(baseName supp_k))^(d-1)
+		      	 else (supp_k)^(degree(supp_k,mon))))
+	            );
+         promote(coeff*monImage,C) -- an empty sum is 0, which we need to promote
+      )    
+   else
+      sum for t in terms x list (
+         coeff := leadCoefficient t;
+         mon := leadMonomial t;
+         monImage := promote(product apply(support mon, y -> (f.functionHash#(baseName y))^(degree(y,mon))),target f);
+         coeff*monImage
+      )
 )
 
 NCRingMap NCMatrix := (f,M) -> (
@@ -2654,6 +2692,7 @@ end
 -----------------------------------
 --- notation to refer to a certain graded piece of an algebra e.g. A_3
 --- a dimension function for graded pieces dim(A,17)
+--- derivations
 --- Dare I say it, Diamond Lemma?
 --- Make Quotients of Quotients work.
 --- NCRingMap kernels (to a certain degree)  -- Not sure I can do this with
