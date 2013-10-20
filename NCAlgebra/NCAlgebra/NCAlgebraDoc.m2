@@ -2677,7 +2677,7 @@ doc ///
          A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
 	 B = QQ[a,b,c,SkewCommutative=>true]
 	 f = ncMap(B,A,{a^3,b^2,a+b,a-b})
-	 matrix f
+--	 matrix f     this doesn't work
 ///
 
 doc ///
@@ -2740,11 +2740,11 @@ doc ///
       : NCMatrix
    Description
       Text
-      This function is broken
+          This function is broken
       Example
          A = QQ{x,y}
 	 f = ncMap(A,A,{x^2,y^2})
-	 f_2
+--	 f_2   this doesn't work
 ///
 
 doc ///

@@ -2106,7 +2106,7 @@ NCRingMap NCRingElement := (f,x) -> (
          mon := t#0#monList;
          monImage := sum apply(# mon, j-> 
 	  product apply(replace(j,f.functionHash#(mon_j),mon), s-> 
-		 if class s===Symbol then putInRing({s},C,1) else s
+		 if class s===Symbol or class s===IndexedVariable then putInRing({s},C,1) else s
 		 )
 	    );
          promote((t#1)*monImage,C) -- an empty sum is 0, which we need to promote 
