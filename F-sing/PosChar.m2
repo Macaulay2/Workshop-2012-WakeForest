@@ -42,8 +42,10 @@ export{
      "frobeniusPower",
      "fSig",
      "guessFPT",
+	"HSL",
      "isBinomial",
      "isDiagonal",
+     "isFJumpingNumberPoly",
      "isFPTPoly",
      "isFRegularPoly",
      "isFRegularQGor",
@@ -51,11 +53,12 @@ export{
      "MultiThread",
      "nu",
      "nuList",
-     "NuPEMinus1Check",
+     "NuCheck",
+     "Origin",
      "OutputRange",
      "sigmaAOverPEMinus1Poly", 
      "sigmaQGorAmb", 
-     "sigmaQGorAOverPEMinus1",      
+     "sigmaAOverPEMinus1QGor",      
      "tauPoly",
      "tauAOverPEMinus1Poly",
      "tauGor",
@@ -985,13 +988,17 @@ tauGor = (Rg,fg,tg) -> tauQGor (Rg,1,fg,tg)
 --Computes Non-Sharply-F-Pure ideals over polynomial rings for (R, fm^{a/(p^{e1}-1)}), 
 --at least defined as in Fujin-Schwede-Takagi.
 --THIS SHOULD BE REWRITTEN TO USE ethRootSafe
-sigmaAOverPEMinus1Poly = (fm, a1, e1) -> (
+sigmaAOverPEMinus1Poly ={HSL=> false}>> o -> (fm, a1, e1) -> ( 
      Rm := ring fm;
      pp := char Rm;
      m1 := 0;
-     if (a1 > pp^e1-1) then (m1 = floor((a1-1)/(pp^e1-1)); a1=((a1-1)%(pp^e1-1)) + 1 );
-     fpow := fm^a1;
-     IN := eR(ideal(1_Rm),e1); -- this is going to be the new value.
+	e2 := e1;
+	a2 := a1;
+	--if e1 = 0, we treat (p^e-1) as 1.  
+     if (e2 == 0) then (e2 = 1; a2 = a1*(pp-1));
+     if (a2 > pp^e2-1) then (m1 = floor((a2-1)/(pp^e2-1)); a2=((a2-1)%(pp^e2-1)) + 1 );
+     fpow := fm^a2;
+     IN := eR(ideal(1_Rm),e2); -- this is going to be the new value.
      -- the previous commands should use the fast power raising when Emily finishes it
      IP := ideal(0_Rm); -- this is going to be the old value.
      count := 0;
@@ -999,16 +1006,16 @@ sigmaAOverPEMinus1Poly = (fm, a1, e1) -> (
      --our initial value is something containing sigma.  This stops after finitely many steps.  
      while (IN != IP) do(
 	  IP = IN;
-	  IN = eR(ideal(fpow)*IP,e1);
+	  IN = eR(ideal(fpow)*IP,e2);
 	  count = count + 1
      );
 
      --return the final ideal and the HSL number of this function
-     {IP*ideal(fm^m1),count}
+     if (o.HSL == true) then {IP*ideal(fm^m1),count} else IP*ideal(fm^m1)
 )
 
 --Computes Non-Sharply-F-pure ideals for non-polynomial rings with respect to no pair.
-sigmaQGorAmb = (Rm, gg) -> (
+sigmaQGor ={HSL=> false}>> o -> (Rm, gg) -> (
      Sm := ambient Rm; --the polynomial ring that Rm is a quotient of
      hk := findQGorGen(Rm, gg);
      
@@ -1023,12 +1030,12 @@ sigmaQGorAmb = (Rm, gg) -> (
      );
      
      --return the ideal and HSL
-     {sub(IP,Rm), count}
+     if (o.HSL == true) then {sub(IP,Rm), count} else sub(IP, Rm)
 )
 
 --Computes Non-Sharply-F-Pure ideals for non-polynomial rings
 --gg is the Gorenstein index
-sigmaQGorAOverPEMinus1 = (fk, a1, e1, gg) -> (
+sigmaAOverPEMinus1QGor  ={HSL=> false}>> o -> (fk, a1, e1, gg) -> (
      Rm := ring fk;
      Sm := ambient Rm; --the polynomial ring that Rm is a quotient of
      pp := char Rm;
@@ -1039,7 +1046,7 @@ sigmaQGorAOverPEMinus1 = (fk, a1, e1, gg) -> (
 	fpow := fm^(a1*sub( (pp^ek - 1)/(pp^e1-1), ZZ) );
 
 
-	IN := (sigmaAOverPEMinus1Poly(hk,1,gg))#0;
+	IN := sigmaAOverPEMinus1Poly(hk,1,gg);
 	count := 0;
 	IP := ideal(0_Sm);
 
@@ -1050,7 +1057,7 @@ sigmaQGorAOverPEMinus1 = (fk, a1, e1, gg) -> (
 	);
 	
      --return the final ideal
-     sub(IP,Rm)
+     if (o.HSL == true) then {sub(IP,Rm), count} else sub(IP,Rm)
 	
 )
 
@@ -1161,7 +1168,7 @@ guessFPT ={OutputRange=>false}>>o -> (ff, e1, maxDenom) ->(
 --e is the max depth to search in
 --FinalCheck is whether the last isFRegularPoly is run (it is possibly very slow) 
 --If MultiThread is set to true, it will compute the two F-signatures simultaneously
-estFPT={FinalCheck=> true, Verbose=> false, MultiThread=>false, DiagonalCheck=>true, BinomialCheck=>true, NuPEMinus1Check=>true} >> o -> (ff,ee)->(
+estFPT={FinalCheck=> true, Verbose=> false, MultiThread=>false, DiagonalCheck=>true, BinomialCheck=>true, NuCheck=>true} >> o -> (ff,ee)->(
      print "starting estFPT";
      
      maxIdeal := ideal( first entries vars( ring ff) );   --the maximal ideal we are computing the fpt at  
@@ -1201,7 +1208,7 @@ estFPT={FinalCheck=> true, Verbose=> false, MultiThread=>false, DiagonalCheck=>t
       );
  
       --check to see if nu/(p^e-1) is the fpt
-      if ((o.NuPEMinus1Check==true) and (foundAnswer == false)) then (
+      if ((o.NuCheck==true) and (foundAnswer == false)) then (
 	   if (isFRegularPoly(ff,(nn/(pp^ee-1)),maxIdeal)==false) then ( 
 		if  (o.Verbose==true) then print "Found answer via nu/(p^e-1)."; 
 		answer = nn/(pp^ee-1);
@@ -1211,6 +1218,14 @@ estFPT={FinalCheck=> true, Verbose=> false, MultiThread=>false, DiagonalCheck=>t
 	   	if  (o.Verbose==true) then print "nu/(p^e - 1) is not the fpt.";
 	   )
       );
+	 
+	--check to see if (nu+1)/p^e is the FPT
+	if ((o.NuCheck==true) and (foundAnswer == false)) then(
+		if (isFPTPoly(ff, (nn+1)/pp^ee,Origin=>true) == true) then (
+			answer = (nn+1)/pp^ee;
+			foundAnswer = true
+		)
+	);
 
      --do the F-signature computation
      if (foundAnswer == false) then (
@@ -1273,9 +1288,11 @@ estFPT={FinalCheck=> true, Verbose=> false, MultiThread=>false, DiagonalCheck=>t
      answer
 )
 
---isFPTPoly, determines if a given rational number is the FPT of a pair in a polynomial ring.  
-isFPTPoly ={Verbose=> false}>> o -> (f1, t1) -> (
+--isFPTPoly, determines if a given rational number is the FPT of a pair in a polynomial ring. 
+--if Origin is specified, it only checks at the origin. 
+isFPTPoly ={Verbose=> false,Origin=>false}>> o -> (f1, t1) -> (
 	pp := char ring f1;
+	if (o.Origin == true) then org := ideal(vars (ring f1));
 	funList := divideFraction(t1, pp);
 	--this writes t1 = a/(p^b(p^c-1))
 	aa := funList#0;
@@ -1283,23 +1300,57 @@ isFPTPoly ={Verbose=> false}>> o -> (f1, t1) -> (
 	cc := funList#2;
 	mySigma := ideal(f1);
 	myTau := tauPoly(f1, t1*pp^bb);
+	if (o.Verbose==true) then print "higher tau Computed";
+
+	--first we check whether this is even a jumping number.
 	if (cc == 0) then
-		mySigma = (ideal(f1^(aa-1)))*((sigmaAOverPEMinus1Poly(f1, (pp-1), 1))#0)
+		mySigma = (ideal(f1^(aa-1)))*((sigmaAOverPEMinus1Poly(f1, (pp-1), 1)))
 	else 
-		mySigma = (sigmaAOverPEMinus1Poly(f1, aa, cc))#0;
-	if (o.Verbose==true) then print "sigma Computed";
+		mySigma = (sigmaAOverPEMinus1Poly(f1, aa, cc));
+	if (o.Verbose==true) then print "higher sigma Computed";
 
 	returnValue := false;
-	if ( not (isSubset(mySigma, myTau) ) ) then (
-		if (o.Verbose==true) then print "sigma is not tau";
-		if ( isSubset(ideal(sub(1, ring f1)), ethRoot(mySigma, bb) )) then (
-			if (o.Verbose==true) then print "less than fpt";
-			if (not isSubset(ideal(sub(1, ring f1)), ethRoot(myTau, bb) ))  then returnValue = true )
+	
+	if (o.Origin == false) then (--if we are not restricting our check to the origin.
+		if ( not (isSubset(mySigma, myTau) ) ) then (--this holds if t1 is a jumping number (but it is not sufficient), perahps it would better not to do this check.
+			if (o.Verbose==true) then print "higher sigma is not higher tau";
+			if ( isSubset(ideal(sub(1, ring f1)), ethRoot(mySigma, bb) )) then (
+				if (o.Verbose==true) then print "we know t1 <= FPT";
+				if (not isSubset(ideal(sub(1, ring f1)), ethRoot(myTau, bb) ))  then returnValue = true 
+			)
+		)
+	)
+	else( --we are only checking at the origin
+		if ( isSubset(ideal(sub(1, ring f1)), ethRoot(mySigma, bb)+org )) then (
+			if (o.Verbose==true) then print "we know t1 <= FPT";
+			if (not isSubset(ideal(sub(1, ring f1)), ethRoot(myTau, bb)+org ))  then returnValue = true 
+		)
 	);
 	
 	returnValue
 )
 
+--isFJumpingNumberPoly determines if a given rational number is an F-jumping number
+isFJumpingNumberPoly ={Verbose=> false}>> o -> (f1, t1) -> (
+	pp := char ring f1;
+	funList := divideFraction(t1, pp);
+	--this writes t1 = a/(p^b(p^c-1))
+	aa := funList#0;
+	bb := funList#1;
+	cc := funList#2;
+	mySigma := ideal(f1);
+	myTau := ethRoot(tauPoly(f1, t1*pp^bb), bb);
+	if (o.Verbose==true) then print "higher tau Computed";
+
+	--first we check whether this is even a jumping number.
+	if (cc == 0) then
+		mySigma = ethRoot((ideal(f1^(aa-1)))*((sigmaAOverPEMinus1Poly(f1, (pp-1), 1))), bb)
+	else 
+		mySigma = ethRoot((sigmaAOverPEMinus1Poly(f1, aa, cc)),bb);
+	if (o.Verbose==true) then print "sigma Computed";
+
+	not (isSubset(mySigma, myTau))
+)
 
 --****************************************************--
 --*****************Documentation**********************--
@@ -1322,15 +1373,35 @@ doc ///
      Headline
         Checks whether a given number is the FPT
      Usage
-     	  isFPTPoly(f,t)  
+     	  isFPTPoly(f,t,Verbose=>V,Origin=>W)  
      Inputs
-         f:RingElement
-	 t:ZZ
+         	f:RingElement
+	 	t:ZZ
+		W:Boolean
+		W:Origin
      Outputs
         :Boolean
      Description
      	Text
-	     Returns true if t is the FPT, otherwise it returns false.
+	     Returns true if t is the FPT, otherwise it returns false.  If Origin is true, it only checks it at ideal(vars ring f).
+///
+
+doc ///
+     Key
+     	isFJumpingNumberPoly 
+     Headline
+        Checks whether a given number is the FPT
+     Usage
+     	  isFJumpingNumberPoly(f,t,Verbose=>V)  
+     Inputs
+         	f:RingElement
+	 	t:ZZ
+		W:Boolean
+     Outputs
+        :Boolean
+     Description
+     	Text
+	     Returns true if t is an F-jumping number, otherwise it returns false.
 ///
 
 
@@ -1780,52 +1851,55 @@ doc ///
      Headline
         Computes the non-sharply F-pure ideal of (R, f^{a/(p^e-1)}) when R is a polynomial ring.
      Usage
-     	 sigmaAOverPEMinus1Poly (f, a, e)
+     	 sigmaAOverPEMinus1Poly (f, a, e, HSL=>W)
      Inputs 
 		f:RingElement
 	a:ZZ
 	e:ZZ
+	W:Boolean
      Outputs
          :Ideal
      Description
 	Text
-	     Let phi be the p^(-e) linear map obtained by multiplying e-th Frobenius trace by f^a.  This computes \phi^n(R) for large n.  This stabilizes by Hartshorne-Speiser-Lyubeznik-Gabber.
+	     Let phi be the p^(-e) linear map obtained by multiplying e-th Frobenius trace by f^a.  This computes \phi^n(R) for large n.  This stabilizes by Hartshorne-Speiser-Lyubeznik-Gabber.  If HSL is true, then the function returns a list where the first entry is sigma and the second entry is the HSL number.
 ///
 
 doc ///
      Key
-     	sigmaQGorAOverPEMinus1
+     	sigmaAOverPEMinus1QGor
      Headline
         Computes the non-sharply F-pure ideal of (R, f^{a/(p^e-1)}).
      Usage
-     	 sigmaQGorAOverPEMinus1(f, a, e, g)
+     	 sigmaAOverPEMinus1QGor(f, a, e, g,HSL=>W)
      Inputs 
 		f:RingElement
-	a:ZZ
-	e:ZZ
-	g:ZZ
+		a:ZZ
+		e:ZZ
+		g:ZZ
+		W:Boolean
      Outputs
          :Ideal
      Description
 	Text
-	     Let phi be the p^(-e) linear map obtained by multiplying e-th Frobenius trace of R by f^a (we assume that the Q-Gorenstein index of R divides p^g-1).  This computes \phi^n(R) for large n.  This stabilizes by Hartshorne-Speiser-Lyubeznik-Gabber.
+	     Let phi be the p^(-e) linear map obtained by multiplying e-th Frobenius trace of R by f^a (we assume that the Q-Gorenstein index of R divides p^g-1).  This computes \phi^n(R) for large n.  This stabilizes by Hartshorne-Speiser-Lyubeznik-Gabber.  If HSL is true, then the function returns a list where the first entry is sigma and the second entry is the HSL number of sigma(ring f) relative to f.
 ///
 
 doc ///
      Key
-     	sigmaQGorAmb
+     	sigmaQGor
      Headline
         Computes the non-sharply F-pure ideal of R, where R is Q-Gorenstein with index dividing (p^g-1).
      Usage
-     	 sigmaQGorAOverPEMinus1(R, g)
+     	 sigmaQGor(R, g,HSL=>W)
      Inputs 
 		R:Ring
-	g:ZZ
+		g:ZZ
+		W:Boolean
      Outputs
          :Ideal
      Description
 	Text
-	     Let phi be the  g-th Frobenius trace of R (we assume that g is the Q-Gorenstein index of R).  This computes \phi^n(R) for large n.  This stabilizes by Hartshorne-Speiser-Lyubeznik-Gabber.
+	     Let phi be the  g-th Frobenius trace of R (we assume that g is the Q-Gorenstein index of R).  This computes \phi^n(R) for large n.  This stabilizes by Hartshorne-Speiser-Lyubeznik-Gabber.  If HSL is true, then the function returns a list where the first entry is sigma and the second entry is the HSL number.
 ///
 
 doc ///
@@ -1861,7 +1935,7 @@ doc ///
      Headline
         Converts a rational number into something of the form (a/(p^b p^(c-1)).
      Usage
-     	 sigmaQGorAOverPEMinus1(t, p)
+     	 divideFraction(t, p)
      Inputs 
 		t:QQ
 	p:ZZ
