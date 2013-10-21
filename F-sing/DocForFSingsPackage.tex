@@ -91,6 +91,9 @@ ${\tt \Big( {\nu_e \over p^e}, (R, f^{\nu_e \over p^e}) \Big) } \text{ and } {\t
 
 In the future, we hope to be able to compute FPTs for wider classes of quasi-homogeneous polynomials, for non-principal ideals, and for more general ambient rings.  If you need some of this functionality \emph{now}, please contact us and we may be able to help.
 
+You can check whether a particular value is the FPT by running {\tt isFPTPoly} (for instance ${\tt isFPTPoly(x^2-y^3, 5/6)}$).  You can also use {\tt guessFPT} to try to find potential values of the FPT.
+You can also see {\tt isFJumpingNumberPoly}
+
 \section{Test ideals and non-sharply-$F$-pure ideals}
 
 There are several functions for computing test ideals.  We list them below.  These are maintained by Karl Schwede, but they rely heavily on the {\tt ethRoot} function (which computes $\bullet^{[1/p^e]}$ also denoted by $I_e(\bullet)$) written and maintained by Mordechai Katzman.
