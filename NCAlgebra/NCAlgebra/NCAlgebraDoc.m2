@@ -10,7 +10,13 @@ undocumented {(net,NCGroebnerBasis),
 	      (net,NCQuotientRing),
 	      functionHash,
 	      (NewFromMethod,NCPolynomialRing,List),
-	      (NewFromMethod,NCQuotientRing,List)}
+	      (NewFromMethod,NCQuotientRing,List),
+	      CacheBergmanGB,
+	      MakeMonic,
+	      Derivation,
+	      NumModuleVars,
+	      InstallGB,
+	      ReturnIdeal}
 
 beginDocumentation()
 
@@ -1435,41 +1441,13 @@ doc ///
      Text
        stuff
 ///
-{*
-doc ///
-   Key
-      [ncGroebnerBasis,InstallGB]
-      InstallGB
-   Headline
-      Install a NCGroebnerBasis (without verifying that it is one).
-   Usage
-     Igb = ncGroebnerBasis(I, InstallGB=>true)
-   Inputs
-     I : NCIdeal
-     InstallGB : Boolean
-   Outputs
-     Igb : NCGroebnerBasis
-///
 
-doc ///
-   Key
-      [ncGroebnerBasis,DegreeLimit]
-   Headline
-      Degree limit on generators of a Groebner basis.
-   Usage
-     Igb = ncGroebnerBasis(I, DegreeLimit=>n)
-   Inputs
-     I : NCIdeal
-     DegreeLimit => ZZ
-   Outputs
-     Igb : NCGroebnerBasis
-///
-*}
 doc ///
    Key
       ncGroebnerBasis
       (ncGroebnerBasis,List)
       (ncGroebnerBasis,NCIdeal)
+      [ncGroebnerBasis,InstallGB]
    Headline
       Compute a noncommutative Groebner basis.
    Usage
@@ -1517,20 +1495,20 @@ doc ///
        Calls to Bergman are usually faster, except for when the polynomial is small.  See the documentation
        for @ TO (symbol %, NCRingElement, NCGroebnerBasis) @ for details on controlling when Bergman is called.
 ///
+
 {*
+
+-- This block of doc nodes is in case we decide to have stubs for the name of the option
+-- in addition to the description of how to use the option in the function call.
+
 doc ///
    Key
       CacheBergmanGB
    Headline
       Whether or not to cache the gb from Bergman to a file for later use
-   Usage
-      Igb = gbFromOutputFile(A,fileName, CacheBergmanGB=>true)
-   Inputs
-      A : NCPolynomialRing
-      fileName : String
-      CacheBergmanGB : Boolean
-   Outputs
-      Igb : NCGroebnerBasis
+   SeeAlso
+      gbFromOutputFile
+      twoSidedNCGroebnerBasisBergman
 ///
 
 doc ///
@@ -1538,6 +1516,9 @@ doc ///
       MakeMonic
    Headline
       An option that specifies Bergman output should be made monic
+   SeeAlso
+      gbFromOutputFile
+      twoSidedNCGroebnerBasisBergman
 ///
 
 doc ///
@@ -1545,7 +1526,35 @@ doc ///
       ReturnIdeal
    Headline
       An option that specifies certain NCAlgebra functions should return an ideal rather than a Groebner basis.
+   SeeAlso
+      gbFromOutputFile
 ///
+
+doc ///
+   Key
+      Derivation
+   Headline
+      An option that specifies that an NCRingMap be considered a derivation.
+   SeeAlso
+      ncMap
+///
+
+doc ///
+   Key
+      NumModuleVars
+   Headline
+      An option specifying the number of module variables in the ring of the Groebner basis.
+///
+
+doc ///
+   Key
+      InstallGB
+   Headline
+      Install a NCGroebnerBasis (without verifying that it is one).
+   SeeAlso
+      ncGroebnerBasis
+///
+
 *}
 
 doc ///
@@ -1617,14 +1626,7 @@ doc ///
        Igb = ncGroebnerBasis I
        gens Igb
 ///
-{*
-doc ///
-   Key
-      NumModuleVars
-   Headline
-      An option specifying the number of module variables in the ring of the Groebner basis.
-///
-*}
+
 doc ///
    Key
       (symbol %, NCRingElement, NCGroebnerBasis)
@@ -2524,10 +2526,7 @@ doc ///
 	 g(a*b)==g(a)*b+a*g(b)
 	 g(promote(1,B))
 	 g(c*a+2*b)
-
 ///
-
-
 
 doc ///
    Key
@@ -2850,6 +2849,7 @@ doc ///
    Key
       minimizeRelations
       (minimizeRelations,List)
+      [minimizeRelations,Verbosity]
    Headline
       Minimizes a list of NCRingElements
    Usage

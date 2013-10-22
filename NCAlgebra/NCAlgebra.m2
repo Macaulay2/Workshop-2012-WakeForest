@@ -77,9 +77,9 @@ MAXDEG = 40
 MAXSIZE = 1000
 
 -- Andy's bergman path
-bergmanPath = "/usr/local/bergman1.001"
+--bergmanPath = "/usr/local/bergman1.001"
 -- Frank's bergman path
---bergmanPath = "~/bergman"
+bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
@@ -2088,7 +2088,7 @@ ncMap (NCRing,NCRing,List) := opts -> (B,C,imageList) -> (
 
 source NCRingMap := f -> f.source
 target NCRingMap := f -> f.target
-matrix NCRingMap := f -> (
+matrix NCRingMap := opts -> f -> (
      if member(NCRing, ancestors class f.target) then
         ncMatrix {(gens source f) / f}
      else
