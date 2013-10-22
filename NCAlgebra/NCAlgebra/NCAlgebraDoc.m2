@@ -991,7 +991,6 @@ doc ///
 	 B' = A/J -- Factor of sklyanin
 	 BprimeToB = ncMap(B,B',gens B) -- way to lift back from B' to B
 	 k = ncMatrix {{x,y,z}}
-	 assignDegrees k
 	 M = BprimeToB rightKernelBergman rightKernelBergman k  -- second syzygy of k over B
       Text
          At this point, M is maximal Cohen-Macaulay B'-module,
@@ -1407,7 +1406,7 @@ doc ///
    Description
      Text
        This is the type for a Groebner basis of an ideal in the tensor algebra.
-       One can provide one using the @ TO InstallGB @ option of @ TO ncGroebnerBasis @
+       One can provide one using the @ TO [ncGroebnerBasis,InstallGB] @ option of @ TO ncGroebnerBasis @
        if you happen to know it.
        
        One also canhave Macaulay2 call Bergman and have it computed via the function
@@ -1437,7 +1436,6 @@ doc ///
        I = ncIdeal {p,q,r}
        Igb = ncGroebnerBasis I
        normalFormBergman(z^17,Igb)
-
      Text
        stuff
 ///
@@ -2683,7 +2681,7 @@ doc ///
    Key
       (symbol @@, NCRingMap, NCRingMap)
    Headline
-      Compose two NCRRingMaps
+      Compose two NCRingMaps
    Usage
       f @@ g
    Inputs
@@ -2739,11 +2737,13 @@ doc ///
       : NCMatrix
    Description
       Text
-          This function is broken
+         This is currently broken.
       Example
          A = QQ{x,y}
-	 f = ncMap(A,A,{x^2,y^2})
-	 -- f_2 this doesn't work yet
+	 B = QQ{a,b}
+	 setWeights(B,{2,2})
+	 f = ncMap(A,B,{x^2,y^2})
+	 --f_2 this is currently broken, since basis doesn't work with non-standard gradings
 ///
 
 doc ///
@@ -2873,8 +2873,6 @@ doc ///
          gensIMin = minimizeRelations(gensI)
 ///
 
-
-
 doc ///
    Key
       skewPolynomialRing
@@ -3003,9 +3001,9 @@ doc ///
 	 error is returned if the input ring has some commutative and some
 	 skew-commutative generators.
       Example
- --        
---    SeeAlso
---       toM2Ring
+        
+   SeeAlso
+      toM2Ring
 ///
 
 
@@ -3157,4 +3155,18 @@ doc ///
 -- toNCRing example
 -- toM2Ring example
 -- sparseCoeffs text
-
+-- setWeights text and examples and caveats
+-- rightKernelBergman
+-- assignDegrees
+-- isLeftRegular/isRightRegular
+-- isCentral text
+-- centralElements text
+-- normalElements
+-- rightKernel
+-- normalAutomorphism
+-- left/rightMultiplicationMap
+-- quadraticClosure example
+-- homogDual example
+-- isWellDefined text
+-- matrix NCRingMap
+-- Check Usage, Inputs, Outputs that are commented out everywhere

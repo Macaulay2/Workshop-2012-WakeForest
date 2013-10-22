@@ -953,7 +953,6 @@ sparseCoeffs List := opts -> L -> (
   termsF := pairs (L#0).terms;
   
   coeffs := if (L#0)!=0 then (apply(termsF, (k,v) -> if v!=0 then (mons#k,0) => v)) else {};
-  
 
   l:=length L;
   if l>1 then
@@ -2186,6 +2185,7 @@ isHomogeneous NCRingMap := f -> (
 )
 
 NCRingMap _ ZZ := (f,n) -> (
+   if not isHomogeneous f then error "Expected a homogeneous NCRingMap.";
    B := source f;
    C := target f;
    srcBasis := flatten entries basis(n,B);
@@ -2193,6 +2193,7 @@ NCRingMap _ ZZ := (f,n) -> (
    imageList := srcBasis / f;
    if #(unique (select(imageList, g -> g != 0) / degree)) != 1 then
       error "Expected the image of degree " << n << " part of source to lie in single degree." << endl;
+   error "err";
    sparseCoeffs(imageList,Monomials=> tarBasis)
 --   matrix {apply(imageList, g -> coefficients(g,Monomials => tarBasis))}
 )
@@ -2669,7 +2670,7 @@ end
 ------------------------------------
 --- ***** Bug in output of NCRingElements!  See the example in the NCPolynomialRing / NCIdeal doc node.
 --- ***** Hilbert series doesn't work with generators of different degrees
---- Make homogeneous maps interface more streamlined.
+--- ***** basis does not work with non-standard gradings
 --- skewPolynomialRing with NCRing bases
 --- threeDimSklyanin(Ring,List,DegreeLimit=>)
 --- Testing!
