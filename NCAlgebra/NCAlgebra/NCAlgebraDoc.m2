@@ -1096,9 +1096,6 @@ doc ///
       NCRingElement
    Headline
       Type of an element in a noncommutative ring
-   --Usage
-   --Inputs
-   --Outputs
    Description
       Text
         This is the type of an element in a noncommutative graded ring.  One can deal with these elements
@@ -2144,14 +2141,36 @@ doc ///
      (setWeights,NCRing,List)
    Headline
       Set a nonstandard grading for a NCRing.
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      setWeights(A,degList)
+   Inputs
+      A : NCRing
+      degList : List
+                a list of integer weights to be assigned to the generators of A
+   Outputs
+      : NCRing
    Description
-      Example
-      -- need to finish unit tests
       Text
-        stuff
+         This method enables the user to work with rings which are not naturally graded
+	 (the generators are not all degree 1). Use at your own risk - several methods
+	 in the current version can give incorrect output for nonstandard gradings.
+	 Perhaps the most important example is hilbertBergman, which throws an error. 
+	 @ TO (basis, ZZ, NCRing) @ and any method requiring a basis are also affected.
+      Example
+         A=QQ{x,y,z}
+	 w=x^3-y^2
+	 isHomogeneous w
+     	 setWeights(A, {2,3,1})
+	 isHomogeneous w
+
+	 C = QQ{a,b,c}
+	 g = ncMap(C,A,{a^3,b^2,a+b,a-b})	 
+	 isHomogeneous g
+	 setWeights(A,{3,2,1,1})
+	 isHomogeneous g
+
+   SeeAlso
+      isHomogeneous
 ///
 
 doc ///
@@ -2170,31 +2189,144 @@ doc ///
       x : NCIdeal
           or an @ TO NCLeftIdeal @ an @ TO NCRightIdeal @ an @ TO NCRing @ an
 	  @ TO NCMatrix @ or an @ TO NCRingElement @
-   --Outputs
+   Outputs
+      : Boolean
    Description
-      Example
-      -- need to finish unit tests
       Text
-        stuff
+         Many methods in the NCAlgebra package require inputs to be homogeneous. The 
+	 meaning of "homogeneous" depens on the type of object. 
+      Text
+         If x is an @ TO NCRingElement @, the method returns true if all terms of x 
+	 have the same degree.
+
+         If x is an @ TO NCIdeal @, @ TO NCLeftIdeal @, or @ TO NCRightIdeal @, the 
+	 method returns true if all generators of the ideal are homogeneous (not 
+	 necessarily of the same degree). 
+   	
+	 If x is an @ TO NCPolynomialRing @, the method returns true. If x is any 
+         other @ TO NCRing@, the method returns true if and only if the defining 
+         ideal of x is homogeneous.
+	
+ 	 If x is an @ TO NCMatrix @, the method returns true if integer weights were
+	 assigned to the source and target of the associated map of free right modules
+	 such that the map is graded (degree 0). See @ TO assignDegrees @.
+      Example
+         A=QQ{x,y,z}
+	 w=x^3-y^2
+	 isHomogeneous w
+     	 setWeights(A, {2,3,1})
+	 isHomogeneous w 
+	 I = ncIdeal{w,x+z^2}
+	 isHomogeneous I
+      Example	
+         A = QQ{x,y,z}
+         f1 = y*z + z*y - x^2
+         f2 = x*z + z*x - y^2
+         f3 = z^2 - x*y - y*x
+         g = -y^3-x*y*z+y*x*z+x^3
+         B = A/ncIdeal{f1,f2,f3,g}
+         M = ncMatrix {{x,y,z,0}, {-y*z-2*x^2,-y*x,z*x-x*z,x},{x*y-2*y*x,x*z,-x^2,y}, {-y^2-z*x,x^2,-x*y,z}}
+         isHomogeneous M
+         assignDegrees(M,{1,0,0,0},{2,2,2,1})
+	 isHomogeneous M
+         N = ncMatrix {gens B}
+	 isHomogeneous N
    SeeAlso
        (isHomogeneous, NCRingMap)
+       setWeights
+       assignDegrees
 ///
+
+doc ///
+   Key
+      assignDegrees
+      (assignDegrees,NCMatrix)
+      (assignDegrees,NCMatrix,List,List)
+   Headline
+      Weights entries of a matrix to make associated map of free modules graded
+   Usage
+      assignDegrees(M) or assignDegrees(M,targetDegs,sourceDegs)
+   Inputs
+      M : NCMatrix
+      targetDegs : List
+                   a list of integer weights for the target basis vectors
+      sourceDegs : List
+                   a list of integer weights for the source basis vectors
+   Outputs
+      : NCMatrix
+        the same matrix M with source and target keys specified and isHomogeneous flag true
+   Description
+      Text
+         A matrix M with homogeneous entries in an NCRing can determine a homomorphism
+	 of graded free modules if the entries satisfy certain consistency conditions.
+	 Finding a set of degrees for source and target basis vectors such that M
+	 determines a graded module map is an integer programming problem. This method
+	 does not solve the problem in general. 
+	 
+      Text
+         With only one input, this method checks to see if the entries in each column
+	 all have the same homogeneous degree. If so, the method assigns source and
+	 target degrees in the natural way and the @ TO isHomogeneous @ flag is set for M.
+	 If not, all degrees are set to 0 and the flag is not set. This method is called
+	 any time a matrix is created.
+	 
+      Text
+         With three inputs, the user may specify the desired degree shifts on inputs
+	 and outputs such that the associated module map is graded. 
+      Example
+         A = QQ{x,y,z}
+         f1 = y*z + z*y - x^2
+         f2 = x*z + z*x - y^2
+         f3 = z^2 - x*y - y*x
+         g = -y^3-x*y*z+y*x*z+x^3
+         I = ncIdeal {f1,f2,f3,g}
+         B = A/I
+         M = ncMatrix {{x,y,z,0}, {-y*z-2*x^2,-y*x,z*x-x*z,x},{x*y-2*y*x,x*z,-x^2,y}, {-y^2-z*x,x^2,-x*y,z}}
+         isHomogeneous M
+         assignDegrees(M,{1,0,0,0},{2,2,2,1})
+	 isHomogeneous M
+         N = ncMatrix {gens B}
+	 isHomogeneous N
+   SeeAlso
+      isHomogeneous
+      rightKernelBergman
+///      
 
 
 doc ///
    Key
       rightKernelBergman
       (rightKernelBergman,NCMatrix)
-      assignDegrees
-      (assignDegrees,NCMatrix)
-      (assignDegrees,NCMatrix,List,List)
       [rightKernelBergman,DegreeLimit]
    Headline
       Methods for computing kernels of matrices over noncommutative rings using Bergman
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      rightKernelBergman(M,DegreeLimit=>n)
+   Inputs
+      M : NCMatrix
+          a homogeneous matrix interpreted as a map of free right modules
+      DegreeLimit => ZZ
+                     the maximum degree in which to compute the kernel
+   Outputs
+      : NCMatrix
+         the kernel of the matrix (considered as a right module map) to degree n
    Description
+      Text
+         Let M be a matrix with homogeneous entries in an NCRing. If the degrees of the 
+	 entries of M satisfy certain consistency conditions, one can define a 
+	 graded homomorphism of free right modules via left multiplication by M. If 
+	 isHomogeneous(M) returns true, these conditions have been verified for M and
+	 M is a valid input for rightKernelBergman. Otherwise, an error is returned
+	 stating that M is not homogeneous. To set the isHomogeneous flag to true,
+	 use @ TO assignDegrees @.
+	 
+      Text	 
+	 For valid inputs, this method computes the first n homogeneous components of 
+	 the (right) kernel of the homomorphism determined by M. If n is not specified 
+	 by the user, the default maximum degree is 10. The method returns a minimal 
+	 set of generators for the kernel in these degrees.
+	 
+	
       Example
          A = QQ{x,y,z}
          f1 = y*z + z*y - x^2
@@ -2211,8 +2343,11 @@ doc ///
          ker1M3*ker2M3 == 0
          ker3M3 = rightKernelBergman(ker2M3)
          ker2M3*ker3M3 == 0
-      Text
-         stuff
+	 
+   SeeAlso
+      isHomogeneous
+      assignDegrees
+      rightKernel
 ///
 
 doc ///
@@ -2228,11 +2363,33 @@ doc ///
    Inputs
       x : NCRingElement
       n : ZZ
+          the degree in which regularity is checked.
    Outputs
       : Boolean
    Description
       Text
---         stuff
+         Given an element x in an NCRing, isLeftRegular returns true if a*x=0 implies
+	 a=0 for all a in the specified homogeneous degree n. Likewise isRightRegular
+	 returns true if x*a=0 implies a=0 for all elements a of degree n. The
+	 method calls @ TO leftMultiplicationMap @ or @ TO rightMultiplicationMap @ as
+	 appropriate and checks the kernel in the specified degree. 
+      Example
+         A = QQ{x,y,z}
+	 f1 = y*z + z*y - x^2
+	 f2 = x*z + z*x - y^2
+	 f3 = z^2 - x*y - y*x
+	 B = A/ncIdeal{f1,f2,f3}
+	 g = -y^3-x*y*z+y*x*z+x^3
+         isLeftRegular(g,6)
+	 
+	 C = QQ{x,y}
+	 D = C/ncIdeal{x^2+x*y,y^2}
+	 isLeftRegular(x,1)
+	 isRightRegular(x,1)
+	 
+   SeeAlso
+      leftMultiplicationMap
+      rightMultiplicationMap         
 ///
 
 doc ///
@@ -2247,9 +2404,12 @@ doc ///
    Inputs
       x : NCRingElement
       ncgb : NCGroebnerBasis
+             a Groebner basis for the NCRing to which x belongs.
    Outputs
       : Boolean
    Description
+      Text
+         This method checks to see if a given NCRing element is central.
       Example
         A = QQ{x,y,z}
         I = ncIdeal { y*z + z*y - x^2,x*z + z*x - y^2,z^2 - x*y - y*x}
@@ -2258,8 +2418,8 @@ doc ///
         h = x^2 + y^2 + z^2
         isCentral h
         isCentral g
-      Text
---         We have not yet implemented the check in a fixed degree.
+   SeeAlso
+      centralElements
 ///
 
 doc ///
@@ -2267,7 +2427,7 @@ doc ///
       centralElements
       (centralElements, NCRing, ZZ)
    Headline
-      Methods for finding/checking central elements
+      Finds central elements in a given degree
    Usage
       centralElements(A,n)
    Inputs
@@ -2277,30 +2437,137 @@ doc ///
    Outputs
       : NCMatrix
    Description
+      Text
+         If the given NCRing has central elements of the specified degree, this method
+	 returns a basis for the space of central elements in that degree.
       Example
         A = QQ{x,y,z}
         I = ncIdeal { y*z + z*y - x^2,x*z + z*x - y^2,z^2 - x*y - y*x}
         B = A/I
         centralElements(B,2)
         centralElements(B,3)
-      Text
---         We have not yet implemented the check in a fixed degree.
 ///
 
 doc ///
    Key
       normalElements
       (normalElements, NCQuotientRing, ZZ, Symbol, Symbol)
-      (normalElements, NCRingMap, ZZ)
-      (isNormal, NCRingElement)
    Headline
-      Computes normal monomials and components of the variety of normal elements in a given degree
-   --Usage
-   --Inputs
-   --Outputs
+      Finds normal elements
+   Usage
+      normalElements(A,n,x,y)
+   Inputs
+      A : NCQuotientRing
+      n : ZZ
+      x : Symbol
+      y : Symbol
+   Outputs
+      : List
    Description
       Text
-         stuff
+         Let b_1,...,b_n be a monomial basis for an NCRing A in degree d. We assume A
+	 is generated by elements a_1,...,a_k of degree 1. A homogeneous element r in A
+	 is normal if a_i*r is in the span of the r*a_j for all i.
+      Text
+         Using the input symbols x and y, we define the "normal variety" to be the 
+	 set of common solutions to the equations  
+	 x_j*a_i*b_j = y_j1*b_j*a_1+...+y_jk*b_j*a_k 
+	 for all i and j. Saturating the ideal at each x_i we extract polynomial equations
+	 the x_i must satisfy for the element x_1*b_1+...+x_n*b_n to be normal in A.
+      Text
+         Before computing the normal variety, this method checks for normal monomials
+	 in degree n. These are returned first to reduce the complexity of the problem.
+	 Then the method computes the variety and returns its components. The equations
+         the method returns are given in terms of the indexed variable x. The indices are
+	 basis monomials in degree n.
+      Text
+         The following example is a 3-dimensional Sklyanin algebra.
+      Example
+         A = QQ{x,y,z}
+	 I = ncIdeal {y*z + z*y - x^2,x*z + z*x - y^2,z^2 - x*y - y*x}
+	 B = A/I
+	 basis(2,B)
+	 normalElements(B,2,r,s)
+      Text
+         The normal elements in degree 2 are x^2, y^2 and z^2. The basis
+	 calculation shows x^2 and y^2 are normal forms in B. The normalElements
+	 method first checks all basis monomials using @ TO isNormal @. In this case
+	 it finds x^2 and y^2 are normal and returns this information. However,  
+	 z^2 is not a normal form expression. The normal form of z^2 is x*y+y*x. In 
+	 the second phase of the calculation, the method returns generators of the
+	 ideal describing the normal elements (excluding the normal monomials). We
+	 see the coefficients of basis monomials y*z and x*z must be 0 and the 
+	 coefficients of x*y and y*x must be equal. The last equation identifies
+	 z^2 = x*y+y*x as a normal element of degree 2.
+      Example
+         normalElements(B,3,t,u) 
+	 g = -y^3-x*y*z+y*x*z+x^3
+	 isCentral g
+      Text
+         In degree 3, there are no normal monomials. The function returns several equations
+	 which determine the only normal element of degree 3 (up to scaling) is the central
+	 element g.
+///
+
+doc ///
+   Key
+      (normalElements, NCRingMap, ZZ)
+   Headline
+      Finds elements normalized by a ring map
+   Usage
+      normalElements(f,n)
+   Inputs
+      f : NCRingMap
+      n : ZZ
+          a homogeneous degree in which to search for normal elements
+   Outputs
+      : List
+   Description
+      Text
+         A normal element x in an NCRing R determines an automorphism f of R by
+	 a*x=x*f(a). Conversely, given a ring endomorphism, we may ask if any x
+	 satisfy the above equation for all a. 
+      Text
+         Given an NCRingMap f and a degree n, this method returns solutions to 
+	 the equations a*x=x*f(a) for all generators a of R.
+      Example
+         B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
+	 sigma = ncMap(B,B,{y,z,w,x})
+	 C = oreExtension(B,sigma,a)
+	 sigmaC = ncMap(C,C,{y,z,w,x,a})
+	 normalElements(sigmaC,1)
+         normalElements(sigmaC,2)
+         normalElements(sigmaC @@ sigmaC,2)
+       
+///
+
+
+doc ///
+   Key
+      (isNormal, NCRingElement)
+   Headline
+      Determines if a given NCRingElement is normal
+   Usage
+      isNormal x
+   Inputs
+      x : NCRingElement
+   Outputs
+      : Boolean
+   Description
+      Text
+         Given an element x in an NCRing R, this method returns true if Rx=xR.
+      Example
+         A = QQ{a,b,c}
+	 I = ncIdeal {a*b+b*a,a*c+c*a,b*c+c*b}
+	 B = A/I
+	 sigma = ncMap(B,B,{b,c,a})
+	 isWellDefined sigma
+	 C = oreExtension(B,sigma,w)
+	 isCentral w
+--	 isNormal w      something in sparseCoeffs breaks in this case
+   SeeAlso
+      isCentral
+      normalElements
 ///
 
 doc ///
@@ -2309,12 +2576,31 @@ doc ///
       (normalAutomorphism,NCRingElement)
    Headline
       Computes the automorphism determined by a normal homogeneous element
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      normalAutomorphism x
+   Inputs
+      x : NCRingElement
+          a homogeneous normal element
+   Outputs
+      : NCRingMap
    Description
       Text
-        This is the type of a matrix over a noncommutative graded ring.
+         Let x be a homogeneous element in an NCRing R. If x is normal then x determines
+	 a graded ring automorphism f of R by a*x = x*f(a). This method returns this 
+	 automorphism as an NCRingMap. 
+      Example
+         A = QQ{a,b,c}
+	 I = ncIdeal {a*b+b*a,a*c+c*a,b*c+c*b}
+	 B = A/I
+	 sigma = ncMap(B,B,{b,c,a})
+	 isWellDefined sigma
+	 C = oreExtension(B,sigma,w)
+--	 isNormal w^2                  something in sparseCoeffs is broken
+--	 phi = normalAutomorphism w^2
+--	 matrix phi
+	 (matrix sigma @@ sigma)
+   SeeAlso
+      normalElements	 
 ///
 
 doc ///
@@ -2327,107 +2613,187 @@ doc ///
       (rightMultiplicationMap,NCRingElement,List,List)
    Headline
       Computes a matrix for left or right multiplication by a homogeneous element
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      leftMultiplicationMap(r,n) or leftMultiplicationMap(r,fromBasis,toBasis)
+   Inputs
+      r : NCRingElement
+      n : ZZ
+          the homogeneous degree for the source of the map
+      fromBasis : List
+                a list of monomials of the same homogeneous degree
+      toBasis : List
+                  a list of monomials of homogeneous degree deg(r) larger than the degree of the toBasis
+   Outputs
+      : Matrix
    Description
       Text
-         stuff
+         These methods return a matrix over the coefficient ring of the NCRing to which r
+	 belongs. The matrix represents left or right multiplication by r. Most commonly, 
+	 the user will enter the ring element (required to be homogeneous) and a degree n.
+	 The result is the matrix of the map A_n -> A_n+d where d is the degree of r.
+	 The matrix is computed relative to the monomial basis obtain using 
+	 @ TO (basis, ZZ, NCRing) @. 
+	 
+	 Alternatively, the user can enter sets of independent monomials to serve as a
+	 basis for the domain and co-domain of the maps. The method left or right 
+	 multiplies r by the fromBasis and converts to coordinates via @ TO sparseCoeffs @
+	 and the toBasis.
+	 
+      Example
+         A = QQ{x,y,z}
+	 f1 = y*z + z*y - x^2
+	 f2 = x*z + z*x - y^2
+	 f3 = z^2 - x*y - y*x
+	 B = A/ncIdeal{f1,f2,f3}
+	 leftMultiplicationMap(x,2)
+	 kernel oo
+	 isRightRegular(x,2)
+      Text
+         If the element is not regular, you can use these methods to compute the 
+	 annihilators in particular degrees.
+      Example
+	 C = QQ{x,y}
+	 D = C/ncIdeal{x^2+x*y,y^2}
+	 isRightRegular(x,1)
+	 leftMultiplicationMap(x,1)
+	 M=matrix gens kernel oo
+	 basis(1,D)*M
+   SeeAlso
+      sparseCoeffs 
 ///
 
 doc ///
    Key
       rightKernel
       (rightKernel,NCMatrix,ZZ)
-      NumberOfBins
+--      NumberOfBins
       [rightKernel,NumberOfBins]
       [rightKernel,Verbosity]
    Headline
       Method for computing kernels of matrices over noncommutative rings in a given degree without using Bergman
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      rightKernel(M,n)
+   Inputs
+      M : NCMatrix
+      n : ZZ
+          the degree in which to compute the kernel
+      NumberOfBins => ZZ
+                      an integer dividing the number of rows of M
+      Verbosity => ZZ
+   Outputs
+      : NCMatrix
    Description
       Text
-         stuff
+         The method @ TO rightKernelBergman @ is a very effective tool for comuting kernels of
+	 homogeneous matrices with entries in rings over QQ or ZZ/p. This method 
+	 provides an alternative that can be used for NCMatrices over any ground ring.
+	 The method is also useful when one knows additional homological information -  
+	 for example if the cokernel of M has a linear free resolution.
+      Text
+         Given an NCMatrix M and an integer n, this method returns a basis for the kernel
+	 of the matrix (viewed as a linear map of free right modules) in homogeneous degree
+	 n. The method successively computes annihilators of columns of M and intersects them. 
+	 For large matrices or large values of n, it may save memory to break the calculation
+	 into smaller pieces. Use the option NumberOfBins to reduce the memory (but increase
+	 the time) the program uses. Set Verbosity to 1 to see progress updates.
+      Text
+         To avoid accidental calls to Bergman for normal form calculations, set the MAXSIZE
+	 environment variable fairly high, say 1000.
+      Example
+         A = QQ{x,y,z,w}
+	 f1 = y*z + z*y - x^2
+	 f2 = x*z + z*x - y^2
+	 f3 = z^2 - x*y - y*x
+	 I = ncIdeal {f1,f2,f3,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
+	 B = A/I
+      Text
+         This algebra is an Ore extension of a 3-dimensional Sklyanin algebra, factored
+	 by the normal regular element w^2. This algebra is Koszul, hence it has a linear
+	 free resolution. The rightKernel method is significantly faster than 
+	 rightKernelBergman in this case. Also note the two methods return different
+	 generating sets for the kernel.
+      Example
+	 M1 = ncMatrix {{x,y,z,w}}
+	 M2 = rightKernel(M1,1)
+	 M3 = rightKernel(M2,1)
+	 rightKernelBergman(M2)
+	 M4 = rightKernel(M3,1)
+	 rightKernelBergman(M3)
+
+   SeeAlso
+      rightKernelBergman	 
 ///
 
 doc ///
    Key
       quadraticClosure
       (quadraticClosure,NCIdeal)
+      (quadraticClosure,NCQuotientRing)
    Headline
       Creates the subideal generated by quadratic elements of a given ideal
    Usage
-      I' = quadraticClosure I
+      quadraticClosure I
    Inputs
       I : NCIdeal
    Outputs
-      I' : NCIdeal
+      : NCIdeal
+        the quadratic closure of I
    Description
       Text
          The quadratic closure of an NCIdeal in an NCPolynomialRing is the NCIdeal
 	 generated by the elements of degree at most 2. Commonly used with 
 	 Link to homogDual in the case where the ideal generators are homogeneous of
 	 degree greater than 1.
+	 
+	 If the input is an NCQuotientRing, the method is applied to the defining
+	 ideal of the quotient ring and the corresponding quotient ring is returned.
+	 At the moment, quotients of quotients is not implemented, and the ambient
+	 ring of the input NCQuotientRing is assumed to be an NCPolynomialRing.
+	 
+	 This method is commonly used in conjunction with @ TO homogDual @.
+      Example
+         A = QQ{x,y,z}
+	 I = ncIdeal{x*z-z*x, y*z, x*y^2-y^2*x, x^3*y-y*x^3}
+	 J = quadraticClosure I
+   SeeAlso
+      homogDual
 ///
 
-doc ///
-   Key
-      (quadraticClosure,NCQuotientRing)
-   Headline
-      Creates a minimal quadratic cover of an NCQuotientRing.
-   Usage
-      B' = quadraticClosure B
-   Inputs
-      B : NCQuotientRing
-   Outputs
-      B' : NCQuotientRing
-   Description
-      Text
-         This method is essentially the same as Link to (quadraticClosure,NCIdeal). At
-	 the moment, quotients of quotients are not implemented, so it is assumed the
-	 ambient ring of B is an NCPolynomialRing. The method returns the quotient of
-	 this NCPolynomialRing by the quadratic closure of B's defining ideal.
-///
 
 doc ///
    Key
       homogDual
       (homogDual,NCIdeal)
+      (homogDual,NCQuotientRing)
    Headline
       Computes the dual of a pure homogeneous ideal
    Usage
-      I' = homogDual I
+      homogDual I
    Inputs
       I : NCIdeal
+          or an @ TO NCQuotientRing @
    Outputs
-      I' : NCIdeal
+      : NCIdeal
+           or an @ TO NCQuotientRing @
    Description
       Text
          The homogeneous dual of a pure ideal I in an NCPolynomialRing A is generated 
 	 by the orthogonal complement to the generators of I under the natural pairing 
 	 on the generating subspace of A and its linear dual. Though technically the dual
 	 ideal belongs to the tensor algebra on the dual space of generators, this
-	 method returns the dual ideal in the same NCPolynomialRing.
-///
-
-doc ///
-   Key
-      (homogDual,NCQuotientRing)
-   Headline
-      Computes the dual of the quotient ring of a pure homogeneous ideal
-   Usage
-      B' = homogDual B
-   Inputs
-      B : NCQuotientRing
-   Outputs
-      B' : NCQuotientRing
-   Description
-      Text
-         This method is essentially the same as Link to (homogDual,NCIdeal). Given
-	 an NCQuotientRing, it extracts the defining (pure) NCIdeal, computes the
-	 homogeneous dual, and returns the corresponding quotient ring.
+	 method returns the dual ideal in the same NCPolynomialRing. 
+	 
+	 If the input is an NCQuotient ring, the method is applied to the defining
+	 ideal of the quotient and the corresponding quotient ring is returned.
+	 
+	 Commonly used in conjunction with @ TO quadraticClosure @.
+      Example
+         A = QQ{x,y,z}
+	 I = ncIdeal{x*z-z*x, y*z, x*y^2-y^2*x, x^3*y-y*x^3}
+	 J = quadraticClosure I
+         J' = homogDual J
+   SeeAlso
+      quadraticClosure
 ///
 
 doc ///
@@ -2441,20 +2807,26 @@ doc ///
    Usage
       sparseCoeffs L
    Inputs
-      L : List
+      L : NCRingElement
+          or a @ TO List @ of NCRingElements
       Monomials => List
+                   a list of monomials to use as a basis for computing coordinate vectors
    Outputs
       : Matrix
    Description
+      Text 
+         This method converts a list of ring elements to coordinate vectors - returned
+	 as a matrix - relative to a list of monomilas. If the user does not 
+	 supply a monomial list, the list is taken to be the monomials 
+	 occuring in the elements of the list (with repetition).
       Example
          A=QQ{a, b, c, d, e, f, g, h}
 	 F = a^2+b^2+c^2+d^2+e^2+f^2+g^2+h^2;
+	 sparseCoeffs(F)
 	 bas = flatten entries basis(2,A);
 	 #bas
 	 sparseCoeffs(F,Monomials=>bas)
 	 sparseCoeffs(toList (10:F),Monomials=>bas)
-      Text
---         stuff
 ///
 
 
@@ -2543,10 +2915,16 @@ doc ///
       B : NCRing
           or a @ TO Ring @
       m : List
+          the images of the generators of A. 
       Derivation => Boolean
    Outputs
       f : NCRingMap
    Description
+      Text 
+	 NCRingMaps are linear and multiplicative by definition, but need not be
+	 well-defined or homogeneous.
+         The user has the option to define an NCRingMap to be a derivation. Such a 
+	 map must have the same source and target.
       Example
          A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
 	 B = QQ{a,b,c}
@@ -2556,6 +2934,8 @@ doc ///
 	 g(a*b)==g(a)*b+a*g(b)
 	 g(promote(1,B))
 	 g(c*a+2*b)
+   SeeAlso
+      NCRingMap
 ///
 
 doc ///
@@ -2610,6 +2990,10 @@ doc ///
 	 C = QQ{a,b,c}
 	 g = ncMap(C,A,{a^3,b^2,a+b,a-b})	 
 	 isHomogeneous g
+	 setWeights(A,{3,2,1,1})
+	 isHomogeneous g
+   SeeAlso
+      (isHomogeneous, NCIdeal)   
 ///
 
 doc ///
@@ -2624,6 +3008,9 @@ doc ///
    Outputs
       : Boolean
    Description
+      Text
+         Returns true if the given NCRingMap evaluates as 0 on the defining relations
+	 of the source.
       Example
          A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
 	 B = QQ{w,x,y,z}/ncIdeal{w*x+x*w,w*y+y*w,x*y+y*x}
@@ -2663,18 +3050,25 @@ doc ///
    Key
       (matrix, NCRingMap)
    Headline
-      The NCMatrix associated to an NCRingMap.
-   --Usage
-   --Inputs
-   --Outputs
+      An NCMatrix associated to an NCRingMap.
+   Usage
+      matrix f
+   Inputs
+      f : NCRingMap
+   Outputs
+      : NCMatrix
    Description
       Text
-         This is currently broken
+         This function returns a matrix whose entries are the images of the
+	 source generators in the target ring of f. The type of matrix depends on
+	 the type of the target ring.
       Example
          A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
 	 B = QQ[a,b,c,SkewCommutative=>true]
 	 f = ncMap(B,A,{a^3,b^2,a+b,a-b})
 	 matrix f
+	 g = ncMap(A,A,{x,y,z,w})
+	 matrix g
 ///
 
 doc ///
@@ -2779,16 +3173,26 @@ doc ///
       (oreExtension,NCRing,NCRingMap,Symbol)
    Headline
       Creates an Ore extension of a noncommutative ring
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      oreExtension(A,sigma,delta,x) or oreExtension(A,sigma,x)
+   Inputs
+      A : NCRing
+      sigma : NCRingMap
+      delta : NCRingMap
+      x : NCRingElement
+          or a @ TO Symbol @
+   Outputs
+      : NCQuotientRing
    Description
+      Text
+         This method calls @ TO oreIdeal @ and returns the associated
+	 Ore extension as an NCQuotientRing.
       Example
          B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
 	 sigma = ncMap(B,B,{y,z,w,x})
 	 C = oreExtension(B,sigma,a)
-      Text
-         stuff
+   SeeAlso
+      oreIdeal
 ///
 
 doc ///
@@ -2800,16 +3204,29 @@ doc ///
       (oreIdeal,NCRing,NCRingMap,Symbol)
    Headline
       Creates the defining ideal of an Ore extension of a noncommutative ring
-   --Usage
-   --Inputs
-   --Outputs
+   Usage
+      oreIdeal(A,sigma,delta,x) or oreIdeal(A,sigma,x)
+   Inputs
+      A : NCRing
+      sigma : NCRingMap
+      delta : NCRingMap
+      x : NCRingElement
+          or a @ TO Symbol @
+   Outputs
+      : NCIdeal
    Description
+      Text
+         Given a ring A, an Ore extension of A by x is the quotient of the free
+	 extension A<x> by the relations x*a - sigma(a)*x-delta(a) where sigma
+	 is an automorphism of A and delta is a sigma-derivation. This method returns
+	 the defining ideal (in the appropriate tensor algebra) of an Ore extension
+	 of A by x. The current version assumes the sigma-derivation delta is 0. 
       Example
          B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
 	 sigma = ncMap(B,B,{y,z,w,x})
 	 C = oreIdeal(B,sigma,a)
-      Text
-         stuff
+   SeeAlso
+      oreExtension
 ///
 
 doc ///
@@ -2977,6 +3394,15 @@ doc ///
 	 ring (or an exterior algebra, if SkewCommutative=>true) on the same generators 
 	 by the defining relations of the input ring. 
       Example
+         A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
+	 x*y-y*x
+	 w^2
+         B = toM2Ring(A)
+	 x*y-y*x
+	 w^2
+	 C = toM2Ring(A,SkewCommutative=>true)
+	 x*y-y*x
+	 w^2
    SeeAlso
       toNCRing
 
@@ -3001,7 +3427,11 @@ doc ///
 	 error is returned if the input ring has some commutative and some
 	 skew-commutative generators.
       Example
-        
+         R = QQ[a,b,c,d]
+	 I = ideal(a*d-b*c)
+         S = R/I
+	 S' = toNCRing(S)
+	 ideal S'
    SeeAlso
       toM2Ring
 ///
@@ -3025,14 +3455,14 @@ doc ///
 	 the "opposites" - elements whose noncommutative monomial terms have been reversed - 
 	 of the generators of the defining NCIdeal of A. If the coefficient ring of A is a
 	 Bergman ring, an NCGroebnerBasis is computed for Aop.
-      Text 
-         Link to skewPolynomialRing  
       Example
           R = QQ[q]/ideal{q^4+q^3+q^2+q+1}
           A = skewPolynomialRing(R,q,{x,y,z,w}) 
 	  x*y == q*y*x
           Aop = oppositeRing A
-	  y*x == q*x*y 		
+	  y*x == q*x*y 
+   SeeAlso
+      skewPolynomialRing		
 ///
 
 
@@ -3057,6 +3487,13 @@ doc ///
 	 reduce each element to normal form relative to the given NCGroebnerBasis
 	 for the NCIdeal defining the NCRing to which the list elements belong. 
       Example
+         A = QQ{x,y,z}
+	 f = y*z + z*y - x^2
+	 g = x*z + z*x - y^2
+	 h = z^2 - x*y - y*x
+	 I = ncIdeal {f,g,h}
+	 Igb = ncGroebnerBasis I
+	 normalFormBergman(z^17,Igb)
 ///
 
 
@@ -3149,24 +3586,6 @@ doc ///
 ///
 
 --- Documentation To-do
--- isHomogeneous
 -- Basic operations
 -- "Things we can do with Bergman" tutorial
--- toNCRing example
--- toM2Ring example
--- sparseCoeffs text
--- setWeights text and examples and caveats
--- rightKernelBergman
--- assignDegrees
--- isLeftRegular/isRightRegular
--- isCentral text
--- centralElements text
--- normalElements
--- rightKernel
--- normalAutomorphism
--- left/rightMultiplicationMap
--- quadraticClosure example
--- homogDual example
--- isWellDefined text
--- matrix NCRingMap
--- Check Usage, Inputs, Outputs that are commented out everywhere
+-- some brokenness in normalAutomorphism code

@@ -77,9 +77,9 @@ MAXDEG = 40
 MAXSIZE = 1000
 
 -- Andy's bergman path
---bergmanPath = "/usr/local/bergman1.001"
+bergmanPath = "/usr/local/bergman1.001"
 -- Frank's bergman path
-bergmanPath = "~/bergman"
+--bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
@@ -596,6 +596,8 @@ quadraticClosure NCIdeal := I -> (
 homogDual NCIdeal := I -> (
    -- Input: An NCIdeal I which is pure of degree d
    -- Output: The NCIdeal J whose generators are orthogonal to those of I under the natural pairing
+   if class I.ring =!= NCPolynomialRing then
+      error "Expected an ideal in the tensor algebra.";
    d:=degree I.generators_0;
    if not all(I.generators, g->(degree g)==d)
       then error "Expected a pure ideal.";
