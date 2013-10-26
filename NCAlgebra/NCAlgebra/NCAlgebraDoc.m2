@@ -3582,10 +3582,155 @@ doc ///
       "Using the Bergman interface"
    Description
       Text
-         Here will go an extended example
+         Bergman is a software package for computing Groebner bases 
+	 for ideals in both commutative and noncommutative polynomial 
+	 rings with coefficients in Q or Z/p. Bergman was created by 
+	 J. Backelin (U. of Stockholm) and its capabilites were extended 
+	 by V. Ufnarovski, S. Cojacaru, and A. Podoplelov.
+      Text
+         Though Bergman is limited in terms of the coefficients it can 
+	 handle and the choice of orderings it offers, it is among the 
+	 most efficient (especially in terms of memory usage) programs 
+	 for computing noncommutative Groebner bases
+	 currently known to us. Rather than re-inventing this wheel, the
+	 NCAlgebra package makes extensive use of Bergman calls for
+	 noncommutative Groebner basis calculations. The following 
+	 examples illustrate some common calculations which involve
+	 a call to Bergman. Our goal is to provide a more intuitive 
+	 user experience with minimal compromises to efficiency. 
+      Text
+         Typically, the user begins by defining a noncommutative polynomial
+	 ring. By default, the ring is graded with generators in degree 1.
+	 Other gradings can be defined, but support for nonstandard gradings
+	 is limited in this version. See @ TO setWeights @.
+      Example
+         A = QQ{x,y,z}
+      Text
+         Implicit in this definition is a choice of ordering for Groebner basis
+	 calculations: the ordering is degree-lexicographic with the generator
+	 symbols listed in order from smallest to largest. Riing elements are 
+	 displayed with the high term listed first.
+      Example
+         p = y*z + z*y - x^2
+      Text
+         One can compute Groebner bases for both homogeneous and inhomogeneous ideals.
+	 We consider a homogeneous example, the inhomogeneous case being similar.
+      Example
+         q = x*z + z*x - y^2
+       	 r = z^2 - x*y - y*x
+       	 I = ncIdeal {p,q,r}
+      Text
+         NCAlgebra has three methods pertaining to  noncommutative
+	 Groebner bases. One is @ TO twoSidedNCGroebnerBasisBergman @. This command
+	 runs Bergman to compute a noncommutative Groebner basis to a certain degree.
+	 The user will recall that unlike the commutative case, noncommutative 
+	 Groebner bases need not be finite, and may grow rapidly. For unfamiliar
+	 examples, we recommend initially setting a relatively low degree threshhold 
+	 (say, n=5). In our example, we know from experience the Groebner basis is finite
+	 so we do not specify a degree limit.
+      Example
+          Igb = twoSidedNCGroebnerBasisBergman I
+      Text
+          One an NCGroebner basis has been calculated, it is cached for later use. This
+	  option can be disabled. See @ TO twoSidedNCGroebnerBasisBergman @ for more
+	  on options. We note that twoSidedNCGroebnerBasisBergman is called automatically
+	  any time the user attempts to create an @ TO NCQuotientRing @.
+      Text
+          Another method related to Groebner bases is @ TO ncGroebnerBasis @. This 
+	  method creates the @ TO NCGroebnerBasis @ object. By default, this method
+	  also calls Bergman for a noncommutative Groebner basis calculation. However,
+	  by setting the option InstallGB to true, the user instructs Macaulay2 to bypass 
+          the Bergman call and accept the input list as a Groebner basis without checking
+	  it is one. This can be useful when the coefficient ring is not Q or Z/p.
+      Example
+         Igb2 = ncGroebnerBasis(I,InstallGB=>true) 
+      Text
+         As mentioned above, noncommutative Groebner bases can grow rapidly both in the
+	 number and size of the terms. In some cases, it takes days to calcuate a 
+	 Groebner basis to the desired degree. So as not to repeat this calculation 
+	 more than once, users might have a Groebner basis saved in a file. The method
+	 @ TO gbFromOutputFile @ enables the user to load the Groebner basis from a file.
+	 The file should contain nothing besides a list of noncommutative polynomials in
+	 Macaulay2 readable form. (One exception: Bergman output files contain lines 
+	 beginning with the "%" symbol. gbFromOutputFile ignores lines beginning with a
+	 "%".) Bergman users: you need not alter the output file from ncpbhgroebner in any
+         way prior to calling gbFromOutputFile. See @ TO gbFromOutputFile @ for an example.
+      Text
+         Once a Groebner basis is computed, many methods become available. The most
+	 basic calculation is to return the normal form of a given element relative
+	 to the known Groebner basis. The NCAlgebra package also provides multiple 
+	 options for this calculation. 
+      Text
+         Generally speaking, Bergman is the most efficient way to reduce a ring 
+	 element to normal form. Behind the scenes, the NCAlgebra package creates a
+	 Bergman-readable input file, runs a Bergman session, and interprets the 
+	 output, which it dislays to the user. This takes time, especially when the
+	 Groebner basis is large. The NCAlgebra package has its own normal form
+	 reduction algorithm. It is considerably slower than Bergman, but it can
+	 be faster than the time required to execute the Bergman call. 
+      Text
+         The file NCAlgebra.m2 contains two environment variables: MAXDEG and MAXSIZE.
+	 If the element to be reduced has degree less than MAXDEG and fewer than MAXSIZE
+	 terms (or if the coefficient ring is not Q or Z/p), the NCAlgebra package calls
+	 its own normal form reduction method. Otherwise, it calls @ TO normalFormBergman @.
+	 The user can force a Bergman call using this method.
+      Example
+          z^17 % Igb
+          normalFormBergman(z^17,Igb)
+      Text
+         Normal form calculations are performed automatically in an @ TO NCQuotientRing @.
+      Example
+         B = A/I
+	 z^17
+      Text
+         We also use Bergman to compute Hilbert series of an @ TO NCQuotientRing @ using 
+	 the @ TO hilbertBergman @ command. By default, the Hilbert series is given to 
+	 degree 10. As mentioned above, we auggest reducing the degree limit for rings
+	 whose growth is not well understood beforehand.
+      Example
+         hilbertBergman B 
+      Text
+         Perhaps a major achievement of the NCAlgebra package is the method 
+	 @ TO rightKernelBergman @. The functionality described above involves only
+	 the most basic Bergman calls, and long time Bergman users may find little
+	 reason to prefer NCAlgebra on those grounds. On the other hand, computing 
+	 kernel generators for a matrix with entries in a noncommutative ring is 
+	 anything but straightforward, and we reduce the call to a single command.
+      Example
+         A = QQ{x,y,z}
+         p = y*z + z*y - x^2
+         q = x*z + z*x - y^2
+         r = z^2 - x*y - y*x
+         g = -y^3-x*y*z+y*x*z+x^3
+         I = ncIdeal {p,q,r,g}
+         B = A/I
+         M = ncMatrix {{x,y,z,0}, {-y*z-2*x^2,-y*x,z*x-x*z,x},{x*y-2*y*x,x*z,-x^2,y}, {-y^2-z*x,x^2,-x*y,z}}
+      Text
+         For details about matrices over noncommutative rings, see @ TO NCMatrix @.
+	 Provided the entries of M are homogeneous and their degrees are compatible,
+	 M can be viewed as a graded (degree 0) homomorphism of graded free B-modules.
+	 For more on this degree-compatibility, see @ TO assignDegrees @.
+      Example
+         assignDegrees(M,{1,0,0,0},{2,2,2,1})
+      Text
+         Now, we can compute the kernel of M. It is always assumed that M determines a 
+	 map of graded right modules. As always in the noncommutative case, computing
+	 generators of the kernel of a map is generally an infinite linear algebra
+	 problem. The @ TO rightKernelBergman @ method returns a set of minimal kernel
+	 generators to degree 10, or to the degree specified by the user.
+      Example
+         ker1M = rightKernelBergman(M)
+         M*ker1M == 0
+      Text
+         In principle, this method can be used to compute the minimal free resolution
+	 of a finitely generated B-module with known presentation up to a specified degree.
+      Example
+         ker2M = rightKernelBergman(ker1M)
+	 ker3M = rightKernelBergman(ker2M) 
 ///
 
 --- Documentation To-do
 -- Basic operations
 -- "Things we can do with Bergman" tutorial
 -- some brokenness in normalAutomorphism code
+-- endomorphismRingGens
