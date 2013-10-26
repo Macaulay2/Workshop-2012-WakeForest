@@ -2586,7 +2586,7 @@ doc ///
    Description
       Text
          Let x be a homogeneous element in an NCRing R. If x is normal then x determines
-	 a graded ring automorphism f of R by a*x = x*f(a). This method returns this 
+	 a graded ring automorphism f of R by x*a = f(x)*a. This method returns this 
 	 automorphism as an NCRingMap. 
       Example
          A = QQ{a,b,c}
@@ -3233,7 +3233,7 @@ doc ///
    Key
       endomorphismRing
       (endomorphismRing,Module,Symbol)
-      endomorphismRingGens  -- don't know how to document this
+      endomorphismRingGens 
    Headline
       Methods for creating endomorphism rings of modules over a commutative ring
    Usage
@@ -3260,6 +3260,13 @@ doc ///
          B = endomorphismRing(M,X)
          gensI = gens ideal B
          gensIMin = minimizeRelations(gensI)
+      Text
+         The endomorphisms are cached in the endomorphism ring and can be accessed
+	 via the key endomorphismRingGens. We verify that X_3 is redundant:
+      Example
+         maps = B.cache.endomorphismRingGens
+	 maps_3 == maps_0*maps_2
+
 ///
 
 doc ///
@@ -3558,23 +3565,214 @@ doc ///
    Key
       "Basic operations on noncommutative algebras"
    Description
+      Text 
+         The NCAlgebra package contains a number of methods for studying noncommutative
+	 rings - primarily graded rings. The following three extended examples 
+	 highlight the capabilites of the package. For a detailed account of the
+	 Groebner basis calculations underlying nearly all of these methods, see
+	 @ TO "Using the Bergman interface" @.
+      Text
+         For a first extended example, consider a skew polynomial ring on four
+	 generators, where generators skew-commute (but are not nilpotent). See
+	 @ TO skewPolynomialRing @ for more details.
+      Example
+         C = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
+      Text
+         Let us briefly note that the user can also define a skew polynomial ring 
+	 with coefficients in a commutative ring.
+      Example
+         R = QQ[q]/ideal{q^4+q^3+q^2+q+1}
+	 B = skewPolynomialRing(R,q,{x,y,z,w})
+	 x*y == q*y*x         
+      Text
+         Returning to the main example, we can define a graded Ore extension of C 
+	 by specifying an automorphism.
+	 The function @ TO ncMap @ is used to define a ring map. Note that ring maps 
+	 are linear and multiplicative by definition but are not assumed to be  well-defined. 
+      Example
+         use C
+         sigma = ncMap(C,C,{y,z,w,x})
+	 isWellDefined sigma
+      Text
+         We form the Ore extension of C by sigma. See @ TO oreExtension @.
+      Example         
+         D = oreExtension(C,sigma,a)
+      Text
+         The new generator a is normal and regular in D. Regularity (on the left or right)
+	 can be checked one homogeneous degree at a time. See @ TO isLeftRegular @. 
+	 Thus a determines a graded automorphism f:D->D via a*r=f(r)*a.
+      Example
+         isNormal a
+	 apply(5,i-> isLeftRegular(a,i+1))
+         sigmaD = normalAutomorphism a
+      Text
+	 Given an automorphism, one can check to see which elements it normalizes
+	 in any given degree.
+      Example       
+         normalElements(sigmaD,1)
+	 normalElements(sigmaD,2)
+      Text
+         One can check for the presence of normal elements more generally. In our
+	 example, since a is normal, a^2 will also be normal. It is the only normal
+	 monomial of degree 2. A complete description of the normal elements in a
+	 given degree is given by @ TO normalElements @. 
+      Example
+         normalElements(D,2,p,q)
+      Text
+         Each component of the "normal variety" is a set of polynomial equations which must
+	 be satisfied by the coefficients of the monomial basis for an element expressed
+	 in that basis to be normal. In this case, the basis of D in degree 2 is
+      Example
+         basis(2,D)	 
+      Text
+         The output of normalElements tells us that in order for a degree 2 element of D
+	 to be normal, it must be an expresison in powers of the generators. The coefficients
+	 of these powers must satisfy the six equations listed.
+      Example
+         isNormal x^2+z^2-y^2-w^2	 
+      Text
+         In Macaulay2, the user can define a polynomial ring to be commutative or 
+	 skew-commutative (the exterior algebra). The user can convert these rings (and
+	 their quotients) to a type compatible with the NCAlgebra package using 
+         @ TO toNCRing @.
+      Example
+         E' = QQ[x,y,z,w,SkewCommutative=>true]
+	 E = toNCRing E'
+	 f = ncMap(E,C,gens E)
+	 f x^2       
+	 use C
+	 x^2 == 0
+      Text
+         Conversely, the user can convert an NCRing to a (quotient of a) polynomial ring
+	 in the usual sense of Macaulay2 using @ TO toM2Ring @. This method works on any
+	 NCRing - the result is the abelianization or "exterior-ization" of the given ring.
+	 For example, if we abelianize the skew polynomial ring C, we get a ring in which
+	 only powers of the generators are nonzero. On the other hand, if we "exterior-ize"
+	 C, we get the exterior algebra.
+      Example
+         C' = toM2Ring C
+         x*y 
+	 x*x
+	 C'' = toM2Ring(C,SkewCommutative=>true)
+         y*x
+	 y*y
+      Text
+         Finally, we can construct the opposite ring. The opposite ring of D will be the
+	 Ore extension by the inverse of sigma. See @ TO oppositeRing @.
+      Example
+         Dop = oppositeRing D
+         a*x == w*a            
+	 use D
+	 a*w == x*a
+      Text
+         Our second example concerns a three-dimensional Sklyanin algebra. This example is
+	 a PI-ring. We define the ring as a quotient of the tensor algebra on three
+	 generators by the two-sided ideal generated by the three elements listed.
       Example
          A = QQ{x,y,z}
 	 f = y*z + z*y - x^2
 	 g = x*z + z*x - y^2
 	 h = z^2 - x*y - y*x
-	 f*g
-	 f^2
-	 f-g 
-         3*g
-         f+g
 	 B = A/ncIdeal{f,g,h}
-	 j = -y^3-x*y*z+y*x*z+x^3
-	 k = x^2 + y^2 + z^2
-	 j*k
-	 k^3
       Text
-         Here will go an extended example
+         It is known that this algebra has a unique (up to rescaling) central element 
+	 of degre 3. We can verify this claim computationally using @ TO centralElements @
+	 and check that the element is regular to a given degree. See @ TO isLeftRegular @.
+      Example
+         centralElements(B,3)
+	 j = y^3+x*y*z-y*x*z-x^3
+	 isCentral j
+	 apply(5,i->isLeftRegular(j,i+1))
+      Text
+         In fact, we can see that j is (up to scaling) the only normal element of degree 3.
+	 See the discussion above for interpreting the output of @ TO normalElements @.
+      Example
+         normalElements(B,3,n,o)
+	 basis(3,B)
+      Text
+         Recently, we studied noncommutative matrix factorizations over noncommutative
+	 hypersurfaces. Here is a simple example. The hypersurface is B/(j). However,
+	 iterated quotients are not yet implemented, so we define this ring as a 
+	 quotient of the tensor algebra. Note the use of "promote" to ensure j is 
+	 thought of as an element of the tensor algebra.
+      Example
+         use A
+	 I = B.ideal
+         J = ncIdeal promote(j,A)
+	 B' = A/(I+J) 
+      Text
+         As in the commutative case, any minimal free resolution of a finitely generated
+	 module over a noncommutative hypersurface is eventually given by a matrix 
+	 factorization. We resolve the trivial module for B' by expressing it as the 
+	 cokernel of a homogeneous matrix. 
+      Example     
+	 k = ncMatrix {gens B'}
+	 M = rightKernelBergman rightKernelBergman k
+	 N = rightKernelBergman M
+      Text
+         As discussed in @ TO "Using the Bergman interface" @, the method 
+	 @ TO rightKernelBergman @ only computes the kernel of a module map to a 
+	 certain homogeneous degree. Applying a theorem of Cassidy and Shelton, we
+	 can be sure the matrices in any minimal graded free resolution of the trivial 
+	 module of B' will have entries of homogeneous degree at most 3.	 
+	 Thus we can be sure M is the third syzygy 
+	 module and N is the fourth. If we lift these matrices we see that M and N are
+	 nearly a factorization of the central element j.
+      Example       
+	 BprimeToB = ncMap(B,B',gens B)
+     	 liftM = BprimeToB M
+	 liftN = BprimeToB N
+	 liftM*liftN
+      Text
+         It appears that a change of basis will produce a matrix factorization. In general,
+	 Bergman returns a generating set for the kernel, but it need not have any
+	 nice properties. Here the NCAlgebra package can help by factoring a map. We 
+	 would like M*M' = M'*M = j*I where I is the identity matrix.
+      Example  	
+	 jId = promote(j,B)*(ncMatrix applyTable(entries id_(ZZ^4), i -> promote(i,B)))
+	 assignDegrees(jId,{2,2,2,3},{5,5,5,6});
+      Text 
+         The matrix jId is diagonal, and we have assigned degrees to make it compatible
+	 with M. Now we factor the lift of M through jId.
+      Example
+	 M' = jId // liftM
+         N
+      Text
+         We see that M' and N describe the same submodule and we check that the 
+	 factorization worked:
+      Example         
+	 liftM*M' 
+	 M'*liftM 
+      Text
+         Our last extended example illustrates how to obtain a presentation for the
+	 endomorphism ring of a module over a commutative ring. First we define a
+	 hypersurface ring and a high syzygy module.
+      Example
+         Q = QQ[a,b,c]
+	 R = Q/ideal{a*b-c^2}
+	 kRes = res(coker vars R, LengthLimit=>7);
+	 M = coker kRes.dd_5
+      Text
+         The endomorphism ring is computed using @ TO endomorphismRing @. This method
+	 computes a presentation, but the presentation is typically not minimal. We
+	 see from the following calcuation that X_3 = X_0X_2.
+      Example
+         B = endomorphismRing(M,X); 
+	 gensI = gens ideal B
+      Text
+         To eliminate redundant generators and relations, use @ TO minimizeRelations @. 
+	 This method makes several passes through the presentation, and stops if no 
+	 minimization occurs.
+      Example
+         gensIMin = minimizeRelations(gensI, Verbosity=>1)
+      Text
+         We see a substantial reduction in the number of relations and that X_1 and X_3
+	 are redundant generators. The endomorphisms themselves are cached, and can be
+	 accessed via @ TO endomorphismRingGens @. As an example, we explicitly verify 
+	 that X_3 is redundant. 
+      Example
+         maps = B.cache.endomorphismRingGens
+         maps#3 == maps#0*maps#2
 ///
 
 doc ///
@@ -3613,8 +3811,10 @@ doc ///
       Example
          p = y*z + z*y - x^2
       Text
-         One can compute Groebner bases for both homogeneous and inhomogeneous ideals.
-	 We consider a homogeneous example, the inhomogeneous case being similar.
+         One can try to compute Groebner bases for both homogeneous and inhomogeneous ideals.
+	 We cannot ensure anything but the homogeneous case works correctly, though
+	 see @ TO setWeights @. 
+	 We consider only homogeneous examples, the inhomogeneous case being similar.
       Example
          q = x*z + z*x - y^2
        	 r = z^2 - x*y - y*x
@@ -3730,7 +3930,4 @@ doc ///
 ///
 
 --- Documentation To-do
--- Basic operations
--- "Things we can do with Bergman" tutorial
 -- some brokenness in normalAutomorphism code
--- endomorphismRingGens
