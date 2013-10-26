@@ -3128,16 +3128,17 @@ doc ///
       f : NCRingMap
       n : ZZ
    Outputs
-      : NCMatrix
+      : Matrix
    Description
       Text
-         This is currently broken.
+         This method returns the homogeneous degree n component of the ring map f.
+	 The output is the matrix (over the coefficient ring of the target) of the 
+	 component map relative to the monomial bases for the source and target. 
       Example
-         A = QQ{x,y}
-	 B = QQ{a,b}
-	 setWeights(B,{2,2})
-	 f = ncMap(A,B,{x^2,y^2})
-	 --f_2 this is currently broken, since basis doesn't work with non-standard gradings
+         A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
+	 f = ncMap(A,A,{y,z,x,w})
+	 f_1
+	 f_2 
 ///
 
 doc ///
@@ -3930,4 +3931,4 @@ doc ///
 ///
 
 --- Documentation To-do
--- some brokenness in normalAutomorphism code
+

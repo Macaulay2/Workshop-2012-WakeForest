@@ -2190,12 +2190,13 @@ NCRingMap _ ZZ := (f,n) -> (
    if not isHomogeneous f then error "Expected a homogeneous NCRingMap.";
    B := source f;
    C := target f;
+   if not all((gens B)|(gens C),x-> degree x == 1) then error "Does not work in nonstandard gradings";
    srcBasis := flatten entries basis(n,B);
    tarBasis := flatten entries basis(n,C);
    imageList := srcBasis / f;
    if #(unique (select(imageList, g -> g != 0) / degree)) != 1 then
       error "Expected the image of degree " << n << " part of source to lie in single degree." << endl;
-   error "err";
+--   error "err";
    sparseCoeffs(imageList,Monomials=> tarBasis)
 --   matrix {apply(imageList, g -> coefficients(g,Monomials => tarBasis))}
 )
