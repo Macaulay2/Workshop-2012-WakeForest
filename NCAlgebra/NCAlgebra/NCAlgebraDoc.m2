@@ -2564,7 +2564,7 @@ doc ///
 	 isWellDefined sigma
 	 C = oreExtension(B,sigma,w)
 	 isCentral w
---	 isNormal w      something in sparseCoeffs breaks in this case
+	 isNormal w      
    SeeAlso
       isCentral
       normalElements
@@ -2595,9 +2595,9 @@ doc ///
 	 sigma = ncMap(B,B,{b,c,a})
 	 isWellDefined sigma
 	 C = oreExtension(B,sigma,w)
---	 isNormal w^2                  something in sparseCoeffs is broken
---	 phi = normalAutomorphism w^2
---	 matrix phi
+	 isNormal w^2        
+	 phi = normalAutomorphism w^2
+	 matrix phi
 	 (matrix sigma @@ sigma)
    SeeAlso
       normalElements	 
@@ -3617,7 +3617,7 @@ doc ///
 	 monomial of degree 2. A complete description of the normal elements in a
 	 given degree is given by @ TO normalElements @. 
       Example
-         normalElements(D,2,p,q)
+         normalElements(D,2,P,Q)
       Text
          Each component of the "normal variety" is a set of polynomial equations which must
 	 be satisfied by the coefficients of the monomial basis for an element expressed
@@ -3629,7 +3629,7 @@ doc ///
 	 to be normal, it must be an expresison in powers of the generators. The coefficients
 	 of these powers must satisfy the six equations listed.
       Example
-         isNormal x^2+z^2-y^2-w^2	 
+         isNormal (x^2+z^2-y^2-w^2)	 
       Text
          In Macaulay2, the user can define a polynomial ring to be commutative or 
 	 skew-commutative (the exterior algebra). The user can convert these rings (and

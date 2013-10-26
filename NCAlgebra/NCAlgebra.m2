@@ -954,7 +954,7 @@ sparseCoeffs List := opts -> L -> (
    
   termsF := pairs (L#0).terms;
   
-  coeffs := if (L#0)!=0 then (apply(termsF, (k,v) -> if v!=0 then (mons#k,0) => v)) else {};
+  coeffs := if (L#0)!=0 then (apply(termsF, (k,v) -> if v!=0 then (mons#k,0) => promote(v,R))) else {};
 
   l:=length L;
   if l>1 then
@@ -962,7 +962,7 @@ sparseCoeffs List := opts -> L -> (
         if not isHomogeneous L#i then error "Expected a homogeneous element.";
         if (L#i) !=0 then (
         termsF = pairs (L#i).terms;
-        newCoeffs := (apply(termsF, (k,v) -> if v!=0 then (mons#k,i) => v));
+        newCoeffs := (apply(termsF, (k,v) -> if v!=0 then (mons#k,i) => promote(v,R)));
        
 	coeffs = coeffs | newCoeffs;);
      ); 
