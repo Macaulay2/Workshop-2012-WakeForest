@@ -16,7 +16,8 @@ undocumented {(net,NCGroebnerBasis),
 	      Derivation,
 	      NumModuleVars,
 	      InstallGB,
-	      ReturnIdeal}
+	      ReturnIdeal,
+	      NumberOfBins}
 
 beginDocumentation()
 
@@ -2666,7 +2667,6 @@ doc ///
    Key
       rightKernel
       (rightKernel,NCMatrix,ZZ)
---      NumberOfBins
       [rightKernel,NumberOfBins]
       [rightKernel,Verbosity]
    Headline
