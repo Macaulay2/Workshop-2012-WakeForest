@@ -1,7 +1,7 @@
 newPackage("NCAlgebra",
      Headline => "Data types for Noncommutative algebras",
-     Version => "0.5",
-     Date => "September 8, 2013",
+     Version => "0.99",
+     Date => "October 29, 2013",
      Authors => {
 	  {Name => "Frank Moore",
 	   HomePage => "http://www.math.wfu.edu/Faculty/Moore.html",
@@ -84,7 +84,7 @@ bergmanPath = "~/bergman"
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
 NCPolynomialRing = new Type of NCRing
-NCRingElement = new Type of MutableHashTable
+NCRingElement = new Type of HashTable
 NCGroebnerBasis = new Type of HashTable
 NCMatrix = new Type of MutableHashTable
 NCMonomial = new Type of HashTable
@@ -96,6 +96,12 @@ NCRingMap = new Type of HashTable
 ---------------------------------------------------------------
 --- Helpful general-purpose functions
 ---------------------------------------------------------------
+
+-- this function uses == to test for unique elements, instead
+-- of ===, as unique does
+lessUnique = xs -> (
+  
+)
 
 removeNulls = xs -> select(xs, x -> x =!= null)
 
@@ -926,6 +932,10 @@ baseName NCRingElement := x -> (
 
 ring NCRingElement := NCRing => f -> f.ring
 
+flagReduced := f -> new (ring f) from {(symbol ring) => ring f,
+      	    	    	    	       (symbol isReduced) => true,
+                                       (symbol cache) => new CacheTable from {},
+                                       (symbol terms) => f.terms}
 
 sparseCoeffs = method(Options => {Monomials => null})
 sparseCoeffs NCRingElement := opts -> f -> (
@@ -1729,6 +1739,9 @@ ncGroebnerBasis = method(Options => {DegreeLimit => 100,
                                      InstallGB => false})
 ncGroebnerBasis List := opts -> fList -> (
    if opts#InstallGB then (
+      -- eliminate repeats
+      fList = unique fList;
+      -- make monic
       fList = apply(fList, f -> (coeff := leadCoefficient f; if isUnit coeff then (coeff)^(-1)*f else (leadCoefficient coeff)^(-1)*f));
       (minNCGBDeg,maxNCGBDeg,minCoeffDeg,maxCoeffDeg) := getMinMaxDegrees(fList);
       new NCGroebnerBasis from hashTable {(symbol generators) => hashTable apply(fList, f -> (leadMonomialForGB f,f)),
@@ -2527,7 +2540,7 @@ transpose NCMatrix := M -> ncMatrix transpose M.matrix
 --- internal routine
 flagReducedMatrix = method()
 flagReducedMatrix NCMatrix := M ->
-   applyTable(M.matrix, entry -> entry.isReduced = true);
+   applyTable(M.matrix, entry -> flagReduced(entry))
 
 --- for printing out the matrices; taken from the core M2 code for
 --- usual matrix printouts (though simplified)

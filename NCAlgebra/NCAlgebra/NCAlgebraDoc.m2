@@ -3677,7 +3677,7 @@ doc ///
 	 B = A/ncIdeal{f,g,h}
       Text
          It is known that this algebra has a unique (up to rescaling) central element 
-	 of degre 3. We can verify this claim computationally using @ TO centralElements @
+	 of degree 3. We can verify this claim computationally using @ TO centralElements @
 	 and check that the element is regular to a given degree. See @ TO isLeftRegular @.
       Example
          centralElements(B,3)
@@ -3807,7 +3807,7 @@ doc ///
       Text
          Implicit in this definition is a choice of ordering for Groebner basis
 	 calculations: the ordering is degree-lexicographic with the generator
-	 symbols listed in order from smallest to largest. Riing elements are 
+	 symbols listed in order from smallest to largest. Ring elements are 
 	 displayed with the high term listed first.
       Example
          p = y*z + z*y - x^2
@@ -3842,7 +3842,8 @@ doc ///
 	  also calls Bergman for a noncommutative Groebner basis calculation. However,
 	  by setting the option InstallGB to true, the user instructs Macaulay2 to bypass 
           the Bergman call and accept the input list as a Groebner basis without checking
-	  it is one. This can be useful when the coefficient ring is not Q or Z/p.
+	  it is one. This can be useful when the coefficient ring is not @ TO QQ @ or a finite
+	  prime field.
       Example
          Igb2 = ncGroebnerBasis(I,InstallGB=>true) 
       Text
@@ -3865,7 +3866,7 @@ doc ///
          Generally speaking, Bergman is the most efficient way to reduce a ring 
 	 element to normal form. Behind the scenes, the NCAlgebra package creates a
 	 Bergman-readable input file, runs a Bergman session, and interprets the 
-	 output, which it dislays to the user. This takes time, especially when the
+	 output, which it displays to the user. This takes time, especially when the
 	 Groebner basis is large. The NCAlgebra package has its own normal form
 	 reduction algorithm. It is considerably slower than Bergman, but it can
 	 be faster than the time required to execute the Bergman call. 
@@ -3886,7 +3887,7 @@ doc ///
       Text
          We also use Bergman to compute Hilbert series of an @ TO NCQuotientRing @ using 
 	 the @ TO hilbertBergman @ command. By default, the Hilbert series is given to 
-	 degree 10. As mentioned above, we auggest reducing the degree limit for rings
+	 degree 10. As mentioned above, we suggest reducing the degree limit for rings
 	 whose growth is not well understood beforehand.
       Example
          hilbertBergman B 
