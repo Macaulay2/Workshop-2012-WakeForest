@@ -72,6 +72,7 @@ protect MaxCoeffDegree
 protect MinCoeffDegree
 protect UsePreviousGBOutput
 protect DontUse
+protect CumulativeBasis
 
 MAXDEG = 40
 MAXSIZE = 1000
@@ -869,7 +870,9 @@ net NCRingElement := f -> (
    myNet := net "";
    for t in sort pairs f.terms do (
       tempNet := net t#1;
-      printParens := ring t#1 =!= QQ and ring t#1 =!= ZZ and size t#1 > 1;
+      printParens := ring t#1 =!= QQ and
+                     ring t#1 =!= ZZ and
+		     (size t#1 > 1 or (isConstant t#1 and size sub(t#1, coefficientRing ring t#1) > 1));
       myNet = myNet |
               (if not firstTerm and t#1 > 0 then
                  net "+"
@@ -1790,6 +1793,46 @@ basis(ZZ,NCRing) := NCMatrix => opts -> (n,B) -> (
    ncMatrix {apply(basisList, mon -> putInRing(mon,1))}
 )
 
+newBasis = method(Options => {CumulativeBasis => false})
+newBasis(ZZ,NCRing) := NCMatrix => opts -> (n,B) -> (
+   ncgbGens := if class B === NCQuotientRing then pairs (ncGroebnerBasis B.ideal).generators else {};
+   basisList := {ncMonomial({},B)};
+   doneList := if opts#CumulativeBasis then basisList else {};
+   varsList := apply(B.generatorSymbols, v -> ncMonomial({v},B));
+   numVars := #varsList;
+   degreeList := gens B / degree;
+   mindeg := min degreeList;
+   lastTerms := ncgbGens / first / first;
+   while basisList =!= {} do (
+      -- build the next tensor weight monomials
+      newBasisList := flatten apply(basisList, mon -> removeNulls apply(#varsList, i -> if degreeList#i + degree mon <= n then (varsList#i) | mon));
+      -- select only those that are not a lead term of a GB element
+      if ncgbGens =!= {} then
+         newBasisList = select(newBasisList, b -> all(lastTerms, mon -> not findSubstring(mon,b,CheckPrefixOnly=>true)));
+      -- add qualifying monomials to done list
+      if opts#CumulativeBasis then
+         doneList = doneList | newBasisList
+      else
+         doneList = doneList | select(newBasisList, b -> degree b == n);
+      -- now only select those that will be needed to build next step
+      basisList = select(newBasisList, b -> degree b + mindeg <= n);
+   );
+   ncMatrix {apply(doneList, mon -> putInRing(mon,1))}   
+)
+
+TEST ///
+restart
+debug needsPackage "NCAlgebra"
+A = QQ{a,b,c,d}
+setWeights(A,{1,1,2,3})
+time b1 = flatten entries basis(8,A);
+time b2 = flatten entries newBasis(8,A);
+B = skewPolynomialRing(QQ,(-1)_QQ,{x,y,z,w})
+setWeights(B,{1,1,2,3})
+time b1 = flatten entries basis(15,B);
+time b2 = flatten entries newBasis(15,B);
+///
+
 leftMultiplicationMap = method()
 leftMultiplicationMap(NCRingElement,ZZ) := (f,n) -> (
    -- Input : A form f of degree m, and a degree n
@@ -2685,7 +2728,6 @@ end
 --- bug fix/performance/interface improvements
 ------------------------------------
 --- ***** Bug in output of NCRingElements!  See the example in the NCPolynomialRing / NCIdeal doc node.
---- ***** Hilbert series doesn't work with generators of different degrees
 --- ***** basis does not work with non-standard gradings
 --- skewPolynomialRing with NCRing bases
 --- threeDimSklyanin(Ring,List,DegreeLimit=>)
@@ -2694,6 +2736,7 @@ end
 
 --- additions in the near future
 ------------------------------------
+--- ***** Hilbert series doesn't work with generators of different degrees
 --- Finish right mingens
 --- Finish left kernels and mingens etc (opposite ring now done)
 --- Make sure that trivial ideals are handled correctly
