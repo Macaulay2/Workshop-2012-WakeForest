@@ -1407,7 +1407,7 @@ doc ///
        One can provide one using the @ TO [ncGroebnerBasis,InstallGB] @ option of @ TO ncGroebnerBasis @
        if you happen to know it.
        
-       One also canhave Macaulay2 call Bergman and have it computed via the function
+       One also can have Macaulay2 call Bergman and have it computed via the function
        @ TO twoSidedNCGroebnerBasisBergman @.  This command is automatically called when defining
        a quotient ring, if the defining ideal does not yet have a cached Groebner basis.
        
