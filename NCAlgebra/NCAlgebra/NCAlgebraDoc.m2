@@ -3311,7 +3311,7 @@ doc ///
       M : Matrix
       L : List
    Outputs
-      B : Ring
+      B : NCRing
    Description
       Text
          This method constructs a skew polynomial ring with coefficients in the ring R
@@ -3334,8 +3334,6 @@ doc ///
      oppositeRing
 ///
 
-
-
 doc ///
    Key
       (skewPolynomialRing,Ring,RingElement,List)
@@ -3351,7 +3349,7 @@ doc ///
           or an integer or a rational number
       L : List
    Outputs
-      : Ring
+      : NCRing
    Description
       Text
          This method constructs a skew polynomial ring with coefficient ring R
@@ -3380,7 +3378,53 @@ doc ///
 
 ///
 
-   
+doc ///
+   Key
+      threeDimSklyanin
+      (threeDimSklyanin,Ring,List)
+      (threeDimSklyanin,Ring,List,List)
+   Headline
+      Defines a three-dimensional Sklyanin with given parameters
+   Usage
+      threeDimSklyanin(R,params,varList)
+   Inputs
+      R       : Ring
+      params  : List
+      varList : List
+      DegreeLimit => ZZ
+   Outputs
+      : NCRing
+   Description
+      Text
+         This method constructs a three dimensional Sklyanin algebra with parameters from
+	 the params list, and variables from varList (see @ HREF{"http:////arxiv.org//abs//1107.2953","here"} @).
+	 If either list is not length three, then an error is thrown.  The generic 
+	 such algebra does not have a finite Groebner basis, so the optional parameter
+	 DegreeLimit has been defaulted to 5.  If only one list is provided, it is used
+	 for the variable names, and a random choice for each parameter is chosen.
+      
+         The following example is a PI algebra, and has a finite Groebner basis.
+      Example
+         B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
+         ncGroebnerBasis ideal B
+      Text
+         This is not generically true, however:
+      Example
+         C = threeDimSklyanin(QQ,{a,b,c})
+	 ncGroebnerBasis ideal C
+      Text
+         In all cases, there is a degree three central regular element (a formula
+	 for which is given in the paper referenced above).
+      Example
+         centralElements(B,3)
+	 centralElements(C,3)
+      Text
+         These algebras also all AS-regular and as such have the same Hilbert
+	 series as a commutative polynomial algebra in three variables, as we can see here:
+      Example
+         hilbertBergman B
+	 hilbertBergman(C,DegreeLimit=>5)
+///
 
 doc ///
    Key
@@ -3966,7 +4010,7 @@ doc ///
 	 variable "bergmanPath" in the NCAlgebra.m2 file. The entry should be path to
 	 the top-level Bergman folder. This step is necessary
 	 for NCAlgebra to access a certain library file in the Bergman distribution.
-	 Having the correct directory in your $PATH is not sufficient; do not omit
+	 Having the correct directory in your \$PATH is not sufficient; do not omit
 	 this step. You can test whether bergmanPath is set correctly by 
 	 running the examples in @ TO normalFormBergman @.
       Text

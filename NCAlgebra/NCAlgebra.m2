@@ -48,6 +48,7 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
          endomorphismRing,endomorphismRingGens,
          minimizeRelations,
          skewPolynomialRing,
+	 threeDimSklyanin,
 	 oppositeRing,
          quadraticClosure,
 	 homogDual,
@@ -78,9 +79,9 @@ MAXDEG = 40
 MAXSIZE = 1000
 
 -- Andy's bergman path
-bergmanPath = "/usr/local/bergman1.001"
+--bergmanPath = "/usr/local/bergman1.001"
 -- Frank's bergman path
---bergmanPath = "~/bergman"
+bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
@@ -872,7 +873,9 @@ net NCRingElement := f -> (
       tempNet := net t#1;
       printParens := ring t#1 =!= QQ and
                      ring t#1 =!= ZZ and
-		     (size t#1 > 1 or (isConstant t#1 and size sub(t#1, coefficientRing ring t#1) > 1));
+		     (size t#1 > 1 or (isField ring t#1 and 
+			               numgens coefficientRing ring t#1 > 0 and
+				       size sub(t#1, coefficientRing ring t#1) > 1));
       myNet = myNet |
               (if not firstTerm and t#1 > 0 then
                  net "+"
@@ -1780,6 +1783,7 @@ net NCGroebnerBasis := ncgb -> (
 ZZ % NCGroebnerBasis := (n,ncgb) -> n
 QQ % NCGroebnerBasis := (n,ncgb) -> n
 
+{*
 basis(ZZ,NCRing) := NCMatrix => opts -> (n,B) -> (
    ncgbGens := if class B === NCQuotientRing then pairs (ncGroebnerBasis B.ideal).generators else {};
    basisList := {ncMonomial({},B)};
@@ -1792,6 +1796,14 @@ basis(ZZ,NCRing) := NCMatrix => opts -> (n,B) -> (
    );
    ncMatrix {apply(basisList, mon -> putInRing(mon,1))}
 )
+*}
+
+basis(ZZ,NCRing) := NCMatrix => opts -> (n,B) ->
+   newBasis(n,B,CumulativeBasis=>false)
+   
+cumulativeBasis = method()
+cumulativeBasis(ZZ,NCRing) := NCMatrix => opts -> (n,B) ->
+   newBasis(n,B,CumulativeBasis=>true)
 
 newBasis = method(Options => {CumulativeBasis => false})
 newBasis(ZZ,NCRing) := NCMatrix => opts -> (n,B) -> (
@@ -2323,6 +2335,23 @@ skewPolynomialRing (Ring,RingElement,List) := (R,skewElt,varList) -> (
    B
 )
 
+threeDimSklyanin = method(Options => {DegreeLimit => 5})
+threeDimSklyanin (Ring, List, List) := opts -> (R, params, varList) -> (
+   if #params != 3 or #varList != 3 then error "Expected lists of length 3.";
+   A := R varList;
+   gensA := gens A;
+   I := ncIdeal {params#0*gensA#1*gensA#2+params#1*gensA#2*gensA#1+params#2*(gensA#0)^2,
+                 params#0*gensA#2*gensA#0+params#1*gensA#0*gensA#2+params#2*(gensA#1)^2,
+		 params#0*gensA#0*gensA#1+params#1*gensA#1*gensA#0+params#2*(gensA#2)^2};
+   Igb := ncGroebnerBasis(I, InstallGB=>(not A#BergmanRing), DegreeLimit=>opts#DegreeLimit);
+   B := A/I;
+   B
+)
+threeDimSklyanin (Ring, List) := opts -> (R, varList) -> (
+   if char R =!= 0 then error "For random Sklyanin, QQ coefficients are required.";
+   threeDimSklyanin(R,{random(QQ),random(QQ), random(QQ)}, varList)
+)
+
 oreIdeal = method()
 oreIdeal (NCRing,NCRingMap,NCRingMap,NCRingElement) := 
 oreIdeal (NCRing,NCRingMap,NCRingMap,Symbol) := (B,sigma,delta,X) -> (
@@ -2727,7 +2756,6 @@ end
 
 --- bug fix/performance/interface improvements
 ------------------------------------
---- ***** Bug in output of NCRingElements!  See the example in the NCPolynomialRing / NCIdeal doc node.
 --- ***** basis does not work with non-standard gradings
 --- skewPolynomialRing with NCRing bases
 --- threeDimSklyanin(Ring,List,DegreeLimit=>)
@@ -2778,10 +2806,18 @@ I = ncIdeal {a*x*y+b*y*x+c*z^2,
              a*z*x+b*x*z+c*y^2}
 Igb = ncGroebnerBasis(I,DegreeLimit=>5)
 B = A/I
+B' = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
+B' = threeDimSklyanin(QQ,{x,y,z})
 C = first flatten entries centralElements(B,3)
 (b*(c^3-a^3))/(c*(c^3-b^3))
 (a*(b^3-c^3))/(c*(c^3-b^3))
 (c*(a^3-c^3))/(c*(c^3-b^3))
+
+-- sklyanin center example
+restart
+needsPackage "NCAlgebra"
+B' = threeDimSklyanin(QQ,{x,y,z})
+centralElements(B',3)
 
 --- andy bug 6/24/2013
 restart
