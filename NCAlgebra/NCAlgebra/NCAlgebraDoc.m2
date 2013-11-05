@@ -2148,10 +2148,10 @@ doc ///
    Description
       Text
          This method enables the user to work with rings which are not naturally graded
-	 (the generators are not all degree 1). Use at your own risk - several methods
-	 in the current version can give incorrect output for nonstandard gradings.
+	 (the generators are not all degree 1). The user should be aware that  methods
+	 which call Bergman may not work with nonstandard gradings.
 	 Perhaps the most important example is hilbertBergman, which throws an error. 
-	 @ TO (basis, ZZ, NCRing) @ and any method requiring a basis are also affected.
+	 Instead, use @ TO hilbertSeries @. 
       Example
          A=QQ{x,y,z}
 	 w=x^3-y^2
@@ -3845,8 +3845,7 @@ doc ///
       Text
          Typically, the user begins by defining a noncommutative polynomial
 	 ring. By default, the ring is graded with generators in degree 1.
-	 Other gradings can be defined, but support for nonstandard gradings
-	 is limited in this version. See @ TO setWeights @.
+	 Other gradings can be defined, see @ TO setWeights @.
       Example
          A = QQ{x,y,z}
       Text
@@ -3858,8 +3857,7 @@ doc ///
          p = y*z + z*y - x^2
       Text
          One can try to compute Groebner bases for both homogeneous and inhomogeneous ideals.
-	 We cannot ensure anything but the homogeneous case works correctly, though
-	 see @ TO setWeights @. 
+	 We cannot ensure Bergman computes any other than the homogeneous case correctly. 
 	 We consider only homogeneous examples, the inhomogeneous case being similar.
       Example
          q = x*z + z*x - y^2

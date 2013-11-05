@@ -79,9 +79,9 @@ MAXDEG = 40
 MAXSIZE = 1000
 
 -- Andy's bergman path
---bergmanPath = "/usr/local/bergman1.001"
+bergmanPath = "/usr/local/bergman1.001"
 -- Frank's bergman path
-bergmanPath = "~/bergman"
+-- bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
