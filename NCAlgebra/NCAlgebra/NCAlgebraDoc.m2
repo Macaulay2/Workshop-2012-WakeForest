@@ -556,8 +556,7 @@ doc ///
       Text
          This command allows for the product of composable NCMatrices (or ordinary matrices over the base).
       Example
-         A = QQ{x,y,z}
-	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 M = ncMatrix {{x, y, z}}
 	 sigma = ncMap(B,B,{y,z,x})
 	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
@@ -582,8 +581,7 @@ doc ///
       Text
          This command allows for the product of composable NCMatrices (or ordinary matrices over the base).
       Example
-         A = QQ{x,y,z}
-	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 M = ncMatrix {{x, y, z}}
 	 sigma = ncMap(B,B,{y,z,x})
 	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
@@ -607,8 +605,7 @@ doc ///
       Text
          This command allows for the scalar multiplication of an NCMatrix by an NCRingElement on the right.
       Example
-         A = QQ{x,y,z}
-	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 M = ncMatrix {{x, y, z}}
 	 sigma = ncMap(B,B,{y,z,x})
 	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
@@ -655,8 +652,7 @@ doc ///
       Text
          This command allows for the scaling of an @ TO NCMatrix @ by an element in @ TO QQ @.
       Example
-         A = QQ{x,y,z}
-	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 M = ncMatrix {{x, y, z}}
 	 sigma = ncMap(B,B,{y,z,x})
 	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
@@ -679,8 +675,7 @@ doc ///
       Text
          This command allows for the scaling of an @ TO NCMatrix @ by an element in @ TO ZZ @.
       Example
-         A = QQ{x,y,z}
-	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 M = ncMatrix {{x, y, z}}
 	 sigma = ncMap(B,B,{y,z,x})
 	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
@@ -703,8 +698,7 @@ doc ///
       Text
          This command allows for the product of composable NCMatrices (or ordinary matrices over the base).
       Example
-         A = QQ{x,y,z}
-	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 M = ncMatrix {{x, y, z}}
 	 sigma = ncMap(B,B,{y,z,x})
 	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
@@ -728,8 +722,7 @@ doc ///
       Text
          This command allows for the scalar multiplication of an NCMatrix by an NCRingElement on the left.
       Example
-         A = QQ{x,y,z}
-	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 M = ncMatrix {{x, y, z}}
 	 sigma = ncMap(B,B,{y,z,x})
 	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
@@ -776,8 +769,7 @@ doc ///
       Text
          This command allows for the scaling of an @ TO NCMatrix @ by an element in @ TO QQ @.
       Example
-         A = QQ{x,y,z}
-	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 M = ncMatrix {{x, y, z}}
 	 sigma = ncMap(B,B,{y,z,x})
 	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
@@ -800,8 +792,7 @@ doc ///
       Text
          This command allows for the scaling of an @ TO NCMatrix @ by an element in @ TO ZZ @.
       Example
-         A = QQ{x,y,z}
-	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 M = ncMatrix {{x, y, z}}
 	 sigma = ncMap(B,B,{y,z,x})
 	 N = ncMatrix {{M},{sigma M}, {sigma sigma M}}
@@ -983,15 +974,20 @@ doc ///
          If M does not factor through N, then the return value L is such that M - N*L is the reduction
 	 of M modulo a Groebner basis for the image of N.
 
-	 Here is an example of doing so over a PI Sklyanin algebra.
+	 Here is an example of doing so over a PI Sklyanin algebra.  Note that since quotients of
+	 quotients are (unfortunately) not yet implemented, we have to do a bit of acrobatics
+	 to define the quotient of the Sklyanin we want.
       Example
-         A = QQ{x,y,z}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
+         A = ambient B
+      Text
+         The element g below is central in B (the two is just for convenience).
+      Example
 	 g = 2*(-y^3-x*y*z+y*x*z+x^3)
-	 B = A/ncIdeal{y*z + z*y - x^2, x*z + z*x - y^2, z^2 - x*y - y*x} -- this is the Sklyanin
 	 J = (ideal B) + ncIdeal {g}
 	 B' = A/J -- Factor of sklyanin
-	 BprimeToB = ncMap(B,B',gens B) -- way to lift back from B' to B
 	 k = ncMatrix {{x,y,z}}
+	 BprimeToB = ncMap(B,B',gens B) -- way to lift back from B' to B
 	 M = BprimeToB rightKernelBergman rightKernelBergman k  -- second syzygy of k over B
       Text
          At this point, M is maximal Cohen-Macaulay B'-module,
@@ -1426,7 +1422,6 @@ doc ///
      Example
        c*z^2 % Igb 
        b*z^2 % Igb
-
        A = QQ{x,y,z}
        p = y*z + z*y - x^2
        q = x*z + z*x - y^2
@@ -2220,12 +2215,7 @@ doc ///
 	 I = ncIdeal{w,x+z^2}
 	 isHomogeneous I
       Example	
-         A = QQ{x,y,z}
-         f1 = y*z + z*y - x^2
-         f2 = x*z + z*x - y^2
-         f3 = z^2 - x*y - y*x
-         g = -y^3-x*y*z+y*x*z+x^3
-         B = A/ncIdeal{f1,f2,f3,g}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
          M = ncMatrix {{x,y,z,0}, {-y*z-2*x^2,-y*x,z*x-x*z,x},{x*y-2*y*x,x*z,-x^2,y}, {-y^2-z*x,x^2,-x*y,z}}
          isHomogeneous M
          assignDegrees(M,{1,0,0,0},{2,2,2,1})
@@ -2275,13 +2265,7 @@ doc ///
          With three inputs, the user may specify the desired degree shifts on inputs
 	 and outputs such that the associated module map is graded. 
       Example
-         A = QQ{x,y,z}
-         f1 = y*z + z*y - x^2
-         f2 = x*z + z*x - y^2
-         f3 = z^2 - x*y - y*x
-         g = -y^3-x*y*z+y*x*z+x^3
-         I = ncIdeal {f1,f2,f3,g}
-         B = A/I
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
          M = ncMatrix {{x,y,z,0}, {-y*z-2*x^2,-y*x,z*x-x*z,x},{x*y-2*y*x,x*z,-x^2,y}, {-y^2-z*x,x^2,-x*y,z}}
          isHomogeneous M
          assignDegrees(M,{1,0,0,0},{2,2,2,1})
@@ -2329,13 +2313,10 @@ doc ///
 	 
 	
       Example
-         A = QQ{x,y,z}
-         f1 = y*z + z*y - x^2
-         f2 = x*z + z*x - y^2
-         f3 = z^2 - x*y - y*x
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
+         A = ambient B
          g = -y^3-x*y*z+y*x*z+x^3
-         I = ncIdeal {f1,f2,f3,g}
-         B = A/I
+         C = A/(ideal B + ncIdeal g)
          M3 = ncMatrix {{x,y,z,0}, {-y*z-2*x^2,-y*x,z*x-x*z,x},{x*y-2*y*x,x*z,-x^2,y}, {-y^2-z*x,x^2,-x*y,z}}
          assignDegrees(M3,{1,0,0,0},{2,2,2,1})
          ker1M3 = rightKernelBergman(M3)
@@ -2375,11 +2356,7 @@ doc ///
 	 method calls @ TO leftMultiplicationMap @ or @ TO rightMultiplicationMap @ as
 	 appropriate and checks the kernel in the specified degree. 
       Example
-         A = QQ{x,y,z}
-	 f1 = y*z + z*y - x^2
-	 f2 = x*z + z*x - y^2
-	 f3 = z^2 - x*y - y*x
-	 B = A/ncIdeal{f1,f2,f3}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 g = -y^3-x*y*z+y*x*z+x^3
          isLeftRegular(g,6)
 	 
@@ -2412,11 +2389,9 @@ doc ///
       Text
          This method checks to see if a given NCRing element is central.
       Example
-        A = QQ{x,y,z}
-        I = ncIdeal { y*z + z*y - x^2,x*z + z*x - y^2,z^2 - x*y - y*x}
-        B = A/I
+        B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
         g = -y^3-x*y*z+y*x*z+x^3
-        h = x^2 + y^2 + z^2
+	h = x^2 + y^2 + z^2
         isCentral h
         isCentral g
    SeeAlso
@@ -2442,10 +2417,8 @@ doc ///
          If the given NCRing has central elements of the specified degree, this method
 	 returns a basis for the space of central elements in that degree.
       Example
-        A = QQ{x,y,z}
-        I = ncIdeal { y*z + z*y - x^2,x*z + z*x - y^2,z^2 - x*y - y*x}
-        B = A/I
-        centralElements(B,2)
+        B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
+	centralElements(B,2)
         centralElements(B,3)
 ///
 
@@ -2484,9 +2457,7 @@ doc ///
       Text
          The following example is a 3-dimensional Sklyanin algebra.
       Example
-         A = QQ{x,y,z}
-	 I = ncIdeal {y*z + z*y - x^2,x*z + z*x - y^2,z^2 - x*y - y*x}
-	 B = A/I
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 basis(2,B)
 	 normalElements(B,2,r,s)
       Text
@@ -2641,11 +2612,7 @@ doc ///
 	 and the toBasis.
 	 
       Example
-         A = QQ{x,y,z}
-	 f1 = y*z + z*y - x^2
-	 f2 = x*z + z*x - y^2
-	 f3 = z^2 - x*y - y*x
-	 B = A/ncIdeal{f1,f2,f3}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 leftMultiplicationMap(x,2)
 	 kernel oo
 	 isRightRegular(x,2)
@@ -2684,7 +2651,7 @@ doc ///
       : NCMatrix
    Description
       Text
-         The method @ TO rightKernelBergman @ is a very effective tool for comuting kernels of
+         The method @ TO rightKernelBergman @ is a very effective tool for computing kernels of
 	 homogeneous matrices with entries in rings over QQ or ZZ/p. This method 
 	 provides an alternative that can be used for NCMatrices over any ground ring.
 	 The method is also useful when one knows additional homological information -  
@@ -2700,12 +2667,10 @@ doc ///
          To avoid accidental calls to Bergman for normal form calculations, set the MAXSIZE
 	 environment variable fairly high, say 1000.
       Example
-         A = QQ{x,y,z,w}
-	 f1 = y*z + z*y - x^2
-	 f2 = x*z + z*x - y^2
-	 f3 = z^2 - x*y - y*x
-	 I = ncIdeal {f1,f2,f3,x*w-w*y,y*w-w*z,z*w-w*x,w^2}
-	 B = A/I
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
+         sigma = ncMap(B,B,{y,z,x})
+	 C = oreExtension(B,sigma,w)
+	 D = (ambient C)/(ideal C + ncIdeal{promote(w^2,ambient C)})
       Text
          This algebra is an Ore extension of a 3-dimensional Sklyanin algebra, factored
 	 by the normal regular element w^2. This algebra is Koszul, hence it has a linear
@@ -2719,7 +2684,6 @@ doc ///
 	 rightKernelBergman(M2)
 	 M4 = rightKernel(M3,1)
 	 rightKernelBergman(M3)
-
    SeeAlso
       rightKernelBergman	 
 ///
@@ -3136,8 +3100,11 @@ doc ///
 	 component map relative to the monomial bases for the source and target. 
       Example
          A = skewPolynomialRing(QQ,(-1)_QQ,{w,x,y,z})
-	 f = ncMap(A,A,{y,z,x,w})
+	 setWeights(A,{1,1,2,2})
+	 f = ncMap(A,A,{x,w,z,y})
+	 basis(1,A)
 	 f_1
+	 basis(2,A)
 	 f_2 
 ///
 
@@ -3598,12 +3565,37 @@ doc ///
 	 At this time, the output is correct only for NCRings with a standard grading -
 	 all generators have degree 1. The output is returned as a polynomial in ZZ[T].
       Example
-         A = QQ{x,y,z}
-	 f = y*z + z*y - x^2
-	 g = x*z + z*x - y^2
-	 h = z^2 - x*y - y*x
-         B = A/ncIdeal{f,g,h}
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 hilbertBergman(B,DegreeLimit=>12)
+///
+
+doc ///
+   Key
+      (hilbertSeries, NCRing)
+   Headline
+      Computes the Hilbert series of an NCRing
+   Usage
+     hseries = hilbertSeries(A)
+   Inputs
+     A : NCRing
+     Order => ZZ
+   Outputs
+     hseries : RingElement
+   Description
+      Text
+         This method computes the Hilbert series of a graded NCRing.  If the ring is defined ober QQ or ZZ/p,
+	 and standard graded, it calls @ TO hilbertBergman @.  Otherwise, if the ring is defined
+	 over a field (and potentially not standard graded), then a basis is computed and the
+	 generating function of the degrees of that basis is returned.  The degree to which one computes
+	 the Hilbert series is controlled with the Order option.
+         The output is returned as a polynomial in ZZ[T].
+      Example
+	 A = QQ{x,y,z}
+	 hilbertSeries A
+	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
+	 hilbertSeries(B,Order=>12)
+	 setWeights(B,{1,2,3})
+	 hilbertSeries(B,Order=>12)
 ///
 
 doc ///
@@ -3952,13 +3944,10 @@ doc ///
 	 kernel generators for a matrix with entries in a noncommutative ring is 
 	 anything but straightforward, and we reduce the call to a single command.
       Example
-         A = QQ{x,y,z}
-         p = y*z + z*y - x^2
-         q = x*z + z*x - y^2
-         r = z^2 - x*y - y*x
-         g = -y^3-x*y*z+y*x*z+x^3
-         I = ncIdeal {p,q,r,g}
-         B = A/I
+         B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
+         A = ambient B
+	 g = -y^3-x*y*z+y*x*z+x^3
+         C = A/(ideal B + ncIdeal g)
          M = ncMatrix {{x,y,z,0}, {-y*z-2*x^2,-y*x,z*x-x*z,x},{x*y-2*y*x,x*z,-x^2,y}, {-y^2-z*x,x^2,-x*y,z}}
       Text
          For details about matrices over noncommutative rings, see @ TO NCMatrix @.

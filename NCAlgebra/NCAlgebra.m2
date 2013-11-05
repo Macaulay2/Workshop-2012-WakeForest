@@ -185,6 +185,26 @@ isHomogeneous NCRing := A -> (
    else isHomogeneous ideal A
 )
 
+hilbertSeries NCRing := RingElement => opts -> A -> (
+   if not isHomogeneous A then error "Expected a homogeneous NCAlgebra.";
+   if opts#Order == infinity then error "Expected a maximum degree.  Use the Order=>ZZ option.";
+   deg := opts#Order;
+   if A.BergmanRing and ((gens A) / degree // unique === {1}) and class A === NCQuotientRing then
+      hilbertBergman A
+   else if class A === NCPolynomialRing then (
+      R := A.degreesRing;
+      1
+   )
+   else if isField coefficientRing A then (
+      monBasis := flatten entries cumulativeBasis(deg,A);
+      R := A.degreesRing;
+      T := R_0;
+      degTally := tally (monBasis / degree);
+      sum apply(deg+1, i -> degTally#i*T^i)
+   )
+   else error "Expected a NCAlgebra whose coefficient ring is a field."
+)
+
 -------------------------------------------
 --- NCPolynomialRing methods --------------
 -------------------------------------------
@@ -287,7 +307,7 @@ net NCRing := A -> net A.CoefficientRing | net A.generators
 
 ideal NCPolynomialRing := NCIdeal => A ->
    new NCIdeal from new HashTable from {(symbol ring) => A,
-                                        (symbol generators) => {},
+                                        (symbol generators) => {promote(0,A)},
                                         (symbol cache) => new CacheTable from {}}
 
 -------------------------------------------
@@ -592,7 +612,10 @@ net NCIdeal := I -> "Two-sided ideal " | net (I.generators);
 
 ring NCIdeal := NCRing => I -> I.ring
 
-NCIdeal + NCIdeal := (I,J) -> ncIdeal (gens I | gens J)
+NCIdeal + NCIdeal := (I,J) -> (
+    if ring I =!= ring J then error "Expected ideals over the same ring.";
+    ncIdeal (gens I | gens J)
+)
 
 quadraticClosure NCIdeal := I -> (
    -- Input: An NCIdeal I
@@ -690,7 +713,10 @@ net NCRightIdeal := I -> "Right ideal " | net (I.generators);
 
 ring NCRightIdeal := NCRing => I -> I.ring
 
-NCRightIdeal + NCRightIdeal := (I,J) -> ncRightIdeal (gens I | gens J)
+NCRightIdeal + NCRightIdeal := (I,J) -> (
+   if ring I =!= ring J then error "Expected ideals over the same ring.";
+   ncRightIdeal (gens I | gens J)
+)
 
 basis (ZZ,NCRightIdeal) := NCMatrix => opts -> (n,I) -> (
    R:=ring I;
@@ -733,7 +759,10 @@ net NCLeftIdeal := I -> "Left ideal " | net (I.generators);
 
 ring NCLeftIdeal := NCRing =>I -> I.ring
 
-NCLeftIdeal + NCLeftIdeal := (I,J) -> ncLeftIdeal (gens I | gens J)
+NCLeftIdeal + NCLeftIdeal := (I,J) -> (
+   if ring I =!= ring J then error "Expected ideals over the same ring.";
+   ncLeftIdeal (gens I | gens J)
+)
 
 basis (ZZ,NCLeftIdeal) := NCMatrix => opts -> (n,I) -> (
    R:=ring I;
@@ -1522,18 +1551,17 @@ hsFromOutputFiles (NCQuotientRing,String,String) := (B,tempOutput,tempTerminal) 
    1 + sum apply(gens B, x -> T^(degree x)) + sum apply(#dims, i -> (dims#i)*T^(i+2))
 )
 
-hilbertBergman = method(Options => {DegreeLimit => 10  -- DegreeLimit = 0 means return rational function (if possible)
+hilbertBergman = method(Options => {DegreeLimit => 10  -- DegreeLimit = 0 means return rational function (if possible, not yet functional)
                                                         -- else return as a power series
                                    })
 -- will add this later
 -- hilbertBergman NCIdeal := opts -> I -> (
-
 hilbertBergman NCQuotientRing := opts -> B -> (
   -- Is the result already here? Check the cache and return if so.
   if not B#BergmanRing then 
      error "Bergman interface can only handle coefficients over QQ or ZZ/p at the present time." << endl;
   if (gens B) / degree // max != 1 or (gens B) / degree // min != 1 then
-     error "Bergman currently only computes Hilbert series correctly for standard graded algebras." << endl;
+     error "Bergman currently only computes Hilbert series correctly for standard graded algebras.  Use hilbertSeries." << endl;
   -- prepare the call to bergman
   tempInit := temporaryFileName() | ".init";      -- init file
   tempInput := temporaryFileName() | ".bi";       -- gb input file
@@ -1802,7 +1830,7 @@ basis(ZZ,NCRing) := NCMatrix => opts -> (n,B) ->
    newBasis(n,B,CumulativeBasis=>false)
    
 cumulativeBasis = method()
-cumulativeBasis(ZZ,NCRing) := NCMatrix => opts -> (n,B) ->
+cumulativeBasis(ZZ,NCRing) := NCMatrix => (n,B) ->
    newBasis(n,B,CumulativeBasis=>true)
 
 newBasis = method(Options => {CumulativeBasis => false})
@@ -2258,7 +2286,6 @@ NCRingMap _ ZZ := (f,n) -> (
    if not isHomogeneous f then error "Expected a homogeneous NCRingMap.";
    B := source f;
    C := target f;
-   if not all((gens B)|(gens C),x-> degree x == 1) then error "Does not work in nonstandard gradings";
    srcBasis := flatten entries basis(n,B);
    tarBasis := flatten entries basis(n,C);
    imageList := srcBasis / f;
@@ -2756,7 +2783,7 @@ end
 
 --- bug fix/performance/interface improvements
 ------------------------------------
---- ***** basis does not work with non-standard gradings
+--- **** rightKernelBergman errors if kernel is zero!!!
 --- skewPolynomialRing with NCRing bases
 --- threeDimSklyanin(Ring,List,DegreeLimit=>)
 --- Testing!
@@ -2867,7 +2894,6 @@ A = QQ{a,b,d}
 setWeights(A,{1,2,3})
 c = b*a-a*b
 I = ncIdeal {c*a+a*c, b*c+c*b-a^2*c, d*a+b^2+a*d-a^2*b, d*c-2*b^3+2*b*a^2*b-c*d+a^2*b^2-a^4*b, d*b+b*d-a^2*d}
-
 ----
 restart
 uninstallPackage "NCAlgebra"
