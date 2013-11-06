@@ -986,8 +986,7 @@ tauQGor = (Rk, ek, fk, t1) -> (
 tauGor = (Rg,fg,tg) -> tauQGor (Rg,1,fg,tg)
 
 --Computes Non-Sharply-F-Pure ideals over polynomial rings for (R, fm^{a/(p^{e1}-1)}), 
---at least defined as in Fujin-Schwede-Takagi.
---THIS SHOULD BE REWRITTEN TO USE ethRootSafe
+--at least defined as in Fujino-Schwede-Takagi.
 sigmaAOverPEMinus1Poly ={HSL=> false}>> o -> (fm, a1, e1) -> ( 
      Rm := ring fm;
      pp := char Rm;
@@ -997,7 +996,7 @@ sigmaAOverPEMinus1Poly ={HSL=> false}>> o -> (fm, a1, e1) -> (
 	--if e1 = 0, we treat (p^e-1) as 1.  
      if (e2 == 0) then (e2 = 1; a2 = a1*(pp-1));
      if (a2 > pp^e2-1) then (m1 = floor((a2-1)/(pp^e2-1)); a2=((a2-1)%(pp^e2-1)) + 1 );
-     fpow := fm^a2;
+     --fpow := fm^a2;
      IN := eR(ideal(1_Rm),e2); -- this is going to be the new value.
      -- the previous commands should use the fast power raising when Emily finishes it
      IP := ideal(0_Rm); -- this is going to be the old value.
@@ -1006,7 +1005,7 @@ sigmaAOverPEMinus1Poly ={HSL=> false}>> o -> (fm, a1, e1) -> (
      --our initial value is something containing sigma.  This stops after finitely many steps.  
      while (IN != IP) do(
 	  IP = IN;
-	  IN = eR(ideal(fpow)*IP,e2);
+	  IN = ethRootSafe(fm,IP,a2,e2); -- eR(ideal(fpow)*IP,e2);
 	  count = count + 1
      );
 
