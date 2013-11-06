@@ -19,7 +19,7 @@ newPackage(
   "SpectralSequences",
 --  AuxiliaryFiles => true,
   Version => "0.6",
-  Date => "9 October 2013",
+  Date => "6 November 2013",
   Authors => {
        {
       Name => "David Berlekamp", 
@@ -77,7 +77,7 @@ export {
    "pageMap", 
    "page" ,
   -- "InfiniteSequence",
-  "prunningMaps", "xHom", "yHom" --, "xTensor", "yTensor"
+  "prunningMaps" --, "xHom", "yHom" --, "xTensor", "yTensor"
   }
 
 
@@ -252,7 +252,7 @@ net FilteredComplex := K -> (
 
 
 -- Primitive constructor, takes a list eg {m_n,m_(n-1), ...,m_0} 
--- defining inclusion maps C=F_(n+1)C > F_(n-1)C > ... > F_0 C 
+-- defining inclusion maps C=F_(n+1)C > F_(n)C > ... > F_0 C 
 -- of subcomplexes of a chain complex (or simplicial complexes) 
 -- and produces a filtered complex with integer keys the
 -- corresponing chain complex.
@@ -412,44 +412,44 @@ filteredComplex(reverse for i from P to (N-1) list
 -- checked carefully --
 
 -- produce the "x-filtration" of the Hom complex.
-Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
-modules := (p,q,T)->(apply( (T#q).cache.indices,
-     i-> if (i#0) <= p - q then  
-     image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
-     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
-     complex := (T,p) -> 
-     	       (K := new ChainComplex;
-		    K.ring = T.ring;
-		    for i from min T to max T do (
-		    if T#?(i-1) then
-		    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
-	       K
-	       );
-     N := max support K_infinity;
-     P := min support K_infinity;
-     H := Hom(K_infinity,C);
-     filteredComplex(reverse for i from P to (N-1) list inducedMap(H, complex(H,i)), Shift => -P)	 
-      )
+--Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
+--modules := (p,q,T)->(apply( (T#q).cache.indices,
+--     i-> if (i#0) <= p - q then  
+--     image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+--     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+--     complex := (T,p) -> 
+--     	       (K := new ChainComplex;
+--		    K.ring = T.ring;
+--		    for i from min T to max T do (
+--		    if T#?(i-1) then
+--		    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
+--	       K
+--	       );
+--     N := max support K_infinity;
+--     P := min support K_infinity;
+--     H := Hom(K_infinity,C);
+--     filteredComplex(reverse for i from P to (N-1) list inducedMap(H, complex(H,i)), Shift => -P)	 
+--      )
 
 -- produce the "y-filtration" of the Hom complex.
-Hom (ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> (    
-modules := (p,q,T)->(apply( (T#q).cache.indices,
-     i-> if (i#1) <= p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
-     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
-complex := (T,p) ->
-     (K := new ChainComplex;
-		    K.ring = T.ring;
-		    for i from min T to max T do (
-		    if T#?(i-1) then
-	     	    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
-	       K
-	       );
-     N := max support K_infinity;
-     P := min support K_infinity;
-     H:= Hom(C,K_infinity);
-     filteredComplex(reverse for i from P to (N -1) list 
-	       inducedMap(H, complex(H,i)), Shift => -P)
-     )
+--Hom (ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> (    
+--modules := (p,q,T)->(apply( (T#q).cache.indices,
+--     i-> if (i#1) <= p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
+--     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
+--complex := (T,p) ->
+--     (K := new ChainComplex;
+--		    K.ring = T.ring;
+--		    for i from min T to max T do (
+--		    if T#?(i-1) then
+--	     	    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
+--	       K
+--	       );
+--     N := max support K_infinity;
+--     P := min support K_infinity;
+--     H:= Hom(C,K_infinity);
+--     filteredComplex(reverse for i from P to (N -1) list 
+--	       inducedMap(H, complex(H,i)), Shift => -P)
+--     )
 
 ---
 ---
@@ -476,6 +476,11 @@ xComplex := (T,n) ->
 		    K.dd_i = inducedMap(directSum(xmodules(n,i-1,T)),directSum(xmodules(n,i,T)),T.dd_i));
 	       K
 	       )
+
+-- produce the "x-filtration" of the Hom complex.
+Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
+xHom(K,C)
+)
 
 xHom = method()
 xHom(FilteredComplex, ChainComplex) := FilteredComplex => (K,C) -> (    
@@ -517,7 +522,9 @@ yComplex := (T,n) ->
 		    K.dd_i = inducedMap(directSum(ymodules(n,i-1,T)),directSum(ymodules(n,i,T)),T.dd_i));
 	       K
 	       )
-
+Hom (ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> ( 
+    yHom(C, K)
+    )
 
 yHom = method()
 yHom(ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> (
@@ -568,11 +575,11 @@ degree Page := C -> C.dd.degree
 
 net Page := E -> (
     L := select(keys E, i -> class i === List and E#i !=0);
-    maxQ := max(apply(L, i->i#1)); 
-    minQ := min(apply(L, i-> i#1)); 
-    maxP := max(apply(L, i->i#0));
-    minP := min(apply(L,i->i#0));
-    K := while maxQ >= minQ list makeRow(maxP, minP, maxQ, E) do maxQ = maxQ-1;
+    maxQ := max(apply(L, i -> i#1)); 
+    minQ := min(apply(L, i -> i#1)); 
+    maxP := max(apply(L, i -> i#0));
+    minP := min(apply(L,i -> i#0));
+    K := while maxQ >= minQ list makeRow(maxP, minP, maxQ, E) do maxQ = maxQ - 1;
    -- netList(K, Boxes => false)
    netList K
     )
@@ -642,7 +649,7 @@ support PageMap := List => (
 PageMap _ List := Matrix => (f,i) ->  if f#?i then f#i else (
       de := f.degree;
       so := (f.source)_i;
-      ta := (f.target)_(i+de);
+      ta := (f.target)_(i + de);
       map(ta,so,0))
 
 
@@ -743,7 +750,7 @@ describe SpectralSequencePage := E -> net expression E
 
 spectralSequencePage = method (Options =>{Prune => false})
 
-spectralSequencePage(FilteredComplex, ZZ) := SpectralSequencePage => opts ->  (K,r) ->( 
+spectralSequencePage(FilteredComplex, ZZ) := SpectralSequencePage => opts ->  (K,r) -> ( 
 new SpectralSequencePage from 
  {symbol filteredComplex=> K, 
        symbol Prune => opts.Prune,
@@ -765,7 +772,7 @@ SpectralSequencePage ^ List := Module => (E,i)-> (E_(-i))
 -- as the support of the page.
 -- is this what we want??  Or do we only want to view the nonzero modules?
 
-support SpectralSequencePage := E ->(
+support SpectralSequencePage := E -> (
      new HashTable from apply(spots E.dd, i -> i=> source E.dd #i) )
  
 page SpectralSequencePage := Page => opts -> E -> ( 
@@ -791,7 +798,7 @@ page SpectralSequencePage := Page => opts -> E -> (
 
 net SpectralSequencePage := E -> (page E)
 
-support SpectralSequencePage := E ->(
+support SpectralSequencePage := E -> (
      new Page from apply(spots E.dd, i-> i=> source E.dd #i) )
 
 
@@ -809,16 +816,17 @@ support SpectralSequencePage := E ->(
 -- In any event it is easy enough to prove directly that they satisfy the requirments 
 -- for a spectral sequence.
 
-cycles := (K,p,q,r) ->(
+cycles := (K,p,q,r) -> (
 ker inducedMap((K_infinity)_(p+q-1) / K_(p-r) _ (p+q-1), 
      K_p _ (p+q), K_(infinity).dd_(p+q), Verify => false))
 
-boundaries := (K,p,q,r) ->(
+boundaries := (K,p,q,r) -> (
     ( image (K_(p+r-1).dd_(p+q+1))) + (K_(p-1) _ (p+q)))
 
 -- compute the pq modules on the rth page
 epq = method()
-epq(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r)->(((cycles(K,p,q,r) + boundaries(K,p,q,r)) / boundaries(K,p,q,r)))
+epq(FilteredComplex,ZZ,ZZ,ZZ) := (K,p,q,r) -> (
+    ((cycles(K,p,q,r) + boundaries(K,p,q,r)) / boundaries(K,p,q,r)))
 
 -- the pq maps on the rth page.
 epqrMaps = method()
@@ -1034,6 +1042,15 @@ document {
    -- {HREF("","")},
    -- {HREF("","")},
    -- {HREF("","")},},
+    SUBSECTION "How to use this package",
+  UL {
+    TO"How to work with filtered complexes", --"Making filtered chain complexes from chain complex maps",
+    --TO "Filtrations and tensor product complexes",
+    --TO "Filtrations and homomorphism complexes",
+    --TO "Filtered complexes and simplicial complexes"
+    },
+    
+ 
   SUBSECTION "Some examples which illustrate this package",
   UL {
     TO "Computing the Serre Spectral Sequence associated to a Hopf Fibration",
@@ -1042,6 +1059,101 @@ document {
     TO "Spectral sequences and non-Koszul syzygies",
     TO "A spectral sequence which fails to degenerate quickly"},
   }
+
+document {
+    Key => "How to work with filtered complexes",
+    Headline => "creating and manipulating filtered complexes",
+    "Here we illustrate some ways for working with filtered complexes",
+    UL { 
+	TO "How to make filtered complexes from chain complex maps",
+	TO "Canonical filtrations on tensor product complexes",
+	TO "Canoncial filtrations onhomomorphism complexes",
+	TO "Filtered complexes and simplicial complexes"
+	},
+    }
+
+doc ///
+     Key
+        "How to make filtered complexes from chain complex maps"
+     Headline
+     	  the most primitive way to make filtered complexes
+     Description
+     	  Text  
+       	    Here we describe
+	    the most basic way to create filtered complexes. 
+	    The general framework is as follows.  We start with a 
+	    chain complex $C$ and suppose that we are given a list of
+	    chain complex maps $\{\phi_n, \phi_{n - 1}, \dots, \phi_0  \}$, 
+	    $\phi_i : B_i \rightarrow C$ (here the $B_i$ are chain complexes)
+	    with the property that $image \phi_{i - 1}$ is a sub-chain complex of
+	    $image \phi_i$.
+	    Given this input data we produce a filtered chain complex
+	    $F_{n + 1} C \supseteq F_n C \supseteq \dots \supseteq F_{-1} C = 0 $
+	    where $F_{n + 1} C = C$ and $F_{i} C = image \phi_i$, for $i = 0, \dots, n$.
+	    
+	    We now illustrate how this is done in a easy example.
+	    We first make three chain complexes $C$, $D$, and $E$.
+	    We then make two chain complex maps, $d : D \rightarrow C$ 
+	    and $e : E \rightarrow C$, and then
+	    compute the resulting filtration of $C$.
+	    We first need to load the relavent packages.
+          Example
+	       needsPackage "SpectralSequences"	    
+     	  Text
+	       We then make our chain complexes $C$, $D$, and $E$.
+     	  Example	       	 
+	       R = QQ[x,y,z,w] ;
+	       c2 = matrix(R,{{1},{0}}) ;
+	       c1 = matrix(R,{{0,1}}) ;
+	       C = chainComplex({c1,c2})        
+	       D_2 = image matrix(R,{{1}});
+	       D_1 = image matrix(R,{{1,0},{0,0}});
+	       D_0 = image matrix(R,{{1}});
+	       D = chainComplex({inducedMap(D_0,D_1,C.dd_1),inducedMap(D_1,D_2,C.dd_2)})     
+               E_2 = image matrix(R,{{0}});
+	       E_1 = image matrix(R,{{1,0},{0,0}});
+	       E_0 = image matrix(R,{{1}});
+	       E = chainComplex({inducedMap(E_0,E_1,C.dd_1),inducedMap(E_1,E_2,C.dd_2)})
+     	  Text
+	       We now make our chain complex maps.
+     	  Example	       	     
+	       d = chainComplexMap(C,D,apply(spots C, i-> inducedMap(C_i,D_i,id_C _i)))
+	       e = chainComplexMap(C,E,apply(spots C, i->inducedMap(C_i,E_i, id_C _i)))
+	  Text
+	       We can check that these are indeed are indeed chain complex maps:
+	  Example   
+	       isChainComplexMap d
+	       isChainComplexMap e
+     	  Text 
+	       Now, given the list of chain complex maps $\{d, e\}$, we obtain
+	       a filtration of $C$ by:
+     	  Example	       	       
+	       K = filteredComplex({d,e})
+	  Text
+	     If we want to specify a specify minimum filtration degree
+             we can use the Shift option.
+      	  Example	       	     
+	       L = filteredComplex({d,e},Shift =>1)
+	       M = filteredComplex({d,e},Shift =>-1)	      	    
+///	  
+
+--doc ///
+    -- Key
+    --      "filtered complexes"
+    -- Headline
+     --	  how to create and manipulate filtered complexes
+    -- Description
+  --   	  Text	            	     
+--	    @TO"filtered complexes and spectral sequences from simplicial complexes"@
+--	  Text    
+--	    @TO"filtered complexes from chain complexes"@
+--	  Text    
+--	    @TO"filtered complexes and spectral sequences from chain complex maps"@
+--	  Text    
+--	      @TO"filtered complexes from tensor products of chain complexes"@
+--	  Text   
+--	      @TO"filtered complexes from Hom"@	     	  
+--///	  	 
 
 --------------------------------------------
 -- Documentation of methods and functions --
@@ -2108,23 +2220,23 @@ doc ///
 
 
 
-doc ///
-     Key
-          "filtered complexes"
-     Headline
-     	  how to create and manipulate filtered complexes
-     Description
-     	  Text	            	     
-	    @TO"filtered complexes and spectral sequences from simplicial complexes"@
-	  Text    
-	    @TO"filtered complexes from chain complexes"@
-	  Text    
-	    @TO"filtered complexes and spectral sequences from chain complex maps"@
+--doc ///
+    -- Key
+     --     "filtered complexes"
+   --  Headline
+     --	  how to create and manipulate filtered complexes
+    -- Description
+  --   	  Text	            	     
+--	    @TO"filtered complexes and spectral sequences from simplicial complexes"@
+--	  Text    
+--	    @TO"filtered complexes from chain complexes"@
+--	  Text    
+--	    @TO"filtered complexes and spectral sequences from chain complex maps"@
 --	  Text    
 --	      @TO"filtered complexes from tensor products of chain complexes"@
 --	  Text   
 --	      @TO"filtered complexes from Hom"@	     	  
-///	  	 
+--///	  	 
 doc ///
      Key
           "filtered complexes and spectral sequences from simplicial complexes"
@@ -2198,61 +2310,6 @@ doc ///
      Description
      	  Text
 ///	  	  
-doc ///
-     Key
-        "filtered complexes and spectral sequences from chain complex maps"
-     Headline
-     	  making filtered complexes and spectral sequences from chain complex maps	
-     Description
-     	  Text  
-       	    We can make a filtered complex from a list of chain complex maps as follows.
-	    We first need to load the relavent packages.
-          Example
-	       needsPackage "SpectralSequences"	    
---	       needsPackage "ChainComplexExtras"
-     	  Text
-	       We then make a chain complex.
-     	  Example	       	 
-	       R=QQ[x,y,z,w]
-	       d2=matrix(R,{{1},{0}})
-	       d1=matrix(R,{{0,1}})
-	       C=chainComplex({d1,d2}) 
-	  Text
-	      We now make the modules of the another chain complex which we will label D.
-	  Example      
-	       D_2 = image matrix(R,{{1}})
-	       D_1 = image matrix(R,{{1,0},{0,0}})
-	       D_0 = image matrix(R,{{1}})
-	       D = chainComplex({inducedMap(D_0,D_1,C.dd_1),inducedMap(D_1,D_2,C.dd_2)})
-     	  Text
-	       Now make a chain complex map.
-     	  Example	       	     
-	       d = chainComplexMap(C,D,apply(spots C, i-> inducedMap(C_i,D_i,id_C _i)))
-	       isChainComplexMap d
-	       d == chainComplexMap(C,D,{inducedMap(C_0,D_0,id_(C_0)),inducedMap(C_1,D_1,id_(C_1)),inducedMap(C_2,D_2,id_(C_2))})
-     	  Text
-	       We now make the modules of another chain complex which we will label E.	     
-     	  Example	      
-               E_2 =image matrix(R,{{0}})
-	       E_1 = image matrix(R,{{1,0},{0,0}})
-	       E_0 = image matrix(R,{{1}})
-	       E = chainComplex({inducedMap(E_0,E_1,C.dd_1),inducedMap(E_1,E_2,C.dd_2)})
-     	  Text
-	       Now make a chain complex map.
-     	  Example	      	       
-	       e = chainComplexMap(C,E,apply(spots C, i->inducedMap(C_i,D_i, id_C _i)))
-     	  Text 
-	       Now make a filtered complex from a list of chain complex maps.
-     	  Example	       	       
-	       K = filteredComplex({d,e})
-	  Text
-	     We can make a filtered complex, with a specified minimum filtration degree
-             from a list of ChainComplexMaps by using the Shift option.
-      	  Example	       	     
-	       L = filteredComplex({d,e},Shift =>1)
-	       M = filteredComplex({d,e},Shift =>-1)	      	    
-	  
-///	  
 doc ///
      Key
         "filtered complexes from tensor products of chain complexes"
@@ -2535,8 +2592,6 @@ d = (filteredComplex D) ** D
 filteredComplex{id_C}
 filteredComplex{id_D}
 
-
-
 e = spectralSequence d
 e^0
 e^0 .dd
@@ -2545,7 +2600,6 @@ e = prune spectralSequence d
 e^0
 e^0 . dd
 -- maybe we are displaying two many maps ??
-
 
 d = D ** (filteredComplex D)
 e = spectralSequence d
@@ -2556,25 +2610,27 @@ e^1 .dd
 c = C ** (filteredComplex C)
 e = spectralSequence c
 e^0
+-- the bug here has been fixed. --
 -- so there is a bug here that needs to be fixed ...
 -- again need to handle the case that min K_infinity is an infinity number etc --
+
+spots C
+
+min C
 min c_infinity
 
 (filteredComplex C) ** C
-
-
 
 --the following shows that there might be an error in the filtered Hom code
 E
 Hom(filteredComplex E, E)
 Hom(E, filteredComplex E)
 -- the middle piece should be different
---compare with 
+-- compare with 
 xHom(filteredComplex E, E)
 yHom(E, filteredComplex E)
 -- so the xHom and yHom might be a fix
 -- need to check the shift ...
-
 
 -- trying to handle the boundary cases for xHom and yHom --
 
@@ -2614,7 +2670,6 @@ ee = spectralSequence yHom(H, filteredComplex H)
 
 ee^0
 ee^10
-
 
 restart
 installPackage"SpectralSequences"
