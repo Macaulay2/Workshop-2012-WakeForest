@@ -79,9 +79,9 @@ MAXDEG = 40
 MAXSIZE = 1000
 
 -- Andy's bergman path
-bergmanPath = "/usr/local/bergman1.001"
+--bergmanPath = "/usr/local/bergman1.001"
 -- Frank's bergman path
--- bergmanPath = "~/bergman"
+bergmanPath = "~/bergman"
 
 NCRing = new Type of Ring
 NCQuotientRing = new Type of NCRing
@@ -192,13 +192,18 @@ hilbertSeries NCRing := RingElement => opts -> A -> (
    if A.BergmanRing and ((gens A) / degree // unique === {1}) and class A === NCQuotientRing then
       hilbertBergman A
    else if class A === NCPolynomialRing then (
+      -- use the known Hilbert series of the algebra
+      -- Hilb(T(V)) = (1-Hilb(V))^(-1) where V is a graded vector space
       R := A.degreesRing;
-      1
+      T := R_0;
+      S := R/(T^(deg+1)) ** QQ;
+      tensorSum := 1 - sum apply(numgens A, i -> (S_0)^(degree (A_i)));
+      sub(tensorSum^(-1), R)
    )
    else if isField coefficientRing A then (
       monBasis := flatten entries cumulativeBasis(deg,A);
-      R := A.degreesRing;
-      T := R_0;
+      R = A.degreesRing;
+      T = R_0;
       degTally := tally (monBasis / degree);
       sum apply(deg+1, i -> degTally#i*T^i)
    )
@@ -1193,7 +1198,7 @@ toNCRing Ring := R -> (
    --- here is the defining ideal of the commutative algebra, inside the tensor algebra
    I := ncIdeal (commRelations | extRelations | ((flatten entries gens ideal R) / phi));
    commIgb := gb ideal R;
-   maxDeg := (flatten entries gens commIgb) / degree / sum // max;
+   maxDeg := (((flatten entries gens commIgb) / degree) | {{0}}) / sum // max;
    Igb := ncGroebnerBasis(I, DegreeLimit => 2*maxDeg);
    A/I
 )
@@ -1287,7 +1292,8 @@ writeBergmanInputFile = method(Options => {ComputeNCGB => true,
 writeBergmanInputFile (List, String) := opts -> (genList, tempInput) -> (
    B := ring first genList;
    charB := char coefficientRing B;
-   maxDeg := max(opts#DegreeLimit, 2*(max(genList / degree)));
+   degList := (genList / degree) | {0};
+   maxDeg := min(opts#DegreeLimit, 2*(max degList));
    genListString := makeGenListString genList;
    writeBergmanInputFile(B,
                          genListString,
@@ -1298,6 +1304,7 @@ writeBergmanInputFile (List, String) := opts -> (genList, tempInput) -> (
 )
 
 writeBergmanInputFile (NCRing,String,String) := opts -> (B,genListString,tempInput) -> (
+   if opts#DegreeLimit == -infinity then error "Unknown error.  Degree limit is -infinity.";
    fil := openOut tempInput;
    varListString := makeVarListString B;
    charB := char coefficientRing B;
@@ -1380,9 +1387,10 @@ gbFromOutputFile(NCPolynomialRing,String) := opts -> (A,tempOutput) -> (
    -- now write gb to file to be used later, and stash answer in ncgb's cache
    if opts#CacheBergmanGB then (
       cacheGB := temporaryFileName() | ".bigb";
-      R := ring first gensList;
-      maxDeg := 2*(max(gensList / degree));
-      writeBergmanInputFile(R,
+      B := if #gensList > 0 then ring first gensList
+           else A;
+      maxDeg := 2*(max((gensList / degree)|{0}));
+      writeBergmanInputFile(B,
                             fileLines,
                             cacheGB,
                             ComputeNCGB=>false,
@@ -1634,8 +1642,9 @@ buildMatrixRelations NCMatrix := M -> (
    rowVarMatr := ncMatrix {rowVars};
    colVarMatr := ncMatrix {colVars};
    bergmanRels := (flatten entries (rowVarMatr*(phi M) - colVarMatr));
+   phi = if class B === NCQuotientRing then ambient phi else phi;
    M.cache#"BergmanRelations" = bergmanRels;
-   ((gens ideal B) / (ambient phi)) | bergmanRels
+   ((gens ideal B) / phi) | bergmanRels
 )
 
 rightKernelBergman = method(Options=>{DegreeLimit=>10})
@@ -1670,6 +1679,9 @@ getModuleCoefficients (List, List) := (modElts, modVars) -> (
    --- this is for the case of an ideal, where there is not a 'module' element.
    if modVars == {} then return ncMatrix {modElts};
    --- the rest is for honest module coefficients
+   -- if the map is injective, then return zero.  Will make more robust later when
+   -- modules are implemented
+   if modElts == {} then return null;
    C := ring first modElts;
    B := C.cache#"MatrixRingOver";
    cols := C.cache#"cols";
@@ -1740,13 +1752,15 @@ minimizeMatrixKerGens(NCPolynomialRing,NCMatrix,List) := opts -> (C,M,kerGens) -
    rows := #(M.target);
    gensC := gens C;
    gensBinC := take(gensC, numgens B);
-   ambientBtoC := ambient ncMap(C,B,gensBinC);
+   ambientBtoC := if class B === NCQuotientRing then ambient ncMap(C,B,gensBinC) else ncMap(C,B,gensBinC);
    gbIdealB := (gens ncGroebnerBasis ideal B) / ambientBtoC;
    colGens := gensC_{(numgens B)..(numgens B+cols-1)};
    colGenSymbols := (C.generatorSymbols)_{(numgens B)..(numgens B+cols-1)};
    kerGensElim := getKernelElements(kerGens,gensBinC,colGens);
    sortGens := sortUsing(kerGensElim,f -> (degree f, #(terms f)));
    kernelMatrix := getModuleCoefficients(sortGens,colGens);
+   -- this is the case when the map is injective
+   if kernelMatrix === null then return ncMatrix {{promote(0,B)}};
    minMker := rightMingens kernelMatrix;
    minMker
 )
@@ -1810,21 +1824,6 @@ net NCGroebnerBasis := ncgb -> (
 
 ZZ % NCGroebnerBasis := (n,ncgb) -> n
 QQ % NCGroebnerBasis := (n,ncgb) -> n
-
-{*
-basis(ZZ,NCRing) := NCMatrix => opts -> (n,B) -> (
-   ncgbGens := if class B === NCQuotientRing then pairs (ncGroebnerBasis B.ideal).generators else {};
-   basisList := {ncMonomial({},B)};
-   varsList := B.generatorSymbols;
-   lastTerms := ncgbGens / first / first;
-   for i from 1 to n do (
-      basisList = flatten apply(varsList, v -> apply(basisList, b -> ncMonomial({v},B) | b));
-      if ncgbGens =!= {} then
-         basisList = select(basisList, b -> all(lastTerms, mon -> not findSubstring(mon,b,CheckPrefixOnly=>true)));
-   );
-   ncMatrix {apply(basisList, mon -> putInRing(mon,1))}
-)
-*}
 
 basis(ZZ,NCRing) := NCMatrix => opts -> (n,B) ->
    newBasis(n,B,CumulativeBasis=>false)
@@ -2291,9 +2290,7 @@ NCRingMap _ ZZ := (f,n) -> (
    imageList := srcBasis / f;
    if #(unique (select(imageList, g -> g != 0) / degree)) != 1 then
       error "Expected the image of degree " << n << " part of source to lie in single degree." << endl;
---   error "err";
    sparseCoeffs(imageList,Monomials=> tarBasis)
---   matrix {apply(imageList, g -> coefficients(g,Monomials => tarBasis))}
 )
 
 NCRingMap @@ NCRingMap := (f,g) -> (
@@ -2740,7 +2737,8 @@ getMatrixGB NCMatrix := opts -> M -> (
    matrRels := buildMatrixRelations M;
    C := ring first matrRels;
    B := ring M;
-   ambBtoC := ncMap (C,ambient B,take(gens C,numgens B));
+   BtoC := ncMap (C, B, take(gens C, numgens B));
+   ambBtoC := if class B === NCQuotientRing then ambient BtoC else BtoC;
    mGB := twoSidedNCGroebnerBasisBergman(matrRels | ((gens ideal B) / ambBtoC),
                                          NumModuleVars => numgens C - numgens B,
                                          DegreeLimit => opts#DegreeLimit,
@@ -2783,117 +2781,34 @@ end
 
 --- bug fix/performance/interface improvements
 ------------------------------------
---- **** rightKernelBergman errors if kernel is zero!!!
---- skewPolynomialRing with NCRing bases
---- threeDimSklyanin(Ring,List,DegreeLimit=>)
 --- Testing!
---- Documentation!
 
 --- additions in the near future
 ------------------------------------
---- ***** Hilbert series doesn't work with generators of different degrees
+--- skewPolynomialRing with NCRing bases
 --- Finish right mingens
---- Finish left kernels and mingens etc (opposite ring now done)
+--- Implement left kernels and mingens etc (opposite ring now done)
 --- Make sure that trivial ideals are handled correctly
---- Make sure that ring constructions respect weights, if present
+--- Make sure constructions over the tensor algebra are handled correctly
 --- isFiniteDimensional?
 --- 'basis' for f.d. algebras?
 --- Generating set for algebras not over a field
---- Proper handling of rings generated in several positive degrees
----    This goes for things such as basis, etc, as well.
 --- fix coefficients to return a pair again.
 
 --- other things to add or work on in due time
 -----------------------------------
 --- notation to refer to a certain graded piece of an algebra e.g. A_3
 --- a dimension function for graded pieces dim(A,17)
---- derivations
 --- Dare I say it, Diamond Lemma?
 --- Make Quotients of Quotients work.
 --- NCRingMap kernels (to a certain degree)  -- Not sure I can do this with
 ---   Bergman, can't use block orders in bergman.
---- anick          -- resolution
+--- anick resolution
 --- NCModules (?) (including module gb (via simple), hilbert series, modulebettinumbers)
 --- Work on reduction code a bit?
 --- Hilbert series for modules (and sided ideals)
---- enveloping algebras, tensor products of algebra, hochschild (co)homology?
+--- enveloping algebras, tensor products of algebra, Hochschild (co)homology?
 
--- skylanin example from Ellen / Artin-Schelter generic Sklyanin example
-restart
-needsPackage "NCAlgebra"
-A = QQ{x,y,z}
-a = random(QQ)
-b = random(QQ)
-c = random(QQ)
-a = 1
-b = 1
-c = -1
-I = ncIdeal {a*x*y+b*y*x+c*z^2,
-             a*y*z+b*z*y+c*x^2,
-             a*z*x+b*x*z+c*y^2}
-Igb = ncGroebnerBasis(I,DegreeLimit=>5)
-B = A/I
-B' = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
-B' = threeDimSklyanin(QQ,{x,y,z})
-C = first flatten entries centralElements(B,3)
-(b*(c^3-a^3))/(c*(c^3-b^3))
-(a*(b^3-c^3))/(c*(c^3-b^3))
-(c*(a^3-c^3))/(c*(c^3-b^3))
-
--- sklyanin center example
-restart
-needsPackage "NCAlgebra"
-B' = threeDimSklyanin(QQ,{x,y,z})
-centralElements(B',3)
-
---- andy bug 6/24/2013
-restart
-needsPackage "NCAlgebra"
-R=toField(QQ[q]/ideal{q^2+q+1})
-A=R{x,y,z}
-I=ncIdeal{z*z+q^2*x*y-q*y*x,q*y*z+q^2*x*x-z*y,q*y*y+z*x-q^2*x*z,x^2*z-q*y*x*y,q^2*x*y*x-x^2*y-y^2*z-q*y*x^2}
-ncgb=ncGroebnerBasis(I,InstallGB=>true)
-
---- Ellen's examples
-restart
-debug needsPackage "NCAlgebra"
-gamma = -1_QQ
-A2 = skewPolynomialRing(QQ,(-1)_QQ,{a,c})
-setWeights(A2, {1,3})
-sigma3 = ncMap(A2,A2,{a,-c})
-delta3 = ncMap(A2,A2,{-gamma*c,-gamma*a^2*c})
-I3 = oreIdeal(A2,sigma3,delta3,b)
-setWeights(ring I3, {1,3,2})
-A3 = (ring I3)/I3
-isHomogeneous A3
-sigma4 = ncMap(A3,A3,{-a,c,-b-gamma*a^2})
-w = b^2+gamma*a^2*b
-delta4 = ncMap(A3,A3,{gamma*w,(2*b+gamma*a^2)*w,promote(0,A3)})
-I4 = oreIdeal(A3,sigma4,delta4,d)
-setWeights(ring I4, {1,3,2,3})
-isHomogeneous I4
-A4 = (ring I4)/I4
-f = d*c - d^2 - b*(b^2+gamma*a^2*b)
-rightKernelBergman ncMatrix {{f}} -- bug if kernel is zero
-ker sparseCoeffs {a*f,f*a} -- element is not normal
-isHomogeneous f
--- bug?
-isNormal(f)  -- should only take vars that have right degree...
-----
-g = promote(f,ambient A4)
-I5 = I4 + ncIdeal{g}
-B = (ring I4)/I5
-k = ncMatrix {{a,b,d}}
-assignDegrees k
-M1 = rightKernelBergman k
-M2 = rightKernelBergman M1
------ better presentation
-restart
-debug needsPackage "NCAlgebra"
-A = QQ{a,b,d}
-setWeights(A,{1,2,3})
-c = b*a-a*b
-I = ncIdeal {c*a+a*c, b*c+c*b-a^2*c, d*a+b^2+a*d-a^2*b, d*c-2*b^3+2*b*a^2*b-c*d+a^2*b^2-a^4*b, d*b+b*d-a^2*d}
 ----
 restart
 uninstallPackage "NCAlgebra"

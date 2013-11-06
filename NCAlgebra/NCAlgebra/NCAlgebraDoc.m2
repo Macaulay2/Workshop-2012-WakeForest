@@ -3591,7 +3591,7 @@ doc ///
          The output is returned as a polynomial in ZZ[T].
       Example
 	 A = QQ{x,y,z}
-	 hilbertSeries A
+	 hilbertSeries(A,Order=>12)
 	 B = threeDimSklyanin(QQ,{1,1,-1},{x,y,z})
 	 hilbertSeries(B,Order=>12)
 	 setWeights(B,{1,2,3})

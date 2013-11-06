@@ -114,3 +114,59 @@ quickExponentiate (ZZ, NCMatrix) := (n, M) -> (
    );
    product matrList
 )
+
+{*
+basis(ZZ,NCRing) := NCMatrix => opts -> (n,B) -> (
+   ncgbGens := if class B === NCQuotientRing then pairs (ncGroebnerBasis B.ideal).generators else {};
+   basisList := {ncMonomial({},B)};
+   varsList := B.generatorSymbols;
+   lastTerms := ncgbGens / first / first;
+   for i from 1 to n do (
+      basisList = flatten apply(varsList, v -> apply(basisList, b -> ncMonomial({v},B) | b));
+      if ncgbGens =!= {} then
+         basisList = select(basisList, b -> all(lastTerms, mon -> not findSubstring(mon,b,CheckPrefixOnly=>true)));
+   );
+   ncMatrix {apply(basisList, mon -> putInRing(mon,1))}
+)
+*}
+
+--- Ellen's examples
+restart
+debug needsPackage "NCAlgebra"
+gamma = -1_QQ
+A2 = skewPolynomialRing(QQ,(-1)_QQ,{a,c})
+setWeights(A2, {1,3})
+sigma3 = ncMap(A2,A2,{a,-c})
+delta3 = ncMap(A2,A2,{-gamma*c,-gamma*a^2*c})
+I3 = oreIdeal(A2,sigma3,delta3,b)
+setWeights(ring I3, {1,3,2})
+A3 = (ring I3)/I3
+isHomogeneous A3
+sigma4 = ncMap(A3,A3,{-a,c,-b-gamma*a^2})
+w = b^2+gamma*a^2*b
+delta4 = ncMap(A3,A3,{gamma*w,(2*b+gamma*a^2)*w,promote(0,A3)})
+I4 = oreIdeal(A3,sigma4,delta4,d)
+setWeights(ring I4, {1,3,2,3})
+isHomogeneous I4
+A4 = (ring I4)/I4
+f = d*c - d^2 - b*(b^2+gamma*a^2*b)
+rightKernelBergman ncMatrix {{f}} -- bug if kernel is zero
+ker sparseCoeffs {a*f,f*a} -- element is not normal
+isHomogeneous f
+-- bug?
+isNormal(f)  -- should only take vars that have right degree...
+----
+g = promote(f,ambient A4)
+I5 = I4 + ncIdeal{g}
+B = (ring I4)/I5
+k = ncMatrix {{a,b,d}}
+assignDegrees k
+M1 = rightKernelBergman k
+M2 = rightKernelBergman M1
+----- better presentation
+restart
+debug needsPackage "NCAlgebra"
+A = QQ{a,b,d}
+setWeights(A,{1,2,3})
+c = b*a-a*b
+I = ncIdeal {c*a+a*c, b*c+c*b-a^2*c, d*a+b^2+a*d-a^2*b, d*c-2*b^3+2*b*a^2*b-c*d+a^2*b^2-a^4*b, d*b+b*d-a^2*d}
