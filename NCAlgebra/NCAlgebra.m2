@@ -54,6 +54,8 @@ export { NCRing, NCQuotientRing, NCPolynomialRing,
 	 homogDual,
 	 toM2Ring,toNCRing,
 	 isExterior,
+	 coordinates,
+	 Basis,
 	 sparseCoeffs
 }
 
@@ -1114,6 +1116,35 @@ flagReduced := f -> new (ring f) from {(symbol ring) => ring f,
       	    	    	    	       (symbol isReduced) => true,
                                        (symbol cache) => new CacheTable from {},
                                        (symbol terms) => f.terms}
+
+
+coordinates = method(Options =>{Basis=>null})
+
+coordinates NCRingElement := opts -> f -> (
+  if opts#Basis === null then
+     sparseCoeffs({f})
+  else
+    coordinates({f},Basis=>opts#Basis)
+)
+
+coordinates List := opts -> L -> (
+   if opts#Basis === null then
+      sparseCoeffs L
+   else
+      bas := opts#Basis;
+      R := ring bas#0;
+      d := degree bas#0;
+      if not all(L, m-> (isHomogeneous(m) and ((degree m)== d))) then 
+	error "Expected homogeneous elements of the same degree.";
+      mons := flatten entries basis(d,R);
+      M := sparseCoeffs(bas, Monomials=>mons);
+      N := sparseCoeffs(L, Monomials=>mons);
+      if rank (M|N) != rank M then error "Expected elements in the span of given basis.";
+      I := id_(target M);
+      T := I // M;
+      T*N
+)
+
 
 sparseCoeffs = method(Options => {Monomials => null})
 sparseCoeffs NCRingElement := opts -> f -> (
