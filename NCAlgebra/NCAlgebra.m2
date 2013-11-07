@@ -675,24 +675,73 @@ homogDual NCIdeal := I -> (
 -- if desired, multiply by toBasis to revert to ring variables.
 -- )
 
-basis (ZZ,NCIdeal) := NCMatrix => opts -> (n,I) -> (
-   -- Input: An NCIdeal I and a degree n.
-   -- Output: A basis for I in degree n. 
+--basis (ZZ,NCIdeal) := NCMatrix => opts -> (n,I) -> (
+--   -- Input: An NCIdeal I and a degree n.
+--   -- Output: A basis for I in degree n. 
+--   R:=ring I;
+--   idealGens:=select(I.generators, g->degree g <= n);
+--   varsList:=gens R;
+--   V:= flatten apply(idealGens, r-> (
+--       	degnList:={r}; 
+--	d:=degree r; 
+--	if d<n then for i from 1 to n-d do (
+--          degnList= flatten apply(varsList, v->flatten{v*degnList,degnList*v});
+--	);
+--	degnList));
+--   terms := flatten entries basis(n,R);
+--   VasCoeffs := sparseCoeffs(V, Monomials=>terms);  
+--   minGens := mingens image VasCoeffs;
+--   ncMatrix{terms}*minGens
+--)
+
+
+basis(ZZ,NCIdeal) := NCMatrix => opts -> (n,I) ->
+   newBasis(n,I,CumulativeBasis=>false)
+   
+cumulativeBasis = method()
+cumulativeBasis(ZZ,NCIdeal) := NCMatrix => (n,I) ->
+   newBasis(n,I,CumulativeBasis=>true)
+
+newBasis = method(Options => {CumulativeBasis => false})   
+newBasis (ZZ,NCIdeal) := NCMatrix => opts -> (n,I) -> (
    R:=ring I;
    idealGens:=select(I.generators, g->degree g <= n);
-   varsList:=gens R;
-   V:= flatten apply(idealGens, r-> (
-       	degnList:={r}; 
-	d:=degree r; 
-	if d<n then for i from 1 to n-d do (
-          degnList= flatten apply(varsList, v->flatten{v*degnList,degnList*v});
-	);
-	degnList));
-   terms := flatten entries basis(n,R);
-   VasCoeffs := sparseCoeffs(V, Monomials=>terms);  
-   minGens := mingens image VasCoeffs;
+   doneToDeg := min (idealGens / degree);  
+   if n < doneToDeg then error "The requested degree must be at least as large as the degree of a minimal generator.";
+   activeGensList:=select(gens R, g-> degree g <= n-doneToDeg);
+   minGenDeg := min (activeGensList / degree);
+      
+-- compute a spanning set for the ideal in degrees <= n
+   newElts := idealGens;
+   doneBasis := if opts#CumulativeBasis then newElts else select(newElts,x->(degree x)==n);
+   while doneToDeg <= n-minGenDeg do (
+        -- compute all products of qualified generators with most recently added elements
+	newElts = flatten apply(activeGensList, v-> flatten{v*newElts,newElts*v});
+	-- select only those of the desired degrees
+	newElts = select(newElts, x-> degree x<=n);
+	if opts#CumulativeBasis then
+	   -- add them to the cumulative list
+	   doneBasis = doneBasis | newElts
+	else
+	   doneBasis = doneBasis | select(newElts, x->(degree x) == n);
+	-- increment the degree to which the spanning set is fully computed
+	doneToDeg = doneToDeg + minGenDeg;
+	-- update the qualified generators 
+	-- note that the minimum degree won't change unless we're done
+	activeGensList = select(activeGensList, g-> degree g <= n - doneToDeg);
+   );
+
+-- now we need to minimize the spanning set
+   terms := flatten entries newBasis(n,R,CumulativeBasis=>opts#CumulativeBasis);
+   asCoeffs := sparseCoeffs(doneBasis, Monomials=>terms);  
+   minGens := mingens image asCoeffs;
    ncMatrix{terms}*minGens
 )
+
+
+
+
+
 
 ------------------------------------------------
 
@@ -723,22 +772,64 @@ NCRightIdeal + NCRightIdeal := (I,J) -> (
    ncRightIdeal (gens I | gens J)
 )
 
-basis (ZZ,NCRightIdeal) := NCMatrix => opts -> (n,I) -> (
+--basis (ZZ,NCRightIdeal) := NCMatrix => opts -> (n,I) -> (
+--   R:=ring I;
+--   idealGens:=select(I.generators, g->degree g <= n);
+--   varsList:=gens R;
+--   V:= flatten apply(idealGens, r-> (
+--        degnList:={r};
+--        d:=degree r;
+--        if d<n then for i from 1 to n-d do (
+--           degnList=unique flatten apply(varsList, v->degnList*v);
+--        );
+--        degnList));
+--   terms := flatten entries basis(n,R);
+--   VasCoeffs := sparseCoeffs(V,Monomials=>terms);
+--   minGens := mingens image VasCoeffs;
+--   ncMatrix{terms}*minGens
+--)
+
+basis(ZZ,NCRightIdeal) := NCMatrix => opts -> (n,I) ->
+   newBasis(n,I,CumulativeBasis=>false)
+   
+cumulativeBasis(ZZ,NCRightIdeal) := NCMatrix => (n,I) ->
+   newBasis(n,I,CumulativeBasis=>true)
+
+newBasis (ZZ,NCRightIdeal) := NCMatrix => opts -> (n,I) -> (
    R:=ring I;
    idealGens:=select(I.generators, g->degree g <= n);
-   varsList:=gens R;
-   V:= flatten apply(idealGens, r-> (
-        degnList:={r};
-        d:=degree r;
-        if d<n then for i from 1 to n-d do (
-           degnList=unique flatten apply(varsList, v->degnList*v);
-        );
-        degnList));
-   terms := flatten entries basis(n,R);
-   VasCoeffs := sparseCoeffs(V,Monomials=>terms);
-   minGens := mingens image VasCoeffs;
+   doneToDeg := min (idealGens / degree);  
+   if n < doneToDeg then error "The requested degree must be at least as large as the degree of a minimal generator.";
+   activeGensList:=select(gens R, g-> degree g <= n-doneToDeg);
+   minGenDeg := min (activeGensList / degree);
+      
+-- compute a spanning set for the ideal in degrees <= n
+   newElts := idealGens;
+   doneBasis := if opts#CumulativeBasis then newElts else select(newElts,x->(degree x)==n);
+   while doneToDeg <= n-minGenDeg do (
+        -- compute all products of qualified generators with most recently added elements
+	newElts = flatten apply(activeGensList, v-> newElts*v);
+	-- select only those of the desired degrees
+	newElts = select(newElts, x-> degree x<=n);
+	if opts#CumulativeBasis then
+	   -- add them to the cumulative list
+	   doneBasis = doneBasis | newElts
+	else
+	   doneBasis = doneBasis | select(newElts, x->(degree x) == n);
+	-- increment the degree to which the spanning set is fully computed
+	doneToDeg = doneToDeg + minGenDeg;
+	-- update the qualified generators 
+	-- note that the minimum degree won't change unless we're done
+	activeGensList = select(activeGensList, g-> degree g <= n - doneToDeg);
+   );
+
+-- now we need to minimize the spanning set
+   terms := flatten entries newBasis(n,R,CumulativeBasis=>opts#CumulativeBasis);
+   asCoeffs := sparseCoeffs(doneBasis, Monomials=>terms);  
+   minGens := mingens image asCoeffs;
    ncMatrix{terms}*minGens
 )
+
 
 ------------------------------------------------
 
@@ -769,22 +860,69 @@ NCLeftIdeal + NCLeftIdeal := (I,J) -> (
    ncLeftIdeal (gens I | gens J)
 )
 
-basis (ZZ,NCLeftIdeal) := NCMatrix => opts -> (n,I) -> (
+--basis (ZZ,NCLeftIdeal) := NCMatrix => opts -> (n,I) -> (
+--   R:=ring I;
+--   idealGens:=select(I.generators, g->degree g <= n);
+--   varsList:=gens R;
+--   V:= flatten apply(idealGens, r-> (
+--        degnList:={r};
+--        d:=degree r;
+--        if d<n then for i from 1 to n-d do (
+--           degnList=unique flatten apply(varsList, v-> v*degnList);
+--        );
+--        degnList));
+--   terms := flatten entries basis(n,R);
+--   VasCoeffs := sparseCoeffs(V,Monomials=>terms);
+--   minGens := mingens image VasCoeffs;
+--   ncMatrix{terms}*minGens
+--)
+
+
+basis(ZZ,NCLeftIdeal) := NCMatrix => opts -> (n,I) ->
+   newBasis(n,I,CumulativeBasis=>false)
+   
+cumulativeBasis(ZZ,NCLeftIdeal) := NCMatrix => (n,I) ->
+   newBasis(n,I,CumulativeBasis=>true)
+
+newBasis (ZZ,NCLeftIdeal) := NCMatrix => opts -> (n,I) -> (
    R:=ring I;
    idealGens:=select(I.generators, g->degree g <= n);
-   varsList:=gens R;
-   V:= flatten apply(idealGens, r-> (
-        degnList:={r};
-        d:=degree r;
-        if d<n then for i from 1 to n-d do (
-           degnList=unique flatten apply(varsList, v-> v*degnList);
-        );
-        degnList));
-   terms := flatten entries basis(n,R);
-   VasCoeffs := sparseCoeffs(V,Monomials=>terms);
-   minGens := mingens image VasCoeffs;
+   doneToDeg := min (idealGens / degree);  
+   if n < doneToDeg then error "The requested degree must be at least as large as the degree of a minimal generator.";
+   activeGensList:=select(gens R, g-> degree g <= n-doneToDeg);
+   minGenDeg := min (activeGensList / degree);
+      
+-- compute a spanning set for the ideal in degrees <= n
+   newElts := idealGens;
+   doneBasis := if opts#CumulativeBasis then newElts else select(newElts,x->(degree x)==n);
+   while doneToDeg <= n-minGenDeg do (
+        -- compute all products of qualified generators with most recently added elements
+	newElts = flatten apply(activeGensList, v-> v*newElts);
+	-- select only those of the desired degrees
+	newElts = select(newElts, x-> degree x<=n);
+	if opts#CumulativeBasis then
+	   -- add them to the cumulative list
+	   doneBasis = doneBasis | newElts
+	else
+	   doneBasis = doneBasis | select(newElts, x->(degree x) == n);
+	-- increment the degree to which the spanning set is fully computed
+	doneToDeg = doneToDeg + minGenDeg;
+	-- update the qualified generators 
+	-- note that the minimum degree won't change unless we're done
+	activeGensList = select(activeGensList, g-> degree g <= n - doneToDeg);
+   );
+
+-- now we need to minimize the spanning set
+   terms := flatten entries newBasis(n,R,CumulativeBasis=>opts#CumulativeBasis);
+   asCoeffs := sparseCoeffs(doneBasis, Monomials=>terms);  
+   minGens := mingens image asCoeffs;
    ncMatrix{terms}*minGens
 )
+
+
+
+
+
 ------------------------------------------------
 
 -------------------------------------------
@@ -1828,11 +1966,11 @@ QQ % NCGroebnerBasis := (n,ncgb) -> n
 basis(ZZ,NCRing) := NCMatrix => opts -> (n,B) ->
    newBasis(n,B,CumulativeBasis=>false)
    
-cumulativeBasis = method()
+--cumulativeBasis = method()
 cumulativeBasis(ZZ,NCRing) := NCMatrix => (n,B) ->
    newBasis(n,B,CumulativeBasis=>true)
 
-newBasis = method(Options => {CumulativeBasis => false})
+--newBasis = method(Options => {CumulativeBasis => false})
 newBasis(ZZ,NCRing) := NCMatrix => opts -> (n,B) -> (
    ncgbGens := if class B === NCQuotientRing then pairs (ncGroebnerBasis B.ideal).generators else {};
    basisList := {ncMonomial({},B)};
