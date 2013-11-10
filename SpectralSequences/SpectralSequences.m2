@@ -1031,9 +1031,9 @@ undocumented {page, prunningMaps, --spots,
 document { 
   Key => SpectralSequences,
   Headline => "a package for working with filtered complexes and spectral sequences",
-  "Every filtered chain complex determines a spectral sequence;     
-  this ", EM "Macaulay2", " package allows users to compute spectral sequences which arise from separated and exhaustive filtrations
-  of bounded chain complexes.",
+  "Let k be a computable field, S a k-algebra of finite type, C a bounded chain complex of
+  finitely generated A-modules, and FC a separated and exhaustive filtration of C.    
+  This package allows users to compute the spectral sequence determined by C.",
  -- SUBSECTION "Contributors",
  -- "The following people have generously contributed code or worked on our code.",
  -- UL {
@@ -1042,16 +1042,16 @@ document {
    -- {HREF("","")},
    -- {HREF("","")},
    -- {HREF("","")},},
-    SUBSECTION "How to use this package",
-  UL {
+   SUBSECTION "First examples which show how to use this package",
+   UL {
     TO"How to work with filtered complexes", --"Making filtered chain complexes from chain complex maps",
-    --TO "Filtrations and tensor product complexes",
-    --TO "Filtrations and homomorphism complexes",
-    --TO "Filtered complexes and simplicial complexes"
+    TO "Filtrations and tensor product complexes",
+    TO "Filtrations and homomorphism complexes",
+    TO "Filtered complexes and simplicial complexes"
     },
     
  
-  SUBSECTION "Some examples which illustrate this package",
+  SUBSECTION "More ellaborate examples which illustrate this package",
   UL {
     TO "Computing the Serre Spectral Sequence associated to a Hopf Fibration",
     TO "Balancing Tor",
@@ -1067,40 +1067,72 @@ document {
     UL { 
 	TO "How to make filtered complexes from chain complex maps",
 	TO "Canonical filtrations on tensor product complexes",
-	TO "Canoncial filtrations onhomomorphism complexes",
+	TO "Canoncial filtrations on homomorphism complexes",
 	TO "Filtered complexes and simplicial complexes"
+	},
+    }
+
+document {
+    Key => "How to work with spectral sequence",
+    Headline => "creating and manipulating spectral sequences",
+    "Here we illustrate some ways for working with spectral sequences",
+    UL { 
+	TO "How to make spectral sequences from filtered complexes",
 	},
     }
 
 doc ///
      Key
+     	"Filtered complexes and simplicial complexes"
+     Description
+          Text
+	    We can make a filtered complex from a nested list of simplicial 
+     	    complexes as follows
+     	  Example
+	      A = QQ[x,y,z,w];	     
+	      D = simplicialComplex {x*y*z, x*y, y*z, w*z};
+	      E = simplicialComplex {x*y, w};
+	      F = simplicialComplex {x,w};
+	      K = filteredComplex{D,E,F}
+	  Text
+     	     If we want the resulting complexes to correspond to the non-reduced homology
+     	     of the simpicial complexes we can do the following.
+     	  Example 
+	     filteredComplex({D,E,F}, ReducedHomology => false)
+	     
+///
+doc ///
+     Key
         "How to make filtered complexes from chain complex maps"
-     Headline
-     	  the most primitive way to make filtered complexes
+   --  Headline
+     --	  the most primitive way to make filtered complexes
      Description
      	  Text  
        	    Here we describe
-	    the most basic way to create filtered complexes. 
-	    The general framework is as follows.  We start with a 
-	    chain complex $C$ and suppose that we are given a list of
-	    chain complex maps $\{\phi_n, \phi_{n - 1}, \dots, \phi_0  \}$, 
-	    $\phi_i : B_i \rightarrow C$ (here the $B_i$ are chain complexes)
-	    with the property that $image \phi_{i - 1}$ is a sub-chain complex of
-	    $image \phi_i$.
-	    Given this input data we produce a filtered chain complex
-	    $F_{n + 1} C \supseteq F_n C \supseteq \dots \supseteq F_{-1} C = 0 $
-	    where $F_{n + 1} C = C$ and $F_{i} C = image \phi_i$, for $i = 0, \dots, n$.
+	    the most primitative way that this package creates filtered complexes. 
 	    
-	    We now illustrate how this is done in a easy example.
-	    We first make three chain complexes $C$, $D$, and $E$.
-	    We then make two chain complex maps, $d : D \rightarrow C$ 
+	    Let $C$ be a chain complex and let
+	   be a list of
+	    chain complex maps $\{\phi_n, \phi_{n - 1}, \dots, \phi_0  \}$ 
+	    with properties that $C$ is the codomain of $\phi_i$, for $0 \leq i \leq n$ and 
+	    $image \phi_{i - 1} \subseteq image \phi_i$ for $1 \leq i \leq n$.
+	    Given this input data we produce an ascending filtered chain complex $FC$
+	    where $F_k C = C$ for $k \geq n + 1$ and $F_k C = image \phi_k$, for $k = 0, \dots, n$.
+	    
+	    We now illustrate how this is done in two easy examples.
+	    We first make three chain complexes $C$, $D$, and $E$, 
+	    two chain complex maps, $d : D \rightarrow C$ 
 	    and $e : E \rightarrow C$, and then
 	    compute the resulting filtration of $C$.
-	    We first need to load the relavent packages.
-          Example
-	       needsPackage "SpectralSequences"	    
+	    When then consider a boundary case by considering the filtered complex obtained
+	    from a single chain complex map, that is the identity of $C$.
+	    
+	    --We first need to load the relavent packages.
+          --Example
+	   --    needsPackage "SpectralSequences"	    
      	  Text
-	       We then make our chain complexes $C$, $D$, and $E$.
+	     Let's make our chain complexes $C$, $D$, and $E$.
+	     
      	  Example	       	 
 	       R = QQ[x,y,z,w] ;
 	       c2 = matrix(R,{{1},{0}}) ;
@@ -1120,7 +1152,7 @@ doc ///
 	       d = chainComplexMap(C,D,apply(spots C, i-> inducedMap(C_i,D_i,id_C _i)))
 	       e = chainComplexMap(C,E,apply(spots C, i->inducedMap(C_i,E_i, id_C _i)))
 	  Text
-	       We can check that these are indeed are indeed chain complex maps:
+	       We can check that these are indeed chain complex maps:
 	  Example   
 	       isChainComplexMap d
 	       isChainComplexMap e
@@ -1134,7 +1166,12 @@ doc ///
              we can use the Shift option.
       	  Example	       	     
 	       L = filteredComplex({d,e},Shift =>1)
-	       M = filteredComplex({d,e},Shift =>-1)	      	    
+	       M = filteredComplex({d,e},Shift =>-1)
+	  Text
+	     We now explain a boundary case in which the list consists of a single map $\{\phi_0\}$.
+	  Example
+	      P = filteredComplex {id_C}   
+    	      P_1	  
 ///	  
 
 --doc ///
@@ -2552,7 +2589,8 @@ assert(all(keys support e^9, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,9)
 assert(all(keys support e^10, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,10)))
 assert(all(keys support e^11, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,11)))
 assert(all(keys support e^12, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,12)))
-
+-- if we compute the example in isolation
+-- then they seem to work correctly...
 ///
 
 
@@ -2570,7 +2608,10 @@ uninstallPackage"SpectralSequences"
 installPackage"SpectralSequences"
 installPackage("SpectralSequences", RemakeAllDocumentation => true)
 check "SpectralSequences";
--- not sure why one of the checks fails ...
+-- the last check fails for reasons that I don't understand.
+-- if we compute the example in isolation
+-- then they seem to work correctly...
+
 
 restart
 needsPackage"SpectralSequences"
@@ -2621,18 +2662,9 @@ min c_infinity
 
 (filteredComplex C) ** C
 
---the following shows that there might be an error in the filtered Hom code
-E
 Hom(filteredComplex E, E)
 Hom(E, filteredComplex E)
--- the middle piece should be different
--- compare with 
-xHom(filteredComplex E, E)
-yHom(E, filteredComplex E)
--- so the xHom and yHom might be a fix
--- need to check the shift ...
 
--- trying to handle the boundary cases for xHom and yHom --
 
 restart
 needsPackage"SpectralSequences"
@@ -2644,29 +2676,29 @@ C = new ChainComplex
 C.ring = A
 H = koszul vars A
 
-xHom(filteredComplex C, C)
-yHom(C, filteredComplex C)
+Hom(filteredComplex C, C)
+Hom(C, filteredComplex C)
 
-e = spectralSequence xHom(filteredComplex C, C)
+e = spectralSequence Hom(filteredComplex C, C)
 e^0
 e^10
 
-ee = spectralSequence yHom(C, filteredComplex C)
+ee = spectralSequence Hom(C, filteredComplex C)
 
 ee^0
 ee^10
 
-xHom(filteredComplex D, D)
-yHom(D, filteredComplex D)
+Hom(filteredComplex D, D)
+Hom(D, filteredComplex D)
 
 e = spectralSequence xHom(filteredComplex D, D)
 e^0
 e^10
 
-xHom(filteredComplex H, H)
-yHom(H, filteredComplex H)
+Hom(filteredComplex H, H)
+Hom(H, filteredComplex H)
 
-ee = spectralSequence yHom(H, filteredComplex H)
+ee = spectralSequence Hom(H, filteredComplex H)
 
 ee^0
 ee^10
