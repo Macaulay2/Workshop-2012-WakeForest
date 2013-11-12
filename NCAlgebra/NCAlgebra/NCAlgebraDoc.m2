@@ -1580,11 +1580,22 @@ doc ///
 	The below code will work in your Macaulay2 session, as long as the file
 	mentioned below is on your path.
 	A=QQ{a, b, c, d, e, f, g, h}
+	-- A=QQ{x56,x46,x36,x26,x16,x45,x35,x25,x15,x34,x24,x14,x23,x13,x12}
         --- This doesn't work in help generator because it can't find the file.
-	-- I = gbFromOutputFile(A,"NCAlgebra/UghABCgb6.txt", ReturnIdeal=>true)
+	-- I = gbFromOutputFile(A,"NCAlgebra/FK.bo", ReturnIdeal=>true)
 	--- This is not the 'real' ideal, but just to prevent an error upon running examples
 	I = ncIdeal {a^9,b^9,c^9,d^9,e^9,f^9,g^9,h^9}
 	B=A/I
+	-- The gb in the file is up to degree 6
+--     Text
+--        In "Quadratic algebras, Dunkl elements, and Schubert calculus," Fomin and Kirillov
+--        introduce a family of noncommutative algebras E_n which may be thought of as the 
+--        quadratic closure of the ring of "Bruhat operators" acting on a vector space whose 
+--        basis is the symmetric group. In that paper, they provide Hilbert series for the 
+--        algebras E_1, ..., E_5. The file loaded above is a Groebner basis of E_6 to degree 6.
+--        Thus B is isomorphic to E_6 in low degrees.
+--     Example
+--        hilbertSeries(B,Order=>6)
 	F = a^7+b^7+c^7+d^7+e^7+f^7+g^7+h^7
 	bas=basis(2,B)
 	X = flatten entries (F*bas)
