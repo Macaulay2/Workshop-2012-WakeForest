@@ -1032,8 +1032,8 @@ document {
   Key => SpectralSequences,
   Headline => "a package for working with filtered complexes and spectral sequences",
   "Let k be a computable field, S a k-algebra of finite type, C a bounded chain complex of
-  finitely generated A-modules, and FC a separated and exhaustive filtration of C.    
-  This package allows users to compute the spectral sequence determined by C.",
+  finitely generated S-modules, and FC a separated and exhaustive filtration of C.    
+  This package allows users to compute the spectral sequence determined by FC.",
  -- SUBSECTION "Contributors",
  -- "The following people have generously contributed code or worked on our code.",
  -- UL {
