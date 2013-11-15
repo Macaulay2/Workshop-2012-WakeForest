@@ -1576,9 +1576,9 @@ doc ///
         This command reads in an Groebner basis from a Bergman output file.
 	It can be useful if you have performed a lengthy computation before,
 	and wish to load in a previously computed result to do some computations.
-	
-	The below code will work in your Macaulay2 session, as long as the file
-	mentioned below is on your path.
+      
+        The Groebner basis we are reading in for this example is located in the NCAlgebra
+	auxiliary files directory.
 	A=QQ{a, b, c, d, e, f, g, h}
 	-- A=QQ{x56,x46,x36,x26,x16,x45,x35,x25,x15,x34,x24,x14,x23,x13,x12}
         --- This doesn't work in help generator because it can't find the file.
@@ -1600,7 +1600,6 @@ doc ///
 	bas=basis(2,B)
 	X = flatten entries (F*bas)
 	XA = apply(X, x -> promote(x,A))
-	use A
 	XA_{0,1,2,3,4}
 ///
 

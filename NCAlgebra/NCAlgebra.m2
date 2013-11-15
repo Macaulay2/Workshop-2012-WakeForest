@@ -101,12 +101,6 @@ NCRingMap = new Type of HashTable
 --- Helpful general-purpose functions
 ---------------------------------------------------------------
 
--- this function uses == to test for unique elements, instead
--- of ===, as unique does
-lessUnique = xs -> (
-  
-)
-
 removeNulls = xs -> select(xs, x -> x =!= null)
 
 removeZeroes = myHash -> select(myHash, c -> c != 0)
@@ -228,6 +222,7 @@ Ring List := (R, varList) -> (
                                    (symbol degreesRing) => ZZ[getSymbol("T"), Weights=>{-1}, Global => false],
 				   (symbol CoefficientRing) => R,
                                    (symbol cache) => new CacheTable from {},
+				   (symbol baseRings) => {ZZ},
                                    BergmanRing => false};
    newGens := apply(varList, v -> v <- putInRing({v},A,1));
 
@@ -237,6 +232,7 @@ Ring List := (R, varList) -> (
    
    setWeights(A, toList (#(gens A):1));
       
+   --- all these promotes will need to be written between this ring and all base rings.
    promote (ZZ,A) := (n,A) -> putInRing({},A,promote(n,R));
 
    promote (QQ,A) := (n,A) -> putInRing({},A,promote(n,R));
@@ -334,6 +330,7 @@ NCPolynomialRing / NCIdeal := (A, I) -> (
                                  (symbol degreesRing) => ZZ[getSymbol("T"), Weights=>{-1}, Global => false],
 				 (symbol ambient) => A,
                                  (symbol cache) => new CacheTable from {},
+          		         (symbol baseRings) => {ZZ},    -- this will be for quotients of quotients
                                  (symbol ideal) => I};
    newGens := apply(B.generatorSymbols, v -> v <- new B from {(symbol ring) => B,
 	    	    	    	    	    	    	      (symbol isReduced) => false,
@@ -347,6 +344,7 @@ NCPolynomialRing / NCIdeal := (A, I) -> (
    
    if A#BergmanRing then B#BergmanRing = true;
 
+   --- all these promotes will need to be written between this ring and all base rings.
    promote (A,B) := (f,B) -> new B from {(symbol ring) => B,
             	    	    	    	 (symbol isReduced) => f.isReduced,
                                          (symbol cache) => new CacheTable from {},
@@ -2944,7 +2942,7 @@ wallTiming = f -> (
 ------------------------------------------------------------
 
 --- include the documentation
-load "NCAlgebra/NCAlgebraDoc.m2"
+load (currentFileDirectory | "NCAlgebra/NCAlgebraDoc.m2")
 
 end
 
@@ -2984,3 +2982,4 @@ uninstallPackage "NCAlgebra"
 installPackage "NCAlgebra"
 needsPackage "NCAlgebra"
 viewHelp "NCAlgebra"
+
