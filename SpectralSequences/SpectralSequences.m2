@@ -1031,9 +1031,11 @@ undocumented {page, prunningMaps, --spots,
 document { 
   Key => SpectralSequences,
   Headline => "a package for working with filtered complexes and spectral sequences",
-  "Let k be a computable field, S a k-algebra of finite type, C a bounded chain complex of
-  finitely generated S-modules, and FC a separated and exhaustive filtration of C.    
-  This package allows users to compute the spectral sequence determined by FC.",
+    "To be written later",
+  --  "This package provides a tool for working with bounded filtrations of bounded chain complexes as well as the spectral sequences associated to such data.",
+--  "Let k be a computable field, S a k-algebra of finite type, C a bounded chain complex of
+--  finitely generated S-modules, and FC a separated and exhaustive filtration of C.    
+--  This package allows users to compute the spectral sequence determined by FC.",
  -- SUBSECTION "Contributors",
  -- "The following people have generously contributed code or worked on our code.",
  -- UL {
@@ -1190,7 +1192,7 @@ doc ///
 	    $B : \dots \rightarrow B_{i} \rightarrow B_{i - 1} \rightarrow \dots $ and
 	    $C : \dots \rightarrow C_{i} \rightarrow C_{i - 1} \rightarrow \dots $ be chain complexes.
 	    
-	    For all integers $p$ and $q$ let let $K_{p,q} := B_p \otimes_S C_q$, let $d'_{p,q} : K_{p,q} \rightarrow K_{p - 1, q}$ 
+	    For all integers $p$ and $q$ let $K_{p,q} := B_p \otimes_S C_q$, let $d'_{p,q} : K_{p,q} \rightarrow K_{p - 1, q}$ 
 	    denote the homorphism 
 	    $\partial^B_{p} \otimes 1$, and let $d''_{p,q} : K_{p,q} \rightarrow K_{p, q - 1} $ denote the 
 	    homorphism $(-1)^p \otimes \partial_q^C $.
@@ -1740,7 +1742,23 @@ doc ///
      	  the type of all filtered complexes
      Description
      	  Text	 
-	     This is a data type for working with filtered complexes
+	     An ascending filtration of a degree $-1$ chain complex
+	     $C : \dots \rightarrow C_i \rightarrow C_{i - 1} \rightarrow \dots$
+	     is an ordered family of chain subcomplexes 
+	     $FC : \dots \subseteq F_{n - 1} C \subseteq F_n C \subseteq \dots $.
+	     Such a filtration is said to be bounded if $F_s C = 0$ for all sufficiently
+	     large $s$ and $F_t C = 0$ for all sufficently large $t$.
+	     
+	     A descending filtration of a degree $1$ chan complex 
+	     $C : \dots  \rightarrow C^i \rightarrow C^{i + 1} \rightarrow \dots $
+	     is an ordered familiy of subchain complexes 
+	     $FC : \dots \subseteq F^{n + 1} C \subseteq F^n C \subseteq \dots$.
+	     Such a filtration is said to be bounded if $F^s C = 0$ for all sufficently 
+	     large $s$ and $F^t C = 0$ for all sufficently small $t$.
+	     
+	     
+	     
+	     --This is a data type for working with filtered complexes
 	     --separated and exhaustive filtrations of bounded chain complexes.
 	     --For an overview of how to create and manipulate filtered complexes 
 	     --see @TO"filtered complexes"@.	  
@@ -1748,7 +1766,51 @@ doc ///
 	     --@TO"spectral sequences"@.	    
 	     --For an overview of how to create and manipulate spectral sequence pages see
 	     --@TO"spectral sequence page"@.
+     Caveat
+     	  By assumption all filtered complexes arise from bounded filtrations of bounded chain complexes.  Filtrations on degree $-1$
+	  chain complexes are ascending.  Filtrations on degree $1$ chain complexes are
+	  descending.
 ///
+
+doc ///
+     Key
+     	  SpectralSequence
+     Headline
+     	  the type of all spectral sequences
+     Description
+     	  Text
+	       --This is a data type for working with spectral sequences.
+	    --   For an overview of how to create and manipulate filtered complexes 
+	      -- see @TO"filtered complexes"@.	  
+	      -- For an overview of how to create and manipulate spectral sequences see
+	      -- @TO"spectral sequences"@.	    
+	      -- For an overview of how to create and manipulate spectral sequence pages see
+	      -- @TO"spectral sequence page"@.
+	       A spectral sequence consists of:
+	       	      
+	       1. A sequence of modules $\{E^r_{p,q}\}_{p,q \in \ZZ, r \geq 0}$;
+	       
+       	       2. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}_{p,q \in ZZ, r \geq 0}$ such that
+	       $d^r_{p,q} d^r_{p+r,q-r+1} = 0$ ; 	       
+	       
+	       3. A collection of isomorphisms $E^{r+1}_{p,q}  $\rightarrow$ ker d^r_{p,q} / image d^r_{p+r,q-r+1} $.	       
+	       
+	       Alternatively a spectral sequence consists of:
+	       
+	       1'. A sequence of modules $\{E_r^{p,q}\}_{p,q \in \ZZ, r \geq 0}$;
+	       
+       	       2'. A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} $\rightarrow$ E_r^{p+r,q-r+1}}_{p,q \in ZZ, r \geq 0}$ such that
+	       $d_r^{p,q} d_r^{p-r,q+r-1} = 0$ ; 	       
+	       
+	       3'. A collection of isomorphisms $E_{r+1}^{p,q}  $\rightarrow$ ker d_r^{p,q} / image d_r^{p-r,q+r-1} $.	       
+	       
+	       In this package, a spectral sequence is represented by a sequence of spectral sequence pages.	       
+     Caveat
+     	  All spectral sequences arise from bounded filtrations of bounded chain complexes.  Ascending filtrations of degree $-1$ chain complexes
+	  determine spectral sequences of the first type.  Descending filtrations of degree $1$ chain complex determine spectral sequences of the second type.
+///
+
+
 
 doc ///
      Key
@@ -1757,24 +1819,67 @@ doc ///
      	  the type of all spectral sequence pages
      Description
      	  Text
-	       This is a data type for working with spectral sequence pages.	  
+	       --This is a data type for working with spectral sequence pages.	  
 	      -- For an overview of how to create and manipulate filtered complexes 
 	      -- see @TO"filtered complexes"@.	  
 	      -- For an overview of how to create and manipulate spectral sequences see
 	      -- @TO"spectral sequences"@.	    
 	      -- For an overview of how to create and manipulate spectral sequence pages see
 	      -- @TO"spectral sequence page"@.
+	      A spectral sequence page consists of:
+	       
+	       1. A fixed integer $r \geq 0$, the page number;	      
+	       
+	       2. A sequence of modules $\{E^r_{p,q}\}_{p,q \in \ZZ}$;
+	       
+       	       3. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}_{p,q \in ZZ, r \geq 0}$ such that
+	       $d^r_{p,q} d^r_{p+r,q-r+1} = 0$ ; 	       
+	       
+	       4. A collection of isomorphisms $E^{r+1}_{p,q}  $\rightarrow$ ker d^r_{p,q} / image d^r_{p+r,q-r+1} $.	       
+	       
+	       Alternatively a spectral sequence page consists of:
+	       
+	       1'.  A fixed integer $r \geq 0$, the page number;
+	       
+	       2'. A sequence of modules $\{E_r^{p,q}\}_{p,q \in \ZZ}$;
+	       
+       	       3'. A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} $\rightarrow$ E_r^{p+r,q-r+1}}_{p,q \in ZZ, r \geq 0}$ such that
+	       $d_r^{p,q} d_r^{p-r,q+r-1} = 0$ ; 	       
+	       
+	       4'. A collection of isomorphisms $E_{r+1}^{p,q}  $\rightarrow$ ker d_r^{p,q} / image d_r^{p-r,q+r-1} $.	
+	       
+     Caveat
+	    By assumption all spectral sequence pages are determined by spectral sequences. The isomorphisms $4$ and $4$' are not explicitly
+	    part of the data type, although they can be obtained by using the command @TO"homologyIsomorphism"@.        	    	      
 ///	       
 
---doc ///
---     Key
---     	  InfiniteSequence
---     Headline
---     	  the type of all infinite sequences
---     Description
---     	  Text
---	       This is a data type for working with infinte sequences.
---///	       
+
+doc ///
+     Key
+     	  SpectralSequencePageMap
+     Headline
+     	  the type of all spectral sequence page maps
+     Description
+     	  Text
+	       A spectral sequence page map consists of:
+	       
+	       1.  A fixed integer $r \geq 0 $, the page number;
+	       
+	       2. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}_{p,q \in ZZ, r \geq 0}$ such that
+	       $d^r_{p,q} d^r_{p+r,q-r+1} = 0$. 
+	       
+	       Alternatively a spectral sequence page consists of:
+	       
+	       1'.  A fixed integer $r \geq 0$, the page number;
+	       
+	       2'.   A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} $\rightarrow$ E_r^{p+r,q-r+1}}_{p,q \in ZZ, r \geq 0}$ such that
+	       $d_r^{p,q} d_r^{p-r,q+r-1} = 0$.
+	       
+     Caveat
+	    By assumption all spectral sequence page maps are determined by spectral sequences. 
+	       
+///	       
+
 
 
 doc ///
@@ -1784,7 +1889,7 @@ doc ///
      	  the type of all pages
      Description
      	  Text
-	       This is a data type for working with doubly indexed tables.
+	       A page is a collection of modules indexed by list of integers.
 ///	       
 
 doc ///
@@ -1797,15 +1902,6 @@ doc ///
 	       This is a data type for working with doubly indexed maps.
 ///	       
 
-doc ///
-     Key
-     	  SpectralSequencePageMap
-     Headline
-     	  the type of all spectral sequence page maps
-     Description
-     	  Text
-	       This is a data type for working with the maps on a spectral sequence page.
-///	       
 
 
 --- functions and methods --- 
@@ -1829,6 +1925,13 @@ doc ///
 	  Description
 	       Text
 	       	    This is the primative filtered complex constructor.     
+///
+
+doc ///
+    	  Key
+	    homologyIsomorphism
+	  Headline 
+	    compute the homology isomorphism  	
 ///	       
 
   doc ///
@@ -2471,28 +2574,6 @@ doc ///
 --     	  Text
 --///	  
 
-doc ///
-     Key
-     	  SpectralSequence
-     Headline
-     	  the type of all spectral sequences
-     Description
-     	  Text
-	       This is a data type for working with spectral sequences.
-	    --   For an overview of how to create and manipulate filtered complexes 
-	      -- see @TO"filtered complexes"@.	  
-	      -- For an overview of how to create and manipulate spectral sequences see
-	      -- @TO"spectral sequences"@.	    
-	      -- For an overview of how to create and manipulate spectral sequence pages see
-	      -- @TO"spectral sequence page"@.
-	    
-	    --   A spectral sequence consists of the following:	      
-	    --   1. A sequence of modules \{E^r_{p,q}\}_{p,q \in \ZZ, r \geq 0},
-       	    --   2. A collection of homomorphisms \{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}_{p,q \in ZZ, r \geq 0} such that
-	    --   d^r_{p,q} d^r_{p+r,q-r+1} =0, 	       
-	    --   3. A collection of isomorphisms E^{r+1}_{p,q}  $\rightarrow$ ker d^r_{p,q} / image d^r_{p+r,q-r+1}.	       
-	    --   In this package, a spectral sequence is represented by a sequence of spectral sequence pages.	       
-///
 
 doc ///
      Key
