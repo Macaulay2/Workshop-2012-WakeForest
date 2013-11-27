@@ -1017,10 +1017,11 @@ undocumented {page, prunningMaps, --spots,
    (expression, SpectralSequence),
    spectralSequencePageMap,
    (support,ChainComplex),
-   (truncate, ChainComplex,ZZ),
-   homologyIsomorphism, Shift,
+ --  (truncate, ChainComplex,ZZ),
+   --homologyIsomorphism, 
+   Shift,
    --prunningMaps, 
-   (prunningMaps, SpectralSequencePage) ,
+   (prunningMaps, SpectralSequencePage),
    (describe, Page),
    (describe, PageMap),
    (max, FilteredComplex),
@@ -2122,12 +2123,72 @@ doc ///
 	       	    This is the primative filtered complex constructor.     
 ///
 
+
+doc ///
+     Key
+       spectralSequence
+     Headline
+     	  construct a spectral sequence from a filtered complex
+     Usage
+     	  E = spectralSequence K
+     Inputs
+     	  K:FilteredComplex
+	       A filtered complex
+     Outputs
+     	  E:SpectralSequence
+     Description
+     	  Text 
+	       This is the primative spectral sequence constructor.
+    ///
+
+doc ///
+     Key
+        spectralSequencePage
+     Headline
+     	  construct a spectral sequence page from a filtered complex
+     Usage
+     	  E = spectralSequencePage(K,r)
+     Inputs
+     	  K:FilteredComplex
+	       A filtered complex
+	  r:ZZ
+     Outputs
+     	  E:SpectralSequencePage
+     Description
+     	  Text 
+	       This is the primative spectral sequence page constructor.
+     ///
+ 
+
 doc ///
     	  Key
 	    homologyIsomorphism
 	  Headline 
 	    compute the homology isomorphism  	
 ///	       
+
+
+doc ///
+    	  Key
+	    (truncate, ChainComplex,ZZ)
+	  Headline 
+	    compute the hard truncation of a chain complex   
+///	       
+
+doc ///
+    	  Key
+	    prunningMaps
+	  Headline 
+	    compute the pruning maps on a spectral sequence page
+///	       
+
+doc ///
+    	  Key
+	    (prunningMaps, SpectralSequencePage)
+	  Headline 
+	    compute the pruning maps on a spectral sequence page
+///	       
+
 
   doc ///
      Key 
@@ -2350,7 +2411,7 @@ doc ///
 doc ///
      Key
      	  (spectralSequence, FilteredComplex)
-	  spectralSequence
+	 -- spectralSequence
      Headline
      	  construct a spectral sequence from a filtered complex
      Usage
@@ -2400,7 +2461,7 @@ doc ///
  doc ///
      Key
      	  (spectralSequencePage, FilteredComplex, ZZ)
-	  spectralSequencePage
+	 -- spectralSequencePage
      Headline
      	  construct a spectral sequence page from a filtered complex
      Usage
