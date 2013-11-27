@@ -19,7 +19,7 @@ newPackage(
   "SpectralSequences",
 --  AuxiliaryFiles => true,
   Version => "0.6",
-  Date => "12 November 2013",
+  Date => "23 November 2013",
   Authors => {
        {
       Name => "David Berlekamp", 
@@ -1076,7 +1076,7 @@ document {
     }
 
 document {
-    Key => "How to work with spectral sequence",
+    Key => "How to work with spectral sequences",
     Headline => "creating and manipulating spectral sequences",
     "Here we illustrate some ways for working with spectral sequences",
     UL { 
@@ -1325,7 +1325,6 @@ doc ///
 	       simplicial complex is pictured.  Here we compute the associated spectral sequence.
 	       As we will see below, the spectral sequences has nonzero maps on higher page numbers.
      	  Example
-	        needsPackage "SpectralSequences";
 		A = ZZ [s,t,u,v,w] ;
 		d0 = simplicialComplex {s} ;
 		d1 = simplicialComplex {s,t} ;
@@ -1371,6 +1370,202 @@ doc ///
 		E^infinity
 		prune HH K_infinity
 ///
+
+ doc ///
+    Key
+      "The quotient map SS ^2 --> RR PP ^2"--"More topological examples"
+    Description
+    	  Text
+	      In this example we compute the spectral sequence arising from
+	      the quotient map
+	      $\mathbb{S}^2 \rightarrow \mathbb{R} \mathbb{P}^2$, 
+	      given by indentifying anti-podal points.
+	       
+	      In order to give a combinatorial picture of the quotient map
+	      $\mathbb{S}^2 \rightarrow \mathbb{R} \mathbb{P}^2$, 
+	      given by indentifying anti-podal points, we
+ 	      first make an appropriate simplicial realization of $\mathbb{S}^2$.
+     	  Example
+	      S = ZZ[v1,v2,v3,v4,v5,v6,v15,v12,v36,v34,v46,v25];
+	      topHalf = {v3*v4*v5, v5*v4*v15, v15*v34*v4, v15*v34*v1, v34*v1*v6, v34*v46*v6, v36*v46*v6, v3*v4*v46, v4*v46*v34, v3*v46*v36};
+	      botHalf = {v1*v6*v2, v6*v2*v36, v2*v36*v12,v36*v12*v3, v12*v3*v5, v12*v5*v25, v25*v5*v15, v2*v12*v25, v1*v2*v25, v1*v25*v15};
+	  Text
+	      The following is a simplicial complex whose topological realiztion is $\mathbb{S}^2$
+	      note that we have added a few barycentric coordinates
+	  Example     
+	      twoSphere = simplicialComplex join(topHalf, botHalf)
+	      facets twoSphere
+	      C = truncate(chainComplex twoSphere,1)
+	  Text
+	     Can check that we've at least entered a simplicial complex
+             whose homology agrees with that of $\mathbb{S}^2$
+	  Example	
+	      prune HH C
+	  Text
+	      We now write down our simplicial complex whose topological realization 
+	      is $\mathbb{R} \mathbb{P}^2$.
+	  Example     
+	      R = ZZ[a,b,c,d,e,f];
+	      realProjectivePlane = simplicialComplex {a*b*c, b*c*d, c*d*e, a*e*d, e*b*a, e*f*b, d*f*b, a*f*d, c*f*e,a*f*c};
+	      B = truncate(chainComplex realProjectivePlane,1)
+	  Text 
+	      Again we can check that we've entered a simplical complex
+       	      whose homology agrees with that of the real projective plane.
+	  Example	 
+	      prune HH B
+    	  Text
+	      We now compute the fibers of the anti-podal quoitent map
+ 	      $\mathbb{S}^2 \rightarrow  \mathbb{R} \mathbb{P}^2$.
+	      The way this works for example is:
+	      $a = v3 ~ v1, b = v6 ~ v5, d = v36 ~ v15, c = v4 ~ v2, 
+	      e = v34 ~ v12, f = v46 ~ v25$
+
+              The fibers over the vertices of $\mathbb{R} \mathbb{P}^2$ are:
+	 Example     
+	      F0twoSphere = simplicialComplex {v1,v3,v5,v6, v4,v2, v36,v15, v34,v12, v46,v25}
+    	 Text
+	      The fibers over the edges of $\mathbb{R}\mathbb{P}^2$ are: 
+   	 Example     
+	      F1twoSphere = simplicialComplex {v3*v4, v1*v2,v3*v5, v1*v6,v4*v5, v2*v6, v5*v15, v6*v36, v4*v34, v2*v12, v15*v34, v36*v12, v1*v15, v3*v36, v46*v34, v25*v12, v6*v34, v5*v12, v6*v46, v5*v25, v36*v46, v15*v25, v3*v46, v1*v25, v4*v15, v2*v36, v1*v34, v3*v12, v4*v46, v25*v2}
+	 Text
+	      The fibers over the faces is all of $\mathbb{S}^2$.
+	 Example     
+	      F2twoSphere = twoSphere
+	 Text
+	      The resulting filtered complex is:
+	 Example
+	      K = filteredComplex({F2twoSphere, F1twoSphere, F0twoSphere}, ReducedHomology => false) 
+	 Text
+	      We now compute the resulting spectral sequence.
+    	 Example
+	      E = prune spectralSequence K
+	      E^0
+	      E^1
+	      E^0 .dd
+	      E^1 .dd
+	      E^2
+	      E^2 .dd
+	     ///
+
+doc///
+    Key
+      "The fibration SS^1 --> Klien Bottle --> SS^1."
+    Description
+    	 Text
+	      This fibration can be trianulated by a simplicial complex which has $18$ facets:
+    	 Example
+	      S = ZZ[a00,a10,a20,a01,a11,a21,a02,a12,a22];
+	      -- there will be 18 facets of Klein Bottle
+	      f1 = a00*a10*a02;
+	      f2 = a02*a12*a10;
+	      f3 = a01*a02*a12;
+	      f4 = a01*a12*a11;
+	      f5 = a00*a01*a11;
+	      f6 = a00*a11*a10;
+	      f7 = a10*a12*a20;
+	      f8 = a12*a20*a22;
+	      f9 = a11*a12*a22;
+	      f10 = a11*a22*a21;
+	      f11 = a10*a11*a21;
+	      f12 = a10*a21*a20;
+	      f13 = a20*a22*a00;
+	      f14 = a22*a00*a01;
+	      f15 = a21*a22*a01;
+	      f16 = a21*a02*a01;
+	      f17 = a20*a21*a02;
+	      f18 = a20*a02*a00;
+ 	 Text
+	      A triangulation of the Klien Bottle is:
+	 Example     
+	      Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16,f17,f18}
+    	 Text
+	      We can check that the homology of this simplicial complex agrees with that
+	      of the Klein Bottle:
+	 Example     
+	      C = truncate(chainComplex Delta,1)
+	      prune HH C
+    	 Text
+	      We now want to make subsimplicial complexes which arise from the 
+	      filtrations of the inverse images of the simplicies.
+	 Example     
+	      F1Delta = Delta
+	      F0Delta = simplicialComplex {a00*a01,a01*a02,a00*a02,a10*a11,a10*a12,a11*a12,a21*a20,a20*a22,a21*a22}
+    	 Text
+	      The resulting filtered complex is:  
+	 Example
+	      K = filteredComplex({F1Delta, F0Delta}, ReducedHomology => false)
+    	Text
+	      The reslting spectral sequence is:
+	Example      
+	      E = prune spectralSequence K
+	      E^0
+	      E^1
+	      E^2
+	      E^3
+    	Text
+	      Note that the spectral sequence is abutting to what it should --- the integral
+	      homology of the Klien bottle
+///
+
+doc ///
+    Key
+      "The trivial fibration SS^1 --> SS^1 x SS^1 --> SS^1"
+    Description
+         Text
+	      In this example we compute the spectral sequence associated to the 
+	      trivial fibration $\mathbb{S}^1 \rightarrow  \mathbb{S}^1 x \mathbb{S}^1 \rightarrow  \mathbb{S}^1$,
+	      where the map is given by one of the projections.  This fibration can be
+	      triangulated as follows.
+	 Example   
+	      S = ZZ[a00,a10,a20,a01,a11,a21,a02,a12,a22];
+	      -- there will be 18 facets of SS^1 x SS^1
+	      f1 = a00*a02*a10;
+	      f2 = a02*a12*a10;
+	      f3 = a01*a02*a12;
+	      f4 = a01*a11*a12;
+	      f5 = a00*a01*a11;
+	      f6 = a00*a10*a11;
+	      f7 = a12*a10*a20;
+	      f8 = a12*a20*a22;
+	      f9 = a11*a12*a22;
+	      f10 = a11*a22*a21;
+	      f11 = a10*a11*a21;
+	      f12 = a10*a21*a20;
+	      f13 = a20*a22*a00;
+	      f14 = a22*a00*a02;
+	      f15 = a21*a22*a02;
+	      f16 = a21*a02*a01;
+	      f17 = a20*a21*a01;
+	      f18 = a20*a01*a00;
+    	 Text
+	      The triangulation of $\mathbb{S}^1 \times \mathbb{S}^1$ is:
+    	 Example
+	      Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9, f10,f11,f12,f13,f14,f15,f16,f17,f18}
+	 Text
+	      We can check that the homology of the simplicial complex
+	      $\Delta$ agrees with that of the torus
+	      $\mathbb{S}^1 \times \mathbb{S}^1 $
+	 Example          
+	      C = truncate(chainComplex Delta,1)
+	      prune HH C
+	 Text
+	      We now make subsimplical complexes arising from the filtrations of the
+	      inverse images of the verticies:
+	 Example         
+	      F1Delta = Delta;
+	      F0Delta = simplicialComplex {a00*a01, a01*a02, a00*a02, a10*a11,a11*a12,a10*a12, a21*a20,a21*a22,a20*a22};
+	      K = filteredComplex({F1Delta, F0Delta}, ReducedHomology => false) ;
+	 Text
+	      The resulting spectral sequence is:    
+	 Example    
+	      E = prune spectralSequence K
+	      E^0
+	      E^0 .dd
+	      E^1 	      
+	      E^1 .dd
+	      E^2
+///
+
   doc ///
     Key
       "Spectral sequences and non-Koszul syzygies"
@@ -1386,7 +1581,6 @@ doc ///
 	       This is acheived by looking at the three polynomials used in their Example 4.3.
     	       The behaviour that we expect to exhibit is predicted by their Proposition 5.2.
 	  Example
-		needsPackage "SpectralSequences"
 		R = QQ[x,y,z,w, Degrees => {{1,0},{1,0},{0,1},{0,1}}]
 		B = ideal(x*z, x*w, y*z, y*w)
 		p_0 = x^2*z
@@ -1708,6 +1902,7 @@ doc ///
 	        	       
 	    
 ///	       	 
+
 
 --doc ///
     -- Key
@@ -2852,3 +3047,62 @@ e^0
 e^10
 e^infinity
 -- so now e^infinity of the zero complex seems to be OK.
+
+restart
+needsPackage"SpectralSequences"
+A = QQ[x,y,z]
+
+C = koszul vars A
+
+filteredComplex C
+
+K = (filteredComplex C) ** C
+
+E = spectralSequence K
+
+E^2
+prune E^2
+
+---
+---
+-- Here is a scratch example which seems 
+-- to illustrate the acyclic "edge complex".
+--
+restart
+needsPackage "SpectralSequences";
+
+A=QQ[a,b,c,d]
+D=simplicialComplex {a*d*c, a*b, a*c, b*c}
+F2D=D
+F1D= simplicialComplex {a*c, d}
+F0D = simplicialComplex {a,d}
+K= filteredComplex({F2D, F1D, F0D},ReducedHomology => false)
+E = spectralSequence(K)
+e = prune E
+E^0
+E^1
+E^2
+E^3
+E^infinity
+e^0
+e^1
+e^2
+e^3
+prune HH K_infinity
+e^2 .dd
+
+--
+-- the acyclic edge complex for this example
+-- will take the form
+-- H_1 --> E^2_{2,-1} --> E^2_{0,0} --> H_0 --> E^2_{1, -1} --> 0
+-- It is given by:
+
+
+edgeComplex = chainComplex {inducedMap(E^2_{1,-1}, HH_0 K_infinity, id_(K_infinity _0)),
+     inducedMap(HH_0 K_infinity, E^2_{0,0}, id_(K_infinity _0)), E^2 .dd_{2,-1}, inducedMap(E^2_{2,-1}, HH_1 K_infinity, id_(K_infinity _1))}
+prune HH edgeComplex
+prune edgeComplex
+
+--
+-- Can we write a short script in general to compute the edge complex?
+-- Ans: yes.
