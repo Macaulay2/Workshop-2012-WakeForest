@@ -1941,7 +1941,7 @@ doc ///
 	     $C : \dots \rightarrow C_i \rightarrow C_{i - 1} \rightarrow \dots$
 	     is an ordered family of chain subcomplexes 
 	     $FC : \dots \subseteq F_{n - 1} C \subseteq F_n C \subseteq \dots $.
-	     Such a filtration is said to be bounded if $F_s C = 0$ for all sufficiently
+	     Such a filtration is said to be bounded if $F_s C = C$ for all sufficiently
 	     large $s$ and $F_t C = 0$ for all sufficently large $t$.
 	     
 	     A descending filtration of a degree $1$ chan complex 
@@ -1949,7 +1949,7 @@ doc ///
 	     is an ordered familiy of subchain complexes 
 	     $FC : \dots \subseteq F^{n + 1} C \subseteq F^n C \subseteq \dots$.
 	     Such a filtration is said to be bounded if $F^s C = 0$ for all sufficently 
-	     large $s$ and $F^t C = 0$ for all sufficently small $t$.
+	     large $s$ and $F^t C = C$ for all sufficently small $t$.
 	     
 	     
 	     
@@ -1983,7 +1983,7 @@ doc ///
 	      -- @TO"spectral sequence page"@.
 	       A spectral sequence consists of:
 	       	      
-	       1. A sequence of modules $\{E^r_{p,q}\}_{p,q \in \ZZ, r \geq 0}$;
+	       1. A sequence of modules $\{E^r_{p,q}\}_{p,q \in \mathbb{Z}, r \geq 0}$;
 	       
        	       2. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}_{p,q \in ZZ, r \geq 0}$ such that
 	       $d^r_{p,q} d^r_{p+r,q-r+1} = 0$ ; 	       
@@ -1992,7 +1992,7 @@ doc ///
 	       
 	       Alternatively a spectral sequence consists of:
 	       
-	       1'. A sequence of modules $\{E_r^{p,q}\}_{p,q \in \ZZ, r \geq 0}$;
+	       1'. A sequence of modules $\{E_r^{p,q}\}_{p,q \in \mathbb{Z}, r \geq 0}$;
 	       
        	       2'. A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} $\rightarrow$ E_r^{p+r,q-r+1}}_{p,q \in ZZ, r \geq 0}$ such that
 	       $d_r^{p,q} d_r^{p-r,q+r-1} = 0$ ; 	       
@@ -2025,9 +2025,9 @@ doc ///
 	       
 	       1. A fixed integer $r \geq 0$, the page number;	      
 	       
-	       2. A sequence of modules $\{E^r_{p,q}\}_{p,q \in \ZZ}$;
+	       2. A sequence of modules $\{E^r_{p,q}\}_{p,q \in \mathbb{Z}}$;
 	       
-       	       3. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}_{p,q \in ZZ, r \geq 0}$ such that
+       	       3. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}\}_{p,q \in \mathbb{Z}, r \geq 0}$ such that
 	       $d^r_{p,q} d^r_{p+r,q-r+1} = 0$ ; 	       
 	       
 	       4. A collection of isomorphisms $E^{r+1}_{p,q}  $\rightarrow$ ker d^r_{p,q} / image d^r_{p+r,q-r+1} $.	       
@@ -2036,9 +2036,9 @@ doc ///
 	       
 	       1'.  A fixed integer $r \geq 0$, the page number;
 	       
-	       2'. A sequence of modules $\{E_r^{p,q}\}_{p,q \in \ZZ}$;
+	       2'. A sequence of modules $\{E_r^{p,q}\}_{p,q \in \mathbb{Z}}$;
 	       
-       	       3'. A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} $\rightarrow$ E_r^{p+r,q-r+1}}_{p,q \in ZZ, r \geq 0}$ such that
+       	       3'. A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} $\rightarrow$ E_r^{p+r,q-r+1}\}_{p,q \in \mathbb{Z}, r \geq 0}$ such that
 	       $d_r^{p,q} d_r^{p-r,q+r-1} = 0$ ; 	       
 	       
 	       4'. A collection of isomorphisms $E_{r+1}^{p,q}  $\rightarrow$ ker d_r^{p,q} / image d_r^{p-r,q+r-1} $.	
@@ -2084,7 +2084,7 @@ doc ///
      	  the type of all pages
      Description
      	  Text
-	       A page is a collection of modules indexed by list of integers.
+	       A page is a collection of modules which are indexed by list of integers.
 ///	       
 
 doc ///
@@ -2094,7 +2094,7 @@ doc ///
      	  the type of all page maps
      Description
      	  Text
-	       This is a data type for working with doubly indexed maps.
+	       A page map is a collection of homomorphisms which are indexed by list of integers.
 ///	       
 
 
@@ -2976,9 +2976,6 @@ e^1 .dd
 c = C ** (filteredComplex C)
 e = spectralSequence c
 e^0
--- the bug here has been fixed. --
--- so there is a bug here that needs to be fixed ...
--- again need to handle the case that min K_infinity is an infinity number etc --
 
 spots C
 
@@ -3071,12 +3068,12 @@ prune E^2
 restart
 needsPackage "SpectralSequences";
 
-A=QQ[a,b,c,d]
-D=simplicialComplex {a*d*c, a*b, a*c, b*c}
-F2D=D
-F1D= simplicialComplex {a*c, d}
+A = QQ[a,b,c,d]
+D = simplicialComplex {a*d*c, a*b, a*c, b*c}
+F2D = D
+F1D = simplicialComplex {a*c, d}
 F0D = simplicialComplex {a,d}
-K= filteredComplex({F2D, F1D, F0D},ReducedHomology => false)
+K = filteredComplex({F2D, F1D, F0D},ReducedHomology => false)
 E = spectralSequence(K)
 e = prune E
 E^0
@@ -3098,7 +3095,7 @@ e^2 .dd
 -- It is given by:
 
 
-edgeComplex = chainComplex {inducedMap(E^2_{1,-1}, HH_0 K_infinity, id_(K_infinity _0)),
+testEdgeComplex = chainComplex {inducedMap(E^2_{1,-1}, HH_0 K_infinity, id_(K_infinity _0)),
      inducedMap(HH_0 K_infinity, E^2_{0,0}, id_(K_infinity _0)), E^2 .dd_{2,-1}, inducedMap(E^2_{2,-1}, HH_1 K_infinity, id_(K_infinity _1))}
 prune HH edgeComplex
 prune edgeComplex
@@ -3106,3 +3103,24 @@ prune edgeComplex
 --
 -- Can we write a short script in general to compute the edge complex?
 -- Ans: yes.
+
+edgeComplex = method()
+
+edgeComplex(SpectralSequence) := (E) -> (
+    if E.Prune == true then error "not currently implemented for pruned spectral sequences";
+    M := select(spots E^2 .dd, i -> E^2_i != 0);
+    l := min apply(M, i -> i#0);
+    m := min apply(M, i -> i#1);
+    C := chainComplex E;
+    chainComplex {inducedMap(E^2_{l + 1, m}, HH_(l + m + 1) C, id_(C_(l + m + 1))),
+     inducedMap(HH_(l + m + 1) C, E^2_{l,m + 1}, id_(C_(l + m + 1))), 
+     E^2 .dd_{l + 2,m}, inducedMap(E^2_{l + 2, m}, HH_(l + m + 2) C, id_(C_(l + m + 2)))}
+    )
+
+edgeComplex E
+
+prune HH myEdgeComplex E
+
+myEdgeComplex prune E
+
+viewHelp
