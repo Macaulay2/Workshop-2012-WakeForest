@@ -986,7 +986,7 @@ basis (List,SpectralSequencePage) := opts -> (deg,E) -> (
 
 beginDocumentation()
 
-undocumented {page, prunningMaps, --spots, 
+undocumented {page, prunningMaps, PageMap, --spots, 
     (degree, Page),
     (net, FilteredComplex),
     (net, Page),
@@ -1021,7 +1021,7 @@ undocumented {page, prunningMaps, --spots,
    --homologyIsomorphism, 
    Shift,
    --prunningMaps, 
-   (prunningMaps, SpectralSequencePage),
+   --(prunningMaps, SpectralSequencePage),
    (describe, Page),
    (describe, PageMap),
    (max, FilteredComplex),
@@ -1032,11 +1032,15 @@ undocumented {page, prunningMaps, --spots,
 document { 
   Key => SpectralSequences,
   Headline => "a package for working with filtered complexes and spectral sequences",
-    "To be written later",
-  --  "This package provides a tool for working with bounded filtrations of bounded chain complexes as well as the spectral sequences associated to such data.",
---  "Let k be a computable field, S a k-algebra of finite type, C a bounded chain complex of
---  finitely generated S-modules, and FC a separated and exhaustive filtration of C.    
---  This package allows users to compute the spectral sequence determined by FC.",
+   "Spectral sequences, although technical and subtle, can be very useful in applications---especially when they fail to degenerate quickly.
+   By constrast little is known about their general structure when they fail to degenerate quickly.
+   Allevating this dichotomy is one of the motivations behind this package.  Its purpose
+   is to allow for effective calculations of particular kinds of spectral sequences.
+   As one general example situation, which illustrations some capabilities of this package,
+   let k be a computable field, S a k-algebra of finite type, C a bounded chain complex of
+ finitely generated S-modules, and FC a bounded asscending filtration of C.  This package is
+ capable of computing, under these assumptions, the spectral sequence---especially the differentials on each page---determined by FC.
+ ", 
  -- SUBSECTION "Contributors",
  -- "The following people have generously contributed code or worked on our code.",
  -- UL {
@@ -1061,8 +1065,17 @@ document {
     TO "Balancing Tor",
     TO "Spectral sequences and connecting morphisms",
     TO "Spectral sequences and non-Koszul syzygies",
-    TO "A spectral sequence which fails to degenerate quickly"},
-  }
+    TO "A spectral sequence which fails to degenerate quickly",
+  --  TO "The quotient map SS ^2 --> RR PP ^2",--"More topological examples",
+  --  TO "The fibration SS^1 --> Klein Bottle --> SS^1",
+  --  TO "The trivial fibration SS^1 --> SS^1 x SS^1 --> SS^1"},
+  },
+
+  SUBSECTION "More easy topological examples",
+  UL { TO "Identifying anti-podal points of the two sphere", --"The quotient map SS ^2 --> RR PP ^2",--"More topological examples",
+    TO "The fibration of the Klein Bottle over the sphere with fibers the sphere", --"The fibration SS^1 --> Klein Bottle --> SS^1",
+    TO "The trivial fibration over the sphere with fibers the sphere"}, -- SS^1 --> SS^1 x SS^1 --> SS^1"},
+}  
 
 document {
     Key => "How to work with filtered complexes",
@@ -1152,14 +1165,14 @@ doc ///
 	     $ Hom(B, C)_k := \prod_{p + q = k} Hom_S(B_{-p}, C_q) $ 
 	     and the differentials  
 	     by $ \partial := d^{'} + d^{''} $;
-	     it carries two natural ascending filtrations $F' Hom(B, C)$ and $F'' Hom(B, C)$.  
+	     it carries two natural ascending filtrations $F' ( Hom(B, C) )$ and $F''( Hom(B, C))$.  
 
              The first is obtained by 
-	     letting $F'_n Hom(B, C)$ be the chain complex determined by setting
-	     $F'_n Hom(B, C)_k := \prod_{p + q = k , p \leq n} Hom_S(B_{-p}, C_q)$
+	     letting $F'_n (Hom(B, C))$ be the chain complex determined by setting
+	     $F'_n (Hom(B, C))_k := \prod_{p + q = k , p \leq n} Hom_S(B_{-p}, C_q)$
 	     and the differentials $\partial := d' + d''$.
 
-             The second is obtained by letting $F''_n Hom(B, C) := \prod_{p + q = k , q \leq n} Hom_S(B_{-p}, C_q)$
+             The second is obtained by letting $F''_n (Hom(B, C)) := \prod_{p + q = k , q \leq n} Hom_S(B_{-p}, C_q)$
 	     and the differentials $\partial := d' + d''$.
     	     
              In Macaulay2 we can compute these filtered complexes as follows.  
@@ -1204,12 +1217,12 @@ doc ///
 	    $F'B \otimes_S C$ and $F'' B \otimes_S C$.  
     	    
 	    The first is obtained by letting
-	    $F'_n B \otimes_S C$ be the chain complex determined by setting
+	    $F'_n (B \otimes_S C)$ be the chain complex determined by setting
 	    $F'_n (B \otimes_S C)_k := \oplus_{p + q = k , p \leq n} B_{p} \otimes_S C_q$
 	    and the differentials $\partial := d' + d''$.
     	    
 	    The second is obtained by letting
-	    $F''_n B \otimes_S C$ be the chain complex determined by setting
+	    $F''_n (B \otimes_S C)$ be the chain complex determined by setting
 	    $F''_n (B \otimes_S C)_k := \oplus_{p + q = k , q \leq n} B_{p} \otimes_S C_q$
 	    and the differentials $\partial := d' + d''$.
 
@@ -1374,13 +1387,17 @@ doc ///
 
  doc ///
     Key
-      "The quotient map SS ^2 --> RR PP ^2"--"More topological examples"
+      --"The quotient map SS ^2 --> RR PP ^2"-- maybe better to call this 
+      "Identifying anti-podal points of the two sphere"
     Description
     	  Text
 	      In this example we compute the spectral sequence arising from
 	      the quotient map
 	      $\mathbb{S}^2 \rightarrow \mathbb{R} \mathbb{P}^2$, 
 	      given by indentifying anti-podal points.
+	      
+	      This map can be realized by a simplicial map along the lines of Exercise 27, Section 6.5 of Armstrong's
+	      book {\it Basic Topology}.
 	       
 	      In order to give a combinatorial picture of the quotient map
 	      $\mathbb{S}^2 \rightarrow \mathbb{R} \mathbb{P}^2$, 
@@ -1391,7 +1408,7 @@ doc ///
 	      topHalf = {v3*v4*v5, v5*v4*v15, v15*v34*v4, v15*v34*v1, v34*v1*v6, v34*v46*v6, v36*v46*v6, v3*v4*v46, v4*v46*v34, v3*v46*v36};
 	      botHalf = {v1*v6*v2, v6*v2*v36, v2*v36*v12,v36*v12*v3, v12*v3*v5, v12*v5*v25, v25*v5*v15, v2*v12*v25, v1*v2*v25, v1*v25*v15};
 	  Text
-	      The following is a simplicial complex whose topological realiztion is $\mathbb{S}^2$
+	      The following is a simplicial complex whose topological realization is $\mathbb{S}^2$
 	      note that we have added a few barycentric coordinates
 	  Example     
 	      twoSphere = simplicialComplex join(topHalf, botHalf)
@@ -1450,10 +1467,15 @@ doc ///
 
 doc///
     Key
-      "The fibration SS^1 --> Klien Bottle --> SS^1."
+      "The fibration of the Klein Bottle over the sphere with fibers the sphere"
     Description
     	 Text
-	      This fibration can be trianulated by a simplicial complex which has $18$ facets:
+	      In this example we give a simplicial realization of the fibration 
+	      $\mathbb{S}^1 \rightarrow {\rm Klein Bottle} \rightarrow \mathbb{S}^1$.  
+	      To give a simplicial realization of of this fibration we first make a simplical
+	      complex which gives a triangulation of the Klein Bottle.
+	      
+	      The triangulation of the Klein Bottle that we will use has 18 facets:
     	 Example
 	      S = ZZ[a00,a10,a20,a01,a11,a21,a02,a12,a22];
 	      -- there will be 18 facets of Klein Bottle
@@ -1476,10 +1498,12 @@ doc///
 	      f17 = a20*a21*a02;
 	      f18 = a20*a02*a00;
  	 Text
-	      A triangulation of the Klien Bottle is:
+	      A triangulation of the Klein Bottle is given by:
 	 Example     
 	      Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16,f17,f18}
     	 Text
+	      In fact the above, up to relabling, is the triangulation of the Klein bottle given in Figure 6.14 of Armstrong's book
+	      {\it Basic Topology}.
 	      We can check that the homology of this simplicial complex agrees with that
 	      of the Klein Bottle:
 	 Example     
@@ -1487,7 +1511,8 @@ doc///
 	      prune HH C
     	 Text
 	      We now want to make subsimplicial complexes which arise from the 
-	      filtrations of the inverse images of the simplicies.
+	      filtrations of the inverse images of the simplicies. {\bf Need to write down what the simplicial
+		  map to the sphere is!! \}
 	 Example     
 	      F1Delta = Delta
 	      F0Delta = simplicialComplex {a00*a01,a01*a02,a00*a02,a10*a11,a10*a12,a11*a12,a21*a20,a20*a22,a21*a22}
@@ -1496,7 +1521,7 @@ doc///
 	 Example
 	      K = filteredComplex({F1Delta, F0Delta}, ReducedHomology => false)
     	Text
-	      The reslting spectral sequence is:
+	      The resulting spectral sequence is:
 	Example      
 	      E = prune spectralSequence K
 	      E^0
@@ -1505,12 +1530,13 @@ doc///
 	      E^3
     	Text
 	      Note that the spectral sequence is abutting to what it should --- the integral
-	      homology of the Klien bottle
+	      homology of the Klein bottle
 ///
 
 doc ///
     Key
-      "The trivial fibration SS^1 --> SS^1 x SS^1 --> SS^1"
+      "The trivial fibration over the sphere with fibers the sphere"--"The trivial fibration SS^1 --> SS^1 x SS^1 --> SS^1"
+      -- maybe better to call this the trivial fibration over the sphere with fiber the sphere
     Description
          Text
 	      In this example we compute the spectral sequence associated to the 
@@ -1543,6 +1569,8 @@ doc ///
     	 Example
 	      Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9, f10,f11,f12,f13,f14,f15,f16,f17,f18}
 	 Text
+	      The above simplicial complex is the triangulation of the torus given in Figure 6.4 of Armstrong's book
+	      "Basic Topology".
 	      We can check that the homology of the simplicial complex
 	      $\Delta$ agrees with that of the torus
 	      $\mathbb{S}^1 \times \mathbb{S}^1 $
@@ -1551,7 +1579,7 @@ doc ///
 	      prune HH C
 	 Text
 	      We now make subsimplical complexes arising from the filtrations of the
-	      inverse images of the verticies:
+	      inverse images of the verticies: {\bf We need to write down what the appropriate simplicial map is!!! }
 	 Example         
 	      F1Delta = Delta;
 	      F0Delta = simplicialComplex {a00*a01, a01*a02, a00*a02, a10*a11,a11*a12,a10*a12, a21*a20,a21*a22,a20*a22};
@@ -1638,7 +1666,7 @@ doc ///
 	      of type $(3,3)$ on $X$.  This connecting morphism is an
 	      isomorphism.
 	  Example   
-	        needsPackage "SpectralSequences";
+	       -- needsPackage "SpectralSequences";
                 R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]; -- PP^1 x PP^1
 		B = intersect(ideal(a_0,a_1),ideal(b_0,b_1)) ; -- irrelevant ideal
 		B = B_*/(x -> x^5)//ideal ; -- Suitably high Frobenius power of B
@@ -1725,8 +1753,6 @@ doc ///
 		    triangualtion of this fibration given in the paper
 		    "A minimal triangulation of the Hopf map and its application"
 		    by K.V. Madahar and K.S Sarkaria. Geom Dedicata, 2000.
-	       Example
-	       	    needsPackage "SpectralSequences"
      	       Text
 	       	    We first make the relavant simplicial complexes
 		    described on page 110 of the paper.  The
@@ -1938,14 +1964,14 @@ doc ///
      	  the type of all filtered complexes
      Description
      	  Text	 
-	     An ascending filtration of a degree $-1$ chain complex
+	     An ascending filtration of a (homological, lower index, or degree $-1$) chain complex
 	     $C : \dots \rightarrow C_i \rightarrow C_{i - 1} \rightarrow \dots$
 	     is an ordered family of chain subcomplexes 
 	     $FC : \dots \subseteq F_{n - 1} C \subseteq F_n C \subseteq \dots $.
 	     Such a filtration is said to be bounded if $F_s C = C$ for all sufficiently
 	     large $s$ and $F_t C = 0$ for all sufficently large $t$.
 	     
-	     A descending filtration of a degree $1$ chan complex 
+	     Alternatively, a descending filtration of a (cohomological, or upper index, or degree $1$) chain complex 
 	     $C : \dots  \rightarrow C^i \rightarrow C^{i + 1} \rightarrow \dots $
 	     is an ordered familiy of subchain complexes 
 	     $FC : \dots \subseteq F^{n + 1} C \subseteq F^n C \subseteq \dots$.
@@ -1954,18 +1980,16 @@ doc ///
 	     
 	     
 	     
-	     --This is a data type for working with filtered complexes
-	     --separated and exhaustive filtrations of bounded chain complexes.
-	     --For an overview of how to create and manipulate filtered complexes 
-	     --see @TO"filtered complexes"@.	  
-	     --For an overview of how to create and manipulate spectral sequences see
-	     --@TO"spectral sequences"@.	    
-	     --For an overview of how to create and manipulate spectral sequence pages see
-	     --@TO"spectral sequence page"@.
+	     The type {\tt FilteredComplex} is a data type for working with bounded filtrations of bounded chain complexes.
      Caveat
      	  By assumption all filtered complexes arise from bounded filtrations of bounded chain complexes.  Filtrations on degree $-1$
 	  chain complexes are ascending.  Filtrations on degree $1$ chain complexes are
 	  descending.
+    SeeAlso
+    	  "How to make filtered complexes from chain complex maps"
+	  "Filtered complexes and simplicial complexes"
+	  "Filtrations and tensor product complexes"
+	  "Filtrations and homomorphism complexes"	  
 ///
 
 doc ///
@@ -1975,35 +1999,50 @@ doc ///
      	  the type of all spectral sequences
      Description
      	  Text
-	       --This is a data type for working with spectral sequences.
-	    --   For an overview of how to create and manipulate filtered complexes 
+	      --This is a data type for working with spectral sequences.
+	      --   For an overview of how to create and manipulate filtered complexes 
 	      -- see @TO"filtered complexes"@.	  
 	      -- For an overview of how to create and manipulate spectral sequences see
 	      -- @TO"spectral sequences"@.	    
 	      -- For an overview of how to create and manipulate spectral sequence pages see
 	      -- @TO"spectral sequence page"@.
-	       A spectral sequence consists of:
+	       A (homological, or lower index) spectral sequence consists of:
 	       	      
-	       1. A sequence of modules $\{E^r_{p,q}\}_{p,q \in \mathbb{Z}, r \geq 0}$;
+	       1. A sequence of modules $\{E^r_{p,q}\}$ for $p,q \in \mathbb{Z}$ and $r \geq 0$;
 	       
-       	       2. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}_{p,q \in ZZ, r \geq 0}$ such that
+       	       2. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}$, for $p,q \in ZZ$ and $ r \geq 0$, such that
 	       $d^r_{p,q} d^r_{p+r,q-r+1} = 0$ ; 	       
 	       
-	       3. A collection of isomorphisms $E^{r+1}_{p,q}  $\rightarrow$ ker d^r_{p,q} / image d^r_{p+r,q-r+1} $.	       
+	       3. A collection of isomorphisms $E^{r+1}_{p,q}  $\rightarrow$ ker d^r_{p,q} / image d^r_{p+r,q-r+1}$.	       
 	       
-	       Alternatively a spectral sequence consists of:
+	       Alternatively a (cohomological, or upper index) spectral sequence consists of:
 	       
-	       1'. A sequence of modules $\{E_r^{p,q}\}_{p,q \in \mathbb{Z}, r \geq 0}$;
+	       1'. A sequence of modules $\{E_r^{p,q}\}$ for $p,q \in \mathbb{Z}$, and $r \geq 0$;
 	       
-       	       2'. A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} $\rightarrow$ E_r^{p+r,q-r+1}}_{p,q \in ZZ, r \geq 0}$ such that
+       	       2'. A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} $\rightarrow$ E_r^{p+r,q-r+1}}_{p,q \in \mathbb{Z}, r \geq 0}$ such that
 	       $d_r^{p,q} d_r^{p-r,q+r-1} = 0$ ; 	       
 	       
-	       3'. A collection of isomorphisms $E_{r+1}^{p,q}  $\rightarrow$ ker d_r^{p,q} / image d_r^{p-r,q+r-1} $.	       
+	       3'. A collection of isomorphisms $E_{r+1}^{p,q}  $\rightarrow$ ker d_r^{p,q} / image d_r^{p-r,q+r-1}$.	       
 	       
-	       In this package, a spectral sequence is represented by a sequence of spectral sequence pages.	       
+	       The type {\tt SpectralSequence} is a data type for working with spectral sequences. 
+	       In this package, a spectral sequence is represented by a sequence of spectral sequence pages.
+	     --  For an overview of how to create and manipulate filtered complexes 
+	      -- see @TO"filtered complexes"@.	  
+	      -- For an overview of how to create and manipulate spectral sequences see
+	      -- @TO"spectral sequences"@.	    
+	      -- For an overview of how to create and manipulate spectral sequence pages see
+	      -- @TO"spectral sequence page"@.	       
      Caveat
      	  All spectral sequences arise from bounded filtrations of bounded chain complexes.  Ascending filtrations of degree $-1$ chain complexes
 	  determine spectral sequences of the first type.  Descending filtrations of degree $1$ chain complex determine spectral sequences of the second type.
+     SeeAlso
+     	 "SpectralSequencePage"
+	 "SpectralSequencePageMap"
+     	 "Filtered complexes and simplicial complexes"
+	 "Filtrations and tensor product complexes"
+	 "Filtrations and homomorphism complexes"
+	 -- "spectral sequences"
+	 -- "spectral sequence page"	
 ///
 
 
@@ -2022,7 +2061,7 @@ doc ///
 	      -- @TO"spectral sequences"@.	    
 	      -- For an overview of how to create and manipulate spectral sequence pages see
 	      -- @TO"spectral sequence page"@.
-	      A spectral sequence page consists of:
+	      A (homological, or lower index) spectral sequence page consists of:
 	       
 	       1. A fixed integer $r \geq 0$, the page number;	      
 	       
@@ -2033,7 +2072,7 @@ doc ///
 	       
 	       4. A collection of isomorphisms $E^{r+1}_{p,q}  $\rightarrow$ ker d^r_{p,q} / image d^r_{p+r,q-r+1} $.	       
 	       
-	       Alternatively a spectral sequence page consists of:
+	       Alternatively a (cohomological, or upper index) spectral sequence page consists of:
 	       
 	       1'.  A fixed integer $r \geq 0$, the page number;
 	       
@@ -2044,9 +2083,15 @@ doc ///
 	       
 	       4'. A collection of isomorphisms $E_{r+1}^{p,q}  $\rightarrow$ ker d_r^{p,q} / image d_r^{p-r,q+r-1} $.	
 	       
+	       The type {\tt SpectralSequencePage} is a data type for working with spectral sequences
+	       and spectral sequence pages.
      Caveat
-	    By assumption all spectral sequence pages are determined by spectral sequences. The isomorphisms $4$ and $4$' are not explicitly
-	    part of the data type, although they can be obtained by using the command @TO"homologyIsomorphism"@.        	    	      
+	    --By assumption all spectral sequence pages are determined by spectral sequences. 
+	    The isomorphisms $4$ and $4$' are not explicitly
+	    part of the data type, although they can be obtained by using the command @TO"homologyIsomorphism"@.
+    SeeAlso
+    	"SpectralSequence"
+	"SpectralSequencePageMap"	            	    	      
 ///	       
 
 
@@ -2057,22 +2102,27 @@ doc ///
      	  the type of all spectral sequence page maps
      Description
      	  Text
-	       A spectral sequence page map consists of:
+	       A (homological, or lower index) spectral sequence page map consists of:
 	       
 	       1.  A fixed integer $r \geq 0 $, the page number;
 	       
-	       2. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}_{p,q \in ZZ, r \geq 0}$ such that
+	       2. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} \rightarrow E^r_{p-r,q+r-1}\}$ for $p,q \in \mathbb{Z}, r \geq 0$ such that
 	       $d^r_{p,q} d^r_{p+r,q-r+1} = 0$. 
 	       
-	       Alternatively a spectral sequence page consists of:
+	       Alternatively a (cohomological, or upper index) spectral sequence page consists of:
 	       
 	       1'.  A fixed integer $r \geq 0$, the page number;
 	       
-	       2'.   A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} $\rightarrow$ E_r^{p+r,q-r+1}}_{p,q \in ZZ, r \geq 0}$ such that
+	       2'.   A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} \rightarrow E_r^{p+r,q-r+1}\}$ for $p,q \in \mathbb{Z}, r \geq 0$ such that
 	       $d_r^{p,q} d_r^{p-r,q+r-1} = 0$.
 	       
-     Caveat
-	    By assumption all spectral sequence page maps are determined by spectral sequences. 
+	       The type {\tt SpectralSequencePageMap} is a data type for working with spectral sequences and the differentials
+	       on the pages of a spectral sequence.
+    SeeAlso
+    	"SpectralSequence"
+	"SpectralSequencePage"	       
+   --  Caveat
+	 --   By assumption all spectral sequence page maps are determined by spectral sequences. 
 	       
 ///	       
 
@@ -2085,7 +2135,12 @@ doc ///
      	  the type of all pages
      Description
      	  Text
-	       A page is a collection of modules which are indexed by list of integers.
+	       A page is a collection of modules which are indexed by list of integers.  This is a parent class for the type @TO"SpectralSequencePage"@.  The infinity page of a spectral sequence 
+	       is an example of a page which is not a spectral sequence page.
+     SeeAlso
+       SpectralSequencePage
+       (symbol ^, SpectralSequence, InfiniteNumber)
+       (symbol _, SpectralSequence, InfiniteNumber)	       
 ///	       
 
 doc ///
@@ -2096,6 +2151,8 @@ doc ///
      Description
      	  Text
 	       A page map is a collection of homomorphisms which are indexed by list of integers.
+     SeeAlso
+     	 (prunningMaps,SpectralSequencePage)    
 ///	       
 
 
@@ -2120,7 +2177,9 @@ doc ///
 	       K: FilteredComplex
 	  Description
 	       Text
-	       	    This is the primative filtered complex constructor.     
+	       	    This is the primative filtered complex constructor.   
+    	  SeeAlso
+	      FilteredComplex		      
 ///
 
 
@@ -2160,17 +2219,11 @@ doc ///
      ///
  
 
-doc ///
-    	  Key
-	    homologyIsomorphism
-	  Headline 
-	    compute the homology isomorphism  	
-///	       
 
 
 doc ///
     	  Key
-	    (truncate, ChainComplex,ZZ)
+	    (truncate, ChainComplex, ZZ)
 	  Headline 
 	    compute the hard truncation of a chain complex   
 ///	       
@@ -2179,14 +2232,25 @@ doc ///
     	  Key
 	    prunningMaps
 	  Headline 
-	    compute the pruning maps on a spectral sequence page
+	    compute the prunning maps on a spectral sequence page
 ///	       
+
+doc ///
+    	  Key
+	    (support,ChainComplex)
+	  Headline 
+	    nonzero parts of a chain complex
+	  Description
+	      Text
+	            Computes the homological degrees in which the chain complex admits a nonzero module  
+///	       
+
 
 doc ///
     	  Key
 	    (prunningMaps, SpectralSequencePage)
 	  Headline 
-	    compute the pruning maps on a spectral sequence page
+	    compute the prunning maps on a spectral sequence page
 ///	       
 
 
@@ -2310,16 +2374,25 @@ doc ///
      Description	  
      	  Text
 	     Produces the filtered complex which determined the spectral sequence.
+	     Consider the spectral sequence $E$ which arises from a nested list of simplicial
+	     complexes.
 	  Example 
-	    needsPackage "SpectralSequences";
 	    A = QQ[a,b,c,d];
 	    D = simplicialComplex {a*d*c, a*b, a*c, b*c};
-	    F2D = D
-	    F1D = simplicialComplex {a*c, d}
-	    F0D = simplicialComplex {a,d}
-	    K = filteredComplex {F2D, F1D, F0D}
+	    F2D = D;
+	    F1D = simplicialComplex {a*c, d};
+	    F0D = simplicialComplex {a,d};
+	    K = filteredComplex {F2D, F1D, F0D};
 	    E = spectralSequence(K) ;
-    	    C = filteredComplex E ;
+	  Text
+	    The underlying filtered chain complex 
+	    can be recovered from the
+	    spectral sequence by:
+	  Example     
+    	    C = filteredComplex E 
+     SeeAlso
+          --(_, FilteredComplex,InfiniteNumber)
+          --(^,FilteredComplex,InfiniteNumber)
     /// 
 
 
@@ -2338,7 +2411,10 @@ doc ///
      	 B:Matrix
      Description
      	  Text 
-	       Returns generators for the requested (multi)degree of the spectral sequence page.
+	       Returns generators for the requested (multi)degree of the spectral sequence page.  It is designed to extend
+	       the function @TO"basis"@ which can be applied to modules, for instance.
+     SeeAlso
+     	 basis	       
     ///
   
 doc ///
@@ -2385,9 +2461,50 @@ doc ///
      	  e:SpectralSequence
      Outputs
      	  E:SpectralSequence
+     SeeAlso
+     	 (minimalPresentation, SpectralSequencePage)
+	 (prune, SpectralSequencePage)
+     	 minimalPresentation
+	 prune
+	 prunningMaps	       
+	  
      Description
      	  Text 
-	       Returns a minimal presentation of the spectral sequence.
+	       Returns a minimal presentation of the spectral sequence.  This function is designed to extend
+	       the @TO"minimalPresentation"@ command which can be applied to modules, for instance.  The prunning maps
+	       are also cached and can be obtained by using the method @TO"prunningMaps"@.
+	       
+	       Consider the filtered complex $K$ below
+	       which arises from a nested list of 
+	       simplicial complexes.
+     	  Example
+	      A = QQ[x,y,z,w];	     
+	      D2 = simplicialComplex {x*y*z, x*y, y*z, w*z};
+	      D1 = simplicialComplex {x*y, w};
+	      D0 = simplicialComplex {x,w};
+	      K = filteredComplex{D2, D1, D0};
+	  Text
+	      Compare the pruned version of the spectral sequence, which we 
+	      denote by $E$,
+	      to that of the non-pruned version of the spectral sequence which we
+	      denote by $J$.
+	  Example
+	      E = prune spectralSequence K;
+	      J = prune spectralSequence K;
+	      E^0
+	      J^1
+	      E^0 .dd
+	      J^1 .dd
+	      E^1 
+	      J^1 
+	      E^1 .dd
+	      J^1 .dd
+	      E^2 
+	      J^2
+	      E^2 .dd
+	      J^2 .dd
+	      E^infinity
+	      J^infinity	       
     ///
 
 doc ///
@@ -2405,6 +2522,11 @@ doc ///
      Description
      	  Text 
 	       Returns a minimal presentation of the spectral sequence page.
+     SeeAlso
+     	 (minimalPresentation, SpectralSequence)
+	 (prune, SpectralSequence)
+     	 minimalPresentation
+	 prune	       	       
     ///
 
 
@@ -2440,7 +2562,16 @@ doc ///
      	  f:FilteredComplex
      Description
      	  Text 
-	      Returns the filtrations of the Hom complex determined by the double complex  
+	      Returns the filtrations of the Hom complex determined by the double complex.  Here is 
+	      an example which illustrates the syntax. 
+	  Example
+	     A = QQ[x,y];
+	     B = koszul vars A;
+	     C = koszul vars A;
+	     F' = Hom(filteredComplex B, C)
+	     F'' = Hom(B,filteredComplex C)   
+     SeeAlso
+     	 "Filtrations and homomorphism complexes"	       
     ///
     doc ///
      Key
@@ -2543,7 +2674,7 @@ doc ///
      	  E:SpectralSequence
 	  k:ZZ
      Outputs
-     	  P: SpectralSequencePage
+     	  P:SpectralSequencePage
      Description
      	  Text 
 	      Returns the kth page of the spectral sequence.
@@ -2561,7 +2692,7 @@ doc ///
      	  E:SpectralSequence
 	  k:InfiniteNumber
      Outputs
-     	  P: Page
+     	  P:Page
      Description
      	  Text 
 	      Returns the infinity page a spectral sequence.
@@ -2624,7 +2755,16 @@ doc ///
      Description
      	  Text 
 	       Returns the two filtrations of the tensor product complex determined by 
-	       the double complex
+	       the double complex. 
+	       The following example illustrates the syntax.
+	  Example
+	      A = QQ[x,y];
+	      B = koszul vars A;
+	      C = koszul vars A;
+	      F' = (filteredComplex B) ** C
+	      F'' = B ** (filteredComplex C)             
+     SeeAlso
+          "Filtrations and tensor product complexes"	       
     ///
  doc ///
      Key
@@ -2726,6 +2866,19 @@ doc ///
 ///
 
 doc ///
+    	  Key
+	    homologyIsomorphism
+	  Headline 
+	    compute the homology isomorphism 
+	  Description
+	       Text
+	         Computes the isomorphism $ker d^r_{p,q} / image d^r_{p + r, q - r + 1} \rightarrow E^{r+1}_{p,q}$  
+	  SeeAlso
+	   (homologyIsomorphism, SpectralSequence, ZZ, ZZ, ZZ)      	
+///	       
+
+
+doc ///
      Key
      	  (homologyIsomorphism, SpectralSequence, ZZ, ZZ, ZZ)
      Headline
@@ -2741,7 +2894,9 @@ doc ///
          g:Matrix 
      Description
           Text
-	       Computes the isomorphism $ker d^r_{p,q} / image d^r_{p + r, q - r + 1} \rightarrow E^r_{p,q}$
+	       Computes the isomorphism $ker d^r_{p,q} / image d^r_{p + r, q - r + 1} \rightarrow E^{r+1}_{p,q}$
+     SeeAlso
+     	 homologyIsomorphism	       
 ///
 
 doc ///
