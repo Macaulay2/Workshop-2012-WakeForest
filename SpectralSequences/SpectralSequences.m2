@@ -19,7 +19,7 @@ newPackage(
   "SpectralSequences",
 --  AuxiliaryFiles => true,
   Version => "0.6",
-  Date => "23 November 2013",
+  Date => "2 December 2013",
   Authors => {
        {
       Name => "David Berlekamp", 
@@ -986,7 +986,7 @@ basis (List,SpectralSequencePage) := opts -> (deg,E) -> (
 
 beginDocumentation()
 
-undocumented {page, prunningMaps, PageMap, --spots, 
+undocumented {page, prunningMaps,-- PageMap, --spots, 
     (degree, Page),
     (net, FilteredComplex),
     (net, Page),
@@ -1016,12 +1016,12 @@ undocumented {page, prunningMaps, PageMap, --spots,
       (page,List, List, Page),
    (expression, SpectralSequence),
    spectralSequencePageMap,
-   (support,ChainComplex),
+ --  (support,ChainComplex),
  --  (truncate, ChainComplex,ZZ),
    --homologyIsomorphism, 
    Shift,
-   --prunningMaps, 
-   --(prunningMaps, SpectralSequencePage),
+ --  prunningMaps, 
+  -- (prunningMaps, SpectralSequencePage),
    (describe, Page),
    (describe, PageMap),
    (max, FilteredComplex),
@@ -1081,12 +1081,12 @@ document {
     Key => "How to work with filtered complexes",
     Headline => "creating and manipulating filtered complexes",
     "Here we illustrate some ways for working with filtered complexes",
-    UL { 
-	TO "How to make filtered complexes from chain complex maps",
-	TO "Canonical filtrations on tensor product complexes",
-	TO "Canoncial filtrations on homomorphism complexes",
+  --  UL { 
+--	TO "How to make filtered complexes from chain complex maps",
+--	TO "Canonical filtrations on tensor product complexes",
+--	TO "Canoncial filtrations on homomorphism complexes",
 	TO "Filtered complexes and simplicial complexes",
-	},
+--	},
     }
 
 document {
@@ -1143,6 +1143,10 @@ doc ///
 	      JJ^0 .dd
 	      JJ^1 .dd
 	      JJ^infinity
+     SeeAlso
+     	  "How to make filtered complexes from chain complex maps"
+	  "Filtrations and tensor product complexes"
+	  "ions and homomorphism complexes"
 ///
 
 
@@ -1917,16 +1921,16 @@ doc ///
      	  the type of all filtered complexes
      Description
      	  Text	 
-	     An ascending filtration of a (homological, lower index, or degree $-1$) chain complex
+	     An ascending filtration of a bounded (homological, lower index, or degree $-1$) chain complex
 	     $C : \dots \rightarrow C_i \rightarrow C_{i - 1} \rightarrow \dots$
 	     is an ordered family of chain subcomplexes 
 	     $FC : \dots \subseteq F_{n - 1} C \subseteq F_n C \subseteq \dots $.
 	     Such a filtration is said to be bounded if $F_s C = C$ for all sufficiently
 	     large $s$ and $F_t C = 0$ for all sufficently large $t$.
 	     
-	     Alternatively, a descending filtration of a (cohomological, or upper index, or degree $1$) chain complex 
+	     Alternatively, a descending filtration of a bounded (cohomological, or upper index, or degree $1$) chain complex 
 	     $C : \dots  \rightarrow C^i \rightarrow C^{i + 1} \rightarrow \dots $
-	     is an ordered familiy of subchain complexes 
+	     is an ordered family of subchain complexes 
 	     $FC : \dots \subseteq F^{n + 1} C \subseteq F^n C \subseteq \dots$.
 	     Such a filtration is said to be bounded if $F^s C = 0$ for all sufficently 
 	     large $s$ and $F^t C = C$ for all sufficently small $t$.
@@ -1963,16 +1967,16 @@ doc ///
 	       	      
 	       1. A sequence of modules $\{E^r_{p,q}\}$ for $p,q \in \mathbb{Z}$ and $r \geq 0$;
 	       
-       	       2. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}}$, for $p,q \in ZZ$ and $ r \geq 0$, such that
+       	       2. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} \rightarrow E^r_{p-r,q+r-1} \}$, for $p,q \in \mathbb{Z}$ and $ r \geq 0$, such that
 	       $d^r_{p,q} d^r_{p+r,q-r+1} = 0$ ; 	       
 	       
-	       3. A collection of isomorphisms $E^{r+1}_{p,q}  $\rightarrow$ ker d^r_{p,q} / image d^r_{p+r,q-r+1}$.	       
+	       3. A collection of isomorphisms $E^{r+1}_{p,q}  \rightarrow  ker d^r_{p,q} / image d^r_{p+r,q-r+1}$.	       
 	       
 	       Alternatively a (cohomological, or upper index) spectral sequence consists of:
 	       
 	       1'. A sequence of modules $\{E_r^{p,q}\}$ for $p,q \in \mathbb{Z}$, and $r \geq 0$;
 	       
-       	       2'. A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} $\rightarrow$ E_r^{p+r,q-r+1}}_{p,q \in \mathbb{Z}, r \geq 0}$ such that
+       	       2'. A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} \rightarrow E_{r}^{p+r,q-r+1}\}$ for $p,q \in \mathbb{Z}, r \geq 0$ such that
 	       $d_r^{p,q} d_r^{p-r,q+r-1} = 0$ ; 	       
 	       
 	       3'. A collection of isomorphisms $E_{r+1}^{p,q}  $\rightarrow$ ker d_r^{p,q} / image d_r^{p-r,q+r-1}$.	       
@@ -2018,23 +2022,25 @@ doc ///
 	       
 	       1. A fixed integer $r \geq 0$, the page number;	      
 	       
-	       2. A sequence of modules $\{E^r_{p,q}\}_{p,q \in \mathbb{Z}}$;
+	       2. A sequence of modules $\{E^r_{p,q}\}$ for $p,q \in \mathbb{Z}$;
 	       
-       	       3. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} $\rightarrow$ E^r_{p-r,q+r-1}\}_{p,q \in \mathbb{Z}, r \geq 0}$ such that
+       	       3. A collection of homomorphisms $\{d^r_{p,q}: E^r_{p,q} \rightarrow E^r_{p-r,q+r-1}\}$ for
+	       $p,q \in \mathbb{Z}, r \geq 0$ such that
 	       $d^r_{p,q} d^r_{p+r,q-r+1} = 0$ ; 	       
 	       
-	       4. A collection of isomorphisms $E^{r+1}_{p,q}  $\rightarrow$ ker d^r_{p,q} / image d^r_{p+r,q-r+1} $.	       
+	       4. A collection of isomorphisms $E^{r+1}_{p,q}  \rightarrow ker d^r_{p,q} / image d^r_{p+r,q-r+1}$.	       
 	       
 	       Alternatively a (cohomological, or upper index) spectral sequence page consists of:
 	       
 	       1'.  A fixed integer $r \geq 0$, the page number;
 	       
-	       2'. A sequence of modules $\{E_r^{p,q}\}_{p,q \in \mathbb{Z}}$;
+	       2'. A sequence of modules $\{E_r^{p,q}\}$ for $p,q \in \mathbb{Z}$;
 	       
-       	       3'. A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} $\rightarrow$ E_r^{p+r,q-r+1}\}_{p,q \in \mathbb{Z}, r \geq 0}$ such that
+       	       3'. A collection of homomorphisms $\{d_r^{p,q}: E_r^{p,q} \rightarrow E_r^{p+r,q-r+1}\}$ for
+	       $ p,q \in \mathbb{Z}, r \geq 0$ such that
 	       $d_r^{p,q} d_r^{p-r,q+r-1} = 0$ ; 	       
 	       
-	       4'. A collection of isomorphisms $E_{r+1}^{p,q}  $\rightarrow$ ker d_r^{p,q} / image d_r^{p-r,q+r-1} $.	
+	       4'. A collection of isomorphisms $E_{r+1}^{p,q}  \rightarrow ker d_r^{p,q} / image d_r^{p-r,q+r-1}$.	
 	       
 	       The type {\tt SpectralSequencePage} is a data type for working with spectral sequences
 	       and spectral sequence pages.
@@ -2044,7 +2050,8 @@ doc ///
 	    part of the data type, although they can be obtained by using the command @TO"homologyIsomorphism"@.
     SeeAlso
     	"SpectralSequence"
-	"SpectralSequencePageMap"	            	    	      
+	"SpectralSequencePageMap"
+	"Page"	            	    	      
 ///	       
 
 
@@ -2073,10 +2080,10 @@ doc ///
 	       on the pages of a spectral sequence.
     SeeAlso
     	"SpectralSequence"
-	"SpectralSequencePage"	       
+	"SpectralSequencePage"
+	"PageMap"	       
    --  Caveat
-	 --   By assumption all spectral sequence page maps are determined by spectral sequences. 
-	       
+	 --   By assumption all spectral sequence page maps are determined by spectral sequences. 	       
 ///	       
 
 
@@ -2088,7 +2095,7 @@ doc ///
      	  the type of all pages
      Description
      	  Text
-	       A page is a collection of modules which are indexed by list of integers.  This is a parent class for the type @TO"SpectralSequencePage"@.  The infinity page of a spectral sequence 
+	       A page is a collection of modules which are indexed by lists of integers.  This is a parent class for the type @TO"SpectralSequencePage"@.  The infinity page of a spectral sequence 
 	       is an example of a page which is not a spectral sequence page.
      SeeAlso
        SpectralSequencePage
@@ -2103,7 +2110,8 @@ doc ///
      	  the type of all page maps
      Description
      	  Text
-	       A page map is a collection of homomorphisms which are indexed by list of integers.
+	       A page map is a collection of homomorphisms which are indexed by lists of integers.  This is a parent class for the type @TO"SpectralSequencePageMap"@.  The output of the 
+	       method {\tt prunningMaps(SpectralSequencePage)} is an example of a {\tt Page} which is not a {\tt SpectralSequencePage}.
      SeeAlso
      	 (prunningMaps,SpectralSequencePage)    
 ///	       
@@ -2132,7 +2140,11 @@ doc ///
 	       Text
 	       	    This is the primative filtered complex constructor.   
     	  SeeAlso
-	      FilteredComplex		      
+	      FilteredComplex
+	       "How to make filtered complexes from chain complex maps"
+    	       "Filtrations and tensor product complexes"
+    	       "Filtrations and homomorphism complexes"
+    	       "Filtered complexes and simplicial complexes"		      
 ///
 
 
@@ -2140,7 +2152,7 @@ doc ///
      Key
        spectralSequence
      Headline
-     	  construct a spectral sequence from a filtered complex
+     	  construct a spectral sequence
      Usage
      	  E = spectralSequence K
      Inputs
@@ -2151,6 +2163,8 @@ doc ///
      Description
      	  Text 
 	       This is the primative spectral sequence constructor.
+     SeeAlso
+     	 (spectralSequence, FilteredComplex)    
     ///
 
 doc ///
@@ -2169,6 +2183,10 @@ doc ///
      Description
      	  Text 
 	       This is the primative spectral sequence page constructor.
+     SeeAlso
+     	 spectralSequence
+     	 (spectralSequence, FilteredComplex)	       
+	 spectralSequencePageMap
      ///
  
 
@@ -2182,10 +2200,23 @@ doc ///
 ///	       
 
 doc ///
-    	  Key
-	    prunningMaps
-	  Headline 
-	    compute the prunning maps on a spectral sequence page
+     Key
+	  prunningMaps
+     Headline 
+	  compute the prunning maps on a spectral sequence page
+     Usage
+     	  d = prunningMaps E
+     Inputs
+     	  E:SpectralSequencePage
+     Outputs
+     	  d:PageMap
+     Description
+     	  Text 
+	       Returns the prunning maps which are cached in the process of prunning the spectral sequence page.
+     SeeAlso
+	      (prune, SpectralSequence)
+	      SpectralSequencePage
+	      PageMap  
 ///	       
 
 doc ///
@@ -2399,7 +2430,18 @@ doc ///
      	  C:ChainComplex
      Description
      	  Text 
-	       Returns the ambient chain complex of the filtered complex.	       
+	       Returns the ambient chain complex of the filtered complex.
+	  Example
+	      A = QQ[x,y];
+	      C = koszul vars A
+	      K = filteredComplex C;
+	      chainComplex K
+	      K_infinity     
+    SeeAlso
+    	(symbol _, FilteredComplex, ZZ)
+	(symbol _, FilteredComplex, InfiniteNumber)
+	(symbol ^, FilteredComplex, ZZ)
+	(symbol ^, FilteredComplex, InfiniteNumber)	       	       	       	       
     ///
 
 doc ///
@@ -2499,6 +2541,11 @@ doc ///
      Description
      	  Text 
 	       Returns the spectral sequence associated to the filtered complex.
+	  Example
+	      A = QQ[x,y];
+	      C = koszul vars A
+	      K = filteredComplex C;
+	      E = spectralSequence K
     ///
     doc ///
      Key
@@ -2540,6 +2587,12 @@ doc ///
      Description
      	  Text 
 	       Returns the underlying chain complex of a spectral sequence.
+	  Example
+	      A = QQ[x,y];
+	      C = koszul vars A
+	      K = filteredComplex C;
+	      E = spectralSequence K
+	      chainComplex E
     ///
 
  doc ///
@@ -2754,9 +2807,23 @@ doc ///
      Description
      	  Text 
 	       Returns the chain complex in (homological) filtration degree j.  
-	       The relationship	$K _ j = K ^{(-j)}$ holds.       
+	       The relationship	$K _ j = K ^{(-j)}$ holds.     
+    	   Example
+	       A = QQ[x,y];
+	       C = koszul vars A;
+	       K = filteredComplex C
+	       K_0
+	       K_1
+	       K_2
+	       K^(-1)
+	       K^(-2)
+	       K_infinity
+	       K_(-infinity)
+	       K^(- infinity)
+	       K^infinity       
      SeeAlso    
-     	  (symbol ^, FilteredComplex, ZZ)           
+     	  (symbol ^, FilteredComplex, ZZ)  
+	  (symbol ^, FilteredComplex, InfiniteNumber)         
     ///
 
 doc ///
@@ -2777,8 +2844,22 @@ doc ///
      	  Text 
 	       Returns the chain complex in (cohomological) filtration degree j.
 	       The relationship $K ^ j = K _{(-j)}$ holds.
+	  Example
+	       A = QQ[x,y];
+	       C = koszul vars A;
+	       K = filteredComplex C
+	       K_0
+	       K_1
+	       K_2
+	       K^(-1)
+	       K^(-2)
+	       K_infinity
+	       K_(-infinity)
+	       K^(-infinity)
+	       K^infinity            
      SeeAlso
-     	  (symbol _, FilteredComplex, ZZ)	       
+     	  (symbol _, FilteredComplex, ZZ)
+	  (symbol _, FilteredComplex, InfiniteNumber)	       
     ///
 
 
@@ -2797,7 +2878,7 @@ doc ///
      Description
           Text
 	       Given a morphism $f: A \rightarrow B$ of chain complexes
-	       returns the connecting map $H_{n+1}( coker f) \rightarrow H_n (im f)$.
+	       returns the connecting map $H_{n+1}(coker f) \rightarrow H_n (im f)$.
 ///
 
 doc ///
