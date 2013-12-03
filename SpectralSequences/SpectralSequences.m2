@@ -1032,7 +1032,7 @@ undocumented {page, prunningMaps, PageMap, --spots,
 document { 
   Key => SpectralSequences,
   Headline => "a package for working with filtered complexes and spectral sequences",
-   "Spectral sequences, although technical and subtle, can be very useful in applications---especially when they fail to degenerate quickly.
+   "Spectral sequences, although technical and subtle, can be very useful in applications---especially when they degenerate quickly.
    By constrast little is known about their general structure when they fail to degenerate quickly.
    Allevating this dichotomy is one of the motivations behind this package.  Its purpose
    is to allow for effective calculations of particular kinds of spectral sequences.
@@ -1335,30 +1335,30 @@ doc ///
     Description
     	  Text
 	       The following example is taken from p. 127, Fig 7.2 of 
-	       Zomorodian's "Topology for computing".  In that figure, a filtration of a suitable
+	       Zomorodian's {\it Topology for computing}.  In that figure, a filtration of a suitable
 	       simplicial complex is pictured.  Here we compute the associated spectral sequence.
 	       As we will see below, the spectral sequences has nonzero maps on higher page numbers.
      	  Example
 		A = ZZ [s,t,u,v,w] ;
-		d0 = simplicialComplex {s} ;
-		d1 = simplicialComplex {s,t} ;
-		d2 = simplicialComplex {s,t,u} ;
-		d3 = simplicialComplex {s*t, u} ;
-		d4 = simplicialComplex {s*t, u, v} ;
-		d5 = simplicialComplex {s*t, u, v, w} ;
-		d6 = simplicialComplex {s*t, s*w ,u, v} ;
-		d7 = simplicialComplex {s*t, s*w ,t * w, u, v} ;
-		d8 = simplicialComplex {s*t, s*w ,t * w, u * v} ;
-		d9 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v} ;
-		d10 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u} ;
-		d11 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w} ;
-		d12 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u} ;
-		d13 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w} ;
-		d14 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w} ;
-		d15 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u} ;
-		d16 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v} ;
-		d17 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v, s*t*w} ;
-		L = reverse {d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17} ;
+		D0 = simplicialComplex {s} ;
+		D1 = simplicialComplex {s,t} ;
+		D2 = simplicialComplex {s,t,u} ;
+		D3 = simplicialComplex {s*t, u} ;
+		D4 = simplicialComplex {s*t, u, v} ;
+		D5 = simplicialComplex {s*t, u, v, w} ;
+		D6 = simplicialComplex {s*t, s*w ,u, v} ;
+		D7 = simplicialComplex {s*t, s*w ,t * w, u, v} ;
+		D8 = simplicialComplex {s*t, s*w ,t * w, u * v} ;
+		D9 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v} ;
+		D10 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u} ;
+		D11 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w} ;
+		D12 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u} ;
+		D13 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w} ;
+		D14 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w} ;
+		D15 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u} ;
+		D16 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v} ;
+		D17 = simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v, s*t*w} ;
+		L = reverse {D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17} ;
 		K = filteredComplex (L, ReducedHomology => false) ;
 		E = prune spectralSequence K ;
 		E^0
@@ -1394,30 +1394,21 @@ doc ///
 	      In this example we compute the spectral sequence arising from
 	      the quotient map
 	      $\mathbb{S}^2 \rightarrow \mathbb{R} \mathbb{P}^2$, 
-	      given by indentifying anti-podal points.
-	      
+	      given by indentifying anti-podal points. 
 	      This map can be realized by a simplicial map along the lines of Exercise 27, Section 6.5 of Armstrong's
 	      book {\it Basic Topology}.
-	       
 	      In order to give a combinatorial picture of the quotient map
 	      $\mathbb{S}^2 \rightarrow \mathbb{R} \mathbb{P}^2$, 
 	      given by indentifying anti-podal points, we
  	      first make an appropriate simplicial realization of $\mathbb{S}^2$.
+	      Note that we have added a few barycentric coordinates.
      	  Example
 	      S = ZZ[v1,v2,v3,v4,v5,v6,v15,v12,v36,v34,v46,v25];
-	      topHalf = {v3*v4*v5, v5*v4*v15, v15*v34*v4, v15*v34*v1, v34*v1*v6, v34*v46*v6, v36*v46*v6, v3*v4*v46, v4*v46*v34, v3*v46*v36};
-	      botHalf = {v1*v6*v2, v6*v2*v36, v2*v36*v12,v36*v12*v3, v12*v3*v5, v12*v5*v25, v25*v5*v15, v2*v12*v25, v1*v2*v25, v1*v25*v15};
+	      twoSphere = simplicialComplex {v3*v4*v5, v5*v4*v15, v15*v34*v4, v15*v34*v1, v34*v1*v6, v34*v46*v6, v36*v46*v6, v3*v4*v46, v4*v46*v34, v3*v46*v36, v1*v6*v2, v6*v2*v36, v2*v36*v12,v36*v12*v3, v12*v3*v5, v12*v5*v25, v25*v5*v15, v2*v12*v25, v1*v2*v25, v1*v25*v15};	   
 	  Text
-	      The following is a simplicial complex whose topological realization is $\mathbb{S}^2$
-	      note that we have added a few barycentric coordinates
-	  Example     
-	      twoSphere = simplicialComplex join(topHalf, botHalf)
-	      facets twoSphere
-	      C = truncate(chainComplex twoSphere,1)
-	  Text
-	     Can check that we've at least entered a simplicial complex
-             whose homology agrees with that of $\mathbb{S}^2$
-	  Example	
+	     We can check that the homology of the simplicial compllex twoSphere agrees with that of $\mathbb{S}^2$.
+	  Example
+	      C = truncate(chainComplex twoSphere,1)	
 	      prune HH C
 	  Text
 	      We now write down our simplicial complex whose topological realization 
@@ -1425,11 +1416,11 @@ doc ///
 	  Example     
 	      R = ZZ[a,b,c,d,e,f];
 	      realProjectivePlane = simplicialComplex {a*b*c, b*c*d, c*d*e, a*e*d, e*b*a, e*f*b, d*f*b, a*f*d, c*f*e,a*f*c};
-	      B = truncate(chainComplex realProjectivePlane,1)
 	  Text 
 	      Again we can check that we've entered a simplical complex
        	      whose homology agrees with that of the real projective plane.
-	  Example	 
+	  Example
+	      B = truncate(chainComplex realProjectivePlane,1)	 
 	      prune HH B
     	  Text
 	      We now compute the fibers of the anti-podal quoitent map
@@ -1474,50 +1465,29 @@ doc///
 	      $\mathbb{S}^1 \rightarrow {\rm Klein Bottle} \rightarrow \mathbb{S}^1$.  
 	      To give a simplicial realization of of this fibration we first make a simplical
 	      complex which gives a triangulation of the Klein Bottle.
-	      
-	      The triangulation of the Klein Bottle that we will use has 18 facets:
+	      The triangulation of the Klein Bottle that we use has 18 facets and is, up to relabling, the triangulation of the Klein bottle given
+	      in Figure 6.14 of Armstrong's book {\it Basic Topology}.
     	 Example
 	      S = ZZ[a00,a10,a20,a01,a11,a21,a02,a12,a22];
 	      -- there will be 18 facets of Klein Bottle
-	      f1 = a00*a10*a02;
-	      f2 = a02*a12*a10;
-	      f3 = a01*a02*a12;
-	      f4 = a01*a12*a11;
-	      f5 = a00*a01*a11;
-	      f6 = a00*a11*a10;
-	      f7 = a10*a12*a20;
-	      f8 = a12*a20*a22;
-	      f9 = a11*a12*a22;
-	      f10 = a11*a22*a21;
-	      f11 = a10*a11*a21;
-	      f12 = a10*a21*a20;
-	      f13 = a20*a22*a00;
-	      f14 = a22*a00*a01;
-	      f15 = a21*a22*a01;
-	      f16 = a21*a02*a01;
-	      f17 = a20*a21*a02;
-	      f18 = a20*a02*a00;
+	      Delta = simplicialComplex {a00*a10*a02, a02*a12*a10, a01*a02*a12, a01*a12*a11, a00*a01*a11, a00*a11*a10, a10*a12*a20, a12*a20*a22, a11*a12*a22, a11*a22*a21, a10*a11*a21, a10*a21*a20, a20*a22*a00, a22*a00*a01, a21*a22*a01, a21*a02*a01, a20*a21*a02, a20*a02*a00}
  	 Text
-	      A triangulation of the Klein Bottle is given by:
-	 Example     
-	      Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16,f17,f18}
-    	 Text
-	      In fact the above, up to relabling, is the triangulation of the Klein bottle given in Figure 6.14 of Armstrong's book
-	      {\it Basic Topology}.
 	      We can check that the homology of this simplicial complex agrees with that
 	      of the Klein Bottle:
 	 Example     
 	      C = truncate(chainComplex Delta,1)
 	      prune HH C
     	 Text
-	      We now want to make subsimplicial complexes which arise from the 
-	      filtrations of the inverse images of the simplicies. {\bf Need to write down what the simplicial
-		  map to the sphere is!! \}
+	      Let $S$ be the simplicial complex with facets $\{A_0 A_1, A_0 A_2, A_1 A_2\}$.  Then $S$ is a triangulation of $S^1$.  The simplicial map
+	      $\pi : \Delta \rightarrow S$ given by $\pi(a_{i,j}) = A_i$ is a combinatorial relization of the fibration
+	      $S^1 \rightarrow {\rm Klein Bottle} \rightarrow S^1$.
+	      The subsimplicial complexes of $\Delta$, which arise from the 
+	      the inverse images of the simplicies of $S$, are described below.
 	 Example     
 	      F1Delta = Delta
 	      F0Delta = simplicialComplex {a00*a01,a01*a02,a00*a02,a10*a11,a10*a12,a11*a12,a21*a20,a20*a22,a21*a22}
     	 Text
-	      The resulting filtered complex is:  
+	      The resulting filtered chain complex is:  
 	 Example
 	      K = filteredComplex({F1Delta, F0Delta}, ReducedHomology => false)
     	Text
@@ -1525,9 +1495,10 @@ doc///
 	Example      
 	      E = prune spectralSequence K
 	      E^0
+	      E^0 .dd
 	      E^1
+	      E^1 .dd
 	      E^2
-	      E^3
     	Text
 	      Note that the spectral sequence is abutting to what it should --- the integral
 	      homology of the Klein bottle
@@ -1541,36 +1512,15 @@ doc ///
          Text
 	      In this example we compute the spectral sequence associated to the 
 	      trivial fibration $\mathbb{S}^1 \rightarrow  \mathbb{S}^1 x \mathbb{S}^1 \rightarrow  \mathbb{S}^1$,
-	      where the map is given by one of the projections.  This fibration can be
-	      triangulated as follows.
+	      where the map is given by one of the projections.  To give a simplicial realization of this fibration we first make a simplical complex
+	      which gives a triangulation of $\mathbb{S}^1 \times \mathbb{S}^1$.  The simplicial complex that we construct
+	      is the triangulation of the torus given in Figure 6.4 of Armstrong's book
+	      {\it Basic Topology} and has 18 facets.
 	 Example   
 	      S = ZZ[a00,a10,a20,a01,a11,a21,a02,a12,a22];
 	      -- there will be 18 facets of SS^1 x SS^1
-	      f1 = a00*a02*a10;
-	      f2 = a02*a12*a10;
-	      f3 = a01*a02*a12;
-	      f4 = a01*a11*a12;
-	      f5 = a00*a01*a11;
-	      f6 = a00*a10*a11;
-	      f7 = a12*a10*a20;
-	      f8 = a12*a20*a22;
-	      f9 = a11*a12*a22;
-	      f10 = a11*a22*a21;
-	      f11 = a10*a11*a21;
-	      f12 = a10*a21*a20;
-	      f13 = a20*a22*a00;
-	      f14 = a22*a00*a02;
-	      f15 = a21*a22*a02;
-	      f16 = a21*a02*a01;
-	      f17 = a20*a21*a01;
-	      f18 = a20*a01*a00;
-    	 Text
-	      The triangulation of $\mathbb{S}^1 \times \mathbb{S}^1$ is:
-    	 Example
-	      Delta = simplicialComplex {f1,f2,f3,f4,f5,f6,f7,f8,f9, f10,f11,f12,f13,f14,f15,f16,f17,f18}
+	      Delta = simplicialComplex {a00*a02*a10, a02*a12*a10, a01*a02*a12, a01*a11*a12, a00*a01*a11, a00*a10*a11, a12*a10*a20, a12*a20*a22, a11*a12*a22, a11*a22*a21, a10*a11*a21, a10*a21*a20, a20*a22*a00, a22*a00*a02, a21*a22*a02, a21*a02*a01, a20*a21*a01, a20*a01*a00}
 	 Text
-	      The above simplicial complex is the triangulation of the torus given in Figure 6.4 of Armstrong's book
-	      "Basic Topology".
 	      We can check that the homology of the simplicial complex
 	      $\Delta$ agrees with that of the torus
 	      $\mathbb{S}^1 \times \mathbb{S}^1 $
@@ -1578,8 +1528,11 @@ doc ///
 	      C = truncate(chainComplex Delta,1)
 	      prune HH C
 	 Text
+	      Let $S$ be the simplical complex with facets $\{A_0 A_1, A_0 A_2, A_1 A_2\}$.  Then $S$ is a triangulation of $S^1$.  The simplicial map
+	      $\pi : \Delta \rightarrow S$ given by $\pi(a_{i,j}) = A_i$ is a combinatorial relization of the trivial fibration
+	      $\mathbb{S}^1 \rightarrow \mathbb{S}^1 \times \mathbb{S}^1 \rightarrow \mathbb{S}^1$.
 	      We now make subsimplical complexes arising from the filtrations of the
-	      inverse images of the verticies: {\bf We need to write down what the appropriate simplicial map is!!! }
+	      inverse images of the simplicies.
 	 Example         
 	      F1Delta = Delta;
 	      F0Delta = simplicialComplex {a00*a01, a01*a02, a00*a02, a10*a11,a11*a12,a10*a12, a21*a20,a21*a22,a20*a22};
