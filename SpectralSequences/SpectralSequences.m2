@@ -482,7 +482,7 @@ xComplex := (T,n) ->
 
 -- produce the "x-filtration" of the Hom complex.
 Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
-xHom(K,C)
+xHom(K, complete C)
 )
 
 xHom = method()
@@ -526,7 +526,7 @@ yComplex := (T,n) ->
 	       K
 	       )
 Hom (ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> ( 
-    yHom(C, K)
+    yHom(complete C, K)
     )
 
 yHom = method()
@@ -1186,7 +1186,7 @@ doc ///
      SeeAlso
      	  "How to make filtered complexes from chain complex maps"
 	  "Filtrations and tensor product complexes"
-	  "ions and homomorphism complexes"
+	  "Filtrations and homomorphism complexes"
 ///
 
 
@@ -1294,6 +1294,8 @@ doc ///
 	     E'' ^ 0 .dd
 	     E'' ^1    
 	     E'' ^1 .dd	      
+     SeeAlso   
+	  "Balancing Tor"	     
 ///     
 doc ///
      Key
@@ -1561,7 +1563,9 @@ doc ///
 	      is the triangulation of the torus given in Figure 6.4 of Armstrong's book
 	      {\it Basic Topology} and has 18 facets.
 	 Example   
-	      S = ZZ[a00,a10,a20,a01,a11,a21,a02,a12,a22];
+	      S = ZZ/101[a00,a10,a20,a01,a11,a21,a02,a12,a22];
+	      --S = ZZ[a00,a10,a20,a01,a11,a21,a02,a12,a22]; for some reason get an error 
+	      -- if use ZZ coefs...
 	      -- there will be 18 facets of SS^1 x SS^1
 	      Delta = simplicialComplex {a00*a02*a10, a02*a12*a10, a01*a02*a12, a01*a11*a12, a00*a01*a11, a00*a10*a11, a12*a10*a20, a12*a20*a22, a11*a12*a22, a11*a22*a21, a10*a11*a21, a10*a21*a20, a20*a22*a00, a22*a00*a02, a21*a22*a02, a21*a02*a01, a20*a21*a01, a20*a01*a00}
 	 Text
@@ -1601,28 +1605,35 @@ doc ///
 	       "A case study in bigraded commutative algebra" by Cox-Dickenstein-Schenck.
 	       In that paper, an appropriate term on the E_2 page of a suitable 
 	       spectral sequence corresponds to non-koszul syzygies.
+	       
 	       Using our indexing conventions, the E^2_{3,-1} term will be what the
 	       $E^{0,1}_2$ term is in their paper.
+	       
 	       We illustrate an instance of the non-generic case for non-Koszul syzygies.
-	       This is acheived by looking at the three polynomials used in their Example 4.3.
+	       To do this we look at the three polynomials used in their Example 4.3.
     	       The behaviour that we expect to exhibit is predicted by their Proposition 5.2.
 	  Example
-		R = QQ[x,y,z,w, Degrees => {{1,0},{1,0},{0,1},{0,1}}]
-		B = ideal(x*z, x*w, y*z, y*w)
-		p_0 = x^2*z
-		p_1 = y^2*w
-		p_2 = y^2*z+x^2*w
-		I = ideal(p_0,p_1,p_2)
+		R = QQ[x,y,z,w, Degrees => {{1,0},{1,0},{0,1},{0,1}}];
+		B = ideal(x*z, x*w, y*z, y*w);
+		p_0 = x^2*z;
+		p_1 = y^2*w;
+		p_2 = y^2*z+x^2*w;
+		I = ideal(p_0,p_1,p_2);
 		-- make the frobenious power of the irrelevant ideal
-		B = B_*/(x -> x^2)//ideal
+		B = B_*/(x -> x^2)//ideal;
 		-- need to take a large enough power. 
 		-- it turns out that that 2 is large enough for this example 
-		G = res image gens B
-		F = koszul gens I
-		K = Hom(G, filteredComplex(F))
-		E = prune spectralSequence K
+		G = complete res image gens B;
+		F = koszul gens I;
+		K = Hom(G, filteredComplex(F));
+		E = prune spectralSequence K;
 		E^1
 		E^2
+	  Text
+	        The degree zero piece of the module $E^2_{3,-1}$ twisted by $R((2,3))$ below
+		shows that there is a $1$-dimensional space of non-Koszul syzygies
+		of bi-degree $(2,3)$.  This is what is predicted by the paper.
+    	  Example		
 		E^2_{3,-1}
 		basis({0,0}, E^2_{3, -1} ** R^{{2, 3}})
 		E^2 .dd_{3, -1}
@@ -1631,11 +1642,15 @@ doc ///
 		basis({0,0}, E^2_{1,0} ** R^{{2,3}})
 		-- this shows that there is a 1 dimensional space of non-Koszul syzygies of bi-degree (2,3)
 		-- which is also what is predicted by the paper.
+    	  Text
+	      	The degree zero piece of the module $E^2_{3,-1}$ twisted by $R((6,1))$ below
+		shows that there is a $1$-dimensional space of non-Koszul syzygies of bi-degree
+		$(6,1)$.  This is also what is predicted by the paper.
+	  Example			
 		basis({0,0}, E^2 _{3, -1} ** R^{{6,1}})
 		-- this shows that there is a 1 dimensional space of non-Koszul syzygies of bi-degree (6,1)
 		-- this is what is predicted by the paper.
-		isIsomorphism(E^2 .dd_{3, -1})	       
-	       	  
+		isIsomorphism(E^2 .dd_{3, -1})	      
 ///	  
      doc ///
      Key
@@ -1643,48 +1658,50 @@ doc ///
      Description
      	  Text
 	       If $0 \rightarrow A \rightarrow B \rightarrow C \rightarrow 0$ is a 
-	       short exact sequence of chain complexes, then the connecting morphism
-	       $H_i(C) \rightarrow H_{i - 1}(A)$ can relized as a suitable map
+	       short exact sequence of chain complexes then the connecting morphism
+	       $H_i(C) \rightarrow H_{i - 1}(A)$ can realized as a suitable map
 	       on the $E^1$ of a spectral sequence determined by a suitably defined
 	       two step filtration of $B$.
 	       
-	       In this example, we illustrate how these constructions can be used to 
+	       Here we illustrate this realization in a concrete situation:  we
 	       compute the connecting morphism $H^i(X, F) \rightarrow H^{i + 1}(X, G)$
 	       arising from a short exact sequence 
 	       $0 \rightarrow G \rightarrow H \rightarrow F \rightarrow 0$ of sheaves
 	       on a smooth toric variety $X$.
 	       
-	       In more detail, we use multigraded commutative algebra and 
-	       spectral sequences
-	      to compute the connecting
-	       morphism 
-	      $H^1(C, OO_C(1,0)) \rightarrow H^2(X, OO_X(-2,-3))$ where 
-	      $X := \mathbb{P}^1 \times \mathbb{P}^1$ and $C$ is a general divisor
-	      of type $(3,3)$ on $X$.  This connecting morphism is an
-	      isomorphism.
+ 	       More specificaly we let $X = \mathbb{P}^1 \times \mathbb{P}^1$ and use multigraded commutative algebra
+	       together with spectral sequences to compute the connecting
+	       morphism $H^1(C, OO_C(1,0)) \rightarrow H^2(X, OO_X(-2,-3))$ where 
+	       $C$ is a general divisor of type $(3,3)$ on $X$.  This connecting morphism is an
+	       isomorphism. 
 	  Example   
 	       -- needsPackage "SpectralSequences";
                 R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]; -- PP^1 x PP^1
-		B = intersect(ideal(a_0,a_1),ideal(b_0,b_1)) ; -- irrelevant ideal
-		B = B_*/(x -> x^5)//ideal ; -- Suitably high Frobenius power of B
-		G = res image gens B
+		M = intersect(ideal(a_0,a_1),ideal(b_0,b_1)) ; -- irrelevant ideal
+		M = M_*/(x -> x^5)//ideal ; -- Suitably high Frobenius power of M
+		G = res image gens M ;
 		I = ideal random(R^1, R^{{-3,-3}}) -- ideal of C
 	        b = chainComplex gradedModule R^{{1,0}} -- make line bundle a chain complex
 		a = chainComplex gradedModule R^{{-2,-3}}
 		-- make the map OO(-2, -3) --> OO(1,0)     
 		f = chainComplexMap(b, a,{random(R^1, R^{{-3,-3}})}) ; 
-		k = filteredComplex ({Hom(G,f)}) ; -- the two step filtered complex we want
-		e = prune spectralSequence k ;
-		e^1 .dd_{1,-2} -- the connecting map HH^1(C, OO_C(1,0)) --> HH^2(X, OO_X(-2,-3)) 
-		basis({0,0}, image e^1 .dd_{1,-2})  -- image 2-dimensional
-		basis({0,0}, ker e^1 .dd_{1,-2}) -- map is injective
-		basis({0,0}, target e^1 .dd_{1,-2}) -- target 2-dimensional 
-		basis({0,0}, source e^1 .dd_{1,-2}) -- source 2 dimensional 
+		K = filteredComplex ({Hom(G,f)}) ; -- the two step filtered complex we want
+		E = prune spectralSequence K ;
+    	  Text
+	       The degree zero piece of the map $E^1 .dd_{1, -2}$ below is the desired connecting 
+	       morphism $H^1(C, OO_C(1,0)) \rightarrow H^2(X, OO_X(-2,-3))$.
+	  Example     
+		E^1 .dd_{1,-2} -- the connecting map HH^1(C, OO_C(1,0)) --> HH^2(X, OO_X(-2,-3)) 
+		basis({0,0}, image E^1 .dd_{1,-2})  -- image 2-dimensional
+		basis({0,0}, ker E^1 .dd_{1,-2}) -- map is injective
+		basis({0,0}, target E^1 .dd_{1,-2}) -- target 2-dimensional 
+		basis({0,0}, source E^1 .dd_{1,-2}) -- source 2 dimensional 
 	  Text
 	       An alternative way to compute the connecting morphism is 
 	  Example
 	      	prune connectingMorphism(Hom(G, f), - 2) ;
-		prune connectingMorphism(Hom(G, f), - 2) == e^1 .dd_{1, -2}    
+		prune connectingMorphism(Hom(G, f), - 2) == E^1 .dd_{1, -2} 
+     
 ///     
      doc ///
      Key
@@ -1717,14 +1734,13 @@ doc ///
 	       In this setting, $H^0(C,F)$ and $H^1(C, F)$ are both $2$-dimensional 
 	       vector spaces.
     	  Example
-	         needsPackage "SpectralSequences";
 	         -- C \subseteq PP^1 x PP^1 type (3,3)
 		 -- Use hypercohomology to compute HH OO_C(1,0) 
 		 R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]; -- PP^1 x PP^1
 		 B = intersect(ideal(a_0,a_1),ideal(b_0,b_1)) ; -- irrelevant ideal
 		 B = B_*/(x -> x^5)//ideal ; -- Sufficentily high Frobenius power 
-		 G = res image gens B
-		 I = ideal random(R^1, R^{{-3,-3}}) -- ideal of C
+		 G = res image gens B ;
+		 I = ideal random(R^1, R^{{-3,-3}}) ; -- ideal of C
 		 F = res comodule I 
 		 -- Twist F by a line of ruling and make filtered complex whose ss abuts to HH OO_C(1,0) 
 		 K = Hom(G , filteredComplex (F ** R^{{1,0}})) ;
@@ -1742,8 +1758,7 @@ doc ///
          
 	  Description
 	       Text
-	       	    We compute 
-		    the Serre Spectral Sequence
+	       	    We compute the Serre Spectral Sequence
 		    associated to the Hopf Fibration 
 		    $S^1 \rightarrow S^3 \rightarrow S^2$.
 		    This example is made possible by the minimal
@@ -1753,7 +1768,7 @@ doc ///
      	       Text
 	       	    We first make the relavant simplicial complexes
 		    described on page 110 of the paper.  The
-		    simplical complex $D$ below is a triangualtion of 
+		    simplical complex $S3$ below is a triangualtion of 
 		    $S^3$.  
 	       Example		    
 		    B = QQ[a_0..a_2,b_0..b_2,c_0..c_2,d_0..d_2];
@@ -1762,112 +1777,102 @@ doc ///
 		    l3 = {c_2*a_2*a_0*b_0,c_2*a_2*b_2*b_0,c_2*c_0*a_0*b_0,a_2*a_0*b_0*d_1,a_2*b_2*b_0*d_2,c_2*c_0*b_0*d_2,c_2*b_2*b_0*d_2,a_2*b_0*d_1*d_2};
 		    l4 = {a_0*b_0*b_1*d_1,a_0*b_1*d_0*d_1,b_1*c_1*c_2*d_1,b_1*c_2*d_0*d_1,a_0*a_2*c_2*d_1,a_0*c_2*d_0*d_1};
 		    l5 = {a_0*b_1*d_0*d_2,a_0*a_1*b_1*d_2,b_1*c_2*d_0*d_2,b_1*b_2*c_2*d_2,a_0*c_2*d_0*d_2,a_0*c_0*c_2*d_2};
-		    D = simplicialComplex(join(l1,l2,l3,l4,l5));
+		    S3 = simplicialComplex(join(l1,l2,l3,l4,l5));
 	       Text 
-	            We now construct filtrations of $D$ corresponding to $k$-
-		    sketeltons of the fibration.
-		    Again we describe these in pieces.
-		    For example, if $p:S^3 \rightarrow S^2$  denotes the map defined
-		    by $a_i\mapsto a$, $b_i\mapsto b$, and $c_i \mapsto c$, 
-		    then to compute
-		    $f1l1$ below, we observe that 
+	            We identify the two sphere $S^2$ with the simplical complex $S2$ defined
+		    by the facets $\{abc, abd, bcd, acd \}$.  The Hopf fibration 
+		    $S^1 \rightarrow S^3 \rightarrow S^2$ is then realized by the simplicial
+		    map $p: S3 \rightarrow S2$ defined by $a_i \mapsto a$, $b_i \mapsto b$, 
+		    $c_i \mapsto c$, and $d_i \mapsto d$.  
+		    		    
+		    We now explain how to construct the filtration of $S3$ obtained by
+		    considering the $k$-sketeltons of this fibration.
+		    
+		    The simplical complex $F1S3$ below
+		    is the subsimplical complex of $S3$ obtained by considering the 
+		    inverse images of the
+		    $1$-dimensional faces of the simplical complex $S2$. 
+		    We first describe the simplical complex $F1S3$ in pieces.		    
+		    
+		    For example, to compute $f1l1$ below, we observe that 
 		    the inverse image of $ab$ under $p$ is
 		    $a_0b_0b_1, a_0a_1b_1$ etc.
-		    These have all been computed by hand previously. 
+		    All of these inverse images have been computed by hand previously. 
 	       Example
 	            f1l1 = {a_0*b_0*b_1,a_0*a_1*b_1,a_0*c_0*c_1,a_0*a_1*c_1,a_0*a_1*d_2,d_1*d_2,b_0*b_1*c_1,b_0*c_0*c_1,b_0*b_1*d_1,b_0*d_1*d_2,c_1*d_1*d_2,c_0*c_1*d_2};
 		    f1l2 = {b_1*a_1*a_2,b_1*b_2*a_2,c_1*c_2*a_2,c_1*a_1*a_2,a_1*a_2*d_2,a_2*d_1*d_2,b_1*c_1*c_2,b_1*b_2*c_2,b_1*b_2*d_2,d_1*d_2,c_1*d_1*d_2,c_1*c_2*d_1};
 		    f1l3 = {a_2*a_0*b_0,a_2*b_2*b_0, c_2*a_2*a_0,c_2*c_0*a_0,a_2*a_0*d_1,a_2*d_1*d_2,b_2*b_0*c_2,c_2*c_0*b_0,b_2*b_0*d_2,b_0*d_1*d_2,c_2*c_0*d_2,d_1*d_2};
 		    f1l4 = {a_0*b_0*b_1,a_0*a_2,a_0*a_2*c_2,c_1*c_2,a_0*d_0*d_1,a_0*a_2*d_1,b_1*c_1*c_2,b_0*b_1,b_0*b_1*d_1,b_1*d_0*d_1,c_1*c_2*d_1,c_2*d_0*d_1}
 		    f1l5 = {a_0*a_1*b_1,b_1*b_2,a_0*c_0*c_2,a_0*a_1,a_0*d_0*d_2,a_0*a_1*d_2,b_1*b_2*c_2,c_0*c_2,b_1*d_0*d_2,b_1*b_2*d_2,c_2*d_0*d_2,c_0*c_2*d_2};
-		    F1D = simplicialComplex(join(f1l1,f1l2,f1l3,f1l4,f1l5));
+		    F1S3 = simplicialComplex(join(f1l1,f1l2,f1l3,f1l4,f1l5));
 	       Text
-	            So $F1D$ corresponds to filtration of $D$ by considering the 
-		    inverse images of the
-		    $1$-dimensional faces of the triangulation of $S^2$. 
-		    $D$ corresponds to the filtration of $D$ by considering 
-		    inverse images
-		    of the two dimensional faces of the triangulation of $S^2$.
+	            The simplical complex $F0S3$ below is the subsimplical complex of $F1S3$ 
+		    obtained by considering the inverse images of
+		    the $0$-dimensional faces of the simplical complex $S2$.  Again we describe 
+		    this simplical complex in pieces.
 	       Example
 		    f0l1 = {a_0*a_1,b_0*b_1,c_0*c_1,d_1*d_2};
 		    f0l2 = {a_1*a_2,b_1*b_2,c_1*c_2,d_1*d_2};
 		    f0l3 = {a_0*a_2,b_0*b_2,c_0*c_2,d_1*d_2};
 		    f0l4 = {a_0*a_2,b_0*b_1,c_1*c_2,d_0*d_1};
 		    f0l5 = {a_0*a_1,b_1*b_2,c_0*c_2,d_0*d_2};
-		    F0D = simplicialComplex(join(f0l1,f0l2,f0l3,f0l4,f0l5)); 
+		    F0S3 = simplicialComplex(join(f0l1,f0l2,f0l3,f0l4,f0l5)); 
 	       Text
-	            So $F0D$ corresponds to the filtration of $D$ by considering 
-		    the inverse images of the 
-		    $0$-dimensional faces of the triangulation of $S^2$.
-		    To compute the Serre spectral sequence of the Hopf fibration 
+	            The simplical complex $S3$ is obtained by considering the 
+		    inverse images of the $2$ dimensional faces of $S2$.
+		    
+		    To compute a simplical version of
+		    the Serre spectral sequence for the
 		    $S^1 \rightarrow S^3 \rightarrow S^2$ 
-		    correctly meaning that we get the $E_2$ page as 
-		    asserted in the usual theorem we need to
+		    correctly---meaning that we get the $E^2$ page as 
+		    asserted in the usual theorem---we need to
 		    use non-reduced homology.		     
      	       Example		     
-     	       	    K = filteredComplex({D,F1D,F0D},ReducedHomology => false)
+     	       	    K = filteredComplex({S3,F1S3,F0S3}, ReducedHomology => false);
      	       Text		    
 		    We now compute the various pages of the spectral sequence.
 		  --  I have not made any serious attempt to compute the $E^0$ 
-		    and $E^1$ pages by hand. 
+		    --
+		    and $E^1$ pages by hand.  
+		    To make the output 
+		    intelliagble we prune the spectral sequence.
      	       Example		     
-     	       	    E = spectralSequence K
-     	       Text 
-	       	    When we compute the $E^0$ page the output will be unintelliagable. 
-		    We will want to prune the page afterwards.
+     	       	    E = prune spectralSequence K;
      	       Example		    		    
-		    E0page = E^0
+		    E0 = E^0
      	       Text
 	       	    Here are the maps.
      	       Example		    		    
-     	       	    E0page.dd
-     	       Text 
-	       	    Compare with the pruned version.
-     	       Example		    		    
-		    minimalE0page = minimalPresentation(E0page)  
-		    minimalE0page.dd
+     	       	    E0.dd
      	       Text
 	       	    Now try the $E^1$ page.  
      	       Example		       	       	    
-		    E1page = E^1
+		    E1 = E^1
      	       Text 
 	       	    Here are the maps.
      	       Example		    		    
-		    E1page.dd 
-     	       Text
-	       	    Compare with the pruned version.
-     	       Example		    		    
-		    minimalE1page = minimalPresentation(E1page)  
-		    minimalE1page.dd
+		    E1.dd 
      	       Text
 	       	    Now try the $E^2$ page.
      	       Example		    		    
-		    E2page = E^2
+		    E2 = E^2
      	       Text
 	       	    Here are the maps.
      	       Example		    		    
-		    E2page.dd
-     	       Text
-	       	    Here is the pruned version.
-     	       Example		    		    
-		    minimalE2page = minimalPresentation(E2page)  
-		    minimalE2page.dd
-		    apply(spots E1page.dd, i->  isIsomorphism homologyIsomorphism(E,i#0,i#1,2))
+		    E2.dd
      	       Text		    
-		    Note that the modules on the E_2 page appear to have been computed correctly.  
+		    Note that the modules on the $E^2$ page appear to have been computed correctly.  
 		    The statement of the Serre spectral sequence, see for example Theorem 1.3 p. 8 of 
 		    Hatcher's Spectral Sequence book, asserts that 
 	            $E^2_{p,q}= H_p(S^2,H_q(S^1,QQ))$.
-		    This is exactly what we are suppose to get.
-		    the maps on the $E_2$ page also seem to be computed correctly as the spectral sequence
+		    This is exactly what we obtained above.  Also 
+		    the maps on the $E^2$ page also seem to be computed correctly as the spectral sequence
 		    will abut to the homology of $S^3$.
      	       Example		    
-		    E3page = E^3
-		    E3page.dd
-		    minimalE3page = minimalPresentation(E3page)  
-		    minimalE3page.dd
+		    E3 = E^3
+		    E3.dd
      	       Text		    
-		   The E_3 page appears to have been computed correctly.		
+		   Thus the E^3 page appears to have been computed correctly.		
 ///	       
  
  doc ///
@@ -1890,41 +1895,39 @@ doc ///
 	       The spectral sequence that computes $Tor^A_i(M,N)$ by tensoring
 	       $K$ with $N$ and taking homology is given by
      	  Example
-	       E = spectralSequence( (filteredComplex K) ** J)
+	       E = prune spectralSequence((filteredComplex K) ** J)
      	  Text
 	       The spectral sequence that computes $Tor^A_i(M,N)$ by tensoring
 	       $J$ with $M$ and taking homology is given by 	        
      	  Example
-	       F = spectralSequence( (K ** (filteredComplex J)))	       
+	       F = prune spectralSequence((K ** (filteredComplex J)))	       
 	  Text
 	       Let's compute some pages and maps of these spectral sequences.
+	       The zeroth pages takes the form:
 	  Example
 	       E^0
-	       e0 = minimalPresentation(E^0)
 	       E^0 .dd 
-	       e0.dd
-	       E^1
-	       e1 = minimalPresentation(E^1)
-	       E^1 .dd
-	       e1.dd
-	       E^2
-	       e2 = minimalPresentation(E^2)
-	       E^2 .dd
-	       e2.dd
-	       F^0
-	       f0 = minimalPresentation(F^0)
+	       F^0 
 	       F^0 .dd
-	       f0.dd
-	       F^1
-	       f1 = minimalPresentation(F^1)
+	  Text
+	      The first pages take the form:
+	  Example          
+	       E^1
+	       E^1 .dd
+    	       F^1
 	       F^1 .dd
-	       f1.dd
-	       F^2  
-	       f2 = minimalPresentation(F^2)  
-	       F^2 .dd      	       
-	       f2.dd
-	        	       
-	    
+	 Text 
+	       The second pages take the form:      
+         Example
+     	       E^2
+	       E^2 .dd
+    	       F^2
+	       F^2 .dd
+	 Text
+	       Observe that $E^2$ and $F^2$ are equal as they should.	 
+     SeeAlso
+	    "Filtrations and tensor product complexes"
+	    "Filtrations and homomorphism complexes"	          
 ///	       	 
 
 
