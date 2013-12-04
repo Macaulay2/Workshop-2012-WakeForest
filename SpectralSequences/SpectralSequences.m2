@@ -77,7 +77,7 @@ export {
    "pageMap", 
    "page" ,
   -- "InfiniteSequence",
-  "prunningMaps" --, "xHom", "yHom" --, "xTensor", "yTensor"
+  "prunningMaps", "edgeComplex" --, "xHom", "yHom" --, "xTensor", "yTensor"
   }
 
 
@@ -293,7 +293,10 @@ filteredComplex(List) := FilteredComplex => opts -> L -> (
 -- apply (#maps,  p -> #maps - (p+1) -opts.Shift => image maps#p); 
  myList := {};
  for p from 0 to #maps - 1 do (
-	 if(image maps#p != C) then 
+--	 if(image maps#p != C) then -- Why do we want to omit redundant pieces?? -- In any
+-- event if we want to omit redundant pieces then we need to fix the max value.
+-- i.e. count the number of redundant pieces and the subtract... 
+-- see scratch examples below.
 	 myList = myList |
 	  {#maps - (p+1) -opts.Shift => image maps#p};
 	  );
@@ -547,6 +550,22 @@ yHom(ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> (
 	    filteredComplex({id_hhh})
 	    )
 	) 
+    )
+
+
+-- experimental I-adic filtration code --
+-- the following script allows us to multiply a chain complex by an ideal
+Ideal * ChainComplex := ChainComplex => (I,C) -> (
+    D := new ChainComplex;
+    D.ring = C.ring;
+    apply(drop(spots C, 1), i -> D.dd_i = inducedMap(I * C_(i-1), I * C_i, C.dd_i));
+    D
+    )
+
+filteredComplex(Ideal,ChainComplex,ZZ) := FilteredComplex => opts -> (I,C,n) ->(
+    if n < 0 then error "expected a non-negative integer"
+    else
+    filteredComplex(apply(n, i -> inducedMap(C, I^(i+1) * C)), Shift => n)   
     )
 
 ------------------------------------
@@ -976,6 +995,27 @@ basis (List,SpectralSequencePage) := opts -> (deg,E) -> (
     apply(spots E.dd, i -> P#i = basis(deg,E_i));
     P
     )
+--
+--
+-- Some more experimental code --
+--
+-- Can we write a short script in general to compute the edge complex?
+-- Ans: yes.
+
+edgeComplex = method()
+
+edgeComplex(SpectralSequence) := (E) -> (
+    if E.Prune == true then error "not currently implemented for pruned spectral sequences";
+    M := select(spots E^2 .dd, i -> E^2_i != 0);
+    l := min apply(M, i -> i#0);
+    m := min apply(M, i -> i#1);
+    C := chainComplex E;
+    chainComplex {inducedMap(E^2_{l + 1, m}, HH_(l + m + 1) C, id_(C_(l + m + 1))),
+     inducedMap(HH_(l + m + 1) C, E^2_{l,m + 1}, id_(C_(l + m + 1))), 
+     E^2 .dd_{l + 2,m}, inducedMap(E^2_{l + 2, m}, HH_(l + m + 2) C, id_(C_(l + m + 2)))}
+    )
+
+
 
 -----------------------------------------------------------
 -----------------------------------------------------------
@@ -986,7 +1026,7 @@ basis (List,SpectralSequencePage) := opts -> (deg,E) -> (
 
 beginDocumentation()
 
-undocumented {page, prunningMaps,-- PageMap, --spots, 
+undocumented {page, --prunningMaps,-- PageMap, --spots, 
     (degree, Page),
     (net, FilteredComplex),
     (net, Page),
@@ -1036,7 +1076,7 @@ document {
    By constrast little is known about their general structure when they fail to degenerate quickly.
    Allevating this dichotomy is one of the motivations behind this package.  Its purpose
    is to allow for effective calculations of particular kinds of spectral sequences.
-   As one general example situation, which illustrations some capabilities of this package,
+   As one general example situation, which illustrates some capabilities of this package,
    let k be a computable field, S a k-algebra of finite type, C a bounded chain complex of
  finitely generated S-modules, and FC a bounded asscending filtration of C.  This package is
  capable of computing, under these assumptions, the spectral sequence---especially the differentials on each page---determined by FC.
@@ -2789,6 +2829,11 @@ doc ///
 	       Returns the chain complex map specifying the inclusion of the i piece 
 	       of the filtered
 	       complex to the ambeint chain complex.
+	  Example
+	      A = QQ[x,y];
+	      C = koszul vars A;
+	      K = filteredComplex C
+	      inducedMap(K,1)     
     ///
 doc ///
      Key
@@ -2929,6 +2974,13 @@ doc ///
      Description
           Text
 	       Computes the isomorphism $ker d^r_{p,q} / image d^r_{p + r, q - r + 1} \rightarrow E^{r+1}_{p,q}$
+     	  Example
+	       A = ZZ [s,t,u,v,w] ;
+	       K = filteredComplex(reverse {simplicialComplex {s}, simplicialComplex {s,t}, simplicialComplex {s,t,u}, simplicialComplex {s*t, u}, simplicialComplex {s*t, u, v}, simplicialComplex {s*t, u, v, w}, simplicialComplex {s*t, s*w ,u, v}, simplicialComplex {s*t, s*w ,t * w, u, v}, simplicialComplex {s*t, s*w ,t * w, u * v}, simplicialComplex {s*t, s*w ,t * w, u * v, s * v}, simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u}, simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w}, simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u}, simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w}, simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w}, simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u}, simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v}, simplicialComplex {s*t, s*w ,t * w, u * v, s * v, s*u, u * w, t* u, t*u*w, s*u*w,s*t*u, s*u*v, s*t*w}}, ReducedHomology => false);
+	       E = prune spectralSequence K
+	       e = spectralSequence K
+	       apply(keys support E^11, i -> homologyIsomorphism(E, i#0, i#1, 11))
+	       apply(keys support e^11, i -> homologyIsomorphism(e, i#0, i#1, 11))
      SeeAlso
      	 homologyIsomorphism	       
 ///
@@ -3038,6 +3090,103 @@ doc ///
 	       Here we explain how to create and manipluate spectral sequence pages.
 ///	  	  
 
+doc ///
+     Key 
+     	 edgeComplex
+	 (edgeComplex,SpectralSequence)
+     Headline 
+     	  the edge homomorphisms
+     Usage 
+         C = edgeComplex E 
+     Inputs 
+	  E: SpectralSequence
+     Outputs
+          C: ChainComplex
+     Description
+     	  Text
+	       Suppose that $E$ is a spectral sequence with the properties that:
+	       
+	       1. $E^2_{p,q} = 0$ for all $p < l$ and all $q \in \mathbb{Z}$;  
+	       
+	       2. $E^2_{p,q} = 0 $ for all $q > m$ and all $p \in \mathbb{Z}$;
+	       
+	       3.  $E$ converges to the graded module $\{H_n\}$ for $n \in \mathbb{Z}$.
+	       
+	       Then $E$ determines a $5$-term exact sequence
+	       $H_{l+m+2} \rightarrow E^2_{l+2,m} \rightarrow E^2_{l,m+1} \rightarrow H_{l+m+1} \rightarrow E^2_{l+1,m} \rightarrow 0$ which we refer to as the 
+	       {\it edge complex}. 
+	       
+	       Note that the above properties are satisfied if $E$ is the spectral sequence determined by a bounded filtration of a bounded chain complex.
+	       
+	       The following is an easy example, of a spectral sequence which arises from a nested chain of simplical complexes, which illustrates this concept.
+	       
+	  Example
+	       A = QQ[a,b,c,d];
+       	       D = simplicialComplex {a*d*c, a*b, a*c, b*c};
+	       F2D = D;
+	       F1D = simplicialComplex {a*c, d};
+	       F0D = simplicialComplex {a,d};
+	       K = filteredComplex({F2D, F1D, F0D},ReducedHomology => false);
+	       C = K_infinity;
+	       prune HH C
+    	  Text
+	       The second page of the corresponding spectral sequences take the form:
+	  Example     		   
+	       E = spectralSequence(K);
+	       e = prune E;
+	       E^2
+	       e^2
+    	  Text
+	       The acyclic edge complex for this example has the form
+	       $H_1(C) \rightarrow E^2_{2,-1} \rightarrow E^2_{0,0} \rightarrow H_0(C)  \rightarrow E^2_{1, -1} \rightarrow 0$
+    	       and is given by 
+	  Example     
+	       edgeComplex E
+	       prune edgeComplex E
+    	  Text
+	       To see that it is acyclic we can compute
+	  Example     
+	       prune HH edgeComplex E
+     Caveat
+	  The method currently does not support pruned spectral sequences.
+///
+
+doc ///
+     Key
+     	  (filteredComplex,Ideal,ChainComplex,ZZ)
+     Headline
+     	  I-adic filtrations of chain complexes
+     Usage 
+         K = filteredComplex(I,C,n)  
+     Inputs 
+	  I: Ideal
+	  C: ChainComplex
+	  n: ZZ
+     Outputs
+          K: FilteredComplex
+     Description
+     	 Text
+	      By multiplying a chain complex by sucessive powers of an ideal we obtain a filtered complex.  
+	 Example     
+	      B = QQ[a..d]
+	      J = ideal vars B
+	      C = complete res monomialCurveIdeal(B,{1,3,4})
+	      K = filteredComplex(J,C,4)
+	 Text
+	      Here are higher some pages of the associated spectral sequence:
+	 Example
+	       e = prune spectralSequence K
+	       e^2
+	       e^3
+	       e^3 .dd
+	       e^4
+	       e^4 .dd
+	       assert(all(keys support e^0, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,0)))
+	       assert(all(keys support e^1, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,1)))
+	       assert(all(keys support e^2, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,2)))
+	       assert(all(keys support e^3, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,3)))
+	       assert(all(keys support e^4, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,4)))
+///
 
 TEST ///
 restart;
@@ -3343,6 +3492,14 @@ e^2 .dd
 -- will take the form
 -- H_1 --> E^2_{2,-1} --> E^2_{0,0} --> H_0 --> E^2_{1, -1} --> 0
 -- It is given by:
+edgeComplex E
+
+prune HH edgeComplex E
+
+prune edgeComplex E
+
+edgeComplex prune E
+
 
 
 testEdgeComplex = chainComplex {inducedMap(E^2_{1,-1}, HH_0 K_infinity, id_(K_infinity _0)),
@@ -3369,8 +3526,92 @@ edgeComplex(SpectralSequence) := (E) -> (
 
 edgeComplex E
 
-prune HH myEdgeComplex E
+prune HH edgeComplex E
 
-myEdgeComplex prune E
+prune edgeComplex E
+
+edgeComplex prune E
 
 viewHelp
+
+restart
+needsPackage "SpectralSequences";
+
+-- the following script allows us to multiply a chain complex by an ideal
+Ideal * ChainComplex := ChainComplex => (I,C) -> (
+    D = new ChainComplex;
+    D.ring = C.ring;
+    apply(drop(spots C, 1), i -> D.dd_i = inducedMap(I * C_(i-1), I * C_i, C.dd_i));
+    D
+    )
+
+A = QQ[x,y]
+C = koszul vars A
+I = ideal vars A
+
+I * C
+
+
+filteredComplex(Ideal,ChainComplex,ZZ) := FilteredComplex => opts -> (I,C,n) ->(
+    if n < 0 then error "expected a non-negative integer"
+    else
+    filteredComplex(apply(n, i -> inducedMap(C, I^(i+1) * C)), Shift => n)   
+    )
+
+
+K = filteredComplex(I,C,5)
+
+E = prune spectralSequence K
+
+E^0
+E^1
+E^2
+
+B = QQ[a..d]
+
+J = ideal vars B
+
+C = complete res monomialCurveIdeal(B,{1,3,4})
+
+k = filteredComplex(J,C,4)
+
+e = prune spectralSequence k
+
+e^0
+e^1
+e^2
+e^3
+e^3 .dd
+e^4
+e^4 .dd
+
+assert(all(keys support e^0, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,0)))
+assert(all(keys support e^1, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,1)))
+assert(all(keys support e^2, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,2)))
+assert(all(keys support e^3, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,3)))
+assert(all(keys support e^4, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,4)))
+-- cool --
+
+--
+--
+-- the following showed that there is/was a bug in the filtered complex constructor...
+-- the issue seemed to be the fact that the ambient complex could be the image of say the first
+-- 2 or 3 maps in the list.  I.e., redundances are allowed.
+-- one way to "fix the bug" was to comment out the offensive line.
+-- the problem seems to be that C is repeated several times.
+-- See line 296--300 of the code.
+--  There is really no problem if we remember the redundances explicitly...
+-- On the other hand, we could rewrite that portion of code.
+K = filteredComplex(apply(3, i -> inducedMap(C, I^i * C)), Shift =>3)
+L = apply(3, i -> inducedMap(C, I^i * C))
+apply(L, i -> isChainComplexMap i)
+K = filteredComplex{id_C, inducedMap(C, I^0 * C), inducedMap(C, I^1 * C)}
+
+K_1
+
+K_2
+
+K_3
+
+
+
