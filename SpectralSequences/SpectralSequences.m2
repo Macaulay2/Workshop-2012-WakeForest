@@ -1095,6 +1095,7 @@ document {
     TO "Filtrations and tensor product complexes",
     TO "Filtrations and homomorphism complexes",
     TO "Filtered complexes and simplicial complexes",
+    TO "I-adic filtrations of chain complexes and their spectral sequences",
   --  TO "Spectral sequences from filtered chain complexes"
     },
     
@@ -1117,26 +1118,27 @@ document {
     TO "The trivial fibration over the sphere with fibers the sphere"}, -- SS^1 --> SS^1 x SS^1 --> SS^1"},
 }  
 
-document {
-    Key => "How to work with filtered complexes",
-    Headline => "creating and manipulating filtered complexes",
+--document {
+ --   Key => "How to work with filtered complexes",
+   -- Headline => "creating and manipulating filtered complexes",
     "Here we illustrate some ways for working with filtered complexes",
   --  UL { 
 --	TO "How to make filtered complexes from chain complex maps",
 --	TO "Canonical filtrations on tensor product complexes",
 --	TO "Canoncial filtrations on homomorphism complexes",
-	TO "Filtered complexes and simplicial complexes",
+--	TO "Filtered complexes and simplicial complexes",
+--	TO "I-adic filtratoins of chain complexes and their spectral sequences",
 --	},
-    }
+   -- }
 
-document {
-    Key => "How to work with spectral sequences",
-    Headline => "creating and manipulating spectral sequences",
-    "Here we illustrate some ways for working with spectral sequences",
-    UL { 
-	TO "How to make spectral sequences from filtered complexes",
-	},
-    }
+--document {
+  --  Key => "How to work with spectral sequences",
+   -- Headline => "creating and manipulating spectral sequences",
+   -- "Here we illustrate some ways for working with spectral sequences",
+   -- UL { 
+--	TO "How to make spectral sequences from filtered complexes",
+--	},
+  --  }
 
 --doc ///
 --    Key
@@ -1146,6 +1148,30 @@ document {
 --	    We make spectral sequences from filtered chain complexes 
 --	  Example   
 --///
+
+doc ///
+     Key
+     	  "I-adic filtrations of chain complexes and their spectral sequences"
+     Description
+     	 Text
+	      By multiplying a chain complex by sucessive powers of an ideal we obtain a filtered complex.  
+	 Example     
+	      B = QQ[a..d]
+	      J = ideal vars B
+	      C = complete res monomialCurveIdeal(B,{1,3,4})
+	      K = filteredComplex(J,C,4)
+	 Text
+	      Here are higher some pages of the associated spectral sequence:
+	 Example
+	       E = prune spectralSequence K
+	       E^2
+	       E^3
+	       E^3 .dd
+	       E^4
+	       E^4 .dd
+///
+
+
 doc ///
      Key
      	"Filtered complexes and simplicial complexes"
@@ -1833,7 +1859,7 @@ doc ///
 		    We now compute the various pages of the spectral sequence.
 		  --  I have not made any serious attempt to compute the $E^0$ 
 		    --
-		    and $E^1$ pages by hand.  
+		    --and $E^1$ pages by hand.  
 		    To make the output 
 		    intelliagble we prune the spectral sequence.
      	       Example		     
@@ -2229,7 +2255,7 @@ doc ///
      SeeAlso
      	 spectralSequence
      	 (spectralSequence, FilteredComplex)	       
-	 spectralSequencePageMap
+	 SpectralSequencePageMap
      ///
  
 
@@ -3156,7 +3182,7 @@ doc ///
 
 doc ///
      Key
-     	  (filteredComplex,Ideal,ChainComplex,ZZ)
+     	  (filteredComplex, Ideal,ChainComplex,ZZ)
      Headline
      	  I-adic filtrations of chain complexes
      Usage 
