@@ -1107,9 +1107,7 @@ document {
     TO "Spectral sequences and connecting morphisms",
     TO "Spectral sequences and non-Koszul syzygies",
     TO "A spectral sequence which fails to degenerate quickly",
-  --  TO "The quotient map SS ^2 --> RR PP ^2",--"More topological examples",
-  --  TO "The fibration SS^1 --> Klein Bottle --> SS^1",
-  --  TO "The trivial fibration SS^1 --> SS^1 x SS^1 --> SS^1"},
+    TO "Edge homomorphisms",
   },
 
   SUBSECTION "More easy topological examples",
@@ -1151,6 +1149,53 @@ document {
 
 doc ///
      Key
+     	  "Examples of filtered complexes and spectral sequences"
+     Headline
+     	  How to use this package
+     Description
+     	  Text
+	       Here is a list of some examples which illustrate various parts of this package.
+	       
+	       {\bf First examples which show how to use this package}
+    	       
+	       $\bullet$ @TO"How to make filtered complexes from chain complex maps"@
+    	       
+	       $\bullet$ @TO"Filtrations and tensor product complexes"@
+    	       
+	       $\bullet$ @TO"Filtrations and homomorphism complexes"@
+    	       
+	       $\bullet$ @TO"Filtered complexes and simplicial complexes"@
+    	       
+	       $\bullet$ @TO"I-adic filtrations of chain complexes and their spectral sequences"@
+    
+ 
+               {\bf More ellaborate examples which illustrate this package}
+
+               $\bullet$ @TO"Computing the Serre Spectral Sequence associated to a Hopf Fibration"@
+    	       
+	       $\bullet$ @TO"Balancing Tor"@
+    	       
+	       $\bullet$ @TO"Spectral sequences and connecting morphisms"@
+    	       
+	       $\bullet$ @TO"Spectral sequences and non-Koszul syzygies"@
+    	       
+	       $\bullet$ @TO"A spectral sequence which fails to degenerate quickly"@
+	       
+	       $\bullet$ @TO"Edge homomorphisms"@
+ 
+               {\bf More easy topological examples}
+	       
+	       $\bullet$ @TO"Identifying anti-podal points of the two sphere"@
+	       
+	       $\bullet$ @TO"The fibration of the Klein Bottle over the sphere with fibers the sphere"@ 
+	       
+	       $\bullet$ @TO"The trivial fibration over the sphere with fibers the sphere"@
+ 
+ 	  	  
+///
+
+doc ///
+     Key
      	  "I-adic filtrations of chain complexes and their spectral sequences"
      Description
      	 Text
@@ -1181,34 +1226,36 @@ doc ///
      	    complexes:
      	  Example
 	      A = QQ[x,y,z,w];	     
-	      D = simplicialComplex {x*y*z, x*y, y*z, w*z};
-	      E = simplicialComplex {x*y, w};
-	      F = simplicialComplex {x,w};
-	      K = filteredComplex{D,E,F}
+	      F2D = simplicialComplex {x*y*z, x*y, y*z, w*z};
+	      F1D = simplicialComplex {x*y, w};
+	      F0D = simplicialComplex {x,w};
+	      K = filteredComplex{F2D, F1D, F0D}
 	  Text
 	      The resulting spectral sequence takes the form:
 	  Example
-	      J = prune spectralSequence K;
-	      J^0
-	      J^0 .dd
-	      J^1
-	      J^1 .dd
-	      J^2 
-	      J^2 .dd
-	      J^infinity    
+	      E = prune spectralSequence K;
+	      E^0
+	      E^0 .dd
+	      E^1
+	      E^1 .dd
+	      E^2 
+	      E^2 .dd
+	      E^infinity    
 	  Text
      	     If we want the homology of the complex to be the non-reduced homology
      	     of the simpicial complex we set the ReducedHomology option to false:
      	  Example 
-	     KK = filteredComplex({D,E,F}, ReducedHomology => false)
+	     k = filteredComplex({F2D, F1D, F0D}, ReducedHomology => false)
 	  Text
 	      The resulting spectral sequence takes the form:
 	  Example    
-	      JJ = prune spectralSequence KK;
-	      JJ^0
-	      JJ^0 .dd
-	      JJ^1 .dd
-	      JJ^infinity
+	      e = prune spectralSequence k;
+	      e^0
+	      e^0 .dd
+	      e^1 .dd
+	      e^2
+	      e^2 .dd
+	      e^infinity
      SeeAlso
      	  "How to make filtered complexes from chain complex maps"
 	  "Filtrations and tensor product complexes"
@@ -1311,7 +1358,7 @@ doc ///
 	     The resulting spectral sequences take the form:
 	 Example
 	     E' = prune spectralSequence F';
-	     E'' = prune spectralSequence F'' ;
+	     E'' = prune spectralSequence F'';
 	     E' ^0
 	     E' ^ 0 .dd
 	     E' ^1    
@@ -1335,8 +1382,8 @@ doc ///
 	    
 	    Let $C$ be a chain complex and consider a list of
 	    chain complex maps $\{\phi_n, \phi_{n - 1}, \dots, \phi_0  \}$ 
-	    with properties that $C$ is the codomain of $\phi_i$, for $0 \leq i \leq n$, and 
-	    $image \phi_{i - 1} \subseteq image \phi_i$, for $1 \leq i \leq n$.
+	    with properties that $C$ is the target of $\phi_i$, for $0 \leq i \leq n$, and the
+	    image of $\phi_{i-1}$ is a subchain complex of the image of $\phi_i$, for $1 \leq i \leq n$.
 	    Given this input data we produce an ascending filtered chain complex $FC$
 	    with the properties that $F_k C = C$ for $k \geq n + 1$ and $F_k C = image \phi_k$, for $k = 0, \dots, n$.
 	    
@@ -1347,13 +1394,8 @@ doc ///
 	    compute the resulting filtration of $C$.
 	    When then consider a boundary case by considering the filtered complex obtained
 	    from a single chain complex map, that is the identity of $C$.
-	    
-	    --We first need to load the relavent packages.
-          --Example
-	   --    needsPackage "SpectralSequences"	    
      	  Text
-	     Let's make our chain complexes $C$, $D$, and $E$.
-	     
+	     Let's make our chain complexes $C$, $D$, and $E$.	     
      	  Example	       	 
 	       R = QQ[x,y,z,w] ;
 	       c2 = matrix(R,{{1},{0}}) ;
@@ -1701,7 +1743,6 @@ doc ///
 	       $C$ is a general divisor of type $(3,3)$ on $X$.  This connecting morphism is an
 	       isomorphism. 
 	  Example   
-	       -- needsPackage "SpectralSequences";
                 R = ZZ/101[a_0..b_1, Degrees=>{2:{1,0},2:{0,1}}]; -- PP^1 x PP^1
 		M = intersect(ideal(a_0,a_1),ideal(b_0,b_1)) ; -- irrelevant ideal
 		M = M_*/(x -> x^5)//ideal ; -- Suitably high Frobenius power of M
@@ -1781,7 +1822,6 @@ doc ///
 doc ///
           Key
        	    "Computing the Serre Spectral Sequence associated to a Hopf Fibration"
-         
 	  Description
 	       Text
 	       	    We compute the Serre Spectral Sequence
@@ -2003,9 +2043,7 @@ doc ///
 	     $FC : \dots \subseteq F^{n + 1} C \subseteq F^n C \subseteq \dots$.
 	     Such a filtration is said to be bounded if $F^s C = 0$ for all sufficently 
 	     large $s$ and $F^t C = C$ for all sufficently small $t$.
-	     
-	     
-	     
+	      
 	     The type {\tt FilteredComplex} is a data type for working with bounded filtrations of bounded chain complexes.
      Caveat
      	  By assumption all filtered complexes arise from bounded filtrations of bounded chain complexes.  Filtrations on degree $-1$
@@ -2114,7 +2152,6 @@ doc ///
 	       The type {\tt SpectralSequencePage} is a data type for working with spectral sequences
 	       and spectral sequence pages.
      Caveat
-	    --By assumption all spectral sequence pages are determined by spectral sequences. 
 	    The isomorphisms $4$ and $4$' are not explicitly
 	    part of the data type, although they can be obtained by using the command @TO"homologyIsomorphism"@.
     SeeAlso
@@ -2151,8 +2188,6 @@ doc ///
     	"SpectralSequence"
 	"SpectralSequencePage"
 	"PageMap"	       
-   --  Caveat
-	 --   By assumption all spectral sequence page maps are determined by spectral sequences. 	       
 ///	       
 
 
@@ -2166,6 +2201,19 @@ doc ///
      	  Text
 	       A page is a collection of modules which are indexed by lists of integers.  This is a parent class for the type @TO"SpectralSequencePage"@.  The infinity page of a spectral sequence 
 	       is an example of a page which is not a spectral sequence page.
+	       
+	      As a specific example consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	      the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	 Example     
+	      B = QQ[a..d];
+	      J = ideal vars B;
+	      C = complete res monomialCurveIdeal(B,{1,3,4});
+	      K = filteredComplex(J,C,4);
+	 Text
+	      The infinity page of the resulting spectral sequence is computed below.
+	 Example
+	       E = prune spectralSequence K;
+	       E^infinity
      SeeAlso
        SpectralSequencePage
        (symbol ^, SpectralSequence, InfiniteNumber)
@@ -2181,11 +2229,23 @@ doc ///
      	  Text
 	       A page map is a collection of homomorphisms which are indexed by lists of integers.  This is a parent class for the type @TO"SpectralSequencePageMap"@.  The output of the 
 	       method {\tt prunningMaps(SpectralSequencePage)} is an example of a {\tt Page} which is not a {\tt SpectralSequencePage}.
+	       
+	       As a specific example consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	       the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	  Text
+	       We compute an example of a prunning map below.
+	  Example
+	       E = prune spectralSequence K;
+	       prunningMaps E^2
      SeeAlso
-     	 (prunningMaps,SpectralSequencePage)    
+     	 (prunningMaps,SpectralSequencePage)  
+	 prune  
 ///	       
-
-
 
 --- functions and methods --- 
   doc ///
@@ -2207,13 +2267,13 @@ doc ///
 	       K: FilteredComplex
 	  Description
 	       Text
-	       	    This is the primative filtered complex constructor.   
+	       	    This is the primitive filtered complex constructor.   
     	  SeeAlso
 	      FilteredComplex
-	       "How to make filtered complexes from chain complex maps"
-    	       "Filtrations and tensor product complexes"
-    	       "Filtrations and homomorphism complexes"
-    	       "Filtered complexes and simplicial complexes"		      
+	      "How to make filtered complexes from chain complex maps"
+    	      "Filtrations and tensor product complexes"
+    	      "Filtrations and homomorphism complexes"
+    	      "Filtered complexes and simplicial complexes"		      
 ///
 
 
@@ -2231,9 +2291,28 @@ doc ///
      	  E:SpectralSequence
      Description
      	  Text 
-	       This is the primative spectral sequence constructor.
+	       This is the primitive spectral sequence constructor.
+	       
+	       In the example below we construct a spectral sequence
+	       $E$ from the filtered complex $K$.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	       E = spectralSequence K
+	  Text
+	       To view pages and or maps we proceed, for example, as follows
+	  Example
+	       E^0
+	       E^0 .dd
+	       E^infinity                   
      SeeAlso
-     	 (spectralSequence, FilteredComplex)    
+     	 SpectralSequence
+	 SpectralSequencePage
+	 (symbol ^,SpectralSequence,ZZ)
+     	 (spectralSequence, FilteredComplex) 
+	 "Examples of filtered complexes and spectral sequences"   
     ///
 
 doc ///
@@ -2251,11 +2330,23 @@ doc ///
      	  E:SpectralSequencePage
      Description
      	  Text 
-	       This is the primative spectral sequence page constructor.
+	       This is the primitive spectral sequence page constructor.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	       E = spectralSequence K
+	  Text
+	       To view pages and or maps we proceed, for example, as follows
+	  Example
+	       E^0
+	       
      SeeAlso
      	 spectralSequence
      	 (spectralSequence, FilteredComplex)	       
 	 SpectralSequencePageMap
+	 "Examples of filtered complexes and spectral sequences"   
      ///
  
 
@@ -2266,6 +2357,16 @@ doc ///
 	    (truncate, ChainComplex, ZZ)
 	  Headline 
 	    compute the hard truncation of a chain complex   
+     Description
+     	  Text
+	       Computes the hard trucaton of a chain complex as a specified homological degree.
+	  Example
+	       B = QQ[a..d];
+	       C = koszul vars B
+	       truncate(C,1)
+	       truncate(C,-1)
+	       truncate(C,-10)
+	       truncate(C,10)     	    
 ///	       
 
 doc ///
@@ -2282,6 +2383,20 @@ doc ///
      Description
      	  Text 
 	       Returns the prunning maps which are cached in the process of prunning the spectral sequence page.
+	       
+	       As a specific example consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	       the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	  Text
+	       We compute an example of a prunning map below.
+	  Example
+	       E = prune spectralSequence K;
+	       prunningMaps E^2
+     
      SeeAlso
 	      (prune, SpectralSequence)
 	      SpectralSequencePage
@@ -2296,6 +2411,16 @@ doc ///
 	  Description
 	      Text
 	            Computes the homological degrees in which the chain complex admits a nonzero module  
+		    
+	      Example
+	      	    A = QQ[x,y];
+		    C = koszul vars A
+		    support C
+		    D = truncate(C,1)
+		    spots D
+		    support D
+    	  SeeAlso
+	       spots		     	    
 ///	       
 
 
@@ -2304,8 +2429,28 @@ doc ///
 	    (prunningMaps, SpectralSequencePage)
 	  Headline 
 	    compute the prunning maps on a spectral sequence page
+     Description
+     	  Text 
+	       Returns the prunning maps which are cached in the process of prunning the spectral sequence page.
+	       
+	       As a specific example consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	       the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	  Text
+	       We compute an example of a prunning map below.
+	  Example
+	       E = prune spectralSequence K;
+	       prunningMaps E^2
+     
+     SeeAlso
+	      (prune, SpectralSequence)
+	      SpectralSequencePage
+	      PageMap  
 ///	       
-
 
   doc ///
      Key 
@@ -2461,11 +2606,25 @@ doc ///
      	  L:List
 	  E:SpectralSequencePage
      Outputs
-     	 B:Matrix
+     	 B:Matrix --Note!!  The output should actually be a page!!
      Description
      	  Text 
 	       Returns generators for the requested (multi)degree of the spectral sequence page.  It is designed to extend
 	       the function @TO"basis"@ which can be applied to modules, for instance.
+
+      	       As a specific example consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	       the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	  Text
+	       We compute the degree $0$ piece of the $E^3$ page below.
+	  Example
+	       E = prune spectralSequence K;
+	       E^3
+	       basis(0,E^3)
      SeeAlso
      	 basis	       
     ///
@@ -2484,6 +2643,19 @@ doc ///
      Description
      	  Text 
 	       Returns the Hilbert polynomials of all modules of the spectral sequence page
+      	       
+	       As a specific example consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	       the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	  Text
+	       We compute the degree $0$ piece of the $E^3$ page below.
+	  Example
+	       E = prune spectralSequence K;
+	       hilbertPolynomial(E^3)
     ///
 
 doc ///
@@ -2525,51 +2697,35 @@ doc ///
      	  e:SpectralSequence
      Outputs
      	  E:SpectralSequence
+     Description
+     	  Text
+	       Returns the minimal presentation of a spectral sequence.
+	       
+	       If we fail to prune a spectral sequence then the out-put can be highly
+	       unintelligable.
+	       
+	       As a specific example consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	       the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	  Text
+	       Compare some pages of the non-prunned version of the spectral sequence
+	       with that of the prunned version.
+	  Example
+	       E = prune spectralSequence K;
+	       e = spectralSequence K;
+	       e^3
+	       E^3
      SeeAlso
      	 (minimalPresentation, SpectralSequencePage)
 	 (prune, SpectralSequencePage)
      	 minimalPresentation
 	 prune
 	 prunningMaps	       
-	  
-     Description
-     	  Text 
-	       Returns a minimal presentation of the spectral sequence.  This function is designed to extend
-	       the @TO"minimalPresentation"@ command which can be applied to modules, for instance.  The prunning maps
-	       are also cached and can be obtained by using the method @TO"prunningMaps"@.
-	       
-	       Consider the filtered complex $K$ below
-	       which arises from a nested list of 
-	       simplicial complexes.
-     	  Example
-	      A = QQ[x,y,z,w];	     
-	      D2 = simplicialComplex {x*y*z, x*y, y*z, w*z};
-	      D1 = simplicialComplex {x*y, w};
-	      D0 = simplicialComplex {x,w};
-	      K = filteredComplex{D2, D1, D0};
-	  Text
-	      Compare the pruned version of the spectral sequence, which we 
-	      denote by $E$,
-	      to that of the non-pruned version of the spectral sequence which we
-	      denote by $J$.
-	  Example
-	      E = prune spectralSequence K;
-	      J = prune spectralSequence K;
-	      E^0
-	      J^1
-	      E^0 .dd
-	      J^1 .dd
-	      E^1 
-	      J^1 
-	      E^1 .dd
-	      J^1 .dd
-	      E^2 
-	      J^2
-	      E^2 .dd
-	      J^2 .dd
-	      E^infinity
-	      J^infinity	       
-    ///
+///
 
 doc ///
      Key
@@ -2586,6 +2742,24 @@ doc ///
      Description
      	  Text 
 	       Returns a minimal presentation of the spectral sequence page.
+
+	       If we fail to prune a spectral sequence then the out-put can be highly
+	       unintelligable.
+	       
+	       As a specific example consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	       the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	  Text
+	       Compare some pruned and non-prunded pages the spectral sequence $E$ below.
+	  Example
+	       E = spectralSequence K;
+	       E^3 
+	       prune E^3
+	       
      SeeAlso
      	 (minimalPresentation, SpectralSequence)
 	 (prune, SpectralSequence)
@@ -2681,6 +2855,27 @@ doc ///
      Description
      	  Text 
 	       Returns the rth page of the spectral sequence determined by K.
+
+               Consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	       the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	       
+	  Text
+	       Let $E$ be the spectral sequence determined by $K$.
+	  Example
+	       E = spectralSequence K;
+	  Text
+	       We now compute some pages.
+	  Example
+	       E^0
+	       E^1
+	       E^infinity      
+     SeeAlso
+     	   "Examples of filtered complexes and spectral sequences"            
      ///
  
     
@@ -2698,7 +2893,29 @@ doc ///
      	  P: SpectralSequencePage
      Description
      	  Text 
-	      Returns the kth page of the spectral sequence.
+	       Returns the kth page of the spectral sequence determined by K.
+
+               Consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	       the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	       
+	  Text
+	       Let $E$ be the spectral sequence determined by $K$.
+	  Example
+	       E = spectralSequence K;
+	  Text
+	       We now compute some pages.
+	  Example
+	       E_0
+	       E_1
+	       E_infinity      
+     SeeAlso
+     	   (symbol ^,SpectralSequence,ZZ)
+     	   "Examples of filtered complexes and spectral sequences"            	      
      ///
 
      doc ///
@@ -2711,12 +2928,29 @@ doc ///
      Inputs
      	  D:SpectralSequencePageMap
 	  L:List
-	      A list L = \{p,q\} of integers.
+	      A list L = \{p,q\} \ of integers.
      Outputs
      	  d: Matrix
      Description
      	  Text 
-	      Returns the p,q th map on a spectral sequence page.
+	      Returns the p,q th map on a (lower index) spectral sequence page.  The relationship
+	      $D_{p,q} = D^{-p,-q}$ holds.
+	      
+	      Consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	      the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example 
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	  Text
+	       We compute a map on the third page of the spectral sequence associated to $K$.
+	  Example          
+	       E = spectralSequence K
+	       E^3 .dd_{-1,2}
+     SeeAlso
+     	  (symbol ^, SpectralSequencePageMap, List)
+	  "Examples of filtered complexes and spectral sequences"            	      	      	  	      
      ///
 
 doc ///
@@ -2729,12 +2963,28 @@ doc ///
      Inputs
      	  D:SpectralSequencePageMap
 	  L:List
-	      A list L = \{p,q\} of integers.
+	      A list L = \{p,q\} \ of integers.
      Outputs
      	  d: Matrix
      Description
      	  Text 
-	      Returns the p,q th map on a spectral sequence page.
+	      Returns the p,q th map on an (upper index) spectral sequence page.  The relationship $D^{p,q} = D_{-p,-q}$ holds.    
+               
+	       Consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	       the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example 
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	  Text
+	       We compute a map on the third page of the spectral sequence associated to $K$.
+	  Example          
+	       E = spectralSequence K
+	       E_3 .dd^{1,-2}
+     SeeAlso
+      	  (symbol _, SpectralSequencePageMap, List)
+	  "Examples of filtered complexes and spectral sequences"            	      	      
      ///
          
      
@@ -2753,6 +3003,28 @@ doc ///
      Description
      	  Text 
 	      Returns the kth page of the spectral sequence.
+              
+	      Consider the filtered complex $K$ below, obtained by multiplying the minimal free resolution of
+	      the rational quartic space curve by sucessive powers of the irrelevant ideal.
+	  Example     
+	       B = QQ[a..d];
+	       J = ideal vars B;
+	       C = complete res monomialCurveIdeal(B,{1,3,4});
+	       K = filteredComplex(J,C,4);
+	       
+	  Text
+	       Let $E$ be the spectral sequence determined by $K$.
+	  Example
+	       E = spectralSequence K;
+	  Text
+	       We now compute some pages.
+	  Example
+	       E^0
+	       E^1
+	       E^infinity      
+     SeeAlso
+     	   (symbol _, SpectralSequence, ZZ)
+     	   "Examples of filtered complexes and spectral sequences"            	      	      
      ///
 
 doc ///
@@ -2788,8 +3060,18 @@ doc ///
      	  M:Module
      Description
      	  Text 
-	       Returns the module in the \{i,j\}   position in the spectral sequence page. 
-	       (Using cohomological indexing conventions.)  
+	       Returns the module in the \{i,j\}  \ position in the spectral sequence page. 
+	       (Using cohomological or upper indexing conventions.)  The relationship $E^{-i,-j} = E_{i,j}$ holds.
+	  Example
+	      A = QQ[x,y]
+	      C = koszul vars A;
+	      K = filteredComplex C;
+	      E = spectralSequence K
+	      E_0
+	      E_0 ^{-1,0}
+	      E^0 _{1,0}
+     SeeAlso
+     	  "Examples of filtered complexes and spectral sequences"            	      	      	      
     ///
 
 doc ///
@@ -2803,13 +3085,23 @@ doc ///
      Inputs
      	  P:SpectralSequencePage
 	  L:List
-	       A list L = \{i,j\} of integers
+	       A list L = \{i,j\} \ of integers
      Outputs
      	  M:Module
      Description
      	  Text 
 	       Returns the module in the \{i,j\} \ position in the spectral sequence page. 
-	       (Using homological indexing conventions.)  
+	       (Using homological or lower indexing conventions.)  The relationship $E_{i,j} = E^{-i,-j}$ holds.
+	  Example
+	      A = QQ[x,y]
+	      C = koszul vars A;
+	      K = filteredComplex C;
+	      E = spectralSequence K
+	      E^0
+	      E^0 _{1,0}
+	      E_0 ^{-1,0}
+     SeeAlso
+     	  "Examples of filtered complexes and spectral sequences"            	      	      	      
     ///
 
 
@@ -3120,9 +3412,65 @@ doc ///
 ///	  	  
 
 doc ///
+     Key
+     	  "Edge homomorphisms"
+     Description
+     	  Text
+	       Suppose that $E$ is a spectral sequence with the properties that:
+	       
+	       1. $E^2_{p,q} = 0$ for all $p < l$ and all $q \in \mathbb{Z}$;  
+	       
+	       2. $E^2_{p,q} = 0 $ for all $q > m$ and all $p \in \mathbb{Z}$;
+	       
+	       3.  $E$ converges to the graded module $\{H_n\}$ for $n \in \mathbb{Z}$.
+	       
+	       Then $E$ determines a $5$-term exact sequence
+	       $H_{l+m+2} \rightarrow E^2_{l+2,m} \rightarrow E^2_{l,m+1} \rightarrow H_{l+m+1} \rightarrow E^2_{l+1,m} \rightarrow 0$ which we refer to as the 
+	       {\it edge complex}. 
+	       
+	       Note that the above properties are satisfied if $E$ is the spectral sequence determined by a bounded filtration of a bounded chain complex.
+	       
+	       The following is an easy example, of a spectral sequence which arises from a nested chain of simplical complexes, which illustrates this concept.
+	       
+	  Example
+	       A = QQ[a,b,c,d];
+       	       D = simplicialComplex {a*d*c, a*b, a*c, b*c};
+	       F2D = D;
+	       F1D = simplicialComplex {a*c, d};
+	       F0D = simplicialComplex {a,d};
+	       K = filteredComplex({F2D, F1D, F0D},ReducedHomology => false);
+	       C = K_infinity;
+	       prune HH C
+    	  Text
+	       The second page of the corresponding spectral sequences take the form:
+	  Example     		   
+	       E = spectralSequence(K);
+	       e = prune E;
+	       E^2
+	       e^2
+    	  Text
+	       The acyclic edge complex for this example has the form
+	       $H_1(C) \rightarrow E^2_{2,-1} \rightarrow E^2_{0,0} \rightarrow H_0(C)  \rightarrow E^2_{1, -1} \rightarrow 0$
+    	       and is given by 
+	  Example     
+	       edgeComplex E
+	       prune edgeComplex E
+    	  Text
+	       To see that it is acyclic we can compute
+	  Example     
+	       prune HH edgeComplex E
+     Caveat
+	  The method currently does not support pruned spectral sequences.
+     SeeAlso
+     	   "Examples of filtered complexes and spectral sequences"            	      
+     	  	  
+///
+	  
+
+doc ///
      Key 
-     	 edgeComplex
-	 (edgeComplex,SpectralSequence)
+     	  edgeComplex
+	  (edgeComplex,SpectralSequence)
      Headline 
      	  the edge homomorphisms
      Usage 
