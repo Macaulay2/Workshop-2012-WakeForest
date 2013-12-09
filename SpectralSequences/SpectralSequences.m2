@@ -19,7 +19,7 @@ newPackage(
   "SpectralSequences",
 --  AuxiliaryFiles => true,
   Version => "0.6",
-  Date => "2 December 2013",
+  Date => "8 December 2013",
   Authors => {
        {
       Name => "David Berlekamp", 
@@ -360,13 +360,6 @@ filteredComplex(reverse for i from P to (N-1) list
 	    )
 	)
      )
---
---     	  N := max support K_infinity;
---	  P := min support K_infinity;
---	  T := K_infinity ** C;
---filteredComplex(reverse for i from P to (N-1) list 
---     inducedMap(T, xTensorComplex(T,i)), Shift => -P)
---	  )
 
 --produce the "y-filtration" of the tensor product complex.
 ChainComplex ** FilteredComplex := FilteredComplex => (C,K) -> ( 
@@ -401,66 +394,6 @@ filteredComplex(reverse for i from P to (N-1) list
 	    )
 	)
      )	   
---    	  N := max support K_infinity;
---	  P := min support K_infinity;
---	  T := C ** K_infinity;
---	   filteredComplex(reverse for i from P to (N -1) list 
---	       inducedMap(T, yTensorComplex(T,i)), Shift => -P)
---     )
-
-
---
--- this is the "old" Hom code. -- I think there is a bug / error in the x filtration --
--- xHom below might be a possible fix... everything needs to be thought about and 
--- checked carefully --
-
--- produce the "x-filtration" of the Hom complex.
---Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
---modules := (p,q,T)->(apply( (T#q).cache.indices,
---     i-> if (i#0) <= p - q then  
---     image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
---     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
---     complex := (T,p) -> 
---     	       (K := new ChainComplex;
---		    K.ring = T.ring;
---		    for i from min T to max T do (
---		    if T#?(i-1) then
---		    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
---	       K
---	       );
---     N := max support K_infinity;
---     P := min support K_infinity;
---     H := Hom(K_infinity,C);
---     filteredComplex(reverse for i from P to (N-1) list inducedMap(H, complex(H,i)), Shift => -P)	 
---      )
-
--- produce the "y-filtration" of the Hom complex.
---Hom (ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> (    
---modules := (p,q,T)->(apply( (T#q).cache.indices,
---     i-> if (i#1) <= p then  image (id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))
---     else image(0* id_(((T#q).cache.components)#(((T#q).cache.indexComponents)#i)))) );
---complex := (T,p) ->
---     (K := new ChainComplex;
---		    K.ring = T.ring;
---		    for i from min T to max T do (
---		    if T#?(i-1) then
---	     	    K.dd_i = inducedMap(directSum(modules(p,i-1,T)),directSum(modules(p,i,T)),T.dd_i));
---	       K
---	       );
---     N := max support K_infinity;
---     P := min support K_infinity;
---     H:= Hom(C,K_infinity);
---     filteredComplex(reverse for i from P to (N -1) list 
---	       inducedMap(H, complex(H,i)), Shift => -P)
---     )
-
----
----
--- here are possible / rewrites of filtered Hom complex...  perhaps this is clearer than
--- above, but also the x-filtration might be what we want ... need to think about it 
--- more carefully ...
-
--- below seems to be clearer now ... -- and seems to work correctly ?!--
 
 -- produce the "x-filtration" of the Hom complex.
 xmodules := (n, d, H)->(
@@ -481,12 +414,8 @@ xComplex := (T,n) ->
 	       )
 
 -- produce the "x-filtration" of the Hom complex.
-Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,C) -> (
-xHom(K, complete C)
-)
-
-xHom = method()
-xHom(FilteredComplex, ChainComplex) := FilteredComplex => (K,C) -> (    
+Hom (FilteredComplex, ChainComplex):= FilteredComplex => (K,D) -> (
+    	C := complete D;
     	   supp := support K_infinity;
 	        -- try to handle the boundary cases --
      if supp != {} and #supp > 1 then (		
@@ -508,6 +437,8 @@ xHom(FilteredComplex, ChainComplex) := FilteredComplex => (K,C) -> (
 	)
     )
 
+-- next are some functions used in the "y-filtration" of the Hom complex.
+
 ymodules := (n, d, H) -> (
     -- want components {p,q} = Hom(-p, q) with p + q = d and q <= n
      apply( (H#d).cache.indices,
@@ -525,12 +456,14 @@ yComplex := (T,n) ->
 		    K.dd_i = inducedMap(directSum(ymodules(n,i-1,T)),directSum(ymodules(n,i,T)),T.dd_i));
 	       K
 	       )
-Hom (ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> ( 
-    yHom(complete C, K)
-    )
+--Hom (ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> ( 
+ --   yHom(complete C, K)
+  --  )
 
-yHom = method()
-yHom(ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> (
+--yHom = method()
+--yHom(ChainComplex, FilteredComplex) := FilteredComplex => (C,K) -> (
+  Hom (ChainComplex, FilteredComplex) := FilteredComplex => (D,K) -> (
+      C := complete D; 
      supp := support K_infinity;
 	        -- try to handle the boundary cases --
      if supp != {} and #supp > 1 then (		
@@ -1078,7 +1011,7 @@ document {
    is to allow for effective calculations of particular kinds of spectral sequences.
    As one general example situation, which illustrates some capabilities of this package,
    let k be a computable field, S a k-algebra of finite type, C a bounded chain complex of
- finitely generated S-modules, and FC a bounded asscending filtration of C.  This package is
+ finitely generated S-modules, and FC a bounded ascending filtration of C.  This package is
  capable of computing, under these assumptions, the spectral sequence---especially the differentials on each page---determined by FC.
  ", 
  -- SUBSECTION "Contributors",
@@ -1104,6 +1037,7 @@ document {
   UL {
     TO "Computing the Serre Spectral Sequence associated to a Hopf Fibration",
     TO "Balancing Tor",
+    TO "Spectral sequences and hypercohomology calculations",
     TO "Spectral sequences and connecting morphisms",
     TO "Spectral sequences and non-Koszul syzygies",
     TO "A spectral sequence which fails to degenerate quickly",
@@ -1116,36 +1050,6 @@ document {
     TO "The trivial fibration over the sphere with fibers the sphere"}, -- SS^1 --> SS^1 x SS^1 --> SS^1"},
 }  
 
---document {
- --   Key => "How to work with filtered complexes",
-   -- Headline => "creating and manipulating filtered complexes",
-    "Here we illustrate some ways for working with filtered complexes",
-  --  UL { 
---	TO "How to make filtered complexes from chain complex maps",
---	TO "Canonical filtrations on tensor product complexes",
---	TO "Canoncial filtrations on homomorphism complexes",
---	TO "Filtered complexes and simplicial complexes",
---	TO "I-adic filtratoins of chain complexes and their spectral sequences",
---	},
-   -- }
-
---document {
-  --  Key => "How to work with spectral sequences",
-   -- Headline => "creating and manipulating spectral sequences",
-   -- "Here we illustrate some ways for working with spectral sequences",
-   -- UL { 
---	TO "How to make spectral sequences from filtered complexes",
---	},
-  --  }
-
---doc ///
---    Key
---     	"Spectral sequences from filtered chain complexes"
---     Description
---          Text
---	    We make spectral sequences from filtered chain complexes 
---	  Example   
---///
 
 doc ///
      Key
@@ -1174,6 +1078,8 @@ doc ///
                $\bullet$ @TO"Computing the Serre Spectral Sequence associated to a Hopf Fibration"@
     	       
 	       $\bullet$ @TO"Balancing Tor"@
+	       
+	       $\bullet$ @TO"Spectral sequences and hypercohomology calculations"@
     	       
 	       $\bullet$ @TO"Spectral sequences and connecting morphisms"@
     	       
@@ -1292,7 +1198,7 @@ doc ///
              The second is obtained by letting $F''_n (Hom(B, C)) := \prod_{p + q = k , q \leq n} Hom_S(B_{-p}, C_q)$
 	     and the differentials $\partial := d' + d''$.
     	     
-             In Macaulay2 we can compute these filtered complexes as follows.  
+             In {\it Macaulay2}, using this package, we can compute these filtered complexes as follows.  
 	 Example
 	     A = QQ[x,y];
 	     B = koszul vars A;
@@ -1773,23 +1679,23 @@ doc ///
      doc ///
      Key
        "Spectral sequences and hypercohomology calculations"
-     Headline
-     	  using spectral sequences to compute hypercohomology
+   --  Headline
+     --	  using spectral sequences to compute hypercohomology
      Description
      	  Text
-	       If $\mathcal{F}$ is a coherent sheaf on a smooth toric variety $X$,
+	       If $\mathcal{F}$ is a coherent sheaf on a smooth toric variety $X$
 	       then multigraded commutative algebra can be used to compute
 	       the cohomology groups $H^i(X, \mathcal{F})$.  
 	       
-	       More specifically, if $B$ is the irrelevant ideal of $X$ then
-	       $H^i(X, \mathcal{F})$ is relized as the degree zero piece of the multigraded
+	       Indeed if $B$ is the irrelevant ideal of $X$ then the cohomology group
+	       $H^i(X, \mathcal{F})$ can be relized as the degree zero piece of the multigraded
 	       module
 	       $Ext^i(B^{[l]}, F)$ for sufficiently large $l$; here $B^{[l]}$ denotes
 	       the $l$th Forbenius power of $B$ and $F$ is any multigraded module whose
 	       corresponding sheaf on $X$ is $\mathcal{F}$.  
 	       
 	       Given the fan of
-	       $X$ and $F$, a sufficiently large power of $l$ can be determined effectively.
+	       $X$ and $F$ a sufficiently large power of $l$ can be determined effectively.
 	       We refer to sections 2 and 3 of the paper 
 	       "Cohomology on Toric Varieties and Local Cohomology with Monomial Supports"
 	       for more details.
@@ -1800,6 +1706,12 @@ doc ///
 	       $C$ is a general divisor of type $(3,3)$ on $X$. 
 	       In this setting, $H^0(C,F)$ and $H^1(C, F)$ are both $2$-dimensional 
 	       vector spaces.
+	       
+	       We first make the multi-graded coordinate ring of 
+	       $\mathbb{P}^1 \times \mathbb{P}^1$, the 
+	       irrelevant ideal, and a sufficentily high Frobenus power of the 
+	       irrelevant ideal needed for our calculations.  Also the complex $G$
+	       below is a resolution of the irrelevant ideal.
     	  Example
 	         -- C \subseteq PP^1 x PP^1 type (3,3)
 		 -- Use hypercohomology to compute HH OO_C(1,0) 
@@ -1807,15 +1719,33 @@ doc ///
 		 B = intersect(ideal(a_0,a_1),ideal(b_0,b_1)) ; -- irrelevant ideal
 		 B = B_*/(x -> x^5)//ideal ; -- Sufficentily high Frobenius power 
 		 G = res image gens B ;
-		 I = ideal random(R^1, R^{{-3,-3}}) ; -- ideal of C
+	  Text
+	       We next make the ideal, denoted by $I$ below, of a general divisor of type $(3,3)$ 
+	       on $\mathbb{P}^1 \times \mathbb{P}^1$.  Also the chain complex
+	       $F$ below is a resolution of this ideal.
+	  Example
+	  	 I = ideal random(R^1, R^{{-3,-3}}) ; -- ideal of C
 		 F = res comodule I 
-		 -- Twist F by a line of ruling and make filtered complex whose ss abuts to HH OO_C(1,0) 
-		 K = Hom(G , filteredComplex (F ** R^{{1,0}})) ;
+    	  Text
+	       To use hypercohomology to compute the cohomology groups of the 
+	       line bundle $\mathcal{O}_C(1,0)$ on $C$ we twist the
+	       complex $F$ above by a line of rulting and then 
+	       make a filtered complex whose associated spectral
+	       sequence abuts to the desired cohomology groups.
+	  Example     		 		 
+		 K = Hom(G , filteredComplex (F ** R^{{1,0}})) ; -- Twist F by a line of ruling and make filtered complex whose ss abuts to HH OO_C(1,0) 
 		 E = prune spectralSequence K ; --the spectral sequence degenerates on the second page 
 		 E^1 
 		 E^2 ; -- output is a mess
+    	  Text 
+	       The cohomology groups we want are obtained as follows.
+	  Example     		 
 		 basis({0,0}, E^2_{0,0}) --  == HH^0 OO_C(1,0)
 		 basis({0,0}, E^2_{1,-2}) --  == HH^1 OO_C(1,0)	 
+		 
+     SeeAlso
+    	  "Spectral sequences and connecting morphisms"
+    	  "Spectral sequences and non-Koszul syzygies"	 
 ///	  
 
 
@@ -1890,16 +1820,13 @@ doc ///
 		    To compute a simplical version of
 		    the Serre spectral sequence for the
 		    $S^1 \rightarrow S^3 \rightarrow S^2$ 
-		    correctly---meaning that we get the $E^2$ page as 
-		    asserted in the usual theorem---we need to
+		    correctly, meaning that the spectral sequence takes the form
+		    $E^2_{p,q} = H_p(S^2,H_q(S^1,QQ))$, we need to
 		    use non-reduced homology.		     
      	       Example		     
      	       	    K = filteredComplex({S3,F1S3,F0S3}, ReducedHomology => false);
      	       Text		    
 		    We now compute the various pages of the spectral sequence.
-		  --  I have not made any serious attempt to compute the $E^0$ 
-		    --
-		    --and $E^1$ pages by hand.  
 		    To make the output 
 		    intelliagble we prune the spectral sequence.
      	       Example		     
@@ -1930,7 +1857,7 @@ doc ///
 		    Note that the modules on the $E^2$ page appear to have been computed correctly.  
 		    The statement of the Serre spectral sequence, see for example Theorem 1.3 p. 8 of 
 		    Hatcher's Spectral Sequence book, asserts that 
-	            $E^2_{p,q}= H_p(S^2,H_q(S^1,QQ))$.
+	            $E^2_{p,q} = H_p(S^2,H_q(S^1,QQ))$.
 		    This is exactly what we obtained above.  Also 
 		    the maps on the $E^2$ page also seem to be computed correctly as the spectral sequence
 		    will abut to the homology of $S^3$.
@@ -1997,24 +1924,6 @@ doc ///
 ///	       	 
 
 
---doc ///
-    -- Key
-    --      "filtered complexes"
-    -- Headline
-     --	  how to create and manipulate filtered complexes
-    -- Description
-  --   	  Text	            	     
---	    @TO"filtered complexes and spectral sequences from simplicial complexes"@
---	  Text    
---	    @TO"filtered complexes from chain complexes"@
---	  Text    
---	    @TO"filtered complexes and spectral sequences from chain complex maps"@
---	  Text    
---	      @TO"filtered complexes from tensor products of chain complexes"@
---	  Text   
---	      @TO"filtered complexes from Hom"@	     	  
---///	  	 
-
 --------------------------------------------
 -- Documentation of methods and functions --
 --------------------------------------------
@@ -2063,13 +1972,6 @@ doc ///
      	  the type of all spectral sequences
      Description
      	  Text
-	      --This is a data type for working with spectral sequences.
-	      --   For an overview of how to create and manipulate filtered complexes 
-	      -- see @TO"filtered complexes"@.	  
-	      -- For an overview of how to create and manipulate spectral sequences see
-	      -- @TO"spectral sequences"@.	    
-	      -- For an overview of how to create and manipulate spectral sequence pages see
-	      -- @TO"spectral sequence page"@.
 	       A (homological, or lower index) spectral sequence consists of:
 	       	      
 	       1. A sequence of modules $\{E^r_{p,q}\}$ for $p,q \in \mathbb{Z}$ and $r \geq 0$;
@@ -2090,12 +1992,6 @@ doc ///
 	       
 	       The type {\tt SpectralSequence} is a data type for working with spectral sequences. 
 	       In this package, a spectral sequence is represented by a sequence of spectral sequence pages.
-	     --  For an overview of how to create and manipulate filtered complexes 
-	      -- see @TO"filtered complexes"@.	  
-	      -- For an overview of how to create and manipulate spectral sequences see
-	      -- @TO"spectral sequences"@.	    
-	      -- For an overview of how to create and manipulate spectral sequence pages see
-	      -- @TO"spectral sequence page"@.	       
      Caveat
      	  All spectral sequences arise from bounded filtrations of bounded chain complexes.  Ascending filtrations of degree $-1$ chain complexes
 	  determine spectral sequences of the first type.  Descending filtrations of degree $1$ chain complex determine spectral sequences of the second type.
@@ -2118,14 +2014,7 @@ doc ///
      	  the type of all spectral sequence pages
      Description
      	  Text
-	       --This is a data type for working with spectral sequence pages.	  
-	      -- For an overview of how to create and manipulate filtered complexes 
-	      -- see @TO"filtered complexes"@.	  
-	      -- For an overview of how to create and manipulate spectral sequences see
-	      -- @TO"spectral sequences"@.	    
-	      -- For an overview of how to create and manipulate spectral sequence pages see
-	      -- @TO"spectral sequence page"@.
-	      A (homological, or lower index) spectral sequence page consists of:
+	       A (homological, or lower index) spectral sequence page consists of:
 	       
 	       1. A fixed integer $r \geq 0$, the page number;	      
 	       
@@ -3133,6 +3022,7 @@ doc ///
      SeeAlso
           "Filtrations and tensor product complexes"	       
     ///
+    
  doc ///
      Key
      	  (inducedMap, FilteredComplex, ZZ)
@@ -3156,6 +3046,7 @@ doc ///
 	      K = filteredComplex C
 	      inducedMap(K,1)     
     ///
+    
 doc ///
      Key
           (symbol _, FilteredComplex, ZZ)
@@ -3366,50 +3257,44 @@ doc ///
 	       G2.dd
 	       D^infinity 	             	          
   ///	  	 
-doc ///
-     Key
-     	  "filtered complexes from chain complexes"
-     Headline
-     	  making filtered complexes and spectral sequences from chain complexes.
-     Description
-     	  Text
-///	  	  
-doc ///
-     Key
-        "filtered complexes from tensor products of chain complexes"
-     Headline
-     	 making filtered complexes and spectral sequences from tensor products 	
-     Description
-     	  Text
-///	  
 
 --doc ///
 --     Key
---       "filtered complexes from Hom"
+--     	  "filtered complexes from chain complexes"
 --     Headline
---     	 making filtered complexes and spectral sequences from Hom
+--     	  making filtered complexes and spectral sequences from chain complexes.
+--     Description
+--     	  Text
+--///	  	  
+
+--doc ///
+--     Key
+--        "filtered complexes from tensor products of chain complexes"
+--     Headline
+--     	 making filtered complexes and spectral sequences from tensor products 	
 --     Description
 --     	  Text
 --///	  
 
 
-doc ///
-     Key
-     	  "spectral sequences"
-     Headline
-     	  how to create and manipluate spectral sequences
-///	  	  
+
+--doc ///
+--     Key
+--     	  "spectral sequences"
+--     Headline
+--     	  how to create and manipluate spectral sequences
+--///	  	  
 	       
 
-doc ///
-     Key
-     	  "spectral sequence page"
-     Headline
-     	  how to create and manipluate spectral sequence pages
-     Description
-     	   Text
-	       Here we explain how to create and manipluate spectral sequence pages.
-///	  	  
+--doc ///
+--     Key
+--     	  "spectral sequence page"
+--     Headline
+--     	  how to create and manipluate spectral sequence pages
+--     Description
+--     	   Text
+--	       Here we explain how to create and manipluate spectral sequence pages.
+--///	  	  
 
 doc ///
      Key
@@ -3420,7 +3305,7 @@ doc ///
 	       
 	       1. $E^2_{p,q} = 0$ for all $p < l$ and all $q \in \mathbb{Z}$;  
 	       
-	       2. $E^2_{p,q} = 0 $ for all $q > m$ and all $p \in \mathbb{Z}$;
+	       2. $E^2_{p,q} = 0 $ for all $q < m$ and all $p \in \mathbb{Z}$;
 	       
 	       3.  $E$ converges to the graded module $\{H_n\}$ for $n \in \mathbb{Z}$.
 	       
@@ -3485,7 +3370,7 @@ doc ///
 	       
 	       1. $E^2_{p,q} = 0$ for all $p < l$ and all $q \in \mathbb{Z}$;  
 	       
-	       2. $E^2_{p,q} = 0 $ for all $q > m$ and all $p \in \mathbb{Z}$;
+	       2. $E^2_{p,q} = 0 $ for all $q < m$ and all $p \in \mathbb{Z}$;
 	       
 	       3.  $E$ converges to the graded module $\{H_n\}$ for $n \in \mathbb{Z}$.
 	       
@@ -3564,6 +3449,107 @@ doc ///
 	       assert(all(keys support e^3, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,3)))
 	       assert(all(keys support e^4, j -> isIsomorphism homologyIsomorphism(e,j#0,j#1,4)))
 ///
+
+
+doc ///
+     Key
+     	  "Example 1"
+     Headline
+     	  Easy example of a filtered simpilcial complex	  
+     Description
+     	  Text
+	       Here we provide an easy example of a filtered simplical complex and 
+	       the resulting spectral sequence.  This example is small enough
+	       that all aspects of it can be explicitly computed by hand.
+	  Example
+	       A = QQ[a,b,c,d];
+	       D = simplicialComplex {a*d*c, a*b, a*c, b*c};
+	       F2D = D
+	       F1D = simplicialComplex {a*c, d}
+	       F0D = simplicialComplex {a,d}
+	       K= filteredComplex({F2D, F1D, F0D},ReducedHomology => false)
+	       E = prune spectralSequence(K)
+	       E^0
+	       E^1
+	       E^2
+	       E^3
+	       E^infinity
+	       C = K_infinity
+	       prune HH C
+	       E^2 .dd
+	  Text
+	       Considering the $E^2$ and $E^3$ pages of the spectral sequence 
+	       we conclude that the map $d^2_{2,-1}$ must have a $1$-dimensional
+	       image and a $1$-dimensinal kernel.  This can be verified easily:
+	  Example
+	      rank ker E^2 .dd_{2,-1}
+	      rank image E^2 .dd_{2,-1}     
+///     
+
+-- We might want to not include this next example
+doc ///
+     Key
+     	  "Example 2"
+     Headline
+     	  Easy example of a filtered simplicial complex
+     Description
+     	  Text
+	       We provide an easy example of a filtered simplical complex and
+	       the resulting spectral sequence.  This example is small enough that
+	       all aspects of it can be explicitly computed by hand.
+	  Example
+	       A = QQ[a,b,c];
+	       D = simplicialComplex({a*b*c})
+	       F3D = D;
+	       F2D = simplicialComplex({a*b,a*c,b*c})
+	       F1D = simplicialComplex({a*b,c})
+	       F0D = simplicialComplex({a,b})
+	       K = filteredComplex({F3D,F2D,F1D,F0D}, ReducedHomology => false)
+	       E = prune spectralSequence K
+	       E^0
+	       E^0 .dd
+	       E^0
+	       E^1
+	       E^0 .dd_{1,0}
+	       E^1 .dd
+	       E^1
+	       E^0
+	       E^2
+	       prune HH K_infinity
+    	       E^infinity
+///
+
+-- We might want to not include this next example
+doc ///
+     Key
+     	  "Example 3"
+     Headline
+     	  Easy example of a filtered simplical complex
+     Description
+     	  Text
+	       We provide an easy example of a filtered simplical complex
+	       and the resuling spectral sequence.  This example is small enough that
+	       all aspects of it can be explicitly computed by hand.	       
+     	  Example
+	       A = QQ[a,b,c]
+	       D = simplicialComplex {a*b*c}
+	       F2D = D
+	       F1D = simplicialComplex {a*b,a*c,b*c}
+	       F0D = simplicialComplex {a,b,c}
+	       K = filteredComplex({F2D,F1D,F0D}, ReducedHomology => false)
+	       C = K_infinity    	     
+	       E = prune spectralSequence K
+	       E^0
+	       E^0 .dd	   
+	       E^1
+	       E^1 .dd
+	       E^2
+	       E^2 .dd
+	       E^infinity
+	       prune HH K_infinity
+///	       
+
+
 
 TEST ///
 restart;
@@ -3989,6 +3975,5 @@ K_1
 K_2
 
 K_3
-
 
 
