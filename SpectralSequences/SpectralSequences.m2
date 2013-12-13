@@ -1006,8 +1006,8 @@ document {
   Key => SpectralSequences,
   Headline => "a package for working with filtered complexes and spectral sequences",
    "Spectral sequences, although technical and subtle, can be very useful in applications---especially when they degenerate quickly.
-   By constrast little is known about their general structure when they fail to degenerate quickly.
-   Allevating this dichotomy is one of the motivations behind this package.  Its purpose
+   By contrast little is known about their general structure when they fail to degenerate quickly.
+   Alleviating this dichotomy is one of the motivations behind this package.  Its purpose
    is to allow for effective calculations of particular kinds of spectral sequences.
    As one general example situation, which illustrates some capabilities of this package,
    let k be a computable field, S a k-algebra of finite type, C a bounded chain complex of
@@ -1944,14 +1944,14 @@ doc ///
 	     is an ordered family of chain subcomplexes 
 	     $FC : \dots \subseteq F_{n - 1} C \subseteq F_n C \subseteq \dots $.
 	     Such a filtration is said to be bounded if $F_s C = C$ for all sufficiently
-	     large $s$ and $F_t C = 0$ for all sufficently large $t$.
+	     large $s$ and $F_t C = 0$ for all sufficiently small $t$.
 	     
 	     Alternatively, a descending filtration of a bounded (cohomological, or upper index, or degree $1$) chain complex 
 	     $C : \dots  \rightarrow C^i \rightarrow C^{i + 1} \rightarrow \dots $
 	     is an ordered family of subchain complexes 
 	     $FC : \dots \subseteq F^{n + 1} C \subseteq F^n C \subseteq \dots$.
-	     Such a filtration is said to be bounded if $F^s C = 0$ for all sufficently 
-	     large $s$ and $F^t C = C$ for all sufficently small $t$.
+	     Such a filtration is said to be bounded if $F^s C = 0$ for all sufficiently 
+	     large $s$ and $F^t C = C$ for all sufficiently small $t$.
 	      
 	     The type {\tt FilteredComplex} is a data type for working with bounded filtrations of bounded chain complexes.
      Caveat
