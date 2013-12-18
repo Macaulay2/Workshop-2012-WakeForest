@@ -883,6 +883,9 @@ toString NCMonomial := mon -> (
 
 degree NCMonomial := mon -> sum apply(#(mon#monList), i -> ((mon.ring).weights)#(mon#monList#i))
 
+tensorLength = method()
+tensorLength NCMonomial := mon -> #(mon#monList)
+
 putInRing = method()
 putInRing (NCMonomial, ZZ) := 
 putInRing (NCMonomial, QQ) :=
@@ -1096,8 +1099,12 @@ monomials NCRingElement := opts -> f -> (
 toString NCRingElement := f -> toStringMaybeSort(f,Sort=>true)
 degree NCRingElement := f -> (
     fkeys := (keys f.terms);
-    B := ring f;
     max (fkeys / degree)
+)
+tensorLength NCRingElement := f -> (
+    ltf := leadTerm f;
+    ltfkeys := (keys (ltf.terms));
+    first (ltfkeys / tensorLength)
 )
 size NCRingElement := f -> #(f.terms)
 leadTerm NCRingElement := f -> (
@@ -1230,7 +1237,7 @@ findNormalComplement (NCRingElement,NCRingElement) := (f,x) -> (
 getMinMaxDegrees = gensList -> (
    minNCGBDeg := minCoeffDeg := infinity;
    maxNCGBDeg := maxCoeffDeg := -infinity;
-   scan(gensList, f -> (degf := degree f;
+   scan(gensList, f -> (degf := tensorLength f;  --- had to change this to tensor length for GB reduction...
                         degLeadCoeff := if isField coefficientRing ring f then 0 else first degree leadCoefficient f;
                         if degf > maxNCGBDeg then maxNCGBDeg = degf;
                         if degf < minNCGBDeg then minNCGBDeg = degf;
@@ -2042,6 +2049,7 @@ NCRingElement % NCGroebnerBasis := (f,ncgb) -> (
       first normalFormBergman({f},ncgb)
 )
 
+--- need to make this work for non-standard gradings
 ncSubstrings = method()
 ncSubstrings (NCMonomial,ZZ,ZZ) := (mon,m,n) -> (
    monLen := #(mon#monList);
@@ -2049,8 +2057,13 @@ ncSubstrings (NCMonomial,ZZ,ZZ) := (mon,m,n) -> (
                                             {}
                                          else
                                             apply(monLen-i+1, j -> (mon_{0..(j-1)},mon_{j..j+i-1},mon_{j+i..(monLen-1)})))
+--   flatten apply(toList(1..(monLen)), i -> if i > n or i < m then 
+--                                            {}
+--                                         else
+--                                            apply(monLen-i+1, j -> (mon_{0..(j-1)},mon_{j..j+i-1},mon_{j+i..(monLen-1)})))
 )
 
+--- this one is ok
 cSubstrings = method()
 cSubstrings (List,ZZ,ZZ) := (exps,m,n) -> (
    if #exps == 1 then 
@@ -2090,6 +2103,7 @@ remainderFunction (NCRingElement,NCGroebnerBasis) := opts -> (f,ncgb) -> (
                     {1_R};
       foundSubstr = select(ncSubstrs ** cSubstrs, s -> ncgbHash#?(s#0#1,s#1) and
                                                        ncgbHash#(s#0#1,s#1) != dontUse);
+      if #pairsf == 14 then error "err";
       coeff = p#1;
       if foundSubstr =!= {} then (
          foundSubstr = minUsing(foundSubstr, s -> size ncgbHash#(s#0#1,s#1));
