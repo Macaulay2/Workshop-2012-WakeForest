@@ -1,4 +1,3 @@
-
 -- from lecture5.m2 from Stillman's Atlanta lectures, June 2012.
 
 restart
